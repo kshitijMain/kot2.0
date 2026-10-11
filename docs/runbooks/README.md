@@ -3,6 +3,9 @@
 Operational procedures (NFR-M06): installation, restore, update, rollback, incident response,
 support playbook. Created by the WPs that build each capability (P0-16, P7-04, P7-05, P8-05).
 
+- `local-setup-and-testing.md`: from an empty Mac to every application running and tested, how to
+  find and fix bugs, and the manual tasks left to make the whole package ready, in order.
+
 - `lan-tls.md`: trusting the restaurant's certificate authority in browsers, fingerprint checks and
   certificate problems (P0-15).
 - `control-plane.md`: operating the Vendor Control Plane: environments, deploying, connecting a

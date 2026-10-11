@@ -11,7 +11,8 @@ pnpm install
 pnpm check                 # format, build, docs checks, lint, typecheck, tests
 ```
 
-Server integration tests need PostgreSQL 16. Linux finds it on PATH. On macOS or Windows set
+`local-setup-and-testing.md` has the full version: every tool, running each application, the
+tests, and the manual tasks left. Server integration tests need PostgreSQL 16. Linux finds it on PATH. On macOS or Windows set
 `TEST_DATABASE_URL` (see `apps/server/README.md`).
 
 ## Where things are

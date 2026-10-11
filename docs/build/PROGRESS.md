@@ -4436,6 +4436,19 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
 
 ## Session log (newest first)
 
+### 2026-10-11: the takeaway e2e step, and the local set-up guide
+
+The console e2e step `[TBL-008]` looked for the heading "Takeaway" by substring, which also
+matched the takeaway screen's "Open takeaway orders" heading; strict mode failed it and the 19
+serial steps after it never ran. `exact: true` fixes it: all 26 console e2e steps pass.
+`docs/runbooks/local-setup-and-testing.md` is new: tools for a Mac, running the server and
+console, the Android apps, the QR site and relay, the Control Plane and Electron; every test
+command; finding and fixing bugs; and `MANUAL_TASKS.md` in the order that unblocks most. Gotchas:
+a server started by hand holds port 8883 (the pager broker), so the e2e suites' own server fails
+with `EADDRINUSE`; `flood.int.test.ts` and `tls.int.test.ts` fail on a machine without IPv6 or a
+LAN interface (cloud containers), not in CI; the Maestro flows default to port 3000 and table
+`T1` while the seed's tables are `1` to `10`.
+
 ### 2026-10-11: alert words for printer and disk or backup
 
 `describeAlert` (`@rp/ordering`) now gives a detail line for `PRINTER_OFFLINE` (printer name, its error, prints waiting) and `DISK_OR_BACKUP` (disk percent full and free GB, or which backup is failing: cloud, continuous or nightly, from the payload the server already raises). New `alerts.printerOffline`, `diskFull` and `backupFailed` strings in `@rp/i18n`. Tests tagged NTF-006. This closes the port left from the 2026-10-11 sync. Nothing buildable is left except `[H]` items (P0-H1 firmware needs a person to run it).

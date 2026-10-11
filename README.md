@@ -30,7 +30,9 @@ pnpm install
 pnpm check                 # format, lint, typecheck, tests
 ```
 
-Requires Node.js 22.12 or newer (production targets Node 24 LTS).
+Requires Node.js 22.12 or newer (production targets Node 24 LTS). To run, test and fix every
+application on your own computer, and for what is left to do, read
+[docs/runbooks/local-setup-and-testing.md](docs/runbooks/local-setup-and-testing.md).
 
 ## Documentation
 
