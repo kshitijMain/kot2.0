@@ -288,7 +288,7 @@ test.describe.serial('the web console', () => {
 
   test('[TBL-008] sends a takeaway order and shows its token', async () => {
     await page.getByRole('button', { name: t('pos.takeaway') }).click();
-    await expect(page.getByRole('heading', { name: t('pos.takeaway') })).toBeVisible();
+    await expect(page.getByRole('heading', { name: t('pos.takeaway'), exact: true })).toBeVisible();
     await page.getByRole('button', { name: 'Breads', exact: true }).click();
     await page.getByRole('button', { name: /^Butter Naan, / }).click();
     await page.getByLabel(t('pos.cart.customer')).fill('Anil');
