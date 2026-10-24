@@ -35,7 +35,7 @@ const MAX_FAILURES = 5;
 const LOCK_MS = 15 * 60_000;
 /** Emails without an account that can sign in, whose failures are counted in memory. */
 const MAX_UNKNOWN_TRACKED = 10_000;
-const ISSUER = 'Restaurant Platform (vendor)';
+const ISSUER = 'Parossa (vendor)';
 
 /** A signed-in vendor staff member, as the guard puts it on the request. */
 export interface VendorPrincipal {

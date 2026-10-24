@@ -1,7 +1,8 @@
-import { fontSize, radius, spacing, touchTarget } from '@rp/design-tokens';
+import { fontSize, fontWeight, radius, spacing, touchTarget } from '@rp/design-tokens';
 import { useId } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
-import { useTheme } from '../theme.js';
+import { StyleSheet, View } from 'react-native';
+import { useTheme, weight } from '../theme.js';
+import { Text, TextInput } from './Text.js';
 
 export interface TextFieldProps {
   /** The visible label, also the field's accessible name, e.g. "Search the menu". */
@@ -90,12 +91,12 @@ export function TextField({
 
 const styles = StyleSheet.create({
   field: { gap: spacing[1] },
-  label: { fontSize: fontSize.md },
+  label: { fontSize: fontSize.md, fontWeight: weight(fontWeight.medium) },
   input: {
-    minHeight: touchTarget.min,
+    minHeight: touchTarget.comfortable,
     borderWidth: 1,
     borderRadius: radius.md,
-    paddingHorizontal: spacing[3],
+    paddingHorizontal: spacing[4],
     fontSize: fontSize.lg,
   },
   multiline: {

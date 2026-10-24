@@ -2,9 +2,9 @@ import type { ServiceRequestView } from '@rp/contracts';
 import { fontSize, radius, spacing } from '@rp/design-tokens';
 import type { ServiceRequestType } from '@rp/domain';
 import { messageOf, Note, useDeviceSession, useLive, useNow, useT } from '@rp/mobile-shell';
-import { Button, useTheme } from '@rp/ui-native';
+import { Button, Text, useTheme } from '@rp/ui-native';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import {
   cancelPlan,
   REQUEST_BUTTONS,

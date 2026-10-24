@@ -1,7 +1,8 @@
 import { fontSize, fontWeight, radius, spacing, touchTarget } from '@rp/design-tokens';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useTheme, weight } from '../theme.js';
 import { Glyph } from './Glyph.js';
+import { Text } from './Text.js';
 
 export interface ChoiceOption {
   readonly id: string;
@@ -72,8 +73,10 @@ export function ChoiceGroup({
             style={[
               styles.option,
               {
-                borderColor: checked ? colors.primary : colors.border,
-                backgroundColor: checked ? colors.infoSubtle : colors.surface,
+                // Chosen: saffron, with a ring dark enough to stand out (WCAG 1.4.11).
+                borderColor: checked ? colors.highlightText : colors.border,
+                borderWidth: checked ? 2 : 1,
+                backgroundColor: checked ? colors.highlightSubtle : colors.surface,
                 opacity: off ? 0.5 : 1,
               },
             ]}
@@ -109,10 +112,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[3],
-    minHeight: touchTarget.min,
-    paddingHorizontal: spacing[3],
+    minHeight: touchTarget.comfortable,
+    paddingHorizontal: spacing[4],
     borderRadius: radius.md,
-    borderWidth: 1,
   },
   label: { flex: 1, fontSize: fontSize.md },
   error: { flexDirection: 'row', alignItems: 'center', gap: spacing[1] },

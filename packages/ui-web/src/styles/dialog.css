@@ -2,7 +2,7 @@
   width: min(100% - var(--rp-space-8), 480px);
   max-height: min(100% - var(--rp-space-8), 90dvh);
   padding: 0;
-  border: 1px solid var(--rp-color-border);
+  border: 0;
   border-radius: var(--rp-radius-xl);
   background: var(--rp-color-surface-raised);
   color: var(--rp-color-text);
@@ -29,7 +29,7 @@
 .rp-dialog__panel {
   display: flex;
   flex-direction: column;
-  gap: var(--rp-space-4);
+  gap: var(--rp-space-5);
   padding: var(--rp-space-6);
 }
 
@@ -46,6 +46,7 @@
   font-size: var(--rp-font-size-xl);
   font-weight: var(--rp-font-weight-semibold);
   line-height: var(--rp-line-height-snug);
+  letter-spacing: -0.01em;
 }
 
 .rp-dialog__close {
@@ -78,6 +79,17 @@
   max-height: 90dvh;
   border-radius: var(--rp-radius-xl) var(--rp-radius-xl) 0 0;
   animation-name: rp-sheet-up;
+}
+
+.rp-dialog[data-variant='sheet'][data-side='bottom'] .rp-dialog__panel::before {
+  align-self: center;
+  width: 40px;
+  height: 4px;
+  margin-top: calc(var(--rp-space-3) * -1);
+  border-radius: var(--rp-radius-full);
+  background: var(--rp-color-border-strong);
+  content: '';
+  opacity: 0.5;
 }
 
 .rp-dialog[data-variant='sheet'][data-side='end'] {

@@ -128,6 +128,7 @@ export class KdsService {
         ageRedMinutes: snapshot.get('kds.ageRedMinutes'),
         readyNotCollectedMinutes: snapshot.get('kds.readyNotCollectedMinutes'),
         soundVolumePercent: snapshot.get('kds.soundVolumePercent'),
+        theme: snapshot.get('kds.theme'),
       },
       serverTime: now.toISOString(),
     };

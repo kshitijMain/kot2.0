@@ -2,6 +2,7 @@ import { PairingCode } from '@rp/contracts';
 import { Button, Card, TextField } from '@rp/ui-web';
 import { type SyntheticEvent, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { BrandLogo } from '../app/brand.js';
 import { useConsole, useConsoleState } from '../app/console-context.js';
 import { useT } from '../app/i18n.js';
 import { canCreateDeviceKey, formatPairingCode, messageOf } from '../app/messages.js';
@@ -39,6 +40,7 @@ export function PairingScreen() {
 
   return (
     <main className="console-center">
+      <BrandLogo />
       {secure && onServerPc() ? <ThisPcSetup /> : null}
       <Card title={t('pairing.title')} headingLevel={2} variant="raised" className="console-panel">
         {notice === 'revoked' ? (

@@ -1,8 +1,9 @@
 import { fontSize, fontWeight, radius, spacing, touchTarget } from '@rp/design-tokens';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import type { GlyphName } from '../glyphs.js';
 import { useTheme, weight } from '../theme.js';
 import { Glyph } from './Glyph.js';
+import { Text } from './Text.js';
 
 export interface QuantityStepperProps {
   value: number;
@@ -41,8 +42,8 @@ export function QuantityStepper({
         styles.button,
         {
           borderColor: colors.borderStrong,
-          backgroundColor: colors.surface,
-          opacity: off ? 0.5 : pressed ? 0.8 : 1,
+          backgroundColor: pressed ? colors.surfaceSunken : colors.surface,
+          opacity: off ? 0.5 : 1,
         },
       ]}
     >
@@ -71,7 +72,7 @@ const styles = StyleSheet.create({
     height: touchTarget.min,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: radius.md,
+    borderRadius: radius.full,
     borderWidth: 1,
   },
   value: {

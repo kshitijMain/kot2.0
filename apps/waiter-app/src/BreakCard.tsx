@@ -1,9 +1,9 @@
-import { spacing } from '@rp/design-tokens';
+import { radius, spacing } from '@rp/design-tokens';
 import { displayDateTime } from '@rp/domain';
 import { messageOf, Note, useDeviceSession, useLive, useT } from '@rp/mobile-shell';
-import { Button, toneColors, useTheme } from '@rp/ui-native';
+import { Button, Text, toneColors, useTheme } from '@rp/ui-native';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 /**
  * "On break" (NTF-009): while the waiter is on break, their alerts go to the manager on duty; the
@@ -66,9 +66,9 @@ export function BreakCard() {
 const styles = StyleSheet.create({
   card: {
     gap: spacing[2],
-    padding: spacing[3],
+    padding: spacing[4],
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: radius.lg,
     borderColor: 'transparent',
   },
 });

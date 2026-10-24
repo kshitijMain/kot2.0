@@ -21,10 +21,10 @@ export const spacing = {
 
 export const radius = {
   none: 0,
-  sm: 4,
-  md: 8,
-  lg: 12,
-  xl: 16,
+  sm: 6,
+  md: 10,
+  lg: 14,
+  xl: 20,
   full: 9999,
 } as const;
 
@@ -39,11 +39,17 @@ export const touchTarget = {
 } as const;
 
 export const fontFamily = {
-  // System fonts only: nothing is downloaded, so the UI renders offline (NFR-A01) and every
-  // platform uses its own well-hinted face (Segoe UI on Windows, Roboto on Android).
-  sans: "system-ui, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, sans-serif",
+  // Inter, bundled with the apps (ADR-0022): nothing is downloaded, so the UI renders offline
+  // (NFR-A01). The system faces after it cover a missing glyph and the moment before it loads.
+  sans: "Inter, system-ui, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, sans-serif",
   mono: "ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', Menlo, Consolas, monospace",
 } as const;
+
+/**
+ * The font family the Android apps ask for: Inter, built into each APK by the `expo-font` plugin
+ * with its 400 to 700 weights (ADR-0022). An APK built before then falls back to Roboto.
+ */
+export const nativeFontFamily = 'Inter';
 
 /** Font sizes in px (converted to rem for the web). */
 export const fontSize = {
@@ -88,10 +94,16 @@ export const lineHeight = {
  */
 export const elevation = {
   0: { shadow: 'none', androidElevation: 0 },
-  1: { shadow: '0 1px 2px rgb(0 0 0 / 0.12), 0 1px 3px rgb(0 0 0 / 0.08)', androidElevation: 1 },
-  2: { shadow: '0 2px 4px rgb(0 0 0 / 0.12), 0 4px 12px rgb(0 0 0 / 0.1)', androidElevation: 4 },
+  1: {
+    shadow: '0 1px 2px rgb(28 25 23 / 0.05), 0 2px 8px rgb(28 25 23 / 0.06)',
+    androidElevation: 1,
+  },
+  2: {
+    shadow: '0 2px 6px rgb(28 25 23 / 0.06), 0 8px 24px rgb(28 25 23 / 0.09)',
+    androidElevation: 4,
+  },
   3: {
-    shadow: '0 8px 16px rgb(0 0 0 / 0.16), 0 16px 40px rgb(0 0 0 / 0.14)',
+    shadow: '0 4px 12px rgb(28 25 23 / 0.08), 0 16px 40px rgb(28 25 23 / 0.16)',
     androidElevation: 12,
   },
 } as const;

@@ -18,11 +18,12 @@ import {
   useRef,
   useState,
 } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import type { GlyphName } from '../glyphs.js';
 import { useUiStrings } from '../strings.js';
 import { toneColors, useTheme, weight } from '../theme.js';
 import { Glyph } from './Glyph.js';
+import { Text } from './Text.js';
 
 export interface ToastOptions {
   title: string;
@@ -139,10 +140,7 @@ function ToastItem({
       accessibilityRole={tone === 'danger' ? 'alert' : 'summary'}
       accessibilityLiveRegion={tone === 'danger' ? 'assertive' : 'polite'}
       testID={id}
-      style={[
-        styles.toast,
-        { backgroundColor: colors.surfaceRaised, borderLeftColor: palette.solid },
-      ]}
+      style={[styles.toast, { backgroundColor: colors.surfaceRaised, borderColor: colors.border }]}
     >
       <Glyph name={TONE_GLYPHS[tone]} color={palette.text} size={fontSize.lg} />
       <View style={styles.text}>
@@ -192,10 +190,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[3],
-    paddingLeft: spacing[3],
-    borderRadius: radius.md,
-    borderLeftWidth: 4,
-    elevation: elevation[2].androidElevation,
+    paddingLeft: spacing[4],
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    elevation: elevation[3].androidElevation,
   },
   text: { flex: 1, paddingVertical: spacing[3], gap: spacing[1] },
   title: { fontSize: fontSize.md, fontWeight: weight(fontWeight.semibold) },

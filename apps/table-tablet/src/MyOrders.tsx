@@ -1,11 +1,11 @@
 import type { OrderView, StaffTile } from '@rp/contracts';
-import { fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
+import { elevation, fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
 import { formatRupees } from '@rp/domain';
 import { messageOf, Note, useDeviceSession, useLive, useT } from '@rp/mobile-shell';
 import { displayState } from '@rp/ordering';
-import { Button, PinPad, useTheme, useToast, weight } from '@rp/ui-native';
+import { Button, PinPad, Text, useTheme, useToast, weight } from '@rp/ui-native';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 /** Events after which the table's orders are read again: their own and the kitchen's moves. */
 const affectsOrders = (eventType: string) =>
@@ -204,7 +204,13 @@ function ApproveAtTable({ order, onDone }: { order: OrderView; onDone: () => voi
 const styles = StyleSheet.create({
   view: { gap: spacing[3] },
   total: { fontSize: fontSize.xl, fontWeight: weight(fontWeight.bold) },
-  order: { gap: spacing[2], padding: spacing[3], borderWidth: 1, borderRadius: radius.lg },
+  order: {
+    gap: spacing[2],
+    padding: spacing[4],
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    elevation: elevation[1].androidElevation,
+  },
   heading: { fontSize: fontSize.lg, fontWeight: weight(fontWeight.semibold) },
   waiting: { fontSize: fontSize.lg, fontWeight: weight(fontWeight.semibold) },
   line: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing[2] },

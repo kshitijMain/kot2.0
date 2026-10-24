@@ -17,6 +17,22 @@ describe('[NFR-L02] ICU message formatting', () => {
     expect(formatMessage(message, { count: 1200 })).toBe('1,200 tries left');
   });
 
+  it('chooses English plural branches where the runtime has no Intl.PluralRules (Hermes)', () => {
+    const original = Object.getOwnPropertyDescriptor(Intl, 'PluralRules');
+    Reflect.deleteProperty(Intl, 'PluralRules');
+    try {
+      const message = '{count, plural, =0 {No tries} one {# try} other {# tries}} left';
+      // A locale no other test formats a plural for, so nothing cached hides a missing fallback.
+      const options = { locale: 'en-AU' };
+      expect(formatMessage(message, { count: 0 }, options)).toBe('No tries left');
+      expect(formatMessage(message, { count: 1 }, options)).toBe('1 try left');
+      expect(formatMessage(message, { count: 2 }, options)).toBe('2 tries left');
+      expect(formatMessage(message, { count: 1.5 }, options)).toBe('1.5 tries left');
+    } finally {
+      if (original !== undefined) Object.defineProperty(Intl, 'PluralRules', original);
+    }
+  });
+
   it('selects by value, falling back to other, and keeps # inside a nested select', () => {
     const message =
       '{count, plural, one {{role, select, OWNER {# owner} other {# person}}} other {# people}}';

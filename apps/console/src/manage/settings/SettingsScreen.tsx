@@ -52,6 +52,8 @@ const CHOICES = new Set([
   'OFF',
   'WHATSAPP',
   'SMS',
+  'LIGHT',
+  'DARK',
 ] as const);
 type ChoiceKey = typeof CHOICES extends Set<infer K> ? K : never;
 

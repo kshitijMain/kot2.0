@@ -1,5 +1,5 @@
 import type { MenuSnapshot, OrderView } from '@rp/contracts';
-import { fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
+import { elevation, fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
 import type { Role } from '@rp/domain';
 import { type LiveData, messageOf, Note, useNow, useT } from '@rp/mobile-shell';
 import {
@@ -11,8 +11,8 @@ import {
   type UnavailableReason,
   unavailableReason,
 } from '@rp/ordering';
-import { Button, Glyph, StatusChip, toneColors, useTheme, weight } from '@rp/ui-native';
-import { StyleSheet, Text, View } from 'react-native';
+import { Button, Glyph, StatusChip, Text, toneColors, useTheme, weight } from '@rp/ui-native';
+import { StyleSheet, View } from 'react-native';
 import type { Ending } from './EndItemSheet';
 
 type SentLine = OrderView['items'][number];
@@ -279,7 +279,13 @@ export function SentOrders({
 const styles = StyleSheet.create({
   section: { gap: spacing[2] },
   heading: { fontSize: fontSize.lg, fontWeight: weight(fontWeight.semibold) },
-  order: { borderWidth: 1, borderRadius: radius.lg, padding: spacing[3], gap: spacing[2] },
+  order: {
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+    elevation: elevation[1].androidElevation,
+    gap: spacing[2],
+  },
   orderTitle: { fontSize: fontSize.md, fontWeight: weight(fontWeight.bold) },
   kot: {
     flexDirection: 'row',

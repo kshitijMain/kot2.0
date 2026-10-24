@@ -92,7 +92,7 @@ export async function tableTentsPdf(
     pageMargins: size === 'A5' ? [24, 28, 24, 20] : [20, 24, 20, 20],
     info: {
       title: `${branding.restaurantName} table QR codes`,
-      creator: 'Restaurant Operations Platform',
+      creator: 'Parossa',
       subject: `Generated ${stamp.generatedAt}`,
     },
     // The fold line of a tent.

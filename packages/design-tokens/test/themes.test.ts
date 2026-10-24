@@ -3,6 +3,7 @@ import {
   type ColorRoles,
   contrastRatio,
   DARK_THEMES,
+  KDS_THEMES,
   kdsFontSize,
   fontSize,
   relativeLuminance,
@@ -19,15 +20,17 @@ const AA_NON_TEXT = 3;
 const AAA_TEXT = 7;
 
 describe('[NFR-U01] [NFR-U02] themes', () => {
-  it('provides light, dark and KDS dark themes with the same roles', () => {
-    expect(THEME_NAMES).toEqual(['light', 'dark', 'kds']);
+  it('provides light, dark and the two kitchen themes with the same roles', () => {
+    expect(THEME_NAMES).toEqual(['light', 'dark', 'kds', 'kds-dark']);
     const roles = Object.keys(themes.light).sort();
     for (const theme of THEME_NAMES) expect(Object.keys(themes[theme]).sort()).toEqual(roles);
   });
 
-  it('marks dark and KDS as dark themes and makes their backgrounds actually dark', () => {
-    expect(DARK_THEMES).toEqual(['dark', 'kds']);
-    expect(relativeLuminance(themes.light.background)).toBeGreaterThan(0.8);
+  it('marks dark and KDS dark as dark themes and makes their backgrounds actually dark', () => {
+    expect(DARK_THEMES).toEqual(['dark', 'kds-dark']);
+    for (const theme of THEME_NAMES.filter((name) => !DARK_THEMES.includes(name))) {
+      expect(relativeLuminance(themes[theme].background)).toBeGreaterThan(0.8);
+    }
     for (const theme of DARK_THEMES) {
       expect(relativeLuminance(themes[theme].background)).toBeLessThan(0.05);
     }
@@ -68,17 +71,43 @@ describe.each(THEME_NAMES)('[NFR-U05] WCAG 2.2 AA contrast in the %s theme', (na
     expect(contrastRatio(solid, theme.background)).toBeGreaterThanOrEqual(AA_NON_TEXT);
   });
 
+  it('the saffron highlight carries readable text and saffron text stays readable', () => {
+    expect(contrastRatio(theme.onHighlight, theme.highlight)).toBeGreaterThanOrEqual(AA_TEXT);
+    expect(contrastRatio(theme.highlightText, theme.highlightSubtle)).toBeGreaterThanOrEqual(
+      AA_TEXT,
+    );
+    for (const surface of SURFACES) {
+      expect(contrastRatio(theme.highlightText, theme[surface])).toBeGreaterThanOrEqual(AA_TEXT);
+    }
+  });
+
+  it('keeps the status tones apart from the brand colours', () => {
+    for (const tone of ['info', 'success', 'warning', 'danger'] as const) {
+      expect(theme[tone]).not.toBe(theme.primary);
+      expect(theme[tone]).not.toBe(theme.highlight);
+      expect(theme[`${tone}Text`]).not.toBe(theme.highlightText);
+    }
+  });
+
   it.each(SURFACES)('control borders and the focus ring stand out on %s', (surface) => {
     expect(contrastRatio(theme.borderStrong, theme[surface])).toBeGreaterThanOrEqual(AA_NON_TEXT);
     expect(contrastRatio(theme.focusRing, theme[surface])).toBeGreaterThanOrEqual(AA_NON_TEXT);
   });
 });
 
-describe('[KDS-011] kitchen display theme', () => {
-  it('meets AAA contrast for text so tickets read from 2 m', () => {
+describe('[KDS-011] kitchen display themes', () => {
+  it('has a light default and a dark alternative', () => {
+    expect(KDS_THEMES).toEqual(['kds', 'kds-dark']);
+    expect(DARK_THEMES).not.toContain('kds');
+    expect(DARK_THEMES).toContain('kds-dark');
+  });
+
+  it.each(KDS_THEMES)('meets AAA contrast for text in %s so tickets read from 2 m', (name) => {
     for (const surface of SURFACES) {
-      expect(contrastRatio(themes.kds.text, themes.kds[surface])).toBeGreaterThanOrEqual(AAA_TEXT);
-      expect(contrastRatio(themes.kds.textMuted, themes.kds[surface])).toBeGreaterThanOrEqual(
+      expect(contrastRatio(themes[name].text, themes[name][surface])).toBeGreaterThanOrEqual(
+        AAA_TEXT,
+      );
+      expect(contrastRatio(themes[name].textMuted, themes[name][surface])).toBeGreaterThanOrEqual(
         AAA_TEXT,
       );
     }

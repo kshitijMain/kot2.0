@@ -1,6 +1,6 @@
 import { newIdempotencyKey, uuidV4 } from '@rp/api-client';
 import type { MenuItem } from '@rp/contracts';
-import { fontSize, fontWeight, spacing } from '@rp/design-tokens';
+import { elevation, fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
 import {
   ItemSheet,
   messageOf,
@@ -20,9 +20,9 @@ import {
   needsOptions,
   requestLines,
 } from '@rp/ordering';
-import { Button, StatusChip, TextField, useTheme, useToast, weight } from '@rp/ui-native';
+import { Button, StatusChip, Text, TextField, useTheme, useToast, weight } from '@rp/ui-native';
 import { useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { CartList } from './CartList';
 import { MenuBrowser } from './MenuBrowser';
 
@@ -216,7 +216,13 @@ export function TakeawayScreen({ onBack }: { onBack: () => void }) {
 const styles = StyleSheet.create({
   form: { gap: spacing[2] },
   heading: { fontSize: fontSize.lg, fontWeight: weight(fontWeight.semibold) },
-  order: { borderWidth: 1, borderRadius: 8, padding: spacing[3], gap: spacing[1] },
+  order: {
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+    elevation: elevation[1].androidElevation,
+    gap: spacing[1],
+  },
   title: { fontSize: fontSize.md, fontWeight: weight(fontWeight.semibold) },
   line: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
 });

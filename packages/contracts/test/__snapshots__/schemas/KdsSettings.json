@@ -9,13 +9,15 @@
         "exclusiveMinimum": 0,
         "maximum": 9007199254740991
       },
-      "soundVolumePercent": { "type": "integer", "minimum": 0, "maximum": 100 }
+      "soundVolumePercent": { "type": "integer", "minimum": 0, "maximum": 100 },
+      "theme": { "type": "string", "enum": ["LIGHT", "DARK"] }
     },
     "required": [
       "ageAmberMinutes",
       "ageRedMinutes",
       "readyNotCollectedMinutes",
-      "soundVolumePercent"
+      "soundVolumePercent",
+      "theme"
     ]
   },
   "output": {
@@ -28,13 +30,15 @@
         "exclusiveMinimum": 0,
         "maximum": 9007199254740991
       },
-      "soundVolumePercent": { "type": "integer", "minimum": 0, "maximum": 100 }
+      "soundVolumePercent": { "type": "integer", "minimum": 0, "maximum": 100 },
+      "theme": { "type": "string", "enum": ["LIGHT", "DARK"] }
     },
     "required": [
       "ageAmberMinutes",
       "ageRedMinutes",
       "readyNotCollectedMinutes",
-      "soundVolumePercent"
+      "soundVolumePercent",
+      "theme"
     ],
     "additionalProperties": false
   }

@@ -60,7 +60,7 @@ export function noticesText(notices: readonly PackageNotice[]): string {
     ].join('\n'),
   );
   return [
-    'Third-party software in the Restaurant Platform server',
+    'Third-party software in the Parossa server',
     '',
     'The server uses these packages, each under its own licence. Node.js, PostgreSQL and WinSW',
     'carry their licences in their own folders.',

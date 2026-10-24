@@ -4,6 +4,8 @@
   font-family: var(--rp-font-sans);
   font-size: var(--rp-font-size-md);
   line-height: var(--rp-line-height-normal);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 :where([class^='rp-'], [class*=' rp-']),

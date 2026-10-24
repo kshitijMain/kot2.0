@@ -76,7 +76,7 @@ export function serverServiceXml(installation: InstallationFile, installationFil
   const { serverDir } = installationPaths(installation);
   return definition(installation, installationFile, {
     id: SERVICE_NAMES.server,
-    name: 'Restaurant Platform server',
+    name: 'Parossa server',
     description:
       'The restaurant server for the POS, kitchen screens, waiter phones, table tablets and pagers.',
     script: join(serverDir, 'dist', 'service', 'service-host-main.js'),
@@ -92,8 +92,8 @@ export function watchdogServiceXml(
   const { serverDir } = installationPaths(installation);
   return definition(installation, installationFile, {
     id: SERVICE_NAMES.watchdog,
-    name: 'Restaurant Platform watchdog',
-    description: 'Keeps the Restaurant Platform database and server services running.',
+    name: 'Parossa watchdog',
+    description: 'Keeps the Parossa database and server services running.',
     script: join(serverDir, 'dist', 'service', 'watchdog-main.js'),
   });
 }

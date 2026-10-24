@@ -70,3 +70,25 @@ describe('[SEC-010] [MOBILE-I3] the app’s data stays on the device', () => {
     }
   });
 });
+
+describe('[NFR-U01] the app’s brand', () => {
+  it('is called Parossa Table, on the off-white splash, with Inter built in', () => {
+    const config = configFor({ APP_ENV: 'production', EAS_PROJECT_ID: undefined });
+    expect(config.name).toBe('Parossa Table');
+    expect(config.android?.adaptiveIcon?.backgroundColor).toBe('#FAF7F2');
+    const plugins = config.plugins ?? [];
+    const options = (name: string): unknown =>
+      plugins.find((plugin) => Array.isArray(plugin) && plugin[0] === name)?.[1];
+    expect(options('expo-splash-screen')).toMatchObject({
+      image: './assets/splash-icon.png',
+      backgroundColor: '#FAF7F2',
+    });
+    const fonts = options('expo-font') as {
+      android: { fonts: { fontFamily: string; fontDefinitions: { path: string }[] }[] };
+    };
+    expect(fonts.android.fonts[0]?.fontFamily).toBe('Inter');
+    for (const font of fonts.android.fonts[0]?.fontDefinitions ?? []) {
+      expect(existsSync(join(projectRoot, font.path))).toBe(true);
+    }
+  });
+});

@@ -12,9 +12,9 @@ import {
   useT,
 } from '@rp/mobile-shell';
 import { estimateCart, type NewCartLine, requestLines } from '@rp/ordering';
-import { Button, Money, QuantityStepper, useTheme, useToast, weight } from '@rp/ui-native';
+import { Button, Money, QuantityStepper, Text, useTheme, useToast, weight } from '@rp/ui-native';
 import { useRef, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import type { Cart } from './use-cart';
 
 /**

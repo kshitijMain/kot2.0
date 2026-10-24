@@ -1,9 +1,9 @@
-import { fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
+import { elevation, fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
 import { pagerWarning } from '@rp/domain';
 import { Note, useDeviceSession, useLive, useT } from '@rp/mobile-shell';
-import { Glyph, toneColors, useTheme, weight } from '@rp/ui-native';
+import { Glyph, Text, toneColors, useTheme, weight } from '@rp/ui-native';
 import { useEffect } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 /** Battery levels are not announced (only a change to low or offline is), so read them again. */
 export const PAGER_REFRESH_MS = 60_000;
@@ -67,7 +67,13 @@ export function PagerCard() {
 }
 
 const styles = StyleSheet.create({
-  card: { borderWidth: 1, borderRadius: radius.md, padding: spacing[3], gap: spacing[1] },
+  card: {
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+    elevation: elevation[1].androidElevation,
+    gap: spacing[1],
+  },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
   heading: { fontSize: fontSize.md, fontWeight: weight(fontWeight.semibold) },
 });

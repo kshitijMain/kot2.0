@@ -189,8 +189,9 @@ Do not "fix" these.
 - State-machine shortcuts (SENT → READY in one tap, READY → SERVED) are accepted (ADR-0006).
 - The KDS is a browser mode, not an Electron app (ADR-0004). A kitchen screen in station mode acts
   as the device, with no person (decision 74).
-- Plain CSS with prefixed classes, not Tailwind or CSS Modules; system fonts only; a built-in icon
-  set instead of Lucide (ADR-0009). All of this keeps screens working offline.
+- Plain CSS with prefixed classes, not Tailwind or CSS Modules; Inter bundled with the apps, never
+  downloaded (ADR-0022); a built-in icon set instead of Lucide (ADR-0009). All of this keeps
+  screens working offline.
 - Packages are consumed from `dist/`. After changing one (notably `@rp/i18n`), rebuild it before
   typechecking its consumers (ADR-0001).
 - The console's router runs without transitions (`useTransitions={false}`) so quick filter changes

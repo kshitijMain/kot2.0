@@ -1,4 +1,4 @@
-import { fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
+import { elevation, fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
 import { multiply } from '@rp/domain';
 import { INSTRUCTIONS_MAX, useT } from '@rp/mobile-shell';
 import {
@@ -9,8 +9,8 @@ import {
   removeLine,
   updateLine,
 } from '@rp/ordering';
-import { Button, Money, QuantityStepper, TextField, useTheme, weight } from '@rp/ui-native';
-import { StyleSheet, Text, View } from 'react-native';
+import { Button, Money, QuantityStepper, Text, TextField, useTheme, weight } from '@rp/ui-native';
+import { StyleSheet, View } from 'react-native';
 
 /**
  * The new items of a table before they are sent (WTR-003): quantity, a note for the kitchen and
@@ -119,7 +119,13 @@ export function CartList({
 
 const styles = StyleSheet.create({
   list: { gap: spacing[3] },
-  line: { borderWidth: 1, borderRadius: radius.lg, padding: spacing[3], gap: spacing[2] },
+  line: {
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+    elevation: elevation[1].androidElevation,
+    gap: spacing[2],
+  },
   head: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing[2] },
   name: { flex: 1, fontSize: fontSize.md, fontWeight: weight(fontWeight.semibold) },
   controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },

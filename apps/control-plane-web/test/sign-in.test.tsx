@@ -17,7 +17,7 @@ describe('signing in', () => {
       return { token: 'new-token', ...me };
     });
     const { user, storage, container } = renderApp({ cp });
-    await screen.findByRole('heading', { name: 'Vendor Control Plane' });
+    await screen.findByRole('heading', { name: 'Parossa Control Plane' });
     await expectNoAxeViolations(container);
     const submit = screen.getByRole('button', { name: 'Sign in' });
     await user.type(screen.getByLabelText('Email'), 'asha@vendor.example');

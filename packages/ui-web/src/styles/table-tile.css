@@ -9,16 +9,23 @@
   gap: var(--rp-space-1);
   min-width: calc(var(--rp-touch-target) * 3);
   min-height: calc(var(--rp-touch-target) * 2);
-  padding: var(--rp-space-3) var(--rp-space-4);
+  padding: var(--rp-space-4) var(--rp-space-4) var(--rp-space-3);
   border: 1px solid var(--rp-color-border);
-  border-inline-start: 6px solid var(--rp-tone-solid);
   border-radius: var(--rp-radius-lg);
   background: var(--rp-color-surface);
   color: var(--rp-color-text);
+  /* The tone shows as a slim bar on the top edge; the state is also in words with an icon. */
+  box-shadow:
+    inset 0 4px 0 var(--rp-tone-solid),
+    var(--rp-elevation-1);
   font: inherit;
   text-align: start;
   cursor: pointer;
   touch-action: manipulation;
+  transition:
+    background-color var(--rp-duration-fast) var(--rp-easing-standard),
+    box-shadow var(--rp-duration-fast) var(--rp-easing-standard),
+    transform var(--rp-duration-fast) var(--rp-easing-standard);
 }
 
 .rp-table-tile[data-tone='info'] {
@@ -41,11 +48,22 @@
 
 .rp-table-tile:hover:not(:disabled) {
   background: var(--rp-tone-subtle);
+  box-shadow:
+    inset 0 4px 0 var(--rp-tone-solid),
+    var(--rp-elevation-2);
 }
 
+.rp-table-tile:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+/* Selected: the brand's saffron, with a ring dark enough to stand out (WCAG 1.4.11). */
 .rp-table-tile[aria-pressed='true'] {
-  border-color: var(--rp-tone-solid);
-  box-shadow: 0 0 0 2px var(--rp-tone-solid);
+  border-color: var(--rp-color-highlight-text);
+  background: var(--rp-color-highlight-subtle);
+  box-shadow:
+    inset 0 4px 0 var(--rp-tone-solid),
+    0 0 0 2px var(--rp-color-highlight-text);
 }
 
 .rp-table-tile:disabled {
@@ -55,7 +73,8 @@
 
 .rp-table-tile__label {
   font-size: var(--rp-font-size-xl);
-  font-weight: var(--rp-font-weight-semibold);
+  font-weight: var(--rp-font-weight-bold);
+  letter-spacing: -0.01em;
 }
 
 .rp-table-tile__state,

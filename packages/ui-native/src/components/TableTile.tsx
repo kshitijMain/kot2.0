@@ -1,10 +1,19 @@
-import { fontSize, fontWeight, radius, spacing, touchTarget, type Tone } from '@rp/design-tokens';
+import {
+  elevation,
+  fontSize,
+  fontWeight,
+  radius,
+  spacing,
+  touchTarget,
+  type Tone,
+} from '@rp/design-tokens';
 import { formatRupees, type Paise, type TableState } from '@rp/domain';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import type { GlyphName } from '../glyphs.js';
 import { toneColors, useTheme, weight } from '../theme.js';
 import { Glyph } from './Glyph.js';
 import { Money } from './Money.js';
+import { Text } from './Text.js';
 
 /**
  * How each table state looks on every floor view, the same tones as `@rp/ui-web` TableTile: a tone
@@ -86,7 +95,8 @@ export function TableTile({
   const frame = {
     backgroundColor: colors.surface,
     borderColor: colors.border,
-    borderLeftColor: tone.solid,
+    // The tone shows as a bar on the top edge; the state is also in words with a symbol.
+    borderTopColor: tone.solid,
   };
   // Without an action it is a summary (e.g. at the top of the table's sheet), not a button.
   if (onPress === undefined) {
@@ -107,7 +117,11 @@ export function TableTile({
       accessibilityLabel={spoken.join(', ')}
       onPress={onPress}
       testID={testID}
-      style={({ pressed }) => [styles.tile, frame, { opacity: pressed ? 0.8 : 1 }]}
+      style={({ pressed }) => [
+        styles.tile,
+        frame,
+        pressed && { backgroundColor: tone.subtle, transform: [{ scale: 0.98 }] },
+      ]}
     >
       {content}
     </Pressable>
@@ -118,13 +132,14 @@ const styles = StyleSheet.create({
   tile: {
     minHeight: touchTarget.min,
     borderWidth: 1,
-    borderLeftWidth: 4,
-    borderRadius: radius.md,
-    padding: spacing[3],
-    gap: spacing[1],
+    borderTopWidth: 4,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+    gap: spacing[2],
+    elevation: elevation[1].androidElevation,
   },
   top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  label: { fontSize: fontSize.lg, fontWeight: weight(fontWeight.bold) },
+  label: { fontSize: fontSize.xl, fontWeight: weight(fontWeight.bold) },
   state: {
     flexDirection: 'row',
     alignItems: 'center',

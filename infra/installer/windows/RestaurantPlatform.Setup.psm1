@@ -723,12 +723,12 @@ function Get-RPFirewallRuleSpec {
     }
     $https = $common.Clone()
     $https.Name = 'RP-Server-HTTPS'
-    $https.DisplayName = 'Restaurant Platform server (HTTPS)'
+    $https.DisplayName = 'Parossa server (HTTPS)'
     $https.Description = 'The POS, kitchen screens, waiter phones and table tablets reach the server here.'
     $https.LocalPort = [string]$Port
     $mqtt = $common.Clone()
     $mqtt.Name = 'RP-Server-MQTT'
-    $mqtt.DisplayName = 'Restaurant Platform pagers (MQTT over TLS)'
+    $mqtt.DisplayName = 'Parossa pagers (MQTT over TLS)'
     $mqtt.Description = 'The waiters'' wrist pagers reach the server here.'
     $mqtt.LocalPort = [string]$MqttPort
     @($https, $mqtt)

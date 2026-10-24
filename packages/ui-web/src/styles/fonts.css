@@ -1,0 +1,12 @@
+/*
+ * Inter 4.1 (SIL Open Font License 1.1, fonts/LICENSE.txt), bundled so every screen renders the
+ * same offline (NFR-A01, ADR-0022). One variable file covers every weight; until it loads, text
+ * shows in the system face (font-display: swap), so nothing waits for it.
+ */
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('./fonts/InterVariable.woff2') format('woff2');
+}

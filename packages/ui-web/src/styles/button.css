@@ -4,6 +4,7 @@
   --rp-button-bg-active: var(--rp-color-primary-active);
   --rp-button-fg: var(--rp-color-on-primary);
   --rp-button-border: transparent;
+  --rp-button-shadow: var(--rp-elevation-1);
 
   display: inline-flex;
   align-items: center;
@@ -12,13 +13,15 @@
   min-width: var(--rp-touch-target);
   min-height: var(--rp-touch-target);
   padding: 0 var(--rp-space-5);
-  border: 2px solid var(--rp-button-border);
+  border: 1px solid var(--rp-button-border);
   border-radius: var(--rp-radius-md);
   background: var(--rp-button-bg);
   color: var(--rp-button-fg);
+  box-shadow: var(--rp-button-shadow, none);
   font: inherit;
   font-weight: var(--rp-font-weight-semibold);
   line-height: var(--rp-line-height-tight);
+  letter-spacing: -0.005em;
   text-align: center;
   cursor: pointer;
   user-select: none;
@@ -26,6 +29,8 @@
   -webkit-tap-highlight-color: transparent;
   transition:
     background-color var(--rp-duration-fast) var(--rp-easing-standard),
+    border-color var(--rp-duration-fast) var(--rp-easing-standard),
+    box-shadow var(--rp-duration-fast) var(--rp-easing-standard),
     transform var(--rp-duration-fast) var(--rp-easing-standard);
 }
 
@@ -39,8 +44,9 @@
 }
 
 .rp-button:disabled {
+  box-shadow: none;
   cursor: not-allowed;
-  opacity: 0.55;
+  opacity: 0.5;
 }
 
 .rp-button[aria-busy='true'] {
@@ -67,6 +73,7 @@
 }
 
 .rp-button[data-variant='ghost'] {
+  --rp-button-shadow: none;
   --rp-button-bg: transparent;
   --rp-button-bg-hover: var(--rp-color-surface-sunken);
   --rp-button-bg-active: var(--rp-color-neutral-subtle);

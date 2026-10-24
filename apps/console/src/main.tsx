@@ -62,7 +62,7 @@ createRoot(root).render(
       transition has nothing to wait for.
     */}
     <BrowserRouter useTransitions={false}>
-      <ThemeRoot className="console-root">
+      <ThemeRoot theme="light" className="console-root">
         <App controller={controller} translator={translator} />
       </ThemeRoot>
     </BrowserRouter>

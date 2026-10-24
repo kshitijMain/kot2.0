@@ -2,8 +2,8 @@ import type { MenuItem } from '@rp/contracts';
 import { fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
 import { useSessionState, useT } from '@rp/mobile-shell';
 import { displayPrice } from '@rp/ordering';
-import { Money, toneColors, useTheme, weight } from '@rp/ui-native';
-import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Money, Text, toneColors, useTheme, weight } from '@rp/ui-native';
+import { Image, Pressable, StyleSheet, View } from 'react-native';
 import { photoSource } from './branding';
 
 const FOOD_TONE = { VEG: 'success', NON_VEG: 'danger', EGG: 'warning' } as const;

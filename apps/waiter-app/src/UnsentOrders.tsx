@@ -1,10 +1,10 @@
-import { fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
+import { elevation, fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
 import type { Translator } from '@rp/i18n';
 import type { OrderDraft, OutboxEntry } from '@rp/mobile-core';
 import { messageOf, Note, useDeviceSession, useT, useUnsentOrders } from '@rp/mobile-shell';
-import { Button, Sheet, toneColors, useTheme, weight } from '@rp/ui-native';
+import { Button, Sheet, Text, toneColors, useTheme, weight } from '@rp/ui-native';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 type Draft = OutboxEntry<OrderDraft>;
 
@@ -203,7 +203,13 @@ export function UnsentHome({ onOpen }: { onOpen: (sessionId: string) => void }) 
 const styles = StyleSheet.create({
   section: { gap: spacing[2] },
   heading: { fontSize: fontSize.lg, fontWeight: weight(fontWeight.semibold) },
-  draft: { borderWidth: 1, borderRadius: radius.lg, padding: spacing[3], gap: spacing[2] },
+  draft: {
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+    elevation: elevation[1].androidElevation,
+    gap: spacing[2],
+  },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
   grow: { flex: 1 },
 });

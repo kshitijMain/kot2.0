@@ -357,9 +357,11 @@ describe('[TAB-001] [TAB-003] [TAB-015] the tablet at its table', () => {
     return context;
   }
 
-  it('[TAB-003] waits for guests with the restaurant and a pinned dish, locked as a kiosk', async () => {
+  it('[TAB-003] [NFR-U02] waits for guests with the restaurant and a pinned dish, locked as a kiosk', async () => {
     const { kiosk, server } = await paired(false);
     expect(await screen.findByText(translator('mobile.tablet.waitToBeSeated'))).toBeOnTheScreen();
+    // The restaurant's brand on a diner's screen; Parossa only as a quiet line (ADR-0022).
+    expect(screen.getByTestId('powered-by')).toHaveTextContent(translator('app.poweredBy'));
     expect(await screen.findByTestId('promotion')).toBeOnTheScreen();
     expect(screen.getByText(translator('mobile.tablet.todaysSpecial'))).toBeOnTheScreen();
     expect(kiosk.calls).toEqual(expect.arrayContaining(['screen true', 'enter']));
@@ -445,6 +447,7 @@ describe('[TAB-001] [TAB-003] [TAB-015] the tablet at its table', () => {
     await online(context.sockets);
     expect(await screen.findByText(translator('mobile.tablet.unbound'))).toBeOnTheScreen();
     expect(screen.getByText(translator('mobile.tablet.unboundHint'))).toBeOnTheScreen();
+    expect(screen.queryByTestId('powered-by')).toBeNull();
   });
 
   it('[TAB-003] uses the restaurant’s colour with text that reads on it', () => {

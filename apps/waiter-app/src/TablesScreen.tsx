@@ -11,9 +11,17 @@ import {
   useT,
 } from '@rp/mobile-shell';
 import { affectsFloor, floorSections, myTableIds, tileAlert, tileDetails } from '@rp/ordering';
-import { Button, SegmentedControl, TableTile, useTheme, useToast, weight } from '@rp/ui-native';
+import {
+  Button,
+  SegmentedControl,
+  TableTile,
+  Text,
+  useTheme,
+  useToast,
+  weight,
+} from '@rp/ui-native';
 import { useCallback, useMemo, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { NotificationsOff } from './notifications';
 import { OpenTableSheet } from './OpenTableSheet';
 import { BreakCard } from './BreakCard';

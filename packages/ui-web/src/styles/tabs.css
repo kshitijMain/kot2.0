@@ -30,14 +30,13 @@
 
 .rp-tabs__tab:hover:not(:disabled) {
   color: var(--rp-color-text);
-  background: var(--rp-color-surface-sunken);
 }
 
 /* Selected is shown by weight and the underline, not colour alone. */
 .rp-tabs__tab[aria-selected='true'] {
   border-bottom-color: var(--rp-color-primary);
-  color: var(--rp-color-text);
-  font-weight: var(--rp-font-weight-bold);
+  color: var(--rp-color-primary);
+  font-weight: var(--rp-font-weight-semibold);
 }
 
 .rp-tabs__tab:disabled {

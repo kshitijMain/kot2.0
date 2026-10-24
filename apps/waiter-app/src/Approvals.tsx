@@ -1,5 +1,5 @@
 import type { PendingApprovalsResponse } from '@rp/contracts';
-import { fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
+import { elevation, fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
 import { formatRupees } from '@rp/domain';
 import type { Translator } from '@rp/i18n';
 import { messageOf, Note, useDeviceSession, useLive, useNow, useT } from '@rp/mobile-shell';
@@ -16,6 +16,7 @@ import {
   Button,
   ChoiceGroup,
   QuantityStepper,
+  Text,
   TextField,
   toneColors,
   useTheme,
@@ -23,7 +24,7 @@ import {
   weight,
 } from '@rp/ui-native';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 type Entry = PendingApprovalsResponse['orders'][number];
 type Mode =
@@ -291,9 +292,21 @@ function Approval({ entry, now, onDone }: { entry: Entry; now: number; onDone: (
 }
 
 const styles = StyleSheet.create({
-  card: { gap: spacing[2], padding: spacing[3], borderWidth: 1, borderRadius: radius.lg },
+  card: {
+    gap: spacing[2],
+    padding: spacing[4],
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    elevation: elevation[1].androidElevation,
+  },
   heading: { fontSize: fontSize.lg, fontWeight: weight(fontWeight.semibold) },
-  row: { gap: spacing[2], padding: spacing[3], borderWidth: 1, borderRadius: radius.md },
+  row: {
+    gap: spacing[2],
+    padding: spacing[4],
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    elevation: elevation[1].androidElevation,
+  },
   title: { fontSize: fontSize.md, fontWeight: weight(fontWeight.semibold) },
   line: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
   actions: { flexDirection: 'row', gap: spacing[2] },

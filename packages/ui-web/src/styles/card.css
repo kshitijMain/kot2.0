@@ -5,10 +5,12 @@
   border-radius: var(--rp-radius-lg);
   background: var(--rp-color-surface);
   color: var(--rp-color-text);
+  box-shadow: var(--rp-elevation-1);
 }
 
 .rp-card[data-variant='raised'] {
-  box-shadow: var(--rp-elevation-1);
+  border-color: transparent;
+  box-shadow: var(--rp-elevation-2);
 }
 
 .rp-card__header {
@@ -16,7 +18,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--rp-space-3);
-  padding: var(--rp-space-4) var(--rp-space-5) 0;
+  padding: var(--rp-space-5) var(--rp-space-6) 0;
 }
 
 .rp-card__title {
@@ -32,13 +34,13 @@
 
 .rp-card__body {
   flex: 1;
-  padding: var(--rp-space-4) var(--rp-space-5);
+  padding: var(--rp-space-4) var(--rp-space-6) var(--rp-space-5);
 }
 
 .rp-card__footer {
   display: flex;
   justify-content: flex-end;
   gap: var(--rp-space-3);
-  padding: var(--rp-space-3) var(--rp-space-5);
+  padding: var(--rp-space-4) var(--rp-space-6);
   border-top: 1px solid var(--rp-color-border);
 }

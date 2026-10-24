@@ -1,12 +1,12 @@
 import type { ServiceRequestView } from '@rp/contracts';
-import { fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
+import { elevation, fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
 import { SERVICE_REQUEST_ALERTS } from '@rp/domain';
 import type { Translator } from '@rp/i18n';
 import { messageOf, Note, useDeviceSession, useLive, useNow, useT } from '@rp/mobile-shell';
 import { alertAge } from '@rp/ordering';
-import { Button, toneColors, useTheme, weight } from '@rp/ui-native';
+import { Button, Text, toneColors, useTheme, weight } from '@rp/ui-native';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 /** Ages ("4 min ago") move on every half minute. */
 const AGE_TICK_MS = 30_000;
@@ -161,9 +161,21 @@ export function ServiceRequests({ show }: { show?: (request: ServiceRequestView)
 }
 
 const styles = StyleSheet.create({
-  card: { borderWidth: 1, borderRadius: radius.lg, padding: spacing[3], gap: spacing[2] },
+  card: {
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+    elevation: elevation[1].androidElevation,
+    gap: spacing[2],
+  },
   heading: { fontSize: fontSize.lg, fontWeight: weight(fontWeight.semibold) },
-  row: { borderWidth: 1, borderRadius: radius.md, padding: spacing[3], gap: spacing[1] },
+  row: {
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+    elevation: elevation[1].androidElevation,
+    gap: spacing[1],
+  },
   title: { fontSize: fontSize.md, fontWeight: weight(fontWeight.bold) },
   facts: { fontSize: fontSize.sm },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2], marginTop: spacing[1] },

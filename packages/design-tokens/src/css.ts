@@ -20,7 +20,14 @@ import {
   touchTarget,
   zIndex,
 } from './scales.js';
-import { type ColorRoles, DARK_THEMES, THEME_NAMES, type ThemeName, themes } from './themes.js';
+import {
+  type ColorRoles,
+  DARK_THEMES,
+  KDS_THEMES,
+  THEME_NAMES,
+  type ThemeName,
+  themes,
+} from './themes.js';
 
 export type CssVariables = Readonly<Record<`--rp-${string}`, string>>;
 
@@ -89,15 +96,15 @@ export function staticVariables(): CssVariables {
     result[cssVarName('breakpoint', key)] = `${String(value)}px`;
   for (const [key, value] of Object.entries(touchTarget))
     result[cssVarName('touch', key)] = `${String(value)}px`;
-  // The size interactive components actually use; the KDS theme raises it.
+  // The size interactive components actually use; the kitchen themes raise it.
   result[cssVarName('touch', 'target')] = `${String(touchTarget.min)}px`;
   return result;
 }
 
-/** Everything a theme sets: its colours plus the KDS density overrides. */
+/** Everything a theme sets: its colours plus, for both kitchen themes, the KDS density overrides. */
 export function themeVariables(theme: ThemeName): CssVariables {
   const result: Record<string, string> = { ...colorVariables(theme) };
-  if (theme === 'kds') {
+  if (KDS_THEMES.includes(theme)) {
     Object.assign(result, fontSizeVariables(kdsFontSize));
     result[cssVarName('touch', 'target')] = `${String(touchTarget.kds)}px`;
   }
@@ -137,7 +144,7 @@ function colorScheme(theme: ThemeName): string {
 
 /**
  * The complete token stylesheet, inside the `rp.tokens` cascade layer so app styles win without
- * specificity fights. Themes are chosen with `data-theme="light|dark|kds"` on any element; with no
+ * specificity fights. Themes are chosen with `data-theme="light|dark|kds|kds-dark"` on any element; with no
  * `data-theme`, the root follows the operating system's light/dark preference.
  */
 export function buildTokensCss(): string {

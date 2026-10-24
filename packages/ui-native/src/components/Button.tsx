@@ -1,14 +1,14 @@
-import { fontSize, fontWeight, radius, spacing, touchTarget } from '@rp/design-tokens';
+import { elevation, fontSize, fontWeight, radius, spacing, touchTarget } from '@rp/design-tokens';
 import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
   type StyleProp,
   StyleSheet,
-  Text,
   type ViewStyle,
 } from 'react-native';
 import { useTheme, weight } from '../theme.js';
+import { Text } from './Text.js';
 
 export const BUTTON_VARIANTS = ['primary', 'secondary', 'ghost', 'danger', 'accent'] as const;
 export type ButtonVariant = (typeof BUTTON_VARIANTS)[number];
@@ -52,12 +52,38 @@ export function Button({
   const { colors } = useTheme();
   const inactive = disabled || loading;
   const palette = {
-    primary: { background: colors.primary, text: colors.onPrimary, border: colors.primary },
-    accent: { background: colors.accent, text: colors.onAccent, border: colors.accent },
-    danger: { background: colors.danger, text: colors.onDanger, border: colors.danger },
-    secondary: { background: colors.surface, text: colors.text, border: colors.borderStrong },
-    ghost: { background: 'transparent', text: colors.primary, border: 'transparent' },
+    primary: {
+      background: colors.primary,
+      pressed: colors.primaryActive,
+      text: colors.onPrimary,
+      border: colors.primary,
+    },
+    accent: {
+      background: colors.accent,
+      pressed: colors.accent,
+      text: colors.onAccent,
+      border: colors.accent,
+    },
+    danger: {
+      background: colors.danger,
+      pressed: colors.dangerText,
+      text: colors.onDanger,
+      border: colors.danger,
+    },
+    secondary: {
+      background: colors.surface,
+      pressed: colors.surfaceSunken,
+      text: colors.text,
+      border: colors.borderStrong,
+    },
+    ghost: {
+      background: 'transparent',
+      pressed: colors.surfaceSunken,
+      text: colors.primary,
+      border: 'transparent',
+    },
   }[variant];
+  const raised = variant !== 'ghost' && !inactive;
   return (
     <Pressable
       accessibilityRole="button"
@@ -74,9 +100,11 @@ export function Button({
         styles.base,
         {
           minHeight: size === 'lg' ? touchTarget.comfortable : touchTarget.min,
-          backgroundColor: palette.background,
+          backgroundColor: pressed ? palette.pressed : palette.background,
           borderColor: palette.border,
-          opacity: inactive ? 0.55 : pressed ? 0.85 : 1,
+          opacity: inactive ? 0.5 : 1,
+          elevation: raised && !pressed ? elevation[1].androidElevation : 0,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
         },
         fullWidth && styles.full,
         style,
@@ -101,7 +129,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: spacing[2],
-    paddingHorizontal: spacing[4],
+    paddingHorizontal: spacing[5],
     borderRadius: radius.md,
     borderWidth: 1,
   },

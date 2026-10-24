@@ -1,6 +1,6 @@
 # ADR-0009: Web styling approach and component workbench
 
-Status: Accepted
+Status: Accepted; amended by ADR-0022 (Inter bundled instead of system fonts only; the kitchen display light by default)
 Date: 2026-09-25
 Work package: P0-13
 Requirements: NFR-U01, NFR-U02, NFR-U03, NFR-U05, KDS-011, AUTH-004, NFR-A01, NFR-P07 (tap feedback ≤ 100 ms)

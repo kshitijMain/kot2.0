@@ -9,9 +9,9 @@ import { fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
 import { formatRupees } from '@rp/domain';
 import type { SuggestionTracker } from '@rp/mobile-core';
 import { describeRecommendation, displayPrice } from '@rp/ordering';
-import { Money, useTheme, weight } from '@rp/ui-native';
+import { Money, Text, useTheme, weight } from '@rp/ui-native';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useSessionState, useT } from './context.js';
 
 /** Where a suggestion came from, as the cart line and the order carry it (REC-008). */

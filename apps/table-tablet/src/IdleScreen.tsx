@@ -1,9 +1,9 @@
 import type { MenuSnapshot, RestaurantProfile, TabletTableView } from '@rp/contracts';
 import { fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
 import { Screen, useSessionState, useT } from '@rp/mobile-shell';
-import { Money, useTheme, weight } from '@rp/ui-native';
+import { Money, Text, useTheme, weight } from '@rp/ui-native';
 import { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, View } from 'react-native';
 import { photoSource } from './branding';
 
 const ROTATE_MS = 8_000;

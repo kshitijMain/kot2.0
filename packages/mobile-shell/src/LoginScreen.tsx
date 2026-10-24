@@ -38,7 +38,7 @@ export function LoginScreen({ roles }: { roles?: readonly StaffTile['role'][] })
 
   if (person !== null) {
     return (
-      <Screen title={t('login.pinFor', { name: person.displayName })}>
+      <Screen title={t('login.pinFor', { name: person.displayName })} brand>
         <PinPad
           label={t('login.pinFor', { name: person.displayName })}
           onComplete={signIn}
@@ -66,7 +66,7 @@ export function LoginScreen({ roles }: { roles?: readonly StaffTile['role'][] })
         : null;
 
   return (
-    <Screen title={t('mobile.staffTitle')}>
+    <Screen title={t('mobile.staffTitle')} brand>
       {/* A new version of the app on the restaurant PC, installed before anyone signs in (P7-04e2). */}
       <ApkOffer />
       {noticeText !== null && <Note tone="danger">{noticeText}</Note>}

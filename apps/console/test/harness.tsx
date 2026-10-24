@@ -52,6 +52,7 @@ export const EMPTY_KDS = {
     ageRedMinutes: 20,
     readyNotCollectedMinutes: 3,
     soundVolumePercent: 70,
+    theme: 'LIGHT',
   },
   serverTime: '2026-09-26T10:00:00.000Z',
 };

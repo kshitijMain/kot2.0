@@ -928,6 +928,28 @@ Decided 2026-09-26 (P1-08a):
 Standing instruction (2026-09-26, the Business Owner): build everything without stopping; Claude
 decides, records decisions here and moves straight to the next WP. Recorded in CLAUDE.md.
 
+Decided 2026-10-24 (the Parossa redesign, at the Business Owner's request; ADR-0022):
+
+794. The product is Parossa (replaces decision 9's OI-01 working name): Parossa Captain (waiter
+     app), Parossa Table (tablet), Parossa Control Plane (vendor web app). Only names people see
+     change; the install folder, Windows app id, service ids, setup file name, Android package ids,
+     Expo slugs, the LAN CA's subject and the `@rp/` scope stay. The Windows installer's wizard
+     title keeps "Restaurant Platform" until `productName` (and with it the install folder) moves.
+795. The kitchen display is light by default; the dark theme is the setting `kds.theme` (DARK).
+     This changes the default in KDS-011 and NFR-U02; readability from 2 m (AAA text, large
+     type) and the 64 px targets stay. The console no longer follows the operating system's dark
+     mode.
+796. Teal `#0f766e` is the primary colour and saffron `#f7931e` the highlight (selected items,
+     badges, the bar under page titles), never the only sign of anything. Saffron text is
+     `#a64b08` (the brief's `#b45309` is 4.38:1 on the input background). Warning moves to ochre
+     `#a16207` and info to blue `#1d4ed8`, apart from the brand colours.
+797. Inter 4.1 is vendored with its OFL licence (web: one variable WOFF2 in `@rp/ui-web`; Android:
+     four TTFs in `@rp/ui-native/fonts`, built in by `expo-font`), not an npm dependency. The apps
+     gain `expo-splash-screen` and `expo-font` (MIT, Expo's own) for the splash and the font.
+798. Diners' screens keep the restaurant's logo and accent (NFR-U02) and show "Powered by Parossa"
+     in small muted text. Their main buttons keep the system's primary colour (now teal), as they
+     did with the old blue; making them the restaurant's accent is left to the Business Owner.
+
 Decided 2026-10-11 (PR #85, the Mac build's CI):
 
 793. The relay's Deno smoke tests run on Deno 2.1.4 in CI, the Deno of the edge runtime Supabase
@@ -4435,6 +4457,40 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-10-24: the Parossa redesign (ADR-0022)
+
+At the Business Owner's request, outside the WP plan: the product is Parossa, with a light, calm
+look on every staff screen. Tokens: new light/dark palettes, `kds` (light, AAA) and `kds-dark`,
+saffron `highlight` roles, status tones moved apart from the brand, rounder radii and softer
+shadows; tests for the saffron roles, both kitchen themes and the brand/status separation. Inter
+bundled (web WOFF2, Android TTFs through `expo-font`). `@rp/ui-web` and the console restyled
+through tokens only (cards with shadows, pill mode switch, saffron selection, the cart as a white
+panel, a saffron bar under page titles); the logo on the console's header, pairing and sign-in.
+`kds.theme` setting with `KdsSettings.theme`, applied to the whole kitchen frame through a context
+(`apps/console/src/kds/kds-theme.tsx`). `@rp/ui-native` restyled the same way and exports `Text`
+and `TextInput` in Inter; the shell and both apps use them; the logo PNG on the phones' pairing
+and sign-in; "Powered by Parossa" on the tablet's diner screens and the QR menu's footer. App names,
+icons, splash (`#FAF7F2`) and the vendor web app's name changed; installer display names too.
+Before/after screenshots of the console were shown to the Business Owner before the native work.
+
+Gotchas: the QR menu's axe check caught a sold-out dish at 4.47:1 on the warmer page (opacity 0.6
+of the text); it is now 0.7. `pnpm --filter @rp/contracts docs` runs pnpm's own `docs` command;
+use `pnpm --filter @rp/contracts run docs` (the root `pnpm contracts:docs` script has the same
+problem). The native screens were checked by their Jest tests and an Android prebuild, not on a
+device: look at them on a phone and a tablet with the next APK.
+
+### 2026-10-24: plural messages on Hermes (waiter app crash after pairing)
+
+The waiter app logged `TypeError: undefined cannot be used as a constructor` once paired: Hermes
+on Android has no `Intl.PluralRules` (only `Collator`, `DateTimeFormat` and `NumberFormat`), and
+`@rp/i18n`'s `formatMessage` called `new Intl.PluralRules` for every plural message (the PIN pad's
+progress, the alert banner). It now falls back to the English rule (`one` for 1, else `other`)
+when the runtime lacks it; the catalogue is English only (NFR-L01), so the result is the same.
+New test in `packages/i18n/test/message-format.test.ts` removes `Intl.PluralRules` as Hermes does.
+Gotcha: the apps' Jest tests run on Node, which has the full `Intl`, so they cannot catch a Hermes
+gap; check the Android bundle (`expo export --platform android`) for `new Intl.` before relying on
+one.
 
 ### 2026-10-11: alert words for printer and disk or backup
 

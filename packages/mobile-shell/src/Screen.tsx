@@ -1,8 +1,9 @@
-import { fontSize, fontWeight, spacing } from '@rp/design-tokens';
-import { useTheme, weight } from '@rp/ui-native';
+import { elevation, fontSize, fontWeight, spacing } from '@rp/design-tokens';
+import { Text, useTheme, weight } from '@rp/ui-native';
 import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { AlertBanner } from './alerts.js';
+import { BrandLogo } from './brand.js';
 import { useSessionState, useT } from './context.js';
 import { LicenceBanner } from './licence.js';
 
@@ -39,11 +40,14 @@ export function Screen({
   title,
   actions,
   footer,
+  brand = false,
   children,
 }: {
   title?: string;
   actions?: ReactNode;
   footer?: ReactNode;
+  /** The Parossa logo above the title: pairing and sign-in (ADR-0022). */
+  brand?: boolean;
   children: ReactNode;
 }) {
   const { colors } = useTheme();
@@ -52,7 +56,11 @@ export function Screen({
       <ConnectionBanner />
       <LicenceBanner />
       <AlertBanner />
-      <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={[styles.content, brand && styles.branded]}
+        keyboardShouldPersistTaps="handled"
+      >
+        {brand ? <BrandLogo /> : null}
         {title !== undefined && (
           <View style={styles.header}>
             <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
@@ -103,15 +111,22 @@ export function Note({
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
-  banner: { paddingHorizontal: spacing[4], paddingVertical: spacing[2] },
-  content: { padding: spacing[4], gap: spacing[3] },
+  banner: { paddingHorizontal: spacing[4], paddingVertical: spacing[3] },
+  content: { padding: spacing[5], gap: spacing[4] },
+  branded: { paddingTop: spacing[8], gap: spacing[5] },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing[2],
   },
-  title: { fontSize: fontSize.xl, fontWeight: weight(fontWeight.bold) },
-  footer: { padding: spacing[3], gap: spacing[2], borderTopWidth: 1 },
+  title: { flexShrink: 1, fontSize: fontSize['2xl'], fontWeight: weight(fontWeight.bold) },
+  footer: {
+    paddingHorizontal: spacing[4],
+    paddingVertical: spacing[3],
+    gap: spacing[2],
+    borderTopWidth: 1,
+    elevation: elevation[2].androidElevation,
+  },
   note: { fontSize: fontSize.md },
 });

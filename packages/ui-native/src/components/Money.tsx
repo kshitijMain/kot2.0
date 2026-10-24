@@ -1,7 +1,8 @@
 import { fontSize, fontWeight } from '@rp/design-tokens';
 import { formatRupees, type Paise } from '@rp/domain';
-import { type StyleProp, Text, type TextStyle } from 'react-native';
+import { type StyleProp, type TextStyle } from 'react-native';
 import { useTheme, weight } from '../theme.js';
+import { Text } from './Text.js';
 
 export interface MoneyProps {
   /** Integer paise (BRD §9.4). Never rupees, never a float: a non-integer throws. */

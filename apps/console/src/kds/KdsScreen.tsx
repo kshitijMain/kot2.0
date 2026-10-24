@@ -34,6 +34,7 @@ import {
   type ExpoOrder,
   expoOrders,
 } from './kds-view.js';
+import { useKdsTheme } from './kds-theme.js';
 import { type KitchenSounds, webAudioSounds } from './sounds.js';
 
 const AGE_ICONS: Readonly<Record<AgeTone, IconName>> = {
@@ -77,6 +78,7 @@ export function KdsScreen({ sounds: given }: { sounds?: KitchenSounds }) {
 
   // Sounds for tickets this screen had not seen (KDS-009); the first read is silent.
   const current = data.status === 'ready' ? data.value.value : undefined;
+  useKdsTheme(current?.settings.theme);
   useEffect(() => {
     if (current === undefined) return;
     const heard = arrivals(known.current, current.tickets);

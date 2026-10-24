@@ -63,6 +63,9 @@ function packageVersion(projectRoot: string): string {
   return pkg.version;
 }
 
+/** An Inter face vendored in @rp/ui-native (SIL Open Font License, ADR-0022). */
+const INTER = (face: string): string => `../../packages/ui-native/fonts/Inter-${face}.ttf`;
+
 export default ({ config, projectRoot }: ConfigContext): ExpoConfig => {
   const env = appEnv();
   const { suffix, label } = ENVIRONMENTS[env];
@@ -75,7 +78,8 @@ export default ({ config, projectRoot }: ConfigContext): ExpoConfig => {
   }
   return {
     ...config,
-    name: `RP Table${label}`,
+    // The name people see (ADR-0022). The slug and the package stay: devices update in place.
+    name: `Parossa Table${label}`,
     slug: 'rp-table-tablet',
     // The release pipeline sets package.json; the version matrix reads it there too (UPD-006).
     version: packageVersion(projectRoot),
@@ -89,7 +93,7 @@ export default ({ config, projectRoot }: ConfigContext): ExpoConfig => {
       // computer (MOBILE-I3); the credentials are in the Keystore, which backups do not carry.
       allowBackup: false,
       adaptiveIcon: {
-        backgroundColor: '#E6F4FE',
+        backgroundColor: '#FAF7F2',
         foregroundImage: './assets/android-icon-foreground.png',
         backgroundImage: './assets/android-icon-background.png',
         monochromeImage: './assets/android-icon-monochrome.png',
@@ -140,6 +144,36 @@ export default ({ config, projectRoot }: ConfigContext): ExpoConfig => {
         },
       ],
       'expo-secure-store',
+      // Parossa's splash on the off-white page colour (ADR-0022).
+      [
+        'expo-splash-screen',
+        {
+          image: './assets/splash-icon.png',
+          imageWidth: 200,
+          resizeMode: 'contain',
+          backgroundColor: '#FAF7F2',
+        },
+      ],
+      // Inter, built into the APK so text renders the same offline (ADR-0022); one family with
+      // its weights, as @rp/ui-native asks for it.
+      [
+        'expo-font',
+        {
+          android: {
+            fonts: [
+              {
+                fontFamily: 'Inter',
+                fontDefinitions: [
+                  { path: INTER('Regular'), weight: 400 },
+                  { path: INTER('Medium'), weight: 500 },
+                  { path: INTER('SemiBold'), weight: 600 },
+                  { path: INTER('Bold'), weight: 700 },
+                ],
+              },
+            ],
+          },
+        },
+      ],
       // Scanning the pairing QR code (P2-01d): the camera without the microphone.
       ['expo-camera', { recordAudioAndroid: false }],
     ],

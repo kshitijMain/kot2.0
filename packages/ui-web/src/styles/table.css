@@ -3,6 +3,7 @@
   border: 1px solid var(--rp-color-border);
   border-radius: var(--rp-radius-lg);
   background: var(--rp-color-surface);
+  box-shadow: var(--rp-elevation-1);
 }
 
 .rp-table {
@@ -28,10 +29,14 @@
 }
 
 .rp-table th {
-  background: var(--rp-color-surface-sunken);
+  background: var(--rp-color-surface);
   color: var(--rp-color-text-muted);
   font-size: var(--rp-font-size-sm);
   font-weight: var(--rp-font-weight-semibold);
+}
+
+.rp-table thead th {
+  border-bottom-color: var(--rp-color-border-strong);
 }
 
 .rp-table [data-align='end'] {

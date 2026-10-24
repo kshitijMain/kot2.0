@@ -2,9 +2,9 @@ import { IndianMobile } from '@rp/contracts';
 import { fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
 import { type KeyValueStore, TABLET_GUEST_KEYS } from '@rp/mobile-core';
 import { messageOf, Note, useDeviceSession, useT } from '@rp/mobile-shell';
-import { Button, ChoiceGroup, TextField, useTheme, weight } from '@rp/ui-native';
+import { Button, ChoiceGroup, Text, TextField, useTheme, weight } from '@rp/ui-native';
 import { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
 /** Kept with the guests' data, so it is asked once per visit and wiped with the rest. */
 export const FEEDBACK_KEY = TABLET_GUEST_KEYS[2];

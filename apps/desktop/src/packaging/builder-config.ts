@@ -12,8 +12,15 @@ import { INSTALL_FOLDERS, type StagingLayout } from './payload.js';
 /** Never change it: the installer finds the installed version, to update it, by this id. */
 export const APP_ID = 'in.restaurantplatform.pos';
 
-/** The working name (OI-01); the install folder is `C:\Program Files\Restaurant Platform`. */
+/**
+ * The install name: the folder `C:\Program Files\Restaurant Platform`, the POS window's .exe and the
+ * uninstaller. Never change it: installed PCs, their updates and the set-up scripts find the
+ * installation by these paths. People see `DISPLAY_NAME` instead.
+ */
 export const PRODUCT_NAME = 'Restaurant Platform';
+
+/** The product's name as people see it: shortcuts and Apps & features (ADR-0022). */
+export const DISPLAY_NAME = 'Parossa';
 
 /**
  * Electron's fuses (SEC-011), set in the packaged executable: it cannot be run as Node.js or be
@@ -51,7 +58,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
   return {
     appId: APP_ID,
     productName: PRODUCT_NAME,
-    copyright: `Copyright © ${new Date().getUTCFullYear()} ${PRODUCT_NAME}`,
+    copyright: `Copyright © ${new Date().getUTCFullYear()} ${DISPLAY_NAME}`,
     electronVersion: options.electronVersion,
     extraMetadata: { version: options.version },
     directories: {
@@ -92,7 +99,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
       allowToChangeInstallationDirectory: false,
       createDesktopShortcut: true,
       createStartMenuShortcut: true,
-      shortcutName: PRODUCT_NAME,
+      shortcutName: DISPLAY_NAME,
       runAfterFinish: true,
       // The restaurant's data is never the uninstaller's to delete unasked (NFR-I02).
       deleteAppDataOnUninstall: false,
@@ -100,7 +107,7 @@ export function builderConfig(options: BuilderOptions): Configuration {
       include: join(options.projectDir, 'installer', 'installer.nsh'),
       warningsAsErrors: true,
       artifactName: 'RestaurantPlatform-Setup-${version}.${ext}',
-      uninstallDisplayName: '${productName} ${version}',
+      uninstallDisplayName: `${DISPLAY_NAME} \${version}`,
     },
   };
 }

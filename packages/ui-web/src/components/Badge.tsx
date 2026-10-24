@@ -3,7 +3,8 @@ import type { HTMLAttributes, ReactNode } from 'react';
 import { cx } from '../internal/cx.js';
 
 export interface BadgeProps extends HTMLAttributes<HTMLSpanElement> {
-  tone?: Tone;
+  /** A status tone, or `highlight`: the brand's saffron for labels that are not a status. */
+  tone?: Tone | 'highlight';
   /** `subtle` (tinted) for labels, `solid` for counts that must catch the eye. */
   variant?: 'subtle' | 'solid';
   icon?: ReactNode;

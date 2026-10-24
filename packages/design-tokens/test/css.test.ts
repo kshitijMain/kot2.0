@@ -39,6 +39,8 @@ describe('[NFR-U01] tokens as CSS variables', () => {
   it('[KDS-011] raises type size and touch target in the KDS theme only', () => {
     expect(themeVariables('kds')['--rp-touch-target']).toBe('64px');
     expect(themeVariables('kds')['--rp-font-size-md']).toBe('1.25rem');
+    expect(themeVariables('kds-dark')['--rp-touch-target']).toBe('64px');
+    expect(themeVariables('kds-dark')['--rp-font-size-md']).toBe('1.25rem');
     expect(themeVariables('light')['--rp-touch-target']).toBeUndefined();
     expect(themeVariables('dark')['--rp-font-size-md']).toBeUndefined();
   });
@@ -55,6 +57,8 @@ describe('[NFR-U01] tokens as CSS variables', () => {
     );
     expect(css).toContain('color-scheme: dark;');
     expect(css).toContain(`--rp-color-background: ${themes.kds.background};`);
+    expect(css).toContain(`--rp-color-background: ${themes['kds-dark'].background};`);
+    expect(css).toContain(`--rp-color-highlight: ${themes.light.highlight};`);
     // Balanced braces: a quick guard against malformed output.
     expect(css.split('{').length).toBe(css.split('}').length);
   });

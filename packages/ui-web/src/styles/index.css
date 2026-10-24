@@ -6,6 +6,7 @@
  */
 @layer rp.tokens, rp.base, rp.components;
 
+@import url('./fonts.css') layer(rp.base);
 @import url('./base.css') layer(rp.base);
 @import url('./button.css') layer(rp.components);
 @import url('./keypad.css') layer(rp.components);

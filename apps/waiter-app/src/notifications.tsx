@@ -1,11 +1,11 @@
-import { radius, spacing } from '@rp/design-tokens';
+import { elevation, radius, spacing } from '@rp/design-tokens';
 import type { Translator } from '@rp/i18n';
 import type { AlertNotificationText, NotificationPermission } from '@rp/mobile-native';
 import { useT } from '@rp/mobile-shell';
 import { describeAlert } from '@rp/ordering';
-import { Button, Glyph, toneColors, useTheme } from '@rp/ui-native';
+import { Button, Glyph, Text, toneColors, useTheme } from '@rp/ui-native';
 import { createContext, type ReactNode, useContext, useEffect, useState } from 'react';
-import { AppState, StyleSheet, Text, View } from 'react-native';
+import { AppState, StyleSheet, View } from 'react-native';
 
 /**
  * The words of the phone's notifications (P2-06b, NFR-L02): an alert says what the banner says
@@ -115,7 +115,13 @@ export function NotificationsOff() {
 }
 
 const styles = StyleSheet.create({
-  card: { borderWidth: 1, borderRadius: radius.md, padding: spacing[3], gap: spacing[2] },
+  card: {
+    borderWidth: 1,
+    borderRadius: radius.lg,
+    padding: spacing[4],
+    elevation: elevation[1].androidElevation,
+    gap: spacing[2],
+  },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
   text: { flex: 1 },
 });

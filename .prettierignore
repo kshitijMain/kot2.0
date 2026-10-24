@@ -14,3 +14,6 @@ storybook-static
 # Written by `next build` (and git-ignored)
 next-env.d.ts
 .next
+
+# The brand files as supplied (ADR-0022): the README lines its file list up by hand.
+brand/parossa/README.md

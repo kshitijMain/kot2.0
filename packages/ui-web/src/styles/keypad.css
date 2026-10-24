@@ -23,8 +23,8 @@
 }
 
 .rp-pin-pad__dot {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
   border: 2px solid var(--rp-color-border-strong);
   border-radius: var(--rp-radius-full);
   transition: background-color var(--rp-duration-fast) var(--rp-easing-standard);
@@ -62,13 +62,14 @@
   justify-content: center;
   gap: var(--rp-space-2);
   min-height: calc(var(--rp-touch-target) * 1.25);
-  border: 2px solid var(--rp-color-border);
+  border: 1px solid var(--rp-color-border);
   border-radius: var(--rp-radius-lg);
   background: var(--rp-color-surface);
   color: var(--rp-color-text);
+  box-shadow: var(--rp-elevation-1);
   font: inherit;
   font-size: var(--rp-font-size-2xl);
-  font-weight: var(--rp-font-weight-semibold);
+  font-weight: var(--rp-font-weight-medium);
   font-variant-numeric: tabular-nums;
   cursor: pointer;
   user-select: none;
@@ -89,13 +90,17 @@
 }
 
 .rp-keypad__key:disabled {
+  box-shadow: none;
   cursor: not-allowed;
   opacity: 0.45;
 }
 
 .rp-keypad__key[data-variant='action'] {
+  border-color: transparent;
   background: var(--rp-color-surface-sunken);
+  box-shadow: none;
   font-size: var(--rp-font-size-md);
+  font-weight: var(--rp-font-weight-semibold);
 }
 
 .rp-keypad__key[data-variant='submit'] {

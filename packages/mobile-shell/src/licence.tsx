@@ -1,7 +1,7 @@
 import { spacing } from '@rp/design-tokens';
 import { affectsLicence, licenceNotice } from '@rp/ordering';
-import { useTheme } from '@rp/ui-native';
-import { StyleSheet, Text, View } from 'react-native';
+import { Text, useTheme } from '@rp/ui-native';
+import { StyleSheet, View } from 'react-native';
 import { useDeviceSession, useSessionState, useT } from './context.js';
 import { useLive } from './use-live.js';
 

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { NotificationEventType, NUDGE_MESSAGE_MAX } from './alerts.js';
 import { Capability } from './auth.js';
 import { Id, Timestamp } from './common.js';
+import { KdsTheme } from './kds.js';
 
 /**
  * The settings catalogue (P1-01a, MGR-007, UPD-010): every configurable value the BRD marks with
@@ -619,6 +620,16 @@ export const SETTINGS = [
     description: 'Volume of the new-ticket chime and the cancellation sound (our default).',
     requirements: ['KDS-009'],
     unit: 'percent',
+  }),
+  setting({
+    key: 'kds.theme',
+    schema: KdsTheme,
+    defaultValue: 'LIGHT',
+    scope: 'RESTAURANT',
+    capability: 'OPERATIONS_CONFIGURE',
+    description:
+      'Kitchen screen colours: light and high-contrast, or dark for a dim kitchen (ADR-0022 changes the BRD default from dark).',
+    requirements: ['KDS-011'],
   }),
 
   // Table tablets, pagers and the QR menu (TAB, PGR, QR)

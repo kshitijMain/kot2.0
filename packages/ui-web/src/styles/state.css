@@ -11,8 +11,22 @@
 
 .rp-state__icon {
   display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72px;
+  height: 72px;
   margin-bottom: var(--rp-space-2);
+  border-radius: var(--rp-radius-full);
+  background: var(--rp-color-surface-sunken);
   color: var(--rp-color-text-muted);
+}
+
+.rp-state[data-kind='error'] .rp-state__icon {
+  background: var(--rp-color-danger-subtle);
+}
+
+.rp-state[data-kind='loading'] .rp-state__icon {
+  background: transparent;
 }
 
 .rp-state[data-kind='error'] .rp-state__icon {

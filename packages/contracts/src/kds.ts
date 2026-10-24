@@ -53,12 +53,21 @@ export const KdsTicket = z.object({
 });
 export type KdsTicket = z.infer<typeof KdsTicket>;
 
-/** The settings a kitchen screen needs (KDS-004, KDS-006, KDS-009). */
+/**
+ * The kitchen screen's colours (KDS-011, ADR-0022): light and high-contrast by default, or the
+ * near-black theme a manager may switch on.
+ */
+export const KDS_THEME_CHOICES = ['LIGHT', 'DARK'] as const;
+export const KdsTheme = z.enum(KDS_THEME_CHOICES);
+export type KdsTheme = z.infer<typeof KdsTheme>;
+
+/** The settings a kitchen screen needs (KDS-004, KDS-006, KDS-009, KDS-011). */
 export const KdsSettings = z.object({
   ageAmberMinutes: z.int().positive(),
   ageRedMinutes: z.int().positive(),
   readyNotCollectedMinutes: z.int().positive(),
   soundVolumePercent: z.int().min(0).max(100),
+  theme: KdsTheme,
 });
 export type KdsSettings = z.infer<typeof KdsSettings>;
 

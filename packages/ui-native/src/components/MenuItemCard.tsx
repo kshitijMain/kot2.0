@@ -1,8 +1,9 @@
-import { fontSize, fontWeight, radius, spacing, touchTarget } from '@rp/design-tokens';
+import { elevation, fontSize, fontWeight, radius, spacing, touchTarget } from '@rp/design-tokens';
 import { formatRupees, type Paise } from '@rp/domain';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useTheme, weight } from '../theme.js';
 import { Money } from './Money.js';
+import { Text } from './Text.js';
 
 export type FoodType = 'VEG' | 'NON_VEG' | 'EGG';
 
@@ -54,7 +55,8 @@ export function MenuItemCard({
         {
           backgroundColor: colors.surface,
           borderColor: colors.border,
-          opacity: off ? 0.6 : pressed ? 0.85 : 1,
+          opacity: off ? 0.6 : 1,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
         },
       ]}
     >
@@ -79,10 +81,11 @@ export function MenuItemCard({
 const styles = StyleSheet.create({
   card: {
     minHeight: touchTarget.comfortable * 2,
-    padding: spacing[3],
-    gap: spacing[1],
+    padding: spacing[4],
+    gap: spacing[2],
     borderRadius: radius.lg,
     borderWidth: 1,
+    elevation: elevation[1].androidElevation,
   },
   top: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[2] },
   mark: {

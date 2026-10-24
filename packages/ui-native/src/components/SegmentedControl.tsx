@@ -1,6 +1,7 @@
 import { fontSize, fontWeight, radius, spacing, touchTarget } from '@rp/design-tokens';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useTheme, weight } from '../theme.js';
+import { Text } from './Text.js';
 
 export interface SegmentOption {
   readonly id: string;
@@ -22,7 +23,7 @@ export function SegmentedControl({ label, options, value, onChange }: SegmentedC
     <View
       accessibilityRole="tablist"
       accessibilityLabel={label}
-      style={[styles.group, { borderColor: colors.borderStrong }]}
+      style={[styles.group, { backgroundColor: colors.surfaceSunken }]}
     >
       {options.map((option) => {
         const selected = option.id === value;
@@ -35,9 +36,17 @@ export function SegmentedControl({ label, options, value, onChange }: SegmentedC
             onPress={() => {
               if (!selected) onChange(option.id);
             }}
-            style={[styles.option, { backgroundColor: selected ? colors.primary : colors.surface }]}
+            style={[styles.option, { backgroundColor: selected ? colors.primary : 'transparent' }]}
           >
-            <Text style={[styles.label, { color: selected ? colors.onPrimary : colors.text }]}>
+            <Text
+              style={[
+                styles.label,
+                {
+                  color: selected ? colors.onPrimary : colors.textMuted,
+                  fontWeight: weight(selected ? fontWeight.semibold : fontWeight.medium),
+                },
+              ]}
+            >
               {option.label}
             </Text>
           </Pressable>
@@ -48,13 +57,14 @@ export function SegmentedControl({ label, options, value, onChange }: SegmentedC
 }
 
 const styles = StyleSheet.create({
-  group: { flexDirection: 'row', borderWidth: 1, borderRadius: radius.md, overflow: 'hidden' },
+  group: { flexDirection: 'row', gap: spacing[1], padding: spacing[1], borderRadius: radius.full },
   option: {
     flex: 1,
     minHeight: touchTarget.min,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: spacing[3],
+    borderRadius: radius.full,
   },
-  label: { fontSize: fontSize.md, fontWeight: weight(fontWeight.semibold) },
+  label: { fontSize: fontSize.md },
 });

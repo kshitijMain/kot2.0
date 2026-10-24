@@ -1,6 +1,6 @@
 # @rp/design-tokens
 
-The design tokens for every app (NFR-U01): colour themes (light, dark, KDS dark), typography,
+The design tokens for every app (NFR-U01): colour themes (light, dark, and the kitchen's light `kds` and `kds-dark`), typography,
 spacing, radius, elevation, motion, z-index and touch-target sizes, with a restaurant accent slot
 (NFR-U02). Built in P0-13; see ADR-0009. Final brand colours wait for OI-01.
 
@@ -10,7 +10,7 @@ TypeScript (web and React Native):
 
 ```ts
 import { themes, spacing, touchTarget, fontSize } from '@rp/design-tokens';
-themes.kds.background; // '#000000'
+themes['kds-dark'].background; // '#000000'
 ```
 
 CSS (web): import once, then choose a theme with `data-theme` on any element (themes nest). Without

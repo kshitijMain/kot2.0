@@ -2,9 +2,9 @@ import type { DomainEvent } from '@rp/contracts';
 import { fontSize, fontWeight } from '@rp/design-tokens';
 import type { Kiosk } from '@rp/mobile-core';
 import { useDeviceSession, useSessionState, useT } from '@rp/mobile-shell';
-import { useTheme, weight } from '@rp/ui-native';
+import { Text, useTheme, weight } from '@rp/ui-native';
 import { useEffect, useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 
 /** A request older than this (e.g. replayed after a reconnect) is not shown. */
 const FRESH_MS = 60_000;

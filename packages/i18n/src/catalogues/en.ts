@@ -5,7 +5,9 @@
  */
 export const en = {
   app: {
-    name: 'Restaurant Operations Platform',
+    name: 'Parossa',
+    /** Customer screens show the restaurant's own brand; Parossa only as this line (NFR-U02). */
+    poweredBy: 'Powered by Parossa',
   },
   console: {
     outdated: {
@@ -1689,6 +1691,8 @@ export const en = {
       OFF: 'Off',
       WHATSAPP: 'WhatsApp',
       SMS: 'SMS',
+      LIGHT: 'Light',
+      DARK: 'Dark',
     },
     field: {
       READY: 'Food ready',
@@ -2733,7 +2737,7 @@ export const en = {
     },
   },
   desktop: {
-    title: 'Restaurant system',
+    title: 'Parossa',
     starting: 'Starting the restaurant’s server. This takes up to a minute after the PC starts.',
   },
   readiness: {
@@ -3473,6 +3477,7 @@ export const en = {
       readyNotCollectedMinutes: 'Ready food not collected after',
       autoEscalateNotCollected: 'Tell the manager about food not collected',
       soundVolumePercent: 'Kitchen screen sound volume',
+      theme: 'Kitchen screen colours',
     },
     tablet: {
       idleShowsPromotions: 'Idle tablets show promotions',
@@ -3651,6 +3656,8 @@ export const en = {
       autoEscalateNotCollected: 'Alert the manager without the kitchen pressing "Notify manager".',
       soundVolumePercent:
         'Volume of the new-ticket chime and the cancellation sound (our default).',
+      theme:
+        'Light suits a bright kitchen and is easiest to read from a distance. Dark suits a dim kitchen.',
     },
     tablet: {
       idleShowsPromotions: 'The idle screen of a table tablet shows promotions.',
@@ -4292,7 +4299,7 @@ export const en = {
     },
   },
   vendorApp: {
-    name: 'Vendor Control Plane',
+    name: 'Parossa Control Plane',
     signOut: 'Sign out',
     nav: {
       label: 'Sections',

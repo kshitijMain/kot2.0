@@ -1,10 +1,11 @@
-import { fontSize, fontWeight, radius, spacing, touchTarget } from '@rp/design-tokens';
+import { elevation, fontSize, fontWeight, radius, spacing, touchTarget } from '@rp/design-tokens';
 import { type ReactNode, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { useSecureScreen } from '../screen-guard.js';
 import { useUiStrings } from '../strings.js';
 import { useTheme, weight } from '../theme.js';
 import { Glyph } from './Glyph.js';
+import { Text } from './Text.js';
 
 export const MIN_PIN_LENGTH = 4;
 export const MAX_PIN_LENGTH = 8;
@@ -97,8 +98,11 @@ export function PinPad({
                 : options.action === true
                   ? colors.surfaceSunken
                   : colors.surface,
-            borderColor: colors.border,
-            opacity: off ? 0.5 : pressed ? 0.8 : 1,
+            borderColor: options.action === true ? colors.surfaceSunken : colors.border,
+            opacity: off ? 0.5 : 1,
+            elevation:
+              options.action === true || off || pressed ? 0 : elevation[1].androidElevation,
+            transform: [{ scale: pressed ? 0.96 : 1 }],
           },
         ]}
       >
@@ -130,8 +134,12 @@ export function PinPad({
             style={[
               styles.dot,
               {
-                borderColor: error ? colors.danger : colors.borderStrong,
-                backgroundColor: index < digits.length ? colors.text : 'transparent',
+                borderColor: error
+                  ? colors.danger
+                  : index < digits.length
+                    ? colors.primary
+                    : colors.borderStrong,
+                backgroundColor: index < digits.length ? colors.primary : 'transparent',
               },
             ]}
           />
@@ -195,6 +203,6 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     borderWidth: 1,
   },
-  digit: { fontSize: fontSize['2xl'], fontWeight: weight(fontWeight.semibold) },
+  digit: { fontSize: fontSize['2xl'], fontWeight: weight(fontWeight.medium) },
   action: { fontSize: fontSize.md, fontWeight: weight(fontWeight.semibold) },
 });

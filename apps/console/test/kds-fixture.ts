@@ -58,6 +58,7 @@ export function board(
       ageRedMinutes: 20,
       readyNotCollectedMinutes: 3,
       soundVolumePercent: 70,
+      theme: 'LIGHT',
     },
     serverTime: NOW,
     ...overrides,

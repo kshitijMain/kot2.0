@@ -58,7 +58,7 @@ const EXCEL_FORMATS: Partial<Record<ColumnKind, string>> = {
 
 export async function documentToXlsx(document: ReportDocument): Promise<Buffer> {
   const workbook = new ExcelJS.Workbook();
-  workbook.creator = 'Restaurant Operations Platform';
+  workbook.creator = 'Parossa';
   const used = new Set<string>();
   const tables = document.tables.length === 0 ? [{ columns: [], rows: [] }] : document.tables;
   for (const table of tables) {
@@ -158,7 +158,7 @@ export async function documentToPdf(document: ReportDocument): Promise<Buffer> {
     info: {
       title: stamp.title,
       author: stamp.restaurant,
-      creator: 'Restaurant Operations Platform',
+      creator: 'Parossa',
     },
     content,
     footer: (page, pages) => ({

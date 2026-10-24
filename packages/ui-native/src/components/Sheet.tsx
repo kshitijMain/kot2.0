@@ -1,9 +1,10 @@
 import { elevation, fontSize, fontWeight, radius, spacing, touchTarget } from '@rp/design-tokens';
 import type { ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useUiStrings } from '../strings.js';
 import { useTheme, weight } from '../theme.js';
 import { Glyph } from './Glyph.js';
+import { Text } from './Text.js';
 
 export interface SheetProps {
   open: boolean;
@@ -42,6 +43,7 @@ export function Sheet({ open, onClose, title, children, footer, dismissible = tr
           accessibilityViewIsModal
           style={[styles.sheet, { backgroundColor: colors.surfaceRaised }]}
         >
+          <View style={[styles.handle, { backgroundColor: colors.border }]} />
           <View style={styles.header}>
             <Text accessibilityRole="header" style={[styles.title, { color: colors.text }]}>
               {title}
@@ -76,11 +78,18 @@ const styles = StyleSheet.create({
     borderTopRightRadius: radius.xl,
     elevation: elevation[3].androidElevation,
   },
+  handle: {
+    alignSelf: 'center',
+    width: 40,
+    height: 4,
+    marginTop: spacing[2],
+    borderRadius: radius.full,
+  },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: spacing[4],
-    paddingTop: spacing[2],
+    paddingLeft: spacing[5],
+    paddingRight: spacing[1],
   },
   title: { flex: 1, fontSize: fontSize.xl, fontWeight: weight(fontWeight.bold) },
   close: {
@@ -89,12 +98,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  body: { padding: spacing[4], gap: spacing[4] },
+  body: { paddingHorizontal: spacing[5], paddingVertical: spacing[4], gap: spacing[5] },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[3],
-    padding: spacing[4],
+    paddingHorizontal: spacing[5],
+    paddingVertical: spacing[4],
     borderTopWidth: 1,
   },
 });

@@ -20,6 +20,7 @@ import { accentColorsOf } from './branding';
 import { IdleScreen } from './IdleScreen';
 import { LocateOverlay } from './LocateOverlay';
 import { OpenTableScreen } from './OpenTableScreen';
+import { PoweredBy } from './PoweredBy';
 import { StaffCorner, StaffPanel } from './StaffPanel';
 import { useTablet } from './use-tablet';
 
@@ -79,6 +80,8 @@ export function TabletHome({ store, kiosk, health, appVersion }: TabletDevice) {
   const profile = restaurant.status === 'ready' ? restaurant.value : null;
   const table = tablet.table;
   let content;
+  // Diners see the restaurant's brand; Parossa only as a quiet line under it (NFR-U02).
+  let diners = false;
   if (tablet.status === 'unbound') {
     content = (
       <Screen title={t('mobile.tablet.unbound')}>
@@ -95,6 +98,7 @@ export function TabletHome({ store, kiosk, health, appVersion }: TabletDevice) {
     );
   } else if (table.session === null) {
     content = <IdleScreen restaurant={profile} table={table} menu={menu} />;
+    diners = true;
   } else {
     content = (
       <OpenTableScreen
@@ -106,11 +110,13 @@ export function TabletHome({ store, kiosk, health, appVersion }: TabletDevice) {
         guestEpoch={tablet.guestEpoch}
       />
     );
+    diners = true;
   }
   return (
     <ThemeProvider accent={accentColorsOf(profile?.accentColor)}>
       <View style={styles.fill}>
         {content}
+        {diners ? <PoweredBy /> : null}
         <StaffCorner
           onOpen={() => {
             setStaff(true);

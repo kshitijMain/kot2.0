@@ -36,9 +36,9 @@ import {
   tileAlert,
   tileDetails,
 } from '@rp/ordering';
-import { Button, SegmentedControl, useTheme, useToast, weight } from '@rp/ui-native';
+import { Button, SegmentedControl, Text, useTheme, useToast, weight } from '@rp/ui-native';
 import { useEffect, useMemo, useState } from 'react';
-import { BackHandler, StyleSheet, Text, View } from 'react-native';
+import { BackHandler, StyleSheet, View } from 'react-native';
 import { CartList } from './CartList';
 import { useCart } from './carts';
 import { EndItemSheet, type Ending } from './EndItemSheet';

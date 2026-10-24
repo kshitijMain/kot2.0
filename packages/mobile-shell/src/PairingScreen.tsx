@@ -1,9 +1,9 @@
 import { parsePairingQr } from '@rp/contracts';
 import { fontSize, radius, spacing } from '@rp/design-tokens';
 import type { FoundServer, ServerAuthority } from '@rp/mobile-core';
-import { Button, TextField, useTheme } from '@rp/ui-native';
+import { Button, Text, TextField, useTheme } from '@rp/ui-native';
 import { lazy, Suspense, useState } from 'react';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet } from 'react-native';
 import { useDeviceSession, useSessionState, useT } from './context.js';
 import { formatFingerprint, formatPairingCode, messageOf } from './messages.js';
 import { Note, Screen } from './Screen.js';
@@ -100,7 +100,7 @@ export function PairingScreen() {
 
   if (unchecked !== undefined) {
     return (
-      <Screen title={t('pairing.checkTitle')}>
+      <Screen title={t('pairing.checkTitle')} brand>
         <Note tone="text">{t('pairing.checkBody', { server: unchecked.serverUrl })}</Note>
         <Text
           testID="pairing-fingerprint"
@@ -153,7 +153,7 @@ export function PairingScreen() {
   }
 
   return (
-    <Screen title={t('pairing.title')}>
+    <Screen title={t('pairing.title')} brand>
       {notice === 'revoked' && <Note tone="danger">{t('pairing.revoked')}</Note>}
       <Note>{t('pairing.scanIntro')}</Note>
       <Button

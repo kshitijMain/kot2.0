@@ -1,9 +1,10 @@
 import { fontSize, fontWeight, radius, spacing, type Tone } from '@rp/design-tokens';
 import type { OrderItemState } from '@rp/domain';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import type { GlyphName } from '../glyphs.js';
 import { toneColors, useTheme, weight } from '../theme.js';
 import { Glyph } from './Glyph.js';
+import { Text } from './Text.js';
 
 /**
  * How each order item state looks on every surface, the same as `@rp/ui-web`: a tone and a symbol,

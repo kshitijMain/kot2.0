@@ -3,7 +3,8 @@
  *
  * - arguments: `Hello {name}`;
  * - plural: `{count, plural, =0 {none} one {# item} other {# items}}`, categories from
- *   `Intl.PluralRules` for the locale, `=N` exact matches first, `#` is the formatted number;
+ *   `Intl.PluralRules` for the locale (English rules where the runtime lacks it, as Hermes does),
+ *   `=N` exact matches first, `#` is the formatted number;
  * - select: `{role, select, OWNER {Owner} other {Staff}}`;
  * - number: `{amount, number}` (grouping for the locale, e.g. 1,00,000 in en-IN);
  * - quoting as in ICU: `''` is an apostrophe, and an apostrophe before `{`, `}` or `#` starts literal
@@ -190,10 +191,22 @@ export interface FormatOptions {
 const pluralRules = new Map<string, Intl.PluralRules>();
 const numberFormats = new Map<string, Intl.NumberFormat>();
 
+/**
+ * English cardinal categories (CLDR: `one` for 1, `other` otherwise) for runtimes without
+ * `Intl.PluralRules`: Hermes on Android has none, so the phones and tablets would throw on every
+ * plural. The catalogue is English only (NFR-L01), so the answer is the one `Intl` would give.
+ */
+function englishPluralCategory(value: number): string {
+  return Math.abs(value) === 1 ? 'one' : 'other';
+}
+
 function pluralCategory(locale: string, value: number): string {
+  // Missing on Hermes, whatever the type says.
+  const PluralRules = (Intl as Partial<typeof Intl>).PluralRules;
+  if (PluralRules === undefined) return englishPluralCategory(value);
   let rules = pluralRules.get(locale);
   if (rules === undefined) {
-    rules = new Intl.PluralRules(locale);
+    rules = new PluralRules(locale);
     pluralRules.set(locale, rules);
   }
   return rules.select(value);

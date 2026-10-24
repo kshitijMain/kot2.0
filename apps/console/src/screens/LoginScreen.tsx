@@ -2,6 +2,7 @@ import type { StaffTile } from '@rp/contracts';
 import { Button, EmptyState, ErrorState, LoadingState, PinPad } from '@rp/ui-web';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { BrandLogo } from '../app/brand.js';
 import { useConsole, useConsoleState } from '../app/console-context.js';
 import { useT } from '../app/i18n.js';
 import { messageOf } from '../app/messages.js';
@@ -49,6 +50,7 @@ export function LoginScreen() {
     return (
       <main className="console-center">
         <section className="console-panel console-login">
+          <BrandLogo />
           <h1 className="console-title">{t('login.pinFor', { name: selected.displayName })}</h1>
           <PinPad
             label={t('login.pinFor', { name: selected.displayName })}
@@ -76,6 +78,7 @@ export function LoginScreen() {
   return (
     <main className="console-center">
       <section className="console-panel console-login">
+        <BrandLogo />
         <h1 className="console-title">{t('login.title')}</h1>
         {noticeText === undefined ? null : (
           <p className="console-notice" role="status">

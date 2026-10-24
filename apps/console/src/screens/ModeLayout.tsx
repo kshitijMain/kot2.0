@@ -1,13 +1,16 @@
+import type { ThemeName } from '@rp/design-tokens';
 import { Button, ConnectionBanner, ThemeRoot } from '@rp/ui-web';
 import { useEffect, useRef, useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import type { ConsoleSnapshot } from '../app/console-controller.js';
 import { useConsole, useConsoleState } from '../app/console-context.js';
+import { BrandLogo } from '../app/brand.js';
 import { useT } from '../app/i18n.js';
 import { InactivityTracker } from '../app/inactivity.js';
 import { modeOfPath, modesFor, type Person } from '../app/modes.js';
 import { AlertPanels, AlertsButton } from '../alerts/AlertCentre.js';
 import { AlertsProvider } from '../alerts/alerts-context.js';
+import { KdsThemeProvider } from '../kds/kds-theme.js';
 import { LicenceBanner } from '../licence/LicenceBanner.js';
 
 /** Warn this long before signing an idle person out. */
@@ -35,15 +38,19 @@ export function ModeLayout() {
   const controller = useConsole();
   const navigate = useNavigate();
   const { pathname } = useLocation();
+  // The kitchen display's theme comes with its tickets (`kds.theme`); light until then.
+  const [kdsTheme, setKdsTheme] = useState<ThemeName>('kds');
   if (state.phase !== 'paired') return <Navigate to="/pair" replace />;
   const { person, session } = state;
   const status = bannerStatus(state.connection);
   const mode = modeOfPath(pathname);
 
   const frame = (
-    <ThemeRoot className="console-shell" {...(mode === 'kds' && { theme: 'kds' as const })}>
+    <ThemeRoot className="console-shell" theme={mode === 'kds' ? kdsTheme : 'light'}>
       <header className="console-header">
-        <span className="console-header__app">{t('app.name')}</span>
+        <span className="console-header__app">
+          <BrandLogo size="sm" onDark={mode === 'kds' && kdsTheme === 'kds-dark'} />
+        </span>
         {person === undefined ? null : <ModeLinks person={person} />}
         <AlertsButton />
         <span className="console-header__device">{state.device?.name}</span>
@@ -74,7 +81,9 @@ export function ModeLayout() {
         <InactivityGuard key={session.id} timeoutSeconds={session.inactivityTimeoutSeconds} />
       ) : null}
       <main className="console-main">
-        <Outlet />
+        <KdsThemeProvider onTheme={setKdsTheme}>
+          <Outlet />
+        </KdsThemeProvider>
       </main>
       <AlertPanels />
     </ThemeRoot>
