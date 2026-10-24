@@ -4480,6 +4480,12 @@ use `pnpm --filter @rp/contracts run docs` (the root `pnpm contracts:docs` scrip
 problem). The native screens were checked by their Jest tests and an Android prebuild, not on a
 device: look at them on a phone and a tablet with the next APK.
 
+NFR-P07 (`speed.e2e.ts`) fails on the 5 GB WSL laptop for the old console as well as the new one
+(tap p95 120-128 ms before, 128-136 ms after, against 100 ms), so it says nothing about the redesign
+there; CI's runner is the judge. The redesign's shadow transitions and press scaling on table tiles
+and menu items were removed again: on 100 tables and 1,000 dishes they cost tap time. Linting the
+whole repo at once swaps on that laptop; lint `packages`, then each app, instead.
+
 ### 2026-10-24: plural messages on Hermes (waiter app crash after pairing)
 
 The waiter app logged `TypeError: undefined cannot be used as a constructor` once paired: Hermes

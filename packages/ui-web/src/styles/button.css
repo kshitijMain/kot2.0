@@ -29,8 +29,6 @@
   -webkit-tap-highlight-color: transparent;
   transition:
     background-color var(--rp-duration-fast) var(--rp-easing-standard),
-    border-color var(--rp-duration-fast) var(--rp-easing-standard),
-    box-shadow var(--rp-duration-fast) var(--rp-easing-standard),
     transform var(--rp-duration-fast) var(--rp-easing-standard);
 }
 

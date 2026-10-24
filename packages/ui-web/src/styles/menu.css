@@ -14,17 +14,14 @@
   text-align: start;
   cursor: pointer;
   touch-action: manipulation;
-  transition:
-    box-shadow var(--rp-duration-fast) var(--rp-easing-standard),
-    transform var(--rp-duration-fast) var(--rp-easing-standard);
 }
 
+/*
+ * Hover and press change only the background: a floor of 100 tables or a menu of 1,000 dishes
+ * must answer a tap within 100 ms (NFR-P07), and animated shadows on that many cards cost more.
+ */
 .rp-menu-item:hover:not(:disabled) {
-  box-shadow: var(--rp-elevation-2);
-}
-
-.rp-menu-item:active:not(:disabled) {
-  transform: scale(0.98);
+  background: var(--rp-color-surface-sunken);
 }
 
 .rp-menu-item:disabled {

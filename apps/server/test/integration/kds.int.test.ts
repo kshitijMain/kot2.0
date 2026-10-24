@@ -150,7 +150,7 @@ const kitchenTicket = async () => {
 const step = (orderItemId: string, event: string, headers = screen('kitchenScreen')) =>
   server().post(`/api/v1/order-items/${orderItemId}/status`).set(headers).send({ event });
 
-describe('[KDS-001] [KDS-002] [KDS-003] a station screen in station mode', () => {
+describe('[KDS-001] [KDS-002] [KDS-003] [KDS-011] a station screen in station mode', () => {
   it('shows only its own station’s tickets, with table, waiter, lines and settings', async () => {
     const kitchen = await tickets(screen('kitchenScreen'));
     expect(kitchen.station).toEqual({ id: id('Kitchen'), name: 'Kitchen' });
@@ -159,6 +159,8 @@ describe('[KDS-001] [KDS-002] [KDS-003] a station screen in station mode', () =>
       ageRedMinutes: 20,
       readyNotCollectedMinutes: 3,
       soundVolumePercent: 70,
+      // Light by default; a manager may choose the dark kitchen theme (ADR-0022).
+      theme: 'LIGHT',
     });
     expect(kitchen.tickets).toHaveLength(1);
     expect(kitchen.tickets[0]).toMatchObject({
