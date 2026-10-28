@@ -182,16 +182,16 @@ components`. Both take the same props and tokens. A new primitive goes into the 
 app) with tests, and gets a line here in the same pull request. Shared ordering behaviour
 (MENU-012) lives in `@rp/domain` and `@rp/ordering`, not in a component.
 
-| Group    | Web (`@rp/ui-web`)                                                                              | Native (`@rp/ui-native`)                                                    |
-| -------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| Actions  | `Button`, `IconButton`, `Icon`, `Spinner`                                                       | `Button`, `Glyph`                                                           |
-| Text     | (the stylesheet sets Inter)                                                                     | `Text`, `TextInput` (Inter)                                                 |
-| Input    | `PinPad`, `NumberPad`, `TextField`, `TextArea`, `Select`, `QuantityStepper`, `ChoiceGroup`      | `PinPad`, `TextField`, `QuantityStepper`, `ChoiceGroup`, `SegmentedControl` |
-| Ordering | `MenuItemCard`, `ItemOptions`, `ComboChoices`, `TableTile`                                      | `MenuItemCard`, `ItemOptions`, `ComboChoices`, `TableTile`                  |
-| Overlays | `Dialog`, `Sheet`, `ConfirmDialog`, `ToastProvider` + `useToast`                                | `Sheet`, `Toast`                                                            |
-| Display  | `Badge` (status tones or `highlight`), `StatusChip`, `Money`, `Card`, `Table`, `Tabs`, `QrCode` | `StatusChip`, `Money`                                                       |
-| States   | `EmptyState`, `LoadingState`, `ErrorState`, `ConnectionBanner`                                  | (screens in `@rp/mobile-shell`: connection banner, alerts)                  |
-| Setup    | `ThemeRoot`, `UiStringsProvider`                                                                | theme provider in `theme.tsx`                                               |
+| Group    | Web (`@rp/ui-web`)                                                                                           | Native (`@rp/ui-native`)                                                    |
+| -------- | ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------- |
+| Actions  | `Button`, `IconButton`, `Icon`, `Spinner`                                                                    | `Button`, `Glyph`                                                           |
+| Text     | (the stylesheet sets Inter)                                                                                  | `Text`, `TextInput` (Inter)                                                 |
+| Input    | `PinPad`, `NumberPad`, `TextField`, `TextArea`, `Select`, `QuantityStepper`, `ChoiceGroup`                   | `PinPad`, `TextField`, `QuantityStepper`, `ChoiceGroup`, `SegmentedControl` |
+| Ordering | `MenuItemCard`, `ItemOptions`, `ComboChoices`, `TableTile`                                                   | `MenuItemCard`, `ItemOptions`, `ComboChoices`, `TableTile`                  |
+| Overlays | `Dialog`, `Sheet`, `ConfirmDialog`, `ToastProvider` + `useToast`                                             | `Sheet`, `Toast`                                                            |
+| Display  | `Badge` (status tones or `highlight`), `StatusChip`, `Money`, `Card`, `Table`, `Tabs`, `QrCode`, `DishPhoto` | `StatusChip`, `Money`, `DishPhoto`                                          |
+| States   | `EmptyState`, `LoadingState`, `ErrorState`, `ConnectionBanner`                                               | (screens in `@rp/mobile-shell`: connection banner, alerts)                  |
+| Setup    | `ThemeRoot`, `UiStringsProvider`                                                                             | theme provider in `theme.tsx`                                               |
 
 Buttons: variants `primary` (one per screen, the main action), `secondary`, `ghost`, `danger`
 (destructive, always confirmed) and `accent` (diner surfaces). Sizes `md` (meets 48 px) and `lg`
@@ -213,6 +213,17 @@ Rules every component follows:
   actions ask for confirmation with `ConfirmDialog`.
 - Manager approvals always use the shared `PinPad` (AUTH-004), on whatever device the action
   started.
+- Dish photos go through `DishPhoto` (web and native): the restaurant's own photo, or, without
+  one or when it fails to load, the same calm placeholder (a plate drawn in `border-strong` on
+  `surface-sunken`, decorative and hidden from screen readers) on every surface that shows photos:
+  the POS, the waiter app, the table tablet, the QR menu, the console's menu editor and its
+  previews. On the POS and the waiter app `MenuItemCard` takes `photo` and shows a small square
+  beside the name (an address, or null for the placeholder; left out, no photo area), decorative
+  there because the card's label names the dish. Photos come only from the restaurant, never
+  AI-made or from the internet; photo pickers say what makes a good one (landscape, good light,
+  one dish, plain background).
+- Long forms keep the few fields everyone needs in view and fold the rest under "More options"
+  (a `details` element, 48 px summary), which opens by itself when a mistake is inside it.
 
 ## 07 Icons
 

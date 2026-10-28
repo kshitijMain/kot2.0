@@ -1,6 +1,7 @@
 import type { Translator } from '@rp/i18n';
-import { ErrorState, LoadingState, ToastProvider } from '@rp/ui-web';
-import { Navigate, Route, Routes } from 'react-router';
+import { ErrorBoundary, ErrorState, LoadingState, ToastProvider } from '@rp/ui-web';
+import type { ReactNode } from 'react';
+import { Navigate, Route, Routes, useLocation } from 'react-router';
 import { ConsoleProvider, useConsoleState } from './app/console-context.js';
 import type { ConsoleController, ConsoleSnapshot } from './app/console-controller.js';
 import { I18nProvider, useT } from './app/i18n.js';
@@ -69,19 +70,57 @@ export function ConsoleRoutes() {
   );
 }
 
+/**
+ * A bug in one screen shows a message with a way back, never a white page (NFR-U04); moving to
+ * another screen clears it. The crash is reported like any other page error (NFR-O02).
+ */
+function ScreenBoundary({
+  children,
+  onError,
+}: {
+  children: ReactNode;
+  onError: ((error: unknown) => void) | undefined;
+}) {
+  const t = useT();
+  const { pathname } = useLocation();
+  return (
+    <ErrorBoundary
+      resetKey={pathname}
+      {...(onError !== undefined && { onError })}
+      fallback={(retry) => (
+        <main className="console-center">
+          <ErrorState
+            title={t('states.crashTitle')}
+            description={t('states.crashDescription')}
+            retryLabel={t('states.retry')}
+            onRetry={retry}
+          />
+        </main>
+      )}
+    >
+      {children}
+    </ErrorBoundary>
+  );
+}
+
 /** The console (C3): one app for POS, KDS and the manager dashboard (MGR-001, KDS-001). */
 export function App({
   controller,
   translator,
+  onError,
 }: {
   controller: ConsoleController;
   translator: Translator;
+  /** Reports a screen that crashed (NFR-O02). */
+  onError?: (error: unknown) => void;
 }) {
   return (
     <I18nProvider translator={translator}>
       <ConsoleProvider controller={controller}>
         <ToastProvider>
-          <ConsoleRoutes />
+          <ScreenBoundary onError={onError}>
+            <ConsoleRoutes />
+          </ScreenBoundary>
         </ToastProvider>
       </ConsoleProvider>
     </I18nProvider>

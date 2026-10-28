@@ -22,7 +22,6 @@ export function alertNotificationText(t: Translator): AlertNotificationText {
       const { title, detail } = describeAlert(alert, t);
       return { title, text: detail ?? '' };
     },
-    acknowledge: t('alerts.acknowledge'),
     channels: {
       alerts: t('alerts.notification.alertsChannel'),
       listening: t('alerts.notification.listeningChannel'),

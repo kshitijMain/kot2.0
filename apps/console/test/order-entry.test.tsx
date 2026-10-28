@@ -78,6 +78,22 @@ describe('[ORD-001] [MENU-012] taking an order at a table', () => {
     await expectNoAxeViolations(container);
   });
 
+  it('[MENU-008] shows each dish’s photo, or the placeholder, beside its name', async () => {
+    const photoId = '0199a0e0-0000-7000-8000-00000000f101';
+    const withPhoto = {
+      ...MENU,
+      items: MENU.items.map((item) => (item.name === 'Paneer Tikka' ? { ...item, photoId } : item)),
+    };
+    const fake = orderServer().on('GET', '/api/v1/menu', () => ({ status: 200, body: withPhoto }));
+    const { user } = await renderConsole({ fake, signedIn: 'CASHIER', path: TABLE_PATH });
+    const tikka = await card(/^Paneer Tikka/);
+    expect(tikka.querySelector('img')).toHaveAttribute('src', `/api/v1/photos/${photoId}/160`);
+    await user.click(screen.getByRole('button', { name: 'Main Course' }));
+    const dal = await card(/^Dal Makhani/);
+    expect(dal.querySelector('img')).toBeNull();
+    expect(dal.querySelector('.rp-dish-photo__plate')).not.toBeNull();
+  });
+
   it('[MENU-005] shows a combo outside its hours, by the restaurant’s clock, as not orderable', async () => {
     // An hour's window that is never now: six hours ahead of Kolkata time.
     const hour = Number(

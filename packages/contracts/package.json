@@ -17,6 +17,10 @@
     "./relay": {
       "types": "./dist/relay/index.d.ts",
       "import": "./dist/relay/index.js"
+    },
+    "./testing": {
+      "types": "./dist/testing/fuzz.d.ts",
+      "import": "./dist/testing/fuzz.js"
     }
   },
   "files": [

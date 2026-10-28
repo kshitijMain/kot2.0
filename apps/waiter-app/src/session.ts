@@ -24,8 +24,8 @@ import { alertNotificationText } from './notifications';
 export const translator = createTranslator();
 
 /**
- * The phone's alerts outside its screen (P2-06b, WTR-005): the service that keeps it listening
- * with the screen off, and a notification per alert with Acknowledge.
+ * The phone's alerts as notifications (P2-06b, WTR-005): the service that keeps it listening with
+ * the screen off, a notification per alert that comes and goes, and the table a tapped one opens.
  */
 export const notifier = new AndroidAlertNotifier(alertNotificationText(translator));
 
@@ -68,10 +68,17 @@ let created: Promise<DeviceSession> | undefined;
  * coming while the alert service runs. The screen and the service's keep-alive task share it.
  */
 export function deviceSession(): Promise<DeviceSession> {
-  created ??= createSession().then((session) => {
-    void session.start();
-    return session;
-  });
+  created ??= createSession().then(
+    (session) => {
+      void session.start();
+      return session;
+    },
+    (error: unknown) => {
+      // A failed start is not kept: the next call (Try again) starts afresh.
+      created = undefined;
+      throw error;
+    },
+  );
   return created;
 }
 

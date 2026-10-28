@@ -31,7 +31,8 @@
     "security:checklists": "node infra/ci/check-checklists.mjs",
     "security:dast": "pnpm --filter @rp/dast scan",
     "installer:test": "pwsh -NoProfile -File infra/installer/windows/Invoke-Tests.ps1",
-    "clean": "turbo run clean && rm -rf node_modules/.cache"
+    "clean": "turbo run clean && rm -rf node_modules/.cache",
+    "printer:virtual": "node scripts/virtual-printer/virtual-printer.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.0",

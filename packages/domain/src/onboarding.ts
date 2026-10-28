@@ -48,6 +48,11 @@ export interface OnboardingFacts {
   readonly pairedDevices: number;
   /** Tables whose QR table tent code was never issued. */
   readonly tablesWithoutQr: number;
+  /**
+   * This PC can take QR orders: the QR menu site and the relay are set up (by the vendor). Until
+   * then table codes cannot be printed, and no guest can order with one.
+   */
+  readonly qrAvailable: boolean;
   /** The guided go-live test saw every path the restaurant uses (P7-07c). */
   readonly goLivePassed: boolean;
 }
@@ -74,7 +79,7 @@ export function stepReady(step: OnboardingStep, facts: OnboardingFacts): boolean
     case 'DEVICES':
       return facts.pairedDevices > 0;
     case 'QR':
-      return facts.tables > 0 && facts.tablesWithoutQr === 0;
+      return facts.qrAvailable && facts.tables > 0 && facts.tablesWithoutQr === 0;
     case 'GO_LIVE':
       return facts.goLivePassed;
   }

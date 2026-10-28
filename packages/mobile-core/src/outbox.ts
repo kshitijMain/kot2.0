@@ -24,8 +24,11 @@ export interface OutboxEntry<T = unknown> {
 /** What sending one entry came to. */
 export type SendOutcome<T = never> =
   | { readonly kind: 'SENT' }
-  /** No answer or a server error: try again later with the same key. */
-  | { readonly kind: 'RETRY'; readonly error: string }
+  /**
+   * No answer or a server error: try again later with the same key. `next` when the server did
+   * answer (an error with this entry only): the entries after it are still sent (QA-009).
+   */
+  | { readonly kind: 'RETRY'; readonly error: string; readonly next?: boolean }
   /**
    * The server refused it (e.g. an item ran out): keep it for a person to fix or dismiss. `body`
    * replaces the stored one, e.g. with the refused lines marked.
@@ -90,8 +93,9 @@ export class PersistentOutbox<T = unknown> {
 
   /**
    * Sends every pending entry, oldest first, one at a time (orders keep their order), including
-   * entries added while it runs. Stops at the first RETRY: the network is down and later entries
-   * would fail too. `only` leaves other entries waiting (e.g. another person's). One flush at a
+   * entries added while it runs. Stops at the first RETRY without an answer: the network is down
+   * and later entries would fail too; an entry the server answered with an error waits on its own
+   * while the later ones go (QA-009). `only` leaves other entries waiting (e.g. another person's). One flush at a
    * time: a flush asked for while one runs joins it.
    */
   flush(
@@ -116,6 +120,7 @@ export class PersistentOutbox<T = unknown> {
     let sent = 0;
     let rejected = 0;
     let retry = 0;
+    let retried = false;
     const tried = new Set<string>();
     for (;;) {
       const entry = (await this.load()).find(
@@ -143,11 +148,14 @@ export class PersistentOutbox<T = unknown> {
         rejected += 1;
       } else {
         await this.replace(entry.key, { status: 'PENDING', lastError: outcome.error });
-        retry = (await this.load()).filter(
-          (candidate) => candidate.status === 'PENDING' && only(candidate),
-        ).length;
-        break;
+        retried = true;
+        if (outcome.next !== true) break;
       }
+    }
+    if (retried) {
+      retry = (await this.load()).filter(
+        (candidate) => candidate.status === 'PENDING' && only(candidate),
+      ).length;
     }
     return { sent, retry, rejected };
   }

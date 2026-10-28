@@ -47,7 +47,11 @@ heartbeats, the audit chain checks, and the alert webhook.
 - Contracts: `@rp/contracts/control-plane`. The generated document is
   `docs/api/control-plane.openapi.json`.
 
-## AI menu import (P6-04a)
+## AI menu import (P6-04a), switched off
+
+Not used since 2026-10-25: restaurants' menus are entered by hand or with the Excel template, and
+no screen offers the AI reading. The code below stays in place, unused; it does nothing without
+`CP_AI_API_KEY`, and its feature flag is not pushed to PCs (`UNUSED_SETTING_KEYS`).
 
 - `POST /v1/menu-extractions` (signed): a restaurant's server sends up to 10 photos (JPEG, PNG,
   WebP, at most 5 MB each) or PDFs, 20 MB together. The answer (202) is the job; `GET
@@ -112,6 +116,24 @@ pnpm --filter @rp/control-plane test             unit + integration tests (throw
 pnpm --filter @rp/control-plane start            run dist/main.js
 pnpm --filter @rp/control-plane db:migrate:deploy
 ```
+
+## Container image
+
+`Dockerfile` (built from the repository root; `Dockerfile.dockerignore` limits its context) is the
+production image: the service with the vendor web app in `/app/web` (`CP_WEB_DIR`), as the
+non-root user 1000, with a health check on `/v1/health`. It trusts Amazon RDS's certificate
+authorities for ap-south-1 (`NODE_EXTRA_CA_CERTS`) and has no secret built in; every setting comes
+from the environment. The same image runs the migrations
+(`node node_modules/prisma/build/index.js migrate deploy`) and the admin CLI
+(`node dist/cli.js <command>`).
+
+```
+docker build -f apps/control-plane/Dockerfile -t rp-control-plane .
+```
+
+CI (`.github/workflows/control-plane-image.yml`) builds it, checks it migrates a database and
+turns healthy, scans it with Trivy (accepted findings in `.trivyignore`) and, on main, pushes it
+to Amazon ECR. Setting up AWS: `docs/runbooks/control-plane-aws.md`.
 
 Schema changes follow the local server's routine (`apps/server/README.md`): edit
 `prisma/schema.prisma`, then create a forward-only migration.

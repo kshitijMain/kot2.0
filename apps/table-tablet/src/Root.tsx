@@ -20,6 +20,7 @@ import {
 } from '@rp/mobile-native';
 import { setScreenGuard } from '@rp/ui-native';
 import Constants from 'expo-constants';
+import { StartupFailed } from '@rp/mobile-shell';
 import { useEffect, useState } from 'react';
 import { App } from './App';
 import type { TabletDevice } from './TabletHome';
@@ -84,21 +85,40 @@ async function createSession(): Promise<Created> {
 
 export function Root() {
   const [created, setCreated] = useState<Created | null>(null);
+  // A start that failed (secure storage, the kiosk module) says so with Try again (NFR-U04).
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let current: Created | undefined;
-    void createSession().then((made) => {
-      current = made;
-      setCreated(made);
-      made.updater?.start();
-      made.apkUpdater?.start();
-      return made.session.start();
-    });
+    void createSession().then(
+      (made) => {
+        current = made;
+        setCreated(made);
+        made.updater?.start();
+        made.apkUpdater?.start();
+        return made.session.start();
+      },
+      () => {
+        setFailed(true);
+      },
+    );
     return () => {
       current?.updater?.stop();
       current?.apkUpdater?.stop();
       current?.session.stop();
     };
-  }, []);
+  }, [attempt]);
+  if (failed) {
+    return (
+      <StartupFailed
+        translator={translator}
+        onRetry={() => {
+          setFailed(false);
+          setAttempt((count) => count + 1);
+        }}
+      />
+    );
+  }
   return created === null ? null : (
     <App
       session={created.session}

@@ -243,10 +243,7 @@ export const HOLDER: AlertHolder = {
   displayName: STAFF.WAITER.displayName,
 };
 
-/**
- * The Android notifier's stand-in (P2-06b): what rang, what was taken off, and whether it listens.
- * `pressAcknowledge` is a person pressing Acknowledge on a notification.
- */
+/** The Android notifier's stand-in (P2-06b): what rang, what was taken off, and whether it listens. */
 export class FakeNotifier implements AlertNotifier {
   readonly announced: AlertView[] = [];
   readonly dismissed: string[] = [];
@@ -254,7 +251,6 @@ export class FakeNotifier implements AlertNotifier {
   holder: AlertHolder | null = null;
   starts = 0;
   stops = 0;
-  private readonly listeners = new Set<(alertId: string) => void>();
 
   start(holder: AlertHolder): Promise<void> {
     this.holder = holder;
@@ -276,17 +272,6 @@ export class FakeNotifier implements AlertNotifier {
   dismiss(alertId: string): Promise<void> {
     this.dismissed.push(alertId);
     return Promise.resolve();
-  }
-
-  onAcknowledge(listener: (alertId: string) => void): () => void {
-    this.listeners.add(listener);
-    return () => {
-      this.listeners.delete(listener);
-    };
-  }
-
-  pressAcknowledge(alertId: string): void {
-    for (const listener of this.listeners) listener(alertId);
   }
 }
 

@@ -15,6 +15,7 @@ import {
   groupFormOf,
   groupRequestOf,
   groupRule,
+  healthInputOf,
   itemFormOf,
   itemRequestOf,
   newComboPart,
@@ -24,7 +25,9 @@ import {
   priceLabel,
   rupeesText,
   splitList,
+  withHalfAndFull,
 } from '../src/manage/menu/menu-view.js';
+import { menuHealth } from '@rp/domain';
 import {
   BREADS,
   category,
@@ -38,6 +41,8 @@ import {
   OLD_CATEGORY,
   OLD_DISH,
   PANEER,
+  stations,
+  taxGroups,
   THALI,
 } from './menu-fixture.js';
 
@@ -111,6 +116,17 @@ describe('[MENU-002] [MENU-003] [MENU-009] dishes', () => {
       ],
     });
     expect(itemRequestOf(form)).not.toHaveProperty('reason');
+  });
+
+  it('[MENU-002] refuses a price of ₹0 for a dish or a size, like the server', () => {
+    const form = itemFormOf(undefined, defaults);
+    expect(checkItem({ ...form, basePrice: '0' }).basePrice).toBe('priceInvalid');
+    expect(checkItem({ ...form, basePrice: '0.50' }).basePrice).toBeUndefined();
+    const sized = {
+      ...form,
+      variants: [{ key: 'a', name: 'Half', price: '0' }],
+    };
+    expect(checkItem(sized).variants).toBeDefined();
   });
 
   it('checks every field like the server', () => {
@@ -245,5 +261,49 @@ describe('[MENU-005] combos', () => {
     expect(
       comboRequestOf({ ...form, windowStart: '22:00', windowEnd: '02:00' }).timeWindow,
     ).toEqual({ start: '22:00', end: '02:00' });
+  });
+});
+
+describe('[MENU-003] sizes made easy', () => {
+  const names = { half: 'Half', full: 'Full' };
+
+  it('adds Half and Full in one go, the price typed becoming the Full price', () => {
+    const form = { ...itemFormOf(undefined, defaults), basePrice: '280' };
+    const variants = withHalfAndFull(form, names);
+    expect(variants.map((variant) => [variant.name, variant.price])).toEqual([
+      ['Half', ''],
+      ['Full', '280'],
+    ]);
+    // Already there: nothing is added twice.
+    expect(withHalfAndFull({ ...form, variants }, names)).toHaveLength(2);
+  });
+
+  it('asks a dish with sizes for no price of its own, and keeps the Full price as the dish’s', () => {
+    const form = {
+      ...itemFormOf(undefined, defaults),
+      name: 'Dal',
+      categoryId: MAINS,
+      basePrice: '',
+      variants: [
+        { key: 'a', name: 'Half', price: '160' },
+        { key: 'b', name: 'Full', price: '260' },
+      ],
+    };
+    expect(checkItem(form)).toEqual({});
+    expect(itemRequestOf(form).basePrice).toBe(26000);
+    expect(checkItem({ ...form, variants: [] }).basePrice).toBe('priceInvalid');
+  });
+});
+
+describe('[MENU-002] the menu check reads the draft', () => {
+  it('checks active dishes against the active stations and tax groups', () => {
+    const draft = draftMenu();
+    const health = menuHealth(healthInputOf(draft, taxGroups().taxGroups, stations().stations));
+    // The archived Mango Lassi is not checked; every active dish has its price, station and tax.
+    expect(health.publishable).toBe(true);
+    expect(health.blocking).toEqual([]);
+    expect(health.warnings.some((problem) => problem.name === 'Mango Lassi')).toBe(false);
+    const noKitchen = menuHealth(healthInputOf(draft, taxGroups().taxGroups, []));
+    expect(noKitchen.blocking.map((problem) => problem.kind)).toContain('NO_STATION');
   });
 });

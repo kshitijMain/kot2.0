@@ -8,8 +8,8 @@ import {
 
 /**
  * Menu import from the vendor template (P1-05, ONB-005, ONB-009): check a file and see every
- * problem with its sheet, row and column; then import it, which adds the menu in one transaction
- * and publishes a new menu version.
+ * problem with its sheet, row and column; then import it, which adds the menu to the draft in one
+ * transaction. Nothing reaches the devices until the menu is published.
  */
 
 /** Largest workbook accepted (a 150-item menu is well under 1 MB). */
@@ -68,13 +68,13 @@ export type MenuImportSummary = z.infer<typeof MenuImportSummary>;
 export const MenuImportReport = z.object({
   /** True when the file has no problems. */
   ok: z.boolean(),
-  /** True when the menu was written and published (import only, never for a check). */
+  /** True when the menu was added to the draft (import only, never for a check). */
   committed: z.boolean(),
   /** Every problem found, by sheet, then row, then column. Nothing is written when there are any. */
   issues: z.array(MenuImportIssue),
   /** What the import adds; null when there are problems. */
   summary: MenuImportSummary.nullable(),
-  /** The published menu version after an import. */
+  /** A published menu version; null, as imports add to the draft and leave publishing to the manager. */
   menuVersion: z.int().positive().nullable(),
 });
 export type MenuImportReport = z.infer<typeof MenuImportReport>;

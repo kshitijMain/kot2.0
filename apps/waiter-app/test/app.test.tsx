@@ -15,6 +15,7 @@ import {
   SocketFactory,
   STAFF,
 } from '@rp/mobile-core/testing';
+import type { AlertTableOpener } from '@rp/mobile-native';
 import { act, fireEvent, render, screen } from '@testing-library/react-native';
 import { AppState } from 'react-native';
 import { App } from '../src/App';
@@ -143,7 +144,8 @@ describe('[UPD-001] over-the-air updates on a waiter phone', () => {
     expect(updater.getSnapshot().status).toBe('ready');
     expect(reload).not.toHaveBeenCalled();
 
-    await fireEvent.press(await screen.findByRole('button', { name: 'Sign out' }));
+    await fireEvent.press(await screen.findByTestId('home-menu'));
+    await fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
     expect(await screen.findByText('Tap your name')).toBeOnTheScreen();
     expect(reload).toHaveBeenCalledTimes(1);
     Object.assign(AppState, { currentState: undefined });
@@ -153,6 +155,8 @@ describe('[UPD-001] over-the-air updates on a waiter phone', () => {
 describe('[WTR-001] waiter app smoke flow', () => {
   it('pairs, signs a waiter in, shows live tables and signs out', async () => {
     const { restaurant, session, sockets, server } = setup();
+    // A new phone alerts nobody yet.
+    restaurant.holder = null;
     await session.start();
     await render(<App session={session} translator={translator} />);
 
@@ -166,7 +170,6 @@ describe('[WTR-001] waiter app smoke flow', () => {
     }
 
     expect(await screen.findByRole('button', { name: 'T1, Free' })).toBeOnTheScreen();
-    expect(screen.getByText('Signed in as Ravi')).toBeOnTheScreen();
 
     // Another device opens T1: the kitchen event makes the screen read the tables again.
     jest.useFakeTimers();
@@ -180,19 +183,38 @@ describe('[WTR-001] waiter app smoke flow', () => {
     jest.useRealTimers();
     expect(await screen.findByRole('button', { name: 'T1, Occupied' })).toBeOnTheScreen();
 
+    // Who is signed in, and signing out, are in the Menu.
+    await fireEvent.press(screen.getByTestId('home-menu'));
+    expect(screen.getByText('Signed in as Ravi')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
     expect(await screen.findByText('Tap your name')).toBeOnTheScreen();
     expect(server.callsTo('POST', '/api/v1/auth/logout')).toHaveLength(1);
   });
 
-  it('only offers waiters and managers on the login screen', async () => {
-    const { session } = setup();
+  it('[AUTH-010] offers only waiters on the login screen', async () => {
+    const { restaurant, session } = setup();
+    restaurant.holder = null;
     await session.start();
     await session.pair('http://pos.test:3000', 'ABCD-EFGH');
     await render(<App session={session} translator={translator} />);
-    expect(await screen.findByRole('button', { name: 'Meera, Manager' })).toBeOnTheScreen();
+    expect(await screen.findByRole('button', { name: 'Ravi, Waiter' })).toBeOnTheScreen();
+    expect(screen.queryByText('Meera')).toBeNull();
     expect(screen.queryByText('Imran')).toBeNull();
     expect(screen.queryByText('Asha')).toBeNull();
+  });
+
+  it('[AUTH-001] opens on the PIN pad of the waiter the phone alerts', async () => {
+    const { session, sockets } = setup();
+    await session.start();
+    await session.pair('http://pos.test:3000', 'ABCD-EFGH');
+    await render(<App session={session} translator={translator} />);
+    await act(async () => {
+      sockets.sync();
+      await Promise.resolve();
+    });
+    expect(await screen.findByRole('header', { name: 'Enter the PIN for Ravi' })).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Not you?' }));
+    expect(await screen.findByRole('button', { name: 'Ravi, Waiter' })).toBeOnTheScreen();
   });
 
   it('says when there are no tables, and offers a retry when they cannot be read', async () => {
@@ -221,7 +243,7 @@ describe('[WTR-006] the waiter’s alerts on the phone', () => {
     payload: { items: ['Paneer Tikka'] },
   });
 
-  it('shows them over the tables and rings a new one in at once', async () => {
+  it('counts them on the bell as they ring, with nothing to acknowledge', async () => {
     const restaurant = new Restaurant();
     const { sockets, server } = await signedInApp(restaurant);
     await act(async () => {
@@ -229,32 +251,31 @@ describe('[WTR-006] the waiter’s alerts on the phone', () => {
       await Promise.resolve();
     });
     expect(await screen.findByRole('button', { name: /^T2, Occupied/ })).toBeOnTheScreen();
-    expect(screen.queryByTestId('alert-banner')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Alerts, none open' })).toBeOnTheScreen();
 
     restaurant.alerts.push(ready);
     await act(async () => {
       sockets.last.fire('event', alertRaisedFrame(1, ready));
       await Promise.resolve();
     });
-    expect(await screen.findByText(/Table T2 · Food ready/)).toBeOnTheScreen();
-    await fireEvent.press(
-      screen.getByRole('button', { name: 'Acknowledge Table T2 · Food ready' }),
-    );
+    // Android shows the notification; the app only counts it, nothing covers the tables.
+    await fireEvent.press(await screen.findByRole('button', { name: 'Alerts, 1 open' }));
+    expect(screen.getByText('Table T2 · Food ready')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Acknowledge Table T2 · Food ready' })).toBeNull();
+
+    // A tap on it opens the table.
+    await fireEvent.press(screen.getByTestId(`alert-${ready.id}`));
+    expect(await screen.findByRole('header', { name: 'Table T2' })).toBeOnTheScreen();
     expect(
       server.callsTo('POST', `/api/v1/devices/current/alerts/${ready.id}/acknowledge`),
-    ).toHaveLength(1);
-    expect(screen.queryByTestId('alert-banner')).toBeNull();
+    ).toHaveLength(0);
   });
 
-  it('[AUTH-005] keeps them on the sign-in screen after an inactivity sign-out', async () => {
+  it('[AUTH-005] opens on the waiter’s PIN pad after an inactivity sign-out', async () => {
     const restaurant = new Restaurant();
     restaurant.alerts.push(ready);
-    const { session, sockets, server } = await signedInApp(restaurant);
-    await act(async () => {
-      sockets.sync();
-      await Promise.resolve();
-    });
-    expect(await screen.findByText(/Table T2 · Food ready/)).toBeOnTheScreen();
+    const { session, server, sockets } = await signedInApp(restaurant);
+    expect(await screen.findByRole('button', { name: /^T2, Occupied/ })).toBeOnTheScreen();
 
     // The server signs Ravi out for inactivity; the phone still alerts him, like his pager.
     server.on('GET', '/api/v1/auth/session', () => ({
@@ -264,18 +285,48 @@ describe('[WTR-006] the waiter’s alerts on the phone', () => {
     await act(async () => {
       await session.keepAlive();
     });
-    expect(await screen.findByText('Tap your name')).toBeOnTheScreen();
     await act(async () => {
       sockets.sync();
       await Promise.resolve();
     });
-    expect(screen.getByText('Paneer Tikka · 4 min ago · For Ravi')).toBeOnTheScreen();
-    await fireEvent.press(
-      screen.getByRole('button', { name: 'Acknowledge Table T2 · Food ready' }),
-    );
-    expect(
-      server.callsTo('POST', `/api/v1/devices/current/alerts/${ready.id}/acknowledge`),
-    ).toHaveLength(1);
-    expect(screen.queryByTestId('alert-banner')).toBeNull();
+    expect(await screen.findByRole('header', { name: 'Enter the PIN for Ravi' })).toBeOnTheScreen();
+  });
+});
+
+/** Android's taps on alert notifications, as `AndroidAlertNotifier` passes them on. */
+class FakeOpener implements AlertTableOpener {
+  private listener: ((sessionId: string) => void) | undefined;
+  constructor(private started: string | null = null) {}
+  onOpenTable(listener: (sessionId: string) => void): () => void {
+    this.listener = listener;
+    return () => {
+      this.listener = undefined;
+    };
+  }
+  takeOpenedTable(): Promise<string | null> {
+    const started = this.started;
+    this.started = null;
+    return Promise.resolve(started);
+  }
+  tap(sessionId: string): void {
+    this.listener?.(sessionId);
+  }
+}
+
+describe('[WTR-005] a tapped alert notification', () => {
+  it('opens its table while the app runs', async () => {
+    const opener = new FakeOpener();
+    await signedInApp(undefined, undefined, { opener });
+    expect(await screen.findByRole('button', { name: /^T2, Occupied/ })).toBeOnTheScreen();
+    await act(async () => {
+      opener.tap(T2_SESSION);
+      await Promise.resolve();
+    });
+    expect(await screen.findByRole('header', { name: 'Table T2' })).toBeOnTheScreen();
+  });
+
+  it('opens its table when the tap started the app', async () => {
+    await signedInApp(undefined, undefined, { opener: new FakeOpener(T2_SESSION) });
+    expect(await screen.findByRole('header', { name: 'Table T2' })).toBeOnTheScreen();
   });
 });

@@ -91,6 +91,46 @@ describe('[MENU-012] MenuItemCard', () => {
     ).toBeDisabled();
     expect(screen.queryByText('3 left')).toBeNull();
   });
+
+  it('[MENU-008] shows the dish’s photo, or the placeholder, only when asked', async () => {
+    await renderUi(
+      <>
+        <MenuItemCard
+          testID="tikka"
+          name="Paneer Tikka"
+          price={28_000}
+          foodType="VEG"
+          foodTypeLabel="Veg"
+          photo={{ uri: 'https://pos.local/api/v1/photos/p/160' }}
+        />
+        <MenuItemCard
+          testID="dal"
+          name="Dal Makhani"
+          price={22_000}
+          foodType="VEG"
+          foodTypeLabel="Veg"
+          photo={null}
+        />
+        <MenuItemCard
+          testID="naan"
+          name="Butter Naan"
+          price={6_000}
+          foodType="VEG"
+          foodTypeLabel="Veg"
+        />
+      </>,
+    );
+    expect(screen.getByTestId('tikka-photo')).toBeOnTheScreen();
+    expect(
+      screen.queryByTestId('tikka-photo-placeholder', { includeHiddenElements: true }),
+    ).toBeNull();
+    expect(
+      screen.getByTestId('dal-photo-placeholder', { includeHiddenElements: true }),
+    ).toBeOnTheScreen();
+    expect(screen.queryByTestId('naan-photo')).toBeNull();
+    // The card still speaks as one button.
+    expect(screen.getByRole('button', { name: 'Paneer Tikka, ₹280.00, Veg' })).toBeOnTheScreen();
+  });
 });
 
 describe('[NFR-U03] QuantityStepper', () => {

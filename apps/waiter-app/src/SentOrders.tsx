@@ -6,12 +6,22 @@ import {
   displayState,
   kotDelivery,
   kotDeliveryText,
+  type LineActions,
   lineActions,
-  servableLines,
   type UnavailableReason,
   unavailableReason,
 } from '@rp/ordering';
-import { Button, Glyph, StatusChip, Text, toneColors, useTheme, weight } from '@rp/ui-native';
+import {
+  Button,
+  Glyph,
+  Sheet,
+  StatusChip,
+  Text,
+  toneColors,
+  useTheme,
+  weight,
+} from '@rp/ui-native';
+import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import type { Ending } from './EndItemSheet';
 
@@ -22,10 +32,8 @@ export interface SentActions {
   readonly role: Role;
   /** Whether the person is this table's waiter (own-table grants). */
   readonly ownTable: boolean;
-  /** Lines with a step in flight. */
+  /** Lines with a cancel or void in flight. */
   readonly busy: ReadonlySet<string>;
-  readonly onStep: (line: SentLine, event: 'PICK_UP' | 'SERVE') => void;
-  readonly onServeAll: (lines: readonly SentLine[]) => void;
   readonly onEnd: (line: SentLine, ending: Ending) => void;
   /** ORD-016: send an order's held items to the kitchen. */
   readonly onFire?: (order: OrderView) => void;
@@ -63,9 +71,10 @@ function lineDetails(line: SentLine, order: OrderView): string {
 /**
  * What was sent for this table (WTR-007, WTR-009, WTR-012): each order with its kitchen tickets
  * and whether each one reached the kitchen (on the kitchen screen, printed, printing, or held by
- * a printer problem), and each item's live state with what can be done with it now: mark it
- * picked up or served, cancel it before the kitchen starts, void it after, or order it again
- * (NFR-U03). Ready dishes can be marked served together.
+ * a printer problem), and each item's live state. "Again" orders a dish again in one tap
+ * (NFR-U03); cancelling it before the kitchen starts or voiding it after sits behind "More", so
+ * neither is pressed by mistake. Nothing is marked picked up or served here: the kitchen's
+ * "Picked up" serves the dish (2026-10-25).
  */
 export function SentOrders({
   data,
@@ -84,6 +93,7 @@ export function SentOrders({
   const { colors } = useTheme();
   // MENU-005: a combo cannot be ordered again outside its hours.
   const now = useNow(30_000);
+  const [more, setMore] = useState<{ line: SentLine; can: LineActions } | undefined>();
   const heading = (
     <Text accessibilityRole="header" style={[styles.heading, { color: colors.text }]}>
       {t('pos.sent.title')}
@@ -108,23 +118,14 @@ export function SentOrders({
       </View>
     );
   }
-  const servable = servableLines(data.value, actions.role, actions.ownTable);
+  const end = (line: SentLine, ending: Ending) => {
+    setMore(undefined);
+    actions.onEnd(line, ending);
+  };
   return (
     <View style={styles.section}>
       {heading}
       {data.value.length === 0 ? <Note>{t('pos.sent.none')}</Note> : null}
-      {servable.length > 1 ? (
-        <Button
-          fullWidth
-          testID="serve-all"
-          disabled={servable.some((line) => actions.busy.has(line.id))}
-          onPress={() => {
-            actions.onServeAll(servable);
-          }}
-        >
-          {t('mobile.item.serveAll', { count: servable.length })}
-        </Button>
-      ) : null}
       {data.value.map((order) => (
         <View
           key={order.id}
@@ -206,29 +207,6 @@ export function SentOrders({
                     <StatusChip state={state} label={t(`pos.itemState.${state}`)} />
                   </View>
                   <View style={styles.lineActions}>
-                    {can.serve ? (
-                      <Button
-                        loading={busy}
-                        accessibilityLabel={t('mobile.item.serveOf', { name: line.name })}
-                        onPress={() => {
-                          actions.onStep(line, 'SERVE');
-                        }}
-                      >
-                        {t('mobile.item.serve')}
-                      </Button>
-                    ) : null}
-                    {can.pickUp ? (
-                      <Button
-                        variant="secondary"
-                        disabled={busy}
-                        accessibilityLabel={t('mobile.item.pickUpOf', { name: line.name })}
-                        onPress={() => {
-                          actions.onStep(line, 'PICK_UP');
-                        }}
-                      >
-                        {t('mobile.item.pickUp')}
-                      </Button>
-                    ) : null}
                     <Button
                       variant="secondary"
                       disabled={blocked !== undefined}
@@ -239,30 +217,20 @@ export function SentOrders({
                     >
                       {t('mobile.order.again')}
                     </Button>
-                    {can.cancel ? (
+                    {can.cancel || can.void !== null ? (
                       <Button
                         variant="ghost"
-                        disabled={busy}
-                        accessibilityLabel={t('mobile.item.cancelOf', { name: line.name })}
+                        loading={busy}
+                        startIcon={<Glyph name="more" color={colors.text} />}
+                        accessibilityLabel={t('mobile.item.moreOf', { name: line.name })}
+                        testID={`more-${line.id}`}
                         onPress={() => {
-                          actions.onEnd(line, 'CANCEL');
+                          setMore({ line, can });
                         }}
                       >
-                        {t('mobile.item.cancel')}
+                        {t('mobile.item.more')}
                       </Button>
                     ) : null}
-                    {can.void === null ? null : (
-                      <Button
-                        variant="ghost"
-                        disabled={busy}
-                        accessibilityLabel={t('mobile.item.voidOf', { name: line.name })}
-                        onPress={() => {
-                          actions.onEnd(line, 'VOID');
-                        }}
-                      >
-                        {t('mobile.item.void')}
-                      </Button>
-                    )}
                   </View>
                   {reason === undefined ? null : (
                     <Text style={[styles.reason, { color: colors.dangerText }]}>{reason}</Text>
@@ -272,6 +240,40 @@ export function SentOrders({
             })}
         </View>
       ))}
+      {more === undefined ? null : (
+        <Sheet
+          open
+          title={more.line.name}
+          onClose={() => {
+            setMore(undefined);
+          }}
+        >
+          {more.can.cancel ? (
+            <Button
+              variant="secondary"
+              fullWidth
+              accessibilityLabel={t('mobile.item.cancelOf', { name: more.line.name })}
+              onPress={() => {
+                end(more.line, 'CANCEL');
+              }}
+            >
+              {t('mobile.item.cancel')}
+            </Button>
+          ) : null}
+          {more.can.void === null ? null : (
+            <Button
+              variant="danger"
+              fullWidth
+              accessibilityLabel={t('mobile.item.voidOf', { name: more.line.name })}
+              onPress={() => {
+                end(more.line, 'VOID');
+              }}
+            >
+              {t('mobile.item.void')}
+            </Button>
+          )}
+        </Sheet>
+      )}
     </View>
   );
 }

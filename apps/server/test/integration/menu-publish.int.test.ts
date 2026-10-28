@@ -180,6 +180,28 @@ describe('[MENU-013] [MENU-012] publishing', () => {
     expect(menu.items.map((item) => item.name)).not.toContain('Chaas');
     await prisma.item.update({ where: { id: id('Chaas') }, data: { archivedAt: null } });
   });
+
+  it('[MENU-002] never publishes a dish without a price, an active station or a tax group', async () => {
+    // Data the editor and the import refuse, as it could be from before the rule.
+    const station = await prisma.station.create({
+      data: { restaurantId: kit.restaurantId, name: 'Old grill', archivedAt: new Date() },
+    });
+    await prisma.item.update({ where: { id: id('Dal') }, data: { basePrice: 0 } });
+    await prisma.item.update({ where: { id: id('Roti') }, data: { stationId: station.id } });
+    const versions = await prisma.menuVersion.count();
+    const refused = await server().post('/api/v1/menu/publish').set(as(manager));
+    expect([refused.status, codeOf(refused)]).toEqual([422, 'MENU_NOT_READY']);
+    expect(ApiError.parse(refused.body).message).toBe(
+      'The menu cannot be published until these are fixed: Dal has no price; Roti has no kitchen station.',
+    );
+    expect(await prisma.menuVersion.count()).toBe(versions);
+
+    const kitchenId = (await prisma.item.findUniqueOrThrow({ where: { id: id('Lassi') } }))
+      .stationId;
+    await prisma.item.update({ where: { id: id('Dal') }, data: { basePrice: 18_000 } });
+    await prisma.item.update({ where: { id: id('Roti') }, data: { stationId: kitchenId } });
+    expect((await server().post('/api/v1/menu/publish').set(as(manager))).status).toBe(200);
+  });
 });
 
 describe('[MENU-006] availability and stock', () => {

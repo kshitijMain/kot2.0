@@ -186,22 +186,18 @@ body {
 }
 
 /* A square thumbnail; the photo keeps its shape and fills it (MENU-008). */
+/* The photo or the shared placeholder (@rp/ui-web DishPhoto), the same square either way. */
 .qr-dish__photo {
   flex: none;
   align-self: center;
   width: 4.5rem;
   height: 4.5rem;
-  object-fit: cover;
+  aspect-ratio: auto;
   border-radius: var(--rp-radius-md);
-  background: var(--rp-color-surface-sunken);
 }
 
 .qr-sheet__photo {
-  display: block;
-  width: 100%;
-  height: auto;
   max-height: 16rem;
-  object-fit: cover;
   border-radius: var(--rp-radius-md);
   margin-bottom: var(--rp-space-3);
 }

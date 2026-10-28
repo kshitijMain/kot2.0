@@ -272,6 +272,35 @@ describe('[WTR-012] [ORD-013] orders on their way to the kitchen', () => {
   });
 });
 
+describe('[WTR-012] [NFR-A03] an order the server keeps failing (QA-009)', () => {
+  it('waits on its own while the orders after it still go', async () => {
+    const server = new FakeServer().on(
+      'POST',
+      '/api/v1/orders',
+      () => ({ status: 500, body: { code: 'INTERNAL_ERROR', message: 'Something went wrong.' } }),
+      () => accepted(8),
+    );
+    const { outbox, net } = outboxFor(server);
+    net.state.offline = true;
+    expect(await outbox.submit(draft(RAVI, 'T1'))).toEqual({ status: 'QUEUED' });
+    expect(await outbox.submit(draft(RAVI, 'T2'))).toEqual({ status: 'QUEUED' });
+    net.state.offline = false;
+    expect(await outbox.flush()).toEqual({ sent: 1, retry: 1, rejected: 0 });
+    const left = await outbox.list();
+    expect(left.map((entry) => [entry.body.tableLabel, entry.status])).toEqual([['T1', 'PENDING']]);
+  });
+
+  it('still stops at the first order when the server cannot be reached', async () => {
+    const server = new FakeServer().on('POST', '/api/v1/orders', () => accepted(9));
+    const { outbox, net } = outboxFor(server);
+    net.state.offline = true;
+    await outbox.submit(draft(RAVI, 'T1'));
+    await outbox.submit(draft(RAVI, 'T2'));
+    expect(await outbox.flush()).toEqual({ sent: 0, retry: 2, rejected: 0 });
+    expect(submits(server)).toHaveLength(0);
+  });
+});
+
 describe('[WTR-012] the persistent outbox during a send', () => {
   it('sends what is added while it runs, and leaves what it is told to skip', async () => {
     const outbox = new PersistentOutbox<{ n: number; who: string }>(new MemoryStore());

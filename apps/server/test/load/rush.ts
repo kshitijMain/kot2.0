@@ -930,18 +930,22 @@ export async function runRush(options: RushOptions): Promise<RushResult> {
     return next;
   };
 
-  /** Picks up and serves the order's dishes that are ready; returns how many. */
+  /**
+   * Picks up the order's dishes that are ready, which serves them (`kds.pickupMarksServed`, on
+   * by default since 2026-10-25); returns how many.
+   */
   const serve = async (device: SimulatedDevice, orderId: string): Promise<number> => {
     const order = await device.call('getOrder', () => device.api.getOrder({ params: { orderId } }));
     const ready = order.items.filter((item) => item.state === 'READY');
     await Promise.all(
-      ready.map(async (item) => {
-        for (const event of ['PICK_UP', 'SERVE'] as const) {
-          await device.call('setOrderItemStatus', () =>
-            device.api.setOrderItemStatus({ params: { orderItemId: item.id }, body: { event } }),
-          );
-        }
-      }),
+      ready.map((item) =>
+        device.call('setOrderItemStatus', () =>
+          device.api.setOrderItemStatus({
+            params: { orderItemId: item.id },
+            body: { event: 'PICK_UP' },
+          }),
+        ),
+      ),
     );
     return ready.length;
   };

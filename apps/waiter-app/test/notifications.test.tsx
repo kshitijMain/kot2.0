@@ -57,7 +57,6 @@ describe('[WTR-005] the waiter phone’s notifications', () => {
       title: `Alerts for ${HOLDER.displayName}`,
       text: `This phone rings for ${HOLDER.displayName}’s alerts, also when it is locked.`,
     });
-    expect(text.acknowledge).toBe('Acknowledge');
     expect(text.channels).toEqual({ alerts: 'Alerts', listening: 'Staying connected for alerts' });
   });
 
@@ -92,7 +91,7 @@ describe('[WTR-005] the waiter phone’s notifications', () => {
     await act(async () => {
       await session.signIn(HOLDER.staffId, '4444');
     });
-    expect(await screen.findByText('Signed in as Ravi')).toBeOnTheScreen();
+    expect(await screen.findByRole('button', { name: /^T2, Occupied/ })).toBeOnTheScreen();
     expect(asked.requests).toBe(1);
     expect(screen.queryByTestId('notifications-off')).toBeNull();
   });
@@ -100,7 +99,7 @@ describe('[WTR-005] the waiter phone’s notifications', () => {
   it('shows no hint on a phone that cannot say', async () => {
     // Rendered without the Android notifier, as in the other tests.
     await signedInApp();
-    expect(await screen.findByText('Signed in as Ravi')).toBeOnTheScreen();
+    expect(await screen.findByRole('button', { name: /^T2, Occupied/ })).toBeOnTheScreen();
     expect(screen.queryByTestId('notifications-off')).toBeNull();
   });
 });

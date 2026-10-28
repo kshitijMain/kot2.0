@@ -11,16 +11,27 @@ export function isoDateOf(value: Date): string {
   return value.toISOString().slice(0, 10);
 }
 
+/** The lock day-end holds alone while it closes a day (BILL-013); others share it. */
+export function dayEndLockKey(restaurantId: string): string {
+  return `day-end:${restaurantId}`;
+}
+
 /**
  * The restaurant's business date at `now` (its cut-off and time zone, BRD §9.4). Once a day is
  * closed at day-end (BILL-013) nothing more is recorded on it: until the clock reaches the next
  * cut-off, new orders, bills and payments belong to the following business date.
+ *
+ * Inside a transaction it first shares day-end's lock until the transaction ends, so a record
+ * dated here cannot land on a day that day-end closes at the same moment and leave the day's
+ * report (QA-010): a running day-end is waited for, and day-end waits for records already being
+ * written. Day-end's own transaction holds the lock alone and is never blocked by itself.
  */
 export async function currentBusinessDate(
-  client: Pick<TransactionClient, 'restaurant' | 'businessDay'>,
+  client: Pick<TransactionClient, 'restaurant' | 'businessDay' | '$queryRaw'>,
   restaurantId: string,
   now: Date = new Date(),
 ): Promise<string> {
+  await client.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock_shared(hashtextextended(${dayEndLockKey(restaurantId)}, 0))`;
   const restaurant = await client.restaurant.findUniqueOrThrow({
     where: { id: restaurantId },
     select: { timeZone: true, businessDayCutoff: true },

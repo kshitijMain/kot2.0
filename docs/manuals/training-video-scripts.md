@@ -12,7 +12,7 @@ English. Voice-over lines are in quotes. Business Owner approval is needed befor
 | 5   | Billing and payment                   | cashiers           | Request bill, discount, split, pay, print, reprint   |
 | 6   | Mistakes and approvals                | cashiers, managers | Void, manager PIN, reason, audit                     |
 | 7   | Shift and cash                        | cashiers           | Open, cash in/out, close, difference                 |
-| 8   | The menu and stock                    | managers           | Edit dish, photo, import, out of stock               |
+| 8   | The menu and stock                    | managers           | Add dish, Half and Full, Excel, photos, publish      |
 | 9   | Staff, devices, pagers                | managers           | Add person, pair a phone, revoke, issue a pager      |
 | 10  | The day-end                           | managers           | Close tables, day-end, Z-report                      |
 | 11  | Reports and the audit log             | owner, managers    | Reports, CSV export, audit filters                   |

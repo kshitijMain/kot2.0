@@ -89,6 +89,13 @@ import {
   MenuTemplateResponse,
 } from './menu-import.js';
 import {
+  MENU_FILE_MAX_BYTES,
+  MenuFileChoices,
+  MenuFileImportResult,
+  MenuFileParams,
+  MenuFileReview,
+} from './menu-file.js';
+import {
   AssignPagerRequest,
   CreatePagerRequest,
   MyPagerResponse,
@@ -2955,6 +2962,108 @@ export const ROUTES = [
     responses: {
       200: { description: 'The current version.', schema: MenuPublishResponse },
       ...standardErrors,
+      422: {
+        description:
+          'MENU_NOT_READY: a dish has no price above ₹0, no active kitchen station or no active tax ' +
+          'group; the message names them and `details.problems` lists them. Nothing is published.',
+        schema: ApiError,
+      },
+    },
+  },
+  {
+    operationId: 'emptyMenuFile',
+    method: 'GET',
+    path: '/api/v1/menu/files/empty',
+    summary: 'The empty menu file (.zip)',
+    description:
+      'ONB-005, ONB-007. A zip with the empty template (menu.xlsx), an empty photos folder and a ' +
+      'README saying how to fill it in. The body is the file itself (application/zip).',
+    tags: ['menu'],
+    requirements: ['ONB-005', 'ONB-007'],
+    capability: 'MENU_MANAGE',
+    responses: {
+      200: { description: 'The zip (application/zip).' },
+      ...standardErrors,
+    },
+  },
+  {
+    operationId: 'exportMenuFile',
+    method: 'GET',
+    path: '/api/v1/menu/files/export',
+    summary: 'The menu as a menu file (.zip)',
+    description:
+      'ONB-005, ONB-007, DATA-003. The draft menu (active entries) in the template, with each ' +
+      'dish’s photo in photos/ named by its short code or name; loading it into a restaurant ' +
+      'without these dishes gives the same menu. Tax rates are never in it, only tax group ' +
+      'names. The body is the file itself (application/zip).',
+    tags: ['menu'],
+    requirements: ['ONB-005', 'ONB-007'],
+    capability: 'MENU_MANAGE',
+    responses: {
+      200: { description: 'The zip (application/zip).' },
+      ...standardErrors,
+    },
+  },
+  {
+    operationId: 'loadMenuFile',
+    method: 'POST',
+    path: '/api/v1/menu/files',
+    summary: 'Load a menu file for review, saving nothing',
+    description:
+      'ONB-005, ONB-007, SEC-004. The body is the file: a zip (application/zip) with menu.xlsx, ' +
+      'photos/ and a README, or a plain workbook. It is refused, with the reason, when it is ' +
+      `larger than ${String(MENU_FILE_MAX_BYTES / 1024 / 1024)} MB, unpacks too large, holds a ` +
+      'path outside the archive, a file that is neither the sheet, the README nor an image, or a ' +
+      'photo that is not a JPEG, PNG, WebP or HEIF image. The answer lists the names to map, ' +
+      'every dish and every photo with its match, and the check; the file is kept for a day.',
+    tags: ['menu'],
+    requirements: ['ONB-005', 'ONB-007', 'SEC-004'],
+    capability: 'MENU_MANAGE',
+    responses: {
+      201: { description: 'The review.', schema: MenuFileReview },
+      ...standardErrors,
+      413: { description: 'The file is too large.', schema: ApiError },
+      422: { description: 'The file is refused; the message says why.', schema: ApiError },
+    },
+  },
+  {
+    operationId: 'checkMenuFile',
+    method: 'POST',
+    path: '/api/v1/menu/files/:fileId/check',
+    summary: 'Check a loaded menu file with the manager’s choices, writing nothing',
+    description:
+      'ONB-005, MENU-011. The tax group and station names mapped to this PC’s, the photos ' +
+      'matched as chosen; every problem by sheet, row and column.',
+    tags: ['menu'],
+    requirements: ['ONB-005', 'MENU-011'],
+    capability: 'MENU_MANAGE',
+    request: { params: MenuFileParams, body: MenuFileChoices },
+    responses: {
+      200: { description: 'The report.', schema: MenuImportReport },
+      ...standardErrors,
+      404: { description: 'No such loaded file (or it is more than a day old).', schema: ApiError },
+    },
+  },
+  {
+    operationId: 'importMenuFile',
+    method: 'POST',
+    path: '/api/v1/menu/files/:fileId/import',
+    summary: 'Add a loaded menu file to the draft menu',
+    description:
+      'ONB-005, ONB-007, ONB-009. Checks as the check does; with no problems, adds the dishes and ' +
+      'their photos to the draft in one transaction, audited. Nothing reaches the devices until ' +
+      'the menu is published. The loaded file is then removed.',
+    tags: ['menu'],
+    requirements: ['ONB-005', 'ONB-007', 'ONB-009', 'AUD-001'],
+    capability: 'MENU_MANAGE',
+    request: { params: MenuFileParams, body: MenuFileChoices },
+    responses: {
+      200: {
+        description: 'The report; `committed` says whether it was added.',
+        schema: MenuFileImportResult,
+      },
+      ...standardErrors,
+      404: { description: 'No such loaded file (or it is more than a day old).', schema: ApiError },
     },
   },
   {
@@ -2995,13 +3104,13 @@ export const ROUTES = [
     operationId: 'importMenu',
     method: 'POST',
     path: '/api/v1/menu/import',
-    summary: 'Import a menu file and publish it',
+    summary: 'Import a menu workbook into the draft',
     description:
-      'ONB-005, ONB-009. Checks the file as the check does; with no problems, adds everything in ' +
-      'one transaction, audited, and publishes a new menu version. With problems nothing is ' +
-      'written and the report lists them.',
+      'ONB-005, ONB-009. Checks the file as the check does; with no problems, adds everything to ' +
+      'the draft menu in one transaction, audited. Nothing reaches the devices until the menu is ' +
+      'published. With problems nothing is written and the report lists them.',
     tags: ['menu'],
-    requirements: ['ONB-005', 'ONB-009', 'MENU-011', 'MENU-013', 'AUD-001'],
+    requirements: ['ONB-005', 'ONB-009', 'MENU-011', 'AUD-001'],
     capability: 'MENU_MANAGE',
     request: { body: MenuImportRequest },
     responses: {

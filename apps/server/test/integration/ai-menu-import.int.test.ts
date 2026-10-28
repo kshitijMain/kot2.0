@@ -35,7 +35,7 @@ import { until } from '../helpers/wait.js';
  * restaurant's server, made smaller, to a real Vendor Control Plane, whose worker has the AI
  * provider read them (here a stand-in on HTTP that answers with a fixture menu: CI never calls the
  * real one) and returns a draft. Nothing is imported until every dish is checked; then the draft
- * goes through the template import and is published.
+ * goes through the template import into the draft menu.
  */
 
 const AI_KEY = 'test-only-ai-key';
@@ -322,7 +322,7 @@ describe('[ONB-006] [VCP-008] reading a printed menu into the menu', () => {
     expect(await prisma.item.count({ where: { restaurantId: kit.restaurantId } })).toBe(0);
   });
 
-  it('imports the checked draft through the template, audited, and publishes it', async () => {
+  it('imports the checked draft through the template into the draft menu, audited', async () => {
     const response = await server()
       .post(`/api/v1/menu/ai-imports/${id('import')}/commit`)
       .set(as(manager))
@@ -334,7 +334,7 @@ describe('[ONB-006] [VCP-008] reading a printed menu into the menu', () => {
       committed: true,
       summary: { categories: 2, modifierGroups: 1, items: 3, variants: 2, combos: 0 },
     });
-    expect(report.menuVersion).not.toBeNull();
+    expect(report.menuVersion).toBeNull();
     const lassi = await prisma.item.findFirstOrThrow({ where: { name: 'Sweet Lassi' } });
     expect(lassi).toMatchObject({ basePrice: 9_000, stationId: id('bar'), foodType: 'VEG' });
     const imported = await prisma.auditLog.findFirstOrThrow({ where: { action: 'MENU_IMPORTED' } });

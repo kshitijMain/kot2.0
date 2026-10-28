@@ -22,11 +22,10 @@ const TEXT: AlertNotificationText = {
     title: `Table ${alert.tableLabel ?? '?'} · Food ready`,
     text: '',
   }),
-  acknowledge: 'Acknowledge',
   channels: { alerts: 'Alerts', listening: 'Staying connected' },
 };
 
-/** The native module's stand-in: records what it was asked, and presses Acknowledge. */
+/** The native module's stand-in: records what it was asked, and taps notifications. */
 function fakeAlerts(options: { enabled?: boolean; granted?: boolean } = {}) {
   const state = {
     started: [] as ListeningNotice[],
@@ -35,7 +34,8 @@ function fakeAlerts(options: { enabled?: boolean; granted?: boolean } = {}) {
     dismissed: [] as string[],
     settingsOpened: 0,
     asked: 0,
-    listeners: new Set<(event: { alertId: string }) => void>(),
+    listeners: new Set<(event: { tableSessionId: string }) => void>(),
+    opened: null as string | null,
   };
   let enabled = options.enabled ?? false;
   const native: AlertsNative = {
@@ -65,6 +65,11 @@ function fakeAlerts(options: { enabled?: boolean; granted?: boolean } = {}) {
       state.settingsOpened += 1;
       return Promise.resolve();
     },
+    takeOpenedTable: () => {
+      const opened = state.opened;
+      state.opened = null;
+      return Promise.resolve(opened);
+    },
     addListener: (_event, listener) => {
       state.listeners.add(listener);
       return {
@@ -74,8 +79,8 @@ function fakeAlerts(options: { enabled?: boolean; granted?: boolean } = {}) {
       };
     },
   };
-  const press = (alertId: string) => {
-    for (const listener of state.listeners) listener({ alertId });
+  const press = (tableSessionId: string) => {
+    for (const listener of state.listeners) listener({ tableSessionId });
   };
   return { native, state, press };
 }
@@ -102,14 +107,14 @@ describe('[WTR-005] the waiter phone’s alerts outside its screen', () => {
   it('[WTR-006] announces an alert with its words and the time it was raised, and takes it off', async () => {
     const { native, state } = fakeAlerts();
     const notifier = new AndroidAlertNotifier(TEXT, { native: () => Promise.resolve(native) });
-    const ready = alertView({ tableLabel: '5' });
+    const ready = alertView({ tableLabel: '5', tableSessionId: 'session-5' });
     await notifier.announce(ready);
     expect(state.announced).toEqual([
       {
         id: ready.id,
         title: 'Table 5 · Food ready',
         text: '',
-        acknowledge: 'Acknowledge',
+        tableSessionId: 'session-5',
         postedAt: Date.parse(ready.createdAt),
       },
     ]);
@@ -122,24 +127,32 @@ describe('[WTR-005] the waiter phone’s alerts outside its screen', () => {
     expect(state.dismissed).toEqual([ready.id]);
   });
 
-  it('[NTF-004] passes Acknowledge pressed on a notification on until it stops listening', async () => {
+  it('passes the table of a tapped notification on until it stops listening', async () => {
     const { native, press } = fakeAlerts();
     const notifier = new AndroidAlertNotifier(TEXT, { native: () => Promise.resolve(native) });
-    const pressed: string[] = [];
-    const stop = notifier.onAcknowledge((alertId) => pressed.push(alertId));
+    const opened: string[] = [];
+    const stop = notifier.onOpenTable((sessionId) => opened.push(sessionId));
     await settled();
-    press('alert-1');
-    expect(pressed).toEqual(['alert-1']);
+    press('session-1');
+    expect(opened).toEqual(['session-1']);
     stop();
-    press('alert-2');
-    expect(pressed).toEqual(['alert-1']);
+    press('session-2');
+    expect(opened).toEqual(['session-1']);
 
     // Stopped before the module was loaded: it never listens.
-    const early = notifier.onAcknowledge((alertId) => pressed.push(alertId));
+    const early = notifier.onOpenTable((sessionId) => opened.push(sessionId));
     early();
     await settled();
-    press('alert-3');
-    expect(pressed).toEqual(['alert-1']);
+    press('session-3');
+    expect(opened).toEqual(['session-1']);
+  });
+
+  it('gives the table of the notification whose tap started the app, once', async () => {
+    const { native, state } = fakeAlerts();
+    const notifier = new AndroidAlertNotifier(TEXT, { native: () => Promise.resolve(native) });
+    state.opened = 'session-7';
+    expect(await notifier.takeOpenedTable()).toBe('session-7');
+    expect(await notifier.takeOpenedTable()).toBeNull();
   });
 
   it('reports a module that cannot be loaded', async () => {
@@ -148,7 +161,7 @@ describe('[WTR-005] the waiter phone’s alerts outside its screen', () => {
       native: () => Promise.reject(new Error('Cannot find native module RpAlerts')),
       onError: (error) => errors.push(error),
     });
-    notifier.onAcknowledge(() => undefined);
+    notifier.onOpenTable(() => undefined);
     await settled();
     expect(errors).toEqual([new Error('Cannot find native module RpAlerts')]);
     await expect(notifier.start(HOLDER)).rejects.toThrow('RpAlerts');

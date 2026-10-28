@@ -97,11 +97,17 @@ export type ModifierGroupView = z.infer<typeof ModifierGroupView>;
 
 // ---------------------------------------------------------------- items
 
+/**
+ * A dish's price: more than ₹0 (a dish without a price is wrong data, refused everywhere, decided
+ * 2026-10-25) and at most ₹1,00,000.
+ */
+const DishPrice = Paise.min(1, 'A price above ₹0').max(10_000_000);
+
 /** MENU-003: a variant with its own price; give the id of an existing one to keep it. */
 export const VariantRequest = z.strictObject({
   id: Id.optional(),
   name: Name(40),
-  price: Paise.max(10_000_000),
+  price: DishPrice,
   externalId: ExternalRef.optional(),
 });
 export type VariantRequest = z.infer<typeof VariantRequest>;
@@ -130,8 +136,8 @@ export const ItemRequest = z
       .nullable(),
     description: z.string().trim().max(500).nullable(),
     photoId: Id.nullable(),
-    /** Price in paise; with variants, the price shown before one is chosen. */
-    basePrice: Paise.max(10_000_000),
+    /** Price in paise, above 0; with variants, the price shown before one is chosen. */
+    basePrice: DishPrice,
     taxGroupId: Id,
     foodType: FoodType,
     spiceLevel: z.int().min(0).max(3),

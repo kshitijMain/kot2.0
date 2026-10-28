@@ -19,7 +19,7 @@ import type {
 import { canTransition, type OrderItemState, orderItemMachine, transition } from '@rp/domain';
 import { createTranslator } from '@rp/i18n';
 import { DeviceSession, MemoryStore } from '@rp/mobile-core';
-import type { NotificationPermission } from '@rp/mobile-native';
+import type { AlertTableOpener, NotificationPermission } from '@rp/mobile-native';
 import {
   FakeKeys,
   fakeLocalServer,
@@ -630,170 +630,182 @@ export class Restaurant {
 
   /** The local server as the waiter app sees it; table actions change the restaurant. */
   server(): FakeServer {
-    return fakeLocalServer()
-      .on('GET', '/api/v1/tables/overview', () => ({ status: 200, body: this.overview() }))
-      .on('GET', '/api/v1/licence', () => ({ status: 200, body: this.licence }))
-      .on('GET', '/api/v1/floor', () => ({ status: 200, body: this.floor() }))
-      .on('GET', '/api/v1/waiter-assignments', () => ({
-        status: 200,
-        body: {
-          current: { businessDate: '2026-09-26', assignments: this.assignments },
-          previous: null,
-        } satisfies WaiterAssignmentsResponse,
-      }))
-      .on('GET', '/api/v1/menu', () => ({ status: 200, body: this.menu }))
-      .on('POST', '/api/v1/orders', (call: RecordedCall) => {
-        if (this.network === 'down') throw new TypeError('Network request failed');
-        const answer = this.submitOrder(call.body as SubmitOrderRequest);
-        if (this.network === 'loseAnswers') throw new TypeError('Network request failed');
-        return { status: 200, body: answer };
-      })
-      .on('GET', '/api/v1/orders/takeaway', () => ({
-        status: 200,
-        body: { orders: this.takeaway },
-      }))
-      .on('GET', '/api/v1/orders/:orderId', (call) => {
-        const order = [...this.orders.values()]
-          .flat()
-          .find((entry) => call.path.endsWith(entry.id));
-        return order === undefined
-          ? { status: 404, body: { code: 'ORDER_NOT_FOUND', message: 'No such order.' } }
-          : { status: 200, body: order };
-      })
-      .on('POST', '/api/v1/orders/:orderId/fire', (call) => {
-        const order = [...this.orders.values()]
-          .flat()
-          .find((entry) => call.path.includes(entry.id));
-        if (order === undefined)
-          return { status: 404, body: { code: 'ORDER_NOT_FOUND', message: 'No' } };
-        const fired: OrderView = {
-          ...order,
-          items: order.items.map((item) =>
-            item.state === 'HELD' ? { ...item, state: 'SENT' as const } : item,
-          ),
-        };
-        for (const [sessionId, list] of this.orders) {
-          this.orders.set(
-            sessionId,
-            list.map((entry) => (entry.id === order.id ? fired : entry)),
-          );
-        }
-        return { status: 200, body: fired };
-      })
-      .on('POST', '/api/v1/order-items/:orderItemId/status', (call) => this.itemStep(call))
-      .on('POST', '/api/v1/order-items/:orderItemId/cancel', (call) => this.endItem(call, 'CANCEL'))
-      .on('POST', '/api/v1/order-items/:orderItemId/void', (call) => this.endItem(call, 'VOID'))
-      .on('POST', '/api/v1/auth/override', (call) => this.approve(call))
-      .on('GET', '/api/v1/table-sessions/:sessionId/orders', (call: RecordedCall) => {
-        const sessionId = call.path.split('/')[4] ?? '';
-        return { status: 200, body: { orders: this.orders.get(sessionId) ?? [] } };
-      })
-      .on('GET', '/api/v1/devices/current/alerts', () => ({
-        status: 200,
-        body: { holder: this.holder, alerts: this.alerts } satisfies DeviceAlertsResponse,
-      }))
-      .on('POST', '/api/v1/devices/current/alerts/:alertId/acknowledge', (call) => {
-        const alert = this.alerts.find((open) => call.path.includes(open.id));
-        if (alert === undefined) {
-          return { status: 404, body: { code: 'ALERT_NOT_FOUND', message: 'No such alert.' } };
-        }
-        this.alerts = this.alerts.filter((open) => open !== alert);
-        return { status: 200, body: { ...alert, status: 'ACKNOWLEDGED', acknowledgedById: RAVI } };
-      })
-      .on('GET', '/api/v1/service-requests', () => ({
-        status: 200,
-        body: { requests: this.requestViews() },
-      }))
-      .on('POST', '/api/v1/service-requests/:requestId/acknowledge', (call) =>
-        this.requestStep(call, 'acknowledge'),
-      )
-      .on('POST', '/api/v1/service-requests/:requestId/resolve', (call) =>
-        this.requestStep(call, 'resolve'),
-      )
-      .on('GET', '/api/v1/recommendations', () => ({
-        status: 200,
-        body: { recommendations: this.suggestions, daypart: null, menuVersion: 1 },
-      }))
-      .on('POST', '/api/v1/recommendations/events', () => ({ status: 204 }))
-      .on('GET', '/api/v1/orders/pending-approval', () => ({
-        status: 200,
-        body: { orders: this.pendingApprovals() },
-      }))
-      .on('POST', '/api/v1/orders/:orderId/approve', (call) => this.decide(call, 'approve'))
-      .on('POST', '/api/v1/orders/:orderId/reject', (call) => this.decide(call, 'reject'))
-      .on('GET', '/api/v1/staff/me/break', () => ({
-        status: 200,
-        body: { staffId: RAVI, onBreak: this.breakSince !== null, since: this.breakSince },
-      }))
-      .on('POST', '/api/v1/staff/me/break', (call) => {
-        this.breakSince = (call.body as { onBreak: boolean }).onBreak ? AT : null;
-        return {
-          status: 200,
-          body: { staffId: RAVI, onBreak: this.breakSince !== null, since: this.breakSince },
-        };
-      })
-      .on('GET', '/api/v1/pagers/mine', () => ({
-        status: 200,
-        body: { pager: this.pager, lowBatteryPercent: 15 } satisfies MyPagerResponse,
-      }))
-      .on('POST', '/api/v1/table-sessions/:sessionId/print-bill', (call) => {
-        const table = this.tables.find(
-          (candidate) => candidate.session !== null && call.path.includes(candidate.session.id),
-        );
-        if (table === undefined || !this.waiterMayPrint) return { status: 403, body: {} };
-        table.state = 'BILL_PRINTED';
-        return {
+    return (
+      fakeLocalServer()
+        // Signing out on the phone ends its alerts: it holds nobody until the next sign-in.
+        .on('POST', '/api/v1/auth/logout', () => {
+          this.holder = null;
+          return { status: 204 };
+        })
+        .on('GET', '/api/v1/tables/overview', () => ({ status: 200, body: this.overview() }))
+        .on('GET', '/api/v1/licence', () => ({ status: 200, body: this.licence }))
+        .on('GET', '/api/v1/floor', () => ({ status: 200, body: this.floor() }))
+        .on('GET', '/api/v1/waiter-assignments', () => ({
           status: 200,
           body: {
-            invoiceId: id(9900),
-            invoiceNumber: 'INV/26-27/000042',
-            grandTotal: 64_000,
-            printed: true,
-            error: null,
-          },
-        };
-      })
-      .on('POST', '/api/v1/tables/:tableId/clean', (call) => {
-        const table = this.tables.find((candidate) => call.path.includes(candidate.id));
-        if (table?.state !== 'NEEDS_CLEANING') return { status: 409, body: {} };
-        table.state = 'FREE';
-        return { status: 200, body: { tableId: table.id, state: 'FREE' } };
-      })
-      .on('POST', '/api/v1/tables/:tableId/open', (call) => {
-        const table = this.tables.find((candidate) => call.path.includes(candidate.id));
-        if (table?.state !== 'FREE') {
-          return {
-            status: 409,
-            body: { code: 'TABLE_NOT_FREE', message: 'Someone has just opened this table.' },
+            current: { businessDate: '2026-09-26', assignments: this.assignments },
+            previous: null,
+          } satisfies WaiterAssignmentsResponse,
+        }))
+        .on('GET', '/api/v1/menu', () => ({ status: 200, body: this.menu }))
+        .on('POST', '/api/v1/orders', (call: RecordedCall) => {
+          if (this.network === 'down') throw new TypeError('Network request failed');
+          const answer = this.submitOrder(call.body as SubmitOrderRequest);
+          if (this.network === 'loseAnswers') throw new TypeError('Network request failed');
+          return { status: 200, body: answer };
+        })
+        .on('GET', '/api/v1/orders/takeaway', () => ({
+          status: 200,
+          body: { orders: this.takeaway },
+        }))
+        .on('GET', '/api/v1/orders/:orderId', (call) => {
+          const order = [...this.orders.values()]
+            .flat()
+            .find((entry) => call.path.endsWith(entry.id));
+          return order === undefined
+            ? { status: 404, body: { code: 'ORDER_NOT_FOUND', message: 'No such order.' } }
+            : { status: 200, body: order };
+        })
+        .on('POST', '/api/v1/orders/:orderId/fire', (call) => {
+          const order = [...this.orders.values()]
+            .flat()
+            .find((entry) => call.path.includes(entry.id));
+          if (order === undefined)
+            return { status: 404, body: { code: 'ORDER_NOT_FOUND', message: 'No' } };
+          const fired: OrderView = {
+            ...order,
+            items: order.items.map((item) =>
+              item.state === 'HELD' ? { ...item, state: 'SENT' as const } : item,
+            ),
           };
-        }
-        const covers = (call.body as { covers: number }).covers;
-        table.state = 'OCCUPIED';
-        table.session = session(9100 + this.tables.indexOf(table), RAVI, covers);
-        return { status: 201, body: this.sessionView(table) };
-      })
-      .on('POST', '/api/v1/table-sessions/:sessionId/move', (call) => {
-        const from = this.tables.find(
-          (table) => table.session !== null && call.path.includes(table.session.id),
-        );
-        const to = this.tables.find(
-          (table) => table.id === (call.body as { toTableId: string }).toTableId,
-        );
-        if (from === undefined || to === undefined) return { status: 404, body: {} };
-        to.state = from.state;
-        to.session = from.session;
-        from.state = 'FREE';
-        from.session = null;
-        return { status: 200, body: this.sessionView(to) };
-      })
-      .on('POST', '/api/v1/table-sessions/:sessionId/request-bill', (call) => {
-        const table = this.tables.find(
-          (candidate) => candidate.session !== null && call.path.includes(candidate.session.id),
-        );
-        if (table === undefined) return { status: 404, body: {} };
-        table.state = 'BILL_REQUESTED';
-        return { status: 200, body: this.sessionView(table) };
-      });
+          for (const [sessionId, list] of this.orders) {
+            this.orders.set(
+              sessionId,
+              list.map((entry) => (entry.id === order.id ? fired : entry)),
+            );
+          }
+          return { status: 200, body: fired };
+        })
+        .on('POST', '/api/v1/order-items/:orderItemId/status', (call) => this.itemStep(call))
+        .on('POST', '/api/v1/order-items/:orderItemId/cancel', (call) =>
+          this.endItem(call, 'CANCEL'),
+        )
+        .on('POST', '/api/v1/order-items/:orderItemId/void', (call) => this.endItem(call, 'VOID'))
+        .on('POST', '/api/v1/auth/override', (call) => this.approve(call))
+        .on('GET', '/api/v1/table-sessions/:sessionId/orders', (call: RecordedCall) => {
+          const sessionId = call.path.split('/')[4] ?? '';
+          return { status: 200, body: { orders: this.orders.get(sessionId) ?? [] } };
+        })
+        .on('GET', '/api/v1/devices/current/alerts', () => ({
+          status: 200,
+          body: { holder: this.holder, alerts: this.alerts } satisfies DeviceAlertsResponse,
+        }))
+        .on('POST', '/api/v1/devices/current/alerts/:alertId/acknowledge', (call) => {
+          const alert = this.alerts.find((open) => call.path.includes(open.id));
+          if (alert === undefined) {
+            return { status: 404, body: { code: 'ALERT_NOT_FOUND', message: 'No such alert.' } };
+          }
+          this.alerts = this.alerts.filter((open) => open !== alert);
+          return {
+            status: 200,
+            body: { ...alert, status: 'ACKNOWLEDGED', acknowledgedById: RAVI },
+          };
+        })
+        .on('GET', '/api/v1/service-requests', () => ({
+          status: 200,
+          body: { requests: this.requestViews() },
+        }))
+        .on('POST', '/api/v1/service-requests/:requestId/acknowledge', (call) =>
+          this.requestStep(call, 'acknowledge'),
+        )
+        .on('POST', '/api/v1/service-requests/:requestId/resolve', (call) =>
+          this.requestStep(call, 'resolve'),
+        )
+        .on('GET', '/api/v1/recommendations', () => ({
+          status: 200,
+          body: { recommendations: this.suggestions, daypart: null, menuVersion: 1 },
+        }))
+        .on('POST', '/api/v1/recommendations/events', () => ({ status: 204 }))
+        .on('GET', '/api/v1/orders/pending-approval', () => ({
+          status: 200,
+          body: { orders: this.pendingApprovals() },
+        }))
+        .on('POST', '/api/v1/orders/:orderId/approve', (call) => this.decide(call, 'approve'))
+        .on('POST', '/api/v1/orders/:orderId/reject', (call) => this.decide(call, 'reject'))
+        .on('GET', '/api/v1/staff/me/break', () => ({
+          status: 200,
+          body: { staffId: RAVI, onBreak: this.breakSince !== null, since: this.breakSince },
+        }))
+        .on('POST', '/api/v1/staff/me/break', (call) => {
+          this.breakSince = (call.body as { onBreak: boolean }).onBreak ? AT : null;
+          return {
+            status: 200,
+            body: { staffId: RAVI, onBreak: this.breakSince !== null, since: this.breakSince },
+          };
+        })
+        .on('GET', '/api/v1/pagers/mine', () => ({
+          status: 200,
+          body: { pager: this.pager, lowBatteryPercent: 15 } satisfies MyPagerResponse,
+        }))
+        .on('POST', '/api/v1/table-sessions/:sessionId/print-bill', (call) => {
+          const table = this.tables.find(
+            (candidate) => candidate.session !== null && call.path.includes(candidate.session.id),
+          );
+          if (table === undefined || !this.waiterMayPrint) return { status: 403, body: {} };
+          table.state = 'BILL_PRINTED';
+          return {
+            status: 200,
+            body: {
+              invoiceId: id(9900),
+              invoiceNumber: 'INV/26-27/000042',
+              grandTotal: 64_000,
+              printed: true,
+              error: null,
+            },
+          };
+        })
+        .on('POST', '/api/v1/tables/:tableId/clean', (call) => {
+          const table = this.tables.find((candidate) => call.path.includes(candidate.id));
+          if (table?.state !== 'NEEDS_CLEANING') return { status: 409, body: {} };
+          table.state = 'FREE';
+          return { status: 200, body: { tableId: table.id, state: 'FREE' } };
+        })
+        .on('POST', '/api/v1/tables/:tableId/open', (call) => {
+          const table = this.tables.find((candidate) => call.path.includes(candidate.id));
+          if (table?.state !== 'FREE') {
+            return {
+              status: 409,
+              body: { code: 'TABLE_NOT_FREE', message: 'Someone has just opened this table.' },
+            };
+          }
+          const covers = (call.body as { covers: number }).covers;
+          table.state = 'OCCUPIED';
+          table.session = session(9100 + this.tables.indexOf(table), RAVI, covers);
+          return { status: 201, body: this.sessionView(table) };
+        })
+        .on('POST', '/api/v1/table-sessions/:sessionId/move', (call) => {
+          const from = this.tables.find(
+            (table) => table.session !== null && call.path.includes(table.session.id),
+          );
+          const to = this.tables.find(
+            (table) => table.id === (call.body as { toTableId: string }).toTableId,
+          );
+          if (from === undefined || to === undefined) return { status: 404, body: {} };
+          to.state = from.state;
+          to.session = from.session;
+          from.state = 'FREE';
+          from.session = null;
+          return { status: 200, body: this.sessionView(to) };
+        })
+        .on('POST', '/api/v1/table-sessions/:sessionId/request-bill', (call) => {
+          const table = this.tables.find(
+            (candidate) => candidate.session !== null && call.path.includes(candidate.session.id),
+          );
+          if (table === undefined) return { status: 404, body: {} };
+          table.state = 'BILL_REQUESTED';
+          return { status: 200, body: this.sessionView(table) };
+        })
+    );
   }
 }
 
@@ -809,6 +821,8 @@ export interface SignedInAppOptions {
   readonly notifications?: NotificationPermission;
   /** False: paired, with nobody signed in yet. */
   readonly signIn?: boolean;
+  /** Android's taps on alert notifications (2026-10-25). */
+  readonly opener?: AlertTableOpener;
 }
 
 /** A paired waiter phone with Ravi signed in, showing the app. */
@@ -836,6 +850,7 @@ export async function signedInApp(
       session={session}
       translator={translator}
       {...(options.notifications !== undefined && { notifications: options.notifications })}
+      {...(options.opener !== undefined && { opener: options.opener })}
     />,
   );
   return { restaurant, server, session, sockets };

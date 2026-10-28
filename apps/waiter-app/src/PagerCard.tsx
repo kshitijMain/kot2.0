@@ -14,9 +14,10 @@ const affectsPager = (eventType: string) =>
 
 /**
  * The waiter's own pager (WTR-014): its connection and battery, with a warning when it is not
- * connected or its battery is at or below the restaurant's low level (PGR-013 ⚙).
+ * connected or its battery is at or below the restaurant's low level (PGR-013 ⚙). `onlyWarnings`
+ * shows it only with that warning, as on the home screen; the menu shows it always.
  */
-export function PagerCard() {
+export function PagerCard({ onlyWarnings = false }: { onlyWarnings?: boolean }) {
   const session = useDeviceSession();
   const t = useT();
   const { colors } = useTheme();
@@ -29,11 +30,14 @@ export function PagerCard() {
   }, [reload]);
 
   if (data.status === 'loading') return null;
-  if (data.status === 'error') return <Note>{t('mobile.pager.unavailable')}</Note>;
+  if (data.status === 'error') {
+    return onlyWarnings ? null : <Note>{t('mobile.pager.unavailable')}</Note>;
+  }
   const { pager, lowBatteryPercent } = data.value;
-  if (pager === null) return <Note>{t('mobile.pager.none')}</Note>;
+  if (pager === null) return onlyWarnings ? null : <Note>{t('mobile.pager.none')}</Note>;
 
   const warning = pagerWarning(pager, lowBatteryPercent);
+  if (onlyWarnings && warning === undefined) return null;
   const tone = toneColors(colors, warning === undefined ? 'success' : 'warning');
   const facts = [
     t(pager.online ? 'mobile.pager.connected' : 'mobile.pager.notConnected'),

@@ -382,6 +382,35 @@ runs as a formula when a spreadsheet opens an export.
 - Risk: likelihood Low, impact Medium: Low.
 - Status: Mitigated (P8-03b2c: the data export and the invoice register only quoted cells).
 
+#### PC-T9 A menu file that reaches outside its folder or carries something else
+
+A manager loads a menu file (a .zip, ONB-005) made elsewhere, or handed over on a USB stick, whose
+entries are named to write outside the folder, or that carries a program, a script or a "photo"
+that is something else.
+
+- Mitigation: the file is never unpacked to disk. Its entries are read in memory within the limits
+  of `MENU_FILE_MAX_BYTES` (100 MB), 550 entries, 20 MB an entry and 200 MB in all, each inflated
+  to at most the size its directory gives and checked against its checksum; an absolute path, a
+  drive letter, a `..` or an empty folder name refuses the whole file, as does any entry that is
+  not the sheet, a README or an image by its name (what zip tools add on their own, `__MACOSX` and
+  the like, is skipped). Every photo goes through the photo upload's checks and re-encoding before
+  the review shows it, and again when it is stored; the sheet goes through the workbook reader's
+  limits and `planMenuImport`. The loaded file is kept on the data drive under a random id for a
+  day, then removed. Only `MENU_MANAGE` may load, export or import; what is imported is a draft
+  until a manager publishes. The export writes every cell as text, never as a formula.
+- Code: `apps/server/src/menu/import/menu-file-reader.ts` (`readMenuFile`);
+  `apps/server/src/menu/import/zip-limits.ts` (`unpackZip`);
+  `apps/server/src/menu/import/menu-file.service.ts` (`MenuFileService`);
+  `apps/server/src/http/body-limits.ts` (`MENU_FILE_BODY_LIMIT`).
+- Tests: `apps/server/test/unit/menu-file-reader.test.ts` "refuses absolute paths, drive letters
+  and parent folders", "refuses two workbooks, a workbook in a folder, and other files", "refuses
+  more photos than a file may hold, and a workbook over 5 MB";
+  `apps/server/test/integration/menu-files.int.test.ts` "refuses a path that points outside the
+  archive", "refuses files that are neither the sheet, the README nor a photo", "is for people who
+  manage the menu only".
+- Risk: likelihood Low, impact Medium: Low.
+- Status: Mitigated (2026-10-25, with the menu file).
+
 ### Repudiation
 
 #### PC-R1 Staff deny a void, discount, edit or payment
@@ -749,7 +778,8 @@ A manager's account uploads a photo or a menu spreadsheet that expands to gigaby
   itself, stopping a byte past the size the directory gave, so a directory that lies is caught
   too; the reader gets those parts again, stored, and inflates nothing (P8-03b2c).
 - Code: `apps/server/src/photos/photo-processing.ts` (`PHOTO_MAX_PIXELS`);
-  `apps/server/src/menu/import/zip-limits.ts` (`checkZipLimits`, `unpackWorkbook`).
+  `apps/server/src/menu/import/zip-limits.ts` (`checkZipLimits`, `unpackWorkbook`, `unpackZip`,
+  the last for the menu file, PC-T9).
 - Tests: `apps/server/test/unit/photo-processing.test.ts` "refuses a file over 5 MB and a picture
   with too many pixels"; `apps/server/test/unit/menu-workbook.test.ts` "refuses archives that
   would unpack too large, and files that are not ZIPs", "inflates the workbook with a limit on

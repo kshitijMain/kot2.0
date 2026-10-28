@@ -218,11 +218,25 @@ describe('[ONB-004] the go-live test', () => {
         },
       });
     await order('POS');
+    // A table with a QR code, on a PC where the vendor has not set up the QR site and relay yet:
+    // no guest can order with it, so the test does not wait for a QR order.
+    const hall = await prisma.section.create({
+      data: { restaurantId: kit.restaurantId, name: 'Go-live hall' },
+    });
+    await prisma.diningTable.create({
+      data: {
+        restaurantId: kit.restaurantId,
+        sectionId: hall.id,
+        label: 'GL1',
+        displayOrder: 1,
+        qrToken: 'go-live-test-token-0001',
+      },
+    });
     const started = await server().post('/api/v1/onboarding/go-live/start').set(as(manager));
     expect(started.status, JSON.stringify(started.body)).toBe(200);
     const view = GoLiveView.parse(started.body);
     expect(view.startedAt).not.toBeNull();
-    // This kit has only a POS paired, and no QR codes: an order at the POS and a bill.
+    // This kit has only a POS paired, and no QR menu: an order at the POS and a bill.
     expect(view.paths.filter((entry) => entry.needed).map((entry) => entry.path)).toEqual([
       'POS_ORDER',
       'BILL',

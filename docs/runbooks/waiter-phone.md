@@ -14,10 +14,14 @@ While someone holds the phone, Android shows a quiet notification "Alerts for Ra
 the person). It goes when they sign out on the phone. If it is missing while someone is signed in,
 the phone is not listening in the background: work through the setup below.
 
-Each alert is its own notification with Acknowledge. On the lock screen it says only that there is
-an alert; the words show, and Acknowledge works, once the phone is unlocked. Acknowledging there
-or in the app stops the pager's reminders and tells the managers' screens. An alert that is not
-acknowledged rings again at each reminder.
+Each alert is its own notification, with the app open too: it drops in from the top and goes, and
+stays in the notification shade; a tap opens the app on its table. On the lock screen it says only
+that there is an alert; the words show once the phone is unlocked. Nobody acknowledges anything on
+the phone (since 2026-10-25): an alert goes by itself when its cause is dealt with (the kitchen
+marks the food picked up, the order is approved, the request resolved, the bill printed), and a
+manager's message closes itself after a few minutes. Food left at the pass goes to the manager
+after "Ready food not collected after" (3 minutes by default); the other alerts after N (60
+seconds) when nobody has dealt with them. The bell on the app's screens lists the open alerts.
 
 ## Setting a phone up
 
@@ -55,8 +59,10 @@ unreachable, the managers get the alert at once (NTF-007).
 2. On the kitchen screen, mark one of that table's dishes Ready.
 3. Within a couple of seconds the phone rings and vibrates, and the lock screen shows "Table 5 ·
    Food ready" (with the table's label) and the dish. The waiter's pager buzzes too.
-4. Press Acknowledge on the notification: it goes, and the pager stops reminding.
-5. Close the app from the recents list, lock the phone and repeat steps 2 to 4.
+4. Mark the dish Picked up on the kitchen screen: the notification goes, and the dish shows
+   Served on the phone.
+5. Close the app from the recents list, lock the phone and repeat steps 2 to 4; then do it once
+   more and tap the notification instead: the app opens on that table.
 6. Sign out on the phone: the "Alerts for …" notification goes, and the phone no longer rings.
 
 ## When a phone does not ring

@@ -59,7 +59,8 @@ export type NotificationChannel = (typeof NOTIFICATION_CHANNELS)[number];
 
 /**
  * How an alert comes back: every R seconds until acknowledged, never, once per state change, until
- * the cause is resolved, or once a day.
+ * the cause is resolved, or once a day. `AUTO_CLOSE` alerts once and closes itself after a while:
+ * a message with no cause that could go away, such as a manager's nudge.
  */
 export const REPEAT_POLICIES = [
   'UNTIL_ACKED',
@@ -67,6 +68,7 @@ export const REPEAT_POLICIES = [
   'ONCE_PER_STATE',
   'UNTIL_RESOLVED',
   'DAILY',
+  'AUTO_CLOSE',
 ] as const;
 export type RepeatPolicy = (typeof REPEAT_POLICIES)[number];
 
@@ -88,42 +90,48 @@ const rule = (
   repeat: RepeatPolicy,
 ): NotificationRule => ({ recipients, channels, pagerText, escalate, repeat });
 
-/** BRD Appendix C, the factory defaults (N = R = 60 s are settings). */
+/**
+ * BRD Appendix C, the factory defaults (N = R = 60 s are settings), with the Business Owner's
+ * change of 2026-10-25 for the waiters' alerts: they ring once and need no acknowledgement. Each
+ * escalates when its cause is still there after N (an order not approved, a request nobody
+ * answered), and food ready escalates from the kitchen instead, when nobody picks it up within
+ * `kds.readyNotCollectedMinutes` (KDS-006). A manager can bring the repeats back per rule.
+ */
 export const DEFAULT_NOTIFICATION_RULES: Readonly<Record<NotificationEvent, NotificationRule>> = {
   ORDER_PENDING_APPROVAL: rule(
     ['RESPONSIBLE_WAITER'],
     ['PAGER', 'WAITER_APP', 'POS'],
     '{table} NEW ORDER',
     true,
-    'UNTIL_ACKED',
+    'NONE',
   ),
   ITEM_READY: rule(
     ['RESPONSIBLE_WAITER'],
     ['PAGER', 'WAITER_APP', 'TABLET'],
     '{table} READY',
-    true,
-    'UNTIL_ACKED',
+    false,
+    'NONE',
   ),
   WATER_REQUEST: rule(
     ['RESPONSIBLE_WAITER'],
     ['PAGER', 'WAITER_APP'],
     '{table} WATER',
     true,
-    'UNTIL_ACKED',
+    'NONE',
   ),
   WAITER_REQUEST: rule(
     ['RESPONSIBLE_WAITER'],
     ['PAGER', 'WAITER_APP'],
     '{table} WAITER',
     true,
-    'UNTIL_ACKED',
+    'NONE',
   ),
   BILL_REQUEST: rule(
     ['RESPONSIBLE_WAITER', 'CASHIER'],
     ['PAGER', 'WAITER_APP', 'POS'],
     '{table} BILL',
     true,
-    'UNTIL_ACKED',
+    'NONE',
   ),
   READY_NOT_COLLECTED: rule(
     ['MANAGERS_ON_DUTY'],
@@ -132,13 +140,7 @@ export const DEFAULT_NOTIFICATION_RULES: Readonly<Record<NotificationEvent, Noti
     false,
     'UNTIL_ACKED',
   ),
-  MANAGER_NUDGE: rule(
-    ['SELECTED'],
-    ['PAGER', 'WAITER_APP'],
-    'MGR: {message}',
-    false,
-    'UNTIL_ACKED',
-  ),
+  MANAGER_NUDGE: rule(['SELECTED'], ['PAGER', 'WAITER_APP'], 'MGR: {message}', false, 'AUTO_CLOSE'),
   ORDER_CHANGED: rule(['STATION'], ['KDS', 'PRINTED_SLIP'], null, false, 'NONE'),
   WAITER_UNREACHABLE: rule(['MANAGERS_ON_DUTY'], ['POS', 'DASHBOARD'], null, false, 'NONE'),
   DEVICE_LOW_BATTERY_OR_OFFLINE: rule(
@@ -441,6 +443,8 @@ export interface NotificationTiming {
   readonly escalationSeconds: number;
   /** R (NTF-002), seconds. */
   readonly repeatSeconds: number;
+  /** How long an `AUTO_CLOSE` alert stays open, seconds. */
+  readonly closeSeconds: number;
 }
 
 const later = (from: Date, seconds: number) => new Date(from.getTime() + seconds * 1000);
@@ -453,22 +457,27 @@ export function initialDeadlines(
 ): AlertDeadlines {
   return {
     escalateAt: rule.escalate && !escalatedAlready ? later(now, timing.escalationSeconds) : null,
+    // An `AUTO_CLOSE` alert's one "repeat" is when it closes.
     nextRepeatAt:
       rule.repeat === 'UNTIL_ACKED' || rule.repeat === 'UNTIL_RESOLVED'
         ? later(now, timing.repeatSeconds)
         : rule.repeat === 'DAILY'
           ? later(now, 24 * 60 * 60)
-          : null,
+          : rule.repeat === 'AUTO_CLOSE'
+            ? later(now, timing.closeSeconds)
+            : null,
   };
 }
 
 export type DueAction =
   | { readonly kind: 'ESCALATE'; readonly next: AlertDeadlines }
-  | { readonly kind: 'REPEAT'; readonly next: AlertDeadlines };
+  | { readonly kind: 'REPEAT'; readonly next: AlertDeadlines }
+  | { readonly kind: 'CLOSE' };
 
 /**
  * What an open alert needs at `now`: escalation first (NTF-005), then a repeat (every R until
  * acknowledged). Several missed repeats (the server was down) come out as one repeat, not a burst.
+ * An `AUTO_CLOSE` alert whose time is up only closes.
  */
 export function dueActions(
   rule: NotificationRule,
@@ -476,6 +485,9 @@ export function dueActions(
   now: Date,
   timing: NotificationTiming,
 ): DueAction[] {
+  if (rule.repeat === 'AUTO_CLOSE' && deadlines.nextRepeatAt !== null) {
+    return deadlines.nextRepeatAt <= now ? [{ kind: 'CLOSE' }] : [];
+  }
   const actions: DueAction[] = [];
   let { escalateAt, nextRepeatAt } = deadlines;
   if (escalateAt !== null && escalateAt <= now) {

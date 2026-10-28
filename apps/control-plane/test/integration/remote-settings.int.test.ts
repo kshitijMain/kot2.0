@@ -54,13 +54,10 @@ describe('[UPD-010] remote configuration', () => {
     const view = FleetRemoteSettingsView.parse(
       (await server().get('/v1/vendor/remote-settings').set(as('READ_ONLY'))).body,
     );
-    expect(view.definitions.map((definition) => definition.key)).toContain('features.aiMenuImport');
-    expect(
-      view.definitions.find((definition) => definition.key === 'features.aiMenuImport'),
-    ).toMatchObject({
-      kind: 'BOOLEAN',
-      defaultValue: true,
-    });
+    // The AI menu reading is switched off for good (2026-10-25): its flag is not offered.
+    expect(view.definitions.map((definition) => definition.key)).not.toContain(
+      'features.aiMenuImport',
+    );
     expect(
       view.definitions.find((definition) => definition.key === 'qr.pickupTimeoutSeconds'),
     ).toMatchObject({
@@ -106,12 +103,12 @@ describe('[UPD-010] remote configuration', () => {
     const set = await server()
       .put(`/v1/vendor/installations/${pc.id ?? ''}/remote-settings`)
       .set(as('SUPER_ADMIN'))
-      .send({ values: { 'features.aiMenuImport': false }, reason: 'AI provider down for them' });
+      .send({ values: { 'qr.submissionsPerWindow': 3 }, reason: 'Busy QR tables there' });
     expect(set.status, JSON.stringify(set.body)).toBe(200);
     const view = InstallationRemoteSettingsView.parse(set.body);
-    const effective = { 'qr.pickupTimeoutSeconds': 90, 'features.aiMenuImport': false };
+    const effective = { 'qr.pickupTimeoutSeconds': 90, 'qr.submissionsPerWindow': 3 };
     expect(view).toMatchObject({
-      overrides: { 'features.aiMenuImport': false },
+      overrides: { 'qr.submissionsPerWindow': 3 },
       effective,
       appliedDigest: null,
     });

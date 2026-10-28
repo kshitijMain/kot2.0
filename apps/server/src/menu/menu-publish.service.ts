@@ -7,7 +7,7 @@ import {
   type MenuPublishResponse,
   MenuSnapshot,
 } from '@rp/contracts';
-import { canonicalJson } from '@rp/domain';
+import { canonicalJson, type HealthProblem, menuHealth } from '@rp/domain';
 import { AuditService } from '../audit/audit.service.js';
 import { authErrors } from '../auth/auth-errors.js';
 import type { Principal } from '../auth/principal.js';
@@ -206,6 +206,12 @@ export class MenuPublishService {
     itemId: string,
     quantity: number,
   ): Promise<ItemAvailabilityView | null> {
+    // A dish taken off the menu since it was ordered has nothing to give back to: its line can
+    // still be cancelled or reduced (QA-016).
+    const archived = await tx.item.count({
+      where: { id: itemId, restaurantId, archivedAt: { not: null } },
+    });
+    if (archived > 0) return null;
     const before = await this.lockAvailability(tx, restaurantId, itemId);
     if (before.stockCount === null) return null;
     const after: ItemAvailabilityView = { ...before, stockCount: before.stockCount + quantity };
@@ -224,8 +230,60 @@ export class MenuPublishService {
   }
 
   /** Inside a transaction that holds the setup lock. */
+  /**
+   * The menu check before publishing (MENU-002, `menuHealth`): a dish without a price above ₹0, an
+   * active kitchen station or an active tax group is wrong data and is never published, whoever
+   * asks (decided 2026-10-25). The answer names the dishes, in plain words.
+   */
+  private async assertReady(tx: TransactionClient, restaurantId: string): Promise<void> {
+    const active = { restaurantId, archivedAt: null };
+    const [items, categories, taxGroups, stations] = await Promise.all([
+      tx.item.findMany({
+        where: active,
+        select: {
+          id: true,
+          name: true,
+          categoryId: true,
+          basePrice: true,
+          taxGroupId: true,
+          stationId: true,
+          photoId: true,
+          variants: { where: { archivedAt: null }, select: { name: true, price: true } },
+        },
+      }),
+      tx.category.findMany({ where: active, select: { id: true, name: true, parentId: true } }),
+      tx.taxGroup.findMany({ where: active, select: { id: true } }),
+      tx.station.findMany({ where: active, select: { id: true } }),
+    ]);
+    const health = menuHealth({
+      dishes: items.map((item) => ({ ...item, sizes: item.variants, archived: false })),
+      categories: categories.map((category) => ({ ...category, archived: false })),
+      taxGroupIds: new Set(taxGroups.map((group) => group.id)),
+      stationIds: new Set(stations.map((station) => station.id)),
+    });
+    if (health.publishable) return;
+    const SHOWN = 5;
+    const said = health.blocking.slice(0, SHOWN).map(problemText);
+    const more = health.blocking.length - said.length;
+    throw new AppError(
+      422,
+      'MENU_NOT_READY',
+      `The menu cannot be published until these are fixed: ${said.join('; ')}${
+        more > 0 ? `; and ${String(more)} more` : ''
+      }.`,
+      {
+        problems: health.blocking.map((problem) => ({
+          kind: problem.kind,
+          dishIds: problem.dishIds,
+          name: problem.name,
+        })),
+      },
+    );
+  }
+
   async publishIn(tx: TransactionClient, principal: Principal): Promise<MenuPublishResponse> {
     const { restaurantId } = principal;
+    await this.assertReady(tx, restaurantId);
     const content = await buildMenuContent(tx, restaurantId);
     const checksum = menuChecksum(content);
     const latest = await tx.menuVersion.findFirst({
@@ -412,5 +470,19 @@ export class MenuPublishService {
       after,
       reason: reason ?? null,
     });
+  }
+}
+
+/** One blocking problem in words, for the refusal. */
+function problemText(problem: HealthProblem): string {
+  switch (problem.kind) {
+    case 'NO_PRICE':
+      return `${problem.name} has no price`;
+    case 'NO_STATION':
+      return `${problem.name} has no kitchen station`;
+    case 'NO_TAX_GROUP':
+      return `${problem.name} has no tax group`;
+    default:
+      return problem.name;
   }
 }

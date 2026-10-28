@@ -31,7 +31,7 @@ import type { Principal } from '../auth/principal.js';
 import { currentBusinessDate, dbDate, isoDateOf } from '../common/business-dates.js';
 import { newId } from '../common/ids.js';
 import { PrismaService, type TransactionClient } from '../database/prisma.service.js';
-import type { Alert } from '../generated/prisma/client.js';
+import type { Alert, Prisma } from '../generated/prisma/client.js';
 import { AppError } from '../errors/app-error.js';
 import { appendEvent } from '../events/outbox.js';
 import { SettingsService } from '../settings/settings.service.js';
@@ -63,9 +63,20 @@ export interface RaiseAlert {
   readonly raisedByDeviceId?: string | null;
   /** Whose own request it is, e.g. the waiter who asked for the bill: they are not alerted. */
   readonly askedById?: string | null;
+  /**
+   * Raised again while open, the alert rings once more with this payload instead of staying
+   * quiet: another dish ready for the same table, now that nobody acknowledges food ready.
+   */
+  readonly renotify?: (payload: Record<string, unknown>) => Record<string, unknown>;
 }
 
 const MANAGER_ROLES = new Set(['OWNER', 'MANAGER']);
+
+/**
+ * Raised again sooner than this after its last ring, an alert takes the new payload without
+ * ringing: the kitchen marking a whole ticket ready is one ring, not one per dish.
+ */
+const RING_AGAIN_AFTER_MS = 10_000;
 
 /** Who acknowledged an alert, and on which device: a pager, a phone or a screen (PAGER-R2). */
 export interface AcknowledgedBy {
@@ -192,9 +203,11 @@ export class NotificationsService implements OnApplicationBootstrap, OnModuleDes
     if (input.dedupeKey !== undefined && input.dedupeKey !== null) {
       const open = await tx.alert.findFirst({
         where: { restaurantId, dedupeKey: input.dedupeKey, status: 'OPEN' },
-        select: { id: true },
       });
-      if (open !== null) return { alertId: open.id, alreadyOpen: true };
+      if (open !== null) {
+        if (input.renotify !== undefined) await this.renotify(tx, open, input.renotify);
+        return { alertId: open.id, alreadyOpen: true };
+      }
     }
     const now = this.clock.now();
     const { rule, timing } = await this.ruleFor(restaurantId, input.type);
@@ -246,6 +259,7 @@ export class NotificationsService implements OnApplicationBootstrap, OnModuleDes
         escalatedAt: resolved.escalateNow ? now : null,
         escalatedTo: resolved.escalateNow ? [...context.managersOnDuty] : [],
         createdAt: now,
+        updatedAt: now,
       },
     });
     const stationIds = resolved.stations ? [...(input.stationIds ?? [])] : [];
@@ -274,6 +288,43 @@ export class NotificationsService implements OnApplicationBootstrap, OnModuleDes
       });
     }
     return { alertId: alert.id, alreadyOpen: false };
+  }
+
+  /**
+   * An open alert takes a new payload and rings again, as a repeat does (NTF-006: once per
+   * repeat), unless it rang moments ago. `updatedAt` keeps when it last rang.
+   */
+  private async renotify(
+    tx: TransactionClient,
+    open: Alert,
+    change: (payload: Record<string, unknown>) => Record<string, unknown>,
+  ): Promise<void> {
+    const now = this.clock.now();
+    const before =
+      typeof open.payload === 'object' && open.payload !== null && !Array.isArray(open.payload)
+        ? (open.payload as Record<string, unknown>)
+        : {};
+    const ring = now.getTime() - open.updatedAt.getTime() >= RING_AGAIN_AFTER_MS;
+    const updated = await tx.alert.update({
+      where: { id: open.id },
+      data: {
+        payload: change(before) as Prisma.InputJsonValue,
+        repeatCount: ring ? open.repeatCount + 1 : open.repeatCount,
+        updatedAt: ring ? now : open.updatedAt,
+      },
+    });
+    await this.emit(tx, updated, now, {
+      type: 'AlertRaised',
+      payload: {
+        alertId: updated.id,
+        eventType: updated.type,
+        recipients: updated.recipientIds,
+        pagerText: updated.pagerText,
+        tableId: updated.tableId,
+        repeat: updated.repeatCount,
+        escalated: updated.escalatedAt !== null,
+      },
+    });
   }
 
   /** Clears the open alerts that match (the cause went away). */
@@ -582,6 +633,9 @@ export class NotificationsService implements OnApplicationBootstrap, OnModuleDes
       timing,
     );
     if (actions.length === 0) return false;
+    if (actions.some((action) => action.kind === 'CLOSE')) {
+      return (await this.clear(tx, { restaurantId: alert.restaurantId, ids: [alert.id] })) > 0;
+    }
     let recipients = alert.recipientIds;
     let escalatedTo = alert.escalatedTo;
     let escalatedAt = alert.escalatedAt;
@@ -602,11 +656,12 @@ export class NotificationsService implements OnApplicationBootstrap, OnModuleDes
         escalatedTo = [...context.managersOnDuty];
         escalatedAt = now;
         recipients = [...new Set([...recipients, ...escalatedTo])];
-      } else {
+      } else if (action.kind === 'REPEAT') {
         repeatCount += 1;
       }
     }
     const last = actions.at(-1);
+    const next = last === undefined || last.kind === 'CLOSE' ? undefined : last.next;
     const updated = await tx.alert.update({
       where: { id: alert.id },
       data: {
@@ -614,8 +669,8 @@ export class NotificationsService implements OnApplicationBootstrap, OnModuleDes
         escalatedTo,
         escalatedAt,
         repeatCount,
-        escalateAt: last?.next.escalateAt ?? null,
-        nextRepeatAt: last?.next.nextRepeatAt ?? null,
+        escalateAt: next?.escalateAt ?? null,
+        nextRepeatAt: next?.nextRepeatAt ?? null,
       },
     });
     if (actions.some((action) => action.kind === 'ESCALATE')) {
@@ -654,6 +709,7 @@ export class NotificationsService implements OnApplicationBootstrap, OnModuleDes
       timing: {
         escalationSeconds: settings.get('notifications.escalationSeconds'),
         repeatSeconds: settings.get('notifications.repeatSeconds'),
+        closeSeconds: settings.get('notifications.autoCloseMinutes') * 60,
       },
     };
   }

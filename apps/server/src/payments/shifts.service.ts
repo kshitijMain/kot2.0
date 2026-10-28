@@ -79,6 +79,18 @@ export class ShiftsService {
     });
   }
 
+  /**
+   * The person's open shift, locked until the transaction ends, for cash going into it: a shift
+   * being closed at the same moment is waited for and then counts as closed, so its counted cash
+   * stays right (QA-013).
+   */
+  async lockedOpenShiftOf(tx: TransactionClient, principal: Principal): Promise<Shift | null> {
+    const open = await this.openShiftOf(tx, principal);
+    if (open === null) return null;
+    await tx.$queryRaw`SELECT 1 AS locked FROM shifts WHERE id = ${open.id}::uuid FOR UPDATE`;
+    return this.openShiftOf(tx, principal);
+  }
+
   async moveCash(
     principal: Principal,
     shiftId: string,

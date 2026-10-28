@@ -82,6 +82,37 @@ describe('[MENU-012] MenuItemCard', () => {
     expect(card).toBeDisabled();
     expect(card).not.toHaveTextContent('3 left');
   });
+
+  it('[MENU-008] shows the dish’s photo beside its name, or the placeholder, when asked', async () => {
+    const { container } = renderUi(
+      <>
+        <MenuItemCard
+          name="Paneer Tikka"
+          price={28_000}
+          foodType="VEG"
+          foodTypeLabel="Veg"
+          photo="/api/v1/photos/p/160"
+        />
+        <MenuItemCard
+          name="Dal Makhani"
+          price={22_000}
+          foodType="VEG"
+          foodTypeLabel="Veg"
+          photo={null}
+        />
+        <MenuItemCard name="Butter Naan" price={6_000} foodType="VEG" foodTypeLabel="Veg" />
+      </>,
+    );
+    const tikka = screen.getByRole('button', { name: 'Paneer Tikka, ₹280.00, Veg' });
+    // Decorative: the card's own name says which dish it is.
+    expect(tikka.querySelector('img')).toHaveAttribute('src', '/api/v1/photos/p/160');
+    expect(tikka.querySelector('img')).toHaveAttribute('alt', '');
+    const dal = screen.getByRole('button', { name: 'Dal Makhani, ₹220.00, Veg' });
+    expect(dal.querySelector('.rp-dish-photo__plate')).not.toBeNull();
+    const naan = screen.getByRole('button', { name: 'Butter Naan, ₹60.00, Veg' });
+    expect(naan.querySelector('.rp-dish-photo')).toBeNull();
+    await expectNoAxeViolations(container);
+  });
 });
 
 describe('[MENU-003] [MENU-004] ItemOptions', () => {

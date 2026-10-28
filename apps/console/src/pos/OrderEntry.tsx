@@ -1,4 +1,4 @@
-import type { MenuItem, MenuSnapshot, OrderView } from '@rp/contracts';
+import { type MenuItem, type MenuSnapshot, type OrderView, photoUrl } from '@rp/contracts';
 import {
   Button,
   EmptyState,
@@ -279,6 +279,7 @@ function MenuBrowser({
               price={displayPrice(item)}
               foodType={item.foodType}
               foodTypeLabel={t(`pos.menu.foodType.${item.foodType}`)}
+              photo={item.photoId === undefined ? null : photoUrl(item.photoId, 160)}
               {...menuNote(menu, item, t, now)}
               onSelect={() => {
                 onChoose(item, menu);

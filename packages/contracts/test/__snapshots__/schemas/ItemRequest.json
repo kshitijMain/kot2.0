@@ -22,7 +22,7 @@
           { "type": "null" }
         ]
       },
-      "basePrice": { "type": "integer", "minimum": 0, "maximum": 10000000 },
+      "basePrice": { "type": "integer", "minimum": 1, "maximum": 10000000 },
       "taxGroupId": {
         "type": "string",
         "format": "uuid",
@@ -75,7 +75,7 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             },
             "name": { "type": "string", "minLength": 1, "maxLength": 40 },
-            "price": { "type": "integer", "minimum": 0, "maximum": 10000000 },
+            "price": { "type": "integer", "minimum": 1, "maximum": 10000000 },
             "externalId": {
               "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 128 }, { "type": "null" }]
             }
@@ -150,7 +150,7 @@
           { "type": "null" }
         ]
       },
-      "basePrice": { "type": "integer", "minimum": 0, "maximum": 10000000 },
+      "basePrice": { "type": "integer", "minimum": 1, "maximum": 10000000 },
       "taxGroupId": {
         "type": "string",
         "format": "uuid",
@@ -203,7 +203,7 @@
               "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
             },
             "name": { "type": "string", "minLength": 1, "maxLength": 40 },
-            "price": { "type": "integer", "minimum": 0, "maximum": 10000000 },
+            "price": { "type": "integer", "minimum": 1, "maximum": 10000000 },
             "externalId": {
               "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 128 }, { "type": "null" }]
             }

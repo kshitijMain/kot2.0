@@ -13,8 +13,8 @@ the manifest cannot be compiled or run in the build environment. Do it with the 
    "Can't take screenshot due to security policy". Open the recent apps: the app's preview is blank.
    Go to a screen without a PIN pad: screenshots work again.
 3. Lock screen (waiter phone, with a screen lock set): lock the phone and make an alert ring.
-   The lock screen shows "Alerts for ..." only, not the table or dish. Unlock: the words and Acknowledge appear.
-   Pressing Acknowledge on the lock screen asks to unlock first.
+   The lock screen shows "Alerts for ..." only, not the table or dish. Unlock: the words appear.
+   (Since 2026-10-25 a notification has no Acknowledge button; a tap opens its table.)
 4. Kiosk (tablet, device owner): after the app locks, `adb reboot bootloader` is not needed; check
    `adb shell dumpsys user | grep -i restrict` lists no_safe_boot, no_debugging_features,
    no_factory_reset, no_add_user, no_modify_accounts. adb stops working after the lock (expected);

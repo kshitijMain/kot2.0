@@ -12,6 +12,7 @@ export * from './licence.js';
 export * from './menu.js';
 export * from './menu-admin.js';
 export * from './menu-import.js';
+export * from './menu-file.js';
 export * from './order.js';
 export * from './order-feed.js';
 export * from './printing.js';

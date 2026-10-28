@@ -34,6 +34,13 @@ describe('[MENU-002] item request', () => {
     expect(ItemRequest.safeParse({ ...item, shortCode: 'has space' }).success).toBe(false);
   });
 
+  it('refuses a dish or a size without a price above ₹0', () => {
+    expect(ItemRequest.safeParse({ ...item, basePrice: 0 }).success).toBe(false);
+    const free = { ...item, variants: [{ name: 'Half', price: 0 }] };
+    expect(ItemRequest.safeParse(free).success).toBe(false);
+    expect(ItemRequest.safeParse({ ...item, basePrice: 1 }).success).toBe(true);
+  });
+
   it('[MENU-003] [MENU-011] refuses repeated variants, tags and synonyms', () => {
     const twice = { name: 'Half', price: 1 };
     expect(ItemRequest.safeParse({ ...item, variants: [twice, twice] }).success).toBe(false);

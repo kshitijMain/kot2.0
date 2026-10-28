@@ -229,6 +229,31 @@ describe('[WTR-003] [ORD-013] taking an order', () => {
     expect(screen.getByRole('tab', { name: 'Order (1)' })).toBeOnTheScreen();
   });
 
+  it('[MENU-008] shows each dish’s photo from the PC, or the placeholder', async () => {
+    const restaurant = new Restaurant();
+    const photoId = id(9101);
+    restaurant.menu = {
+      ...restaurant.menu,
+      items: restaurant.menu.items.map((item) =>
+        item.id === IDS.dal ? { ...item, photoId } : item,
+      ),
+    };
+    await signedInApp(restaurant);
+    await openTable('T2');
+    await showMenu();
+    await fireEvent.press(button('Main Course'));
+    expect(screen.getByTestId(`dish-${IDS.dal}-photo`)).toBeOnTheScreen();
+    expect(
+      screen.queryByTestId(`dish-${IDS.dal}-photo-placeholder`, { includeHiddenElements: true }),
+    ).toBeNull();
+    // A small rendition from the restaurant's PC.
+    expect(JSON.stringify(screen.toJSON())).toContain(
+      `"uri":"http://pos.test:3000/api/v1/photos/${photoId}/160"`,
+    );
+    const others = screen.getAllByTestId(/-photo-placeholder$/, { includeHiddenElements: true });
+    expect(others.length).toBeGreaterThan(0);
+  });
+
   it('says when the phone has no menu yet', async () => {
     const { session } = await signedInApp();
     await act(async () => {

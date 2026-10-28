@@ -89,12 +89,56 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   await designCapacity(speed.url);
   process.env.RP_E2E_SPEED_DATABASE_URL = speed.url;
   process.env.RP_E2E_SPEED_DATA_DIR = speedDir;
+  // Two restaurants for the menu file test (ONB-005): the development seed, which loads a filled
+  // file and exports its menu; and one without a menu, whose kitchen station has another name,
+  // which loads that export.
+  const menuFile = await seeded(cluster);
+  const menuFileFresh = await seeded(cluster);
+  await withoutMenu(menuFileFresh.database.url);
+  process.env.RP_E2E_MENU_DATABASE_URL = menuFile.database.url;
+  process.env.RP_E2E_MENU_DATA_DIR = menuFile.dataDir;
+  process.env.RP_E2E_MENU_FRESH_DATABASE_URL = menuFileFresh.database.url;
+  process.env.RP_E2E_MENU_FRESH_DATA_DIR = menuFileFresh.dataDir;
   return async () => {
+    await menuFile.database.drop().catch(() => undefined);
+    await menuFileFresh.database.drop().catch(() => undefined);
     await speed.drop().catch(() => undefined);
     await fresh.drop().catch(() => undefined);
     await database.drop().catch(() => undefined);
     await cluster.stop();
   };
+}
+
+/** A database with the development seed, and the data folder whose pepper its PINs use. */
+async function seeded(cluster: Awaited<ReturnType<typeof startTestDatabase>>) {
+  const database = await cloneTemplateDatabase(
+    cluster.adminUrl,
+    cluster.templateDatabase,
+    cluster.runId,
+  );
+  const dataDir = mkdtempSync(join(tmpdir(), 'rp-e2e-menu-'));
+  execFileSync('node', [join(SERVER_DIST, 'database', 'seed-cli.js')], {
+    env: { ...process.env, DATABASE_URL: database.url, RP_DATA_DIR: dataDir },
+    stdio: 'inherit',
+  });
+  return { database, dataDir };
+}
+
+/**
+ * The seed without its menu (no dish, category, add-on group or published version), and its
+ * kitchen station called "Main kitchen": a restaurant set up but with no menu yet.
+ */
+async function withoutMenu(url: string): Promise<void> {
+  const client = new pg.Client({ connectionString: url });
+  await client.connect();
+  try {
+    await client.query(`
+      TRUNCATE categories, items, modifier_groups, menu_versions CASCADE;
+      UPDATE stations SET name = 'Main kitchen' WHERE name = 'Kitchen';
+    `);
+  } finally {
+    await client.end();
+  }
 }
 
 /**

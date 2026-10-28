@@ -24,6 +24,7 @@ import {
   decideStaffChange,
   isLockedAt,
   type LockoutPolicy,
+  maySignInOn,
   OVERRIDE_RECORD_TYPES,
   type Role,
 } from '@rp/domain';
@@ -86,7 +87,10 @@ export class AuthService {
     @Inject(SECRET_STORE) private readonly secrets: SecretStore,
   ) {}
 
-  /** Login tiles: active staff of this device's restaurant who have a PIN (AUTH-001). */
+  /**
+   * Login tiles: active staff of this device's restaurant who have a PIN and may sign in on this
+   * kind of device (AUTH-001; a waiter phone lists waiters only).
+   */
   async staffTiles(device: AuthenticatedDevice): Promise<StaffTilesResponse> {
     const staff = await this.prisma.staff.findMany({
       where: {
@@ -99,12 +103,14 @@ export class AuthService {
       orderBy: { displayName: 'asc' },
     });
     return {
-      staff: staff.map((person) => ({
-        staffId: person.id,
-        displayName: person.displayName,
-        role: person.role.baseRole,
-        photoId: person.photoId,
-      })),
+      staff: staff
+        .filter((person) => maySignInOn(device.type, person.role.baseRole))
+        .map((person) => ({
+          staffId: person.id,
+          displayName: person.displayName,
+          role: person.role.baseRole,
+          photoId: person.photoId,
+        })),
     };
   }
 
@@ -136,6 +142,10 @@ export class AuthService {
         }
         if (staff.role === 'KITCHEN' && !settings.kitchenIndividualLogins) {
           return { error: authErrors.kitchenStationMode() };
+        }
+        // The tiles leave them out; the server decides (AUTH-010).
+        if (!maySignInOn(device.type, staff.role)) {
+          return { error: authErrors.notOnThisDevice() };
         }
         await this.clearFailures(tx, credential.id);
         const session = await this.sessions.create(tx, {
@@ -184,6 +194,10 @@ export class AuthService {
       if (staff?.role !== 'OWNER') {
         await this.hasher.verifyNothing(request.password);
         return { error: await this.failure(base, 'Not an owner account') } as const;
+      }
+      if (!maySignInOn(device.type, staff.role)) {
+        await this.hasher.verifyNothing(request.password);
+        return { error: authErrors.notOnThisDevice() } as const;
       }
       const verified = await this.verifyOwnerSecrets(tx, base, staff.id, request, settings, now);
       if ('error' in verified) return verified;

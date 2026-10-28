@@ -208,27 +208,14 @@ describe('[WTR-006] [NTF-006] the alerts of the person the phone alerts', () => 
   });
 });
 
-describe('[NTF-004] [WTR-006] acknowledging on the phone', () => {
-  it('acknowledges as the holder from the screen or the notification', async () => {
-    const fake = serverListing(held(ready, bill)).on(
-      'POST',
-      `${ALERTS}/:alertId/acknowledge`,
-      (call) => ({
-        status: 200,
-        body: { ...(call.path.includes(ready.id) ? ready : bill), status: 'ACKNOWLEDGED' },
-      }),
-    );
+describe('[NTF-004] [WTR-006] the phone never acknowledges', () => {
+  it('keeps an alert until it is cleared, without asking the waiter for anything', async () => {
+    const fake = serverListing(held(ready));
     const { session, sockets, notifier } = await phone(fake);
     sockets.sync();
-    await expect.poll(() => session.alerts.getSnapshot().alerts).toHaveLength(2);
-
-    await session.alerts.acknowledge(ready.id);
-    expect(fake.callsTo('POST', `${ALERTS}/${ready.id}/acknowledge`)).toHaveLength(1);
-    expect(session.alerts.getSnapshot().alerts).toEqual([bill]);
-
-    notifier.pressAcknowledge(bill.id);
-    await expect.poll(() => session.alerts.getSnapshot().alerts).toEqual([]);
-    expect(notifier.dismissed).toEqual([ready.id, bill.id]);
+    await expect.poll(() => notifier.announced).toEqual([ready]);
+    expect(session.alerts.getSnapshot().alerts).toEqual([ready]);
+    expect(fake.callsTo('POST', `${ALERTS}/${ready.id}/acknowledge`)).toHaveLength(0);
   });
 
   it('takes off what was acknowledged or cleared elsewhere, the pager included', async () => {
@@ -253,58 +240,6 @@ describe('[NTF-004] [WTR-006] acknowledging on the phone', () => {
     expect(session.alerts.getSnapshot().alerts).toEqual([]);
     expect(notifier.dismissed).toEqual([ready.id, bill.id]);
     expect(reads(fake)).toBe(before);
-  });
-
-  it('takes off an alert already gone, and keeps one it could not acknowledge', async () => {
-    const fake = serverListing(held(ready, bill)).on(
-      'POST',
-      `${ALERTS}/:alertId/acknowledge`,
-      () => ({ status: 404, body: { code: 'ALERT_NOT_FOUND', message: 'Gone.' } }),
-      () => ({ status: 503, body: { code: 'UNAVAILABLE', message: 'Busy.' } }),
-    );
-    const { session, sockets } = await phone(fake);
-    sockets.sync();
-    await expect.poll(() => session.alerts.getSnapshot().alerts).toHaveLength(2);
-
-    await session.alerts.acknowledge(ready.id);
-    expect(session.alerts.getSnapshot().alerts).toEqual([bill]);
-    await expect(session.alerts.acknowledge(bill.id)).rejects.toThrow('Busy.');
-    expect(session.alerts.getSnapshot().alerts).toEqual([bill]);
-  });
-
-  it('[WTR-005] sends what was pressed while the app was starting once it has read the alerts', async () => {
-    const fake = serverListing(held(ready, bill)).on(
-      'POST',
-      `${ALERTS}/:alertId/acknowledge`,
-      () => ({ status: 200, body: { ...bill, status: 'ACKNOWLEDGED' } }),
-    );
-    const { session, sockets, notifier } = await phone(fake);
-    // Android delivers an Acknowledge pressed on a notification before the app has read anything.
-    notifier.pressAcknowledge(bill.id);
-    await settled();
-    expect(fake.callsTo('POST', `${ALERTS}/${bill.id}/acknowledge`)).toHaveLength(0);
-
-    sockets.sync();
-    await expect.poll(() => session.alerts.getSnapshot().alerts).toEqual([ready]);
-    expect(fake.callsTo('POST', `${ALERTS}/${bill.id}/acknowledge`)).toHaveLength(1);
-  });
-
-  it('[WTR-005] brings a notification back when acknowledging it failed', async () => {
-    const fake = serverListing(held(ready)).on('POST', `${ALERTS}/:alertId/acknowledge`, () => ({
-      status: 503,
-      body: { code: 'UNAVAILABLE', message: 'Busy.' },
-    }));
-    const { session, sockets, notifier, errors } = await phone(fake);
-    sockets.sync();
-    await expect.poll(() => notifier.announced).toEqual([ready]);
-
-    notifier.pressAcknowledge(ready.id);
-    // Still open: announced again (the notification went when it was pressed), and reported.
-    await expect.poll(() => notifier.announced).toEqual([ready, ready]);
-    expect(session.alerts.getSnapshot().alerts).toEqual([ready]);
-    expect(errors.some((error) => error instanceof ApiRequestError && error.status === 503)).toBe(
-      true,
-    );
   });
 
   it('forgets the alerts when the phone is unpaired', async () => {

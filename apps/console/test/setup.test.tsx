@@ -89,6 +89,49 @@ describe('[ONB-004] the setup page', () => {
     expect(goLive.queryByRole('button', { name: t('setupPage.step.GO_LIVE.confirm') })).toBeNull();
   });
 
+  it('[ONB-005] offers the two ways to load the menu side by side while step 7 is to do', async () => {
+    const createObjectURL = vi.fn((_file: Blob) => 'blob:template');
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() }));
+    const fake = signsInAs(server(), 'MANAGER')
+      .on('GET', '/api/v1/onboarding', () => ({ status: 200, body: onboarding() }))
+      .on('GET', '/api/v1/menu/files/empty', () => ({
+        status: 200,
+        body: 'PK zip',
+        headers: { 'content-type': 'application/zip' },
+      }));
+    const { user, container } = await renderConsole({
+      fake,
+      path: '/manage/setup',
+      signedIn: 'MANAGER',
+    });
+    const menu = await row(t('setupPage.step.MENU.title'));
+    const ways = within(menu.getByRole('region', { name: t('setupPage.menuWays.title') }));
+    expect(ways.getByRole('heading', { name: t('setupPage.menuWays.byHand') })).toBeVisible();
+    expect(ways.getByText(t('setupPage.menuWays.byHandText'))).toBeVisible();
+    expect(ways.getByRole('heading', { name: t('setupPage.menuWays.excel') })).toBeVisible();
+    expect(ways.getByText(t('setupPage.menuWays.excelText'))).toBeVisible();
+    expect(ways.getByRole('link', { name: t('setupPage.menuWays.byHandOpen') })).toHaveAttribute(
+      'href',
+      '/manage/menu',
+    );
+    expect(ways.getByRole('link', { name: t('setupPage.menuWays.upload') })).toHaveAttribute(
+      'href',
+      '/manage/menu/import',
+    );
+    expect(ways.getByRole('link', { name: t('setupPage.menuWays.photos') })).toHaveAttribute(
+      'href',
+      '/manage/menu/photos',
+    );
+    expect(menu.queryByText(/printed|photos of the menu/i)).toBeNull();
+    await expectNoAxeViolations(container);
+    await user.click(ways.getByRole('button', { name: t('menuFile.download') }));
+    await vi.waitFor(() => {
+      expect(createObjectURL).toHaveBeenCalledTimes(1);
+    });
+    expect(fake.callsTo('GET', '/api/v1/menu/files/empty')).toHaveLength(1);
+    vi.unstubAllGlobals();
+  });
+
   it('[ONB-003] lets the Owner activate the PC with the vendor’s code', async () => {
     const fake = signsInAs(server(), 'OWNER')
       .on(

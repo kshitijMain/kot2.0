@@ -118,7 +118,7 @@ export class FeedbackService {
         businessDate: { gte: dbDate(range.from), lte: dbDate(range.to) },
       },
       include: { dinerContact: { select: { phone: true } } },
-      orderBy: [{ createdAt: 'desc' }],
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
     });
     const tableIds = [
       ...new Set(rows.flatMap((row) => (row.tableId === null ? [] : [row.tableId]))),

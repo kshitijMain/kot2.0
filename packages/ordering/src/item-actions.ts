@@ -49,10 +49,3 @@ export function lineActions(
     void: can('VOID') && (voiding === 'ALLOW' || voiding === 'OVERRIDE') ? voiding : null,
   };
 }
-
-/** The lines of these orders the person may mark served now, in order (WTR-007). */
-export function servableLines(orders: readonly OrderView[], role: Role, ownTable: boolean): Line[] {
-  return orders.flatMap((order) =>
-    order.items.filter((line) => lineActions(line, role, ownTable).serve),
-  );
-}

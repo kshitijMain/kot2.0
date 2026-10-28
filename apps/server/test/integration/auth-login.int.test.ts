@@ -81,6 +81,19 @@ describe('[AUTH-001] staff tiles', () => {
     const text = JSON.stringify(response.body);
     expect(text).not.toMatch(/secret|hash|pin/i);
   });
+  it('[AUTH-010] keeps a waiter phone for waiters: only they are listed, and only they sign in', async () => {
+    const phone = await addDevice(app, kit, 'WAITER_PHONE');
+    const tiles = await server().get('/api/v1/auth/staff-tiles').set(authHeaders(phone));
+    expect(StaffTilesResponse.parse(tiles.body).staff.map((tile) => tile.role)).toEqual(['WAITER']);
+    for (const role of ['MANAGER', 'OWNER', 'CASHIER'] as const) {
+      const refused = await pinLogin(phone, kit.staff[role], TEST_PINS[role]);
+      expect([refused.status, ApiError.parse(refused.body).code]).toEqual([
+        403,
+        'ROLE_NOT_ON_DEVICE',
+      ]);
+    }
+    expect((await pinLogin(phone, kit.staff.WAITER, TEST_PINS.WAITER)).status).toBe(200);
+  });
 });
 
 describe('[AUTH-001] [AUTH-002] [AUTH-005] PIN login', () => {

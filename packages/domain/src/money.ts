@@ -184,24 +184,28 @@ export function allocate(amount: Paise, weights: readonly number[]): Paise[] {
     );
   }
 
+  // Exact in big integers: amount × weight can pass 2^53 on a large bill with a large discount,
+  // although every share fits (QA-020).
+  const total = BigInt(totalWeight);
   const parts: Paise[] = [];
-  const remainders: { index: number; remainder: number }[] = [];
+  const remainders: { index: number; remainder: bigint }[] = [];
   let allocated = 0;
   weights.forEach((weight, index) => {
-    const product = amount * weight;
-    assertSafeProduct(product);
-    const remainder = product % totalWeight;
-    const share = (product - remainder) / totalWeight;
+    const product = BigInt(amount) * BigInt(weight);
+    const remainder = product % total;
+    const share = Number((product - remainder) / total);
     parts.push(share);
     remainders.push({ index, remainder });
     allocated += share;
   });
 
   let leftover = amount - allocated;
-  remainders.sort((a, b) => b.remainder - a.remainder || a.index - b.index);
+  remainders.sort((a, b) =>
+    b.remainder > a.remainder ? 1 : b.remainder < a.remainder ? -1 : a.index - b.index,
+  );
   for (const entry of remainders) {
     if (leftover === 0) break;
-    if (entry.remainder === 0) continue;
+    if (entry.remainder === 0n) continue;
     parts[entry.index] = (parts[entry.index] ?? 0) + 1;
     leftover -= 1;
   }

@@ -29,11 +29,10 @@ here with Vitest:
   sign-out so the phone goes on alerting like a pager (AUTH-005). They are read through the
   device's own endpoint when the connection comes up or back (NTF-006) and after an alert event for
   the holder; each alert and each repeat is announced once to the `AlertNotifier` (the Android
-  notifications of P2-06b), and acknowledging acknowledges everywhere, the pager included
-  (NTF-004). Unpairing or pairing again forgets them. The first read tells the notifier whom to
-  listen for, or to stop (a service Android restarted for someone who has signed out since);
-  Acknowledge pressed on a notification before that read is sent after it, and one that fails
-  announces the alert again, as its notification went when it was pressed (P2-06b).
+  notifications of P2-06b). The phone never acknowledges (2026-10-25): an alert goes when it is
+  cleared or acknowledged elsewhere (the pager's button, a manager). Unpairing or pairing again
+  forgets them. The first read tells the notifier whom to listen for, or to stop (a service
+  Android restarted for someone who has signed out since).
 - `OrderOutbox`: orders from this device on their way to the kitchen (WTR-012, ORD-013). Each is
   kept before it is sent and sent again with the same idempotency key until the server answers;
   orders go only while the person who took them is signed in; a refused order stays with the

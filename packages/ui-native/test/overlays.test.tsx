@@ -1,7 +1,16 @@
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import { useState } from 'react';
 import { Pressable, Text } from 'react-native';
-import { Sheet, type ToastOptions, ToastProvider, useToast } from '../src/index.js';
+import {
+  ScreenInsetsProvider,
+  Sheet,
+  type ToastOptions,
+  ToastProvider,
+  useToast,
+} from '../src/index.js';
+
+/** A phone with gesture navigation: 24 points of status bar, 48 of navigation bar. */
+const PHONE_BARS = { top: 24, right: 0, bottom: 48, left: 0 };
 import { renderUi } from './render.js';
 
 describe('[NFR-U01] Sheet', () => {
@@ -40,6 +49,15 @@ describe('[NFR-U01] Sheet', () => {
     expect(screen.getByTestId('sheet-close')).toBeDisabled();
     expect(screen.getByText('Options')).toBeOnTheScreen();
   });
+
+  it('keeps its footer above the navigation bar', async () => {
+    await renderUi(
+      <ScreenInsetsProvider insets={PHONE_BARS}>
+        <Host />
+      </ScreenInsetsProvider>,
+    );
+    expect(screen.getByTestId('sheet-footer')).toHaveStyle({ paddingBottom: 16 + 48 });
+  });
 });
 
 describe('[NFR-U01] Toast', () => {
@@ -63,6 +81,17 @@ describe('[NFR-U01] Toast', () => {
       </Pressable>
     );
   }
+
+  it('shows above the navigation bar', async () => {
+    await renderUi(
+      <ScreenInsetsProvider insets={PHONE_BARS}>
+        <ToastProvider>
+          <Trigger toast={{ title: 'KOT sent' }} />
+        </ToastProvider>
+      </ScreenInsetsProvider>,
+    );
+    expect(screen.getByTestId('toast-region')).toHaveStyle({ bottom: 24 + 48 });
+  });
 
   it('hides a success toast after the duration', async () => {
     await renderUi(

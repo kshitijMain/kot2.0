@@ -6,6 +6,8 @@ export * from './components/ComboChoices.js';
 export * from './components/ConfirmDialog.js';
 export * from './components/ConnectionBanner.js';
 export * from './components/Dialog.js';
+export * from './components/DishPhoto.js';
+export * from './components/ErrorBoundary.js';
 export * from './components/Icon.js';
 export * from './components/IconButton.js';
 export * from './components/ItemOptions.js';

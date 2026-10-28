@@ -11,12 +11,16 @@ its own PostgreSQL 16 database in an India region (for example AWS `ap-south-1` 
 the repository.
 
 Choosing and opening the hosting account is item 5 of `docs/owner/OWNER_CHECKLIST.md`. Until
-then, the service runs locally and in CI tests.
+then, the service runs locally and in CI tests. On AWS in Mumbai, setting up each environment
+step by step is `control-plane-aws.md`.
 
 For staging and production:
 
-- Set `CP_ENV=staging` or `CP_ENV=production` and a `DATABASE_URL` with `sslmode=verify-full`
-  (at least `require`; the service refuses to start without it).
+- Set `CP_ENV=staging` or `CP_ENV=production` and a `DATABASE_URL` with `sslmode=require` (the
+  service refuses to start without it). The service's driver (node-postgres) treats `require` as
+  `verify-full`: it checks the certificate and the host name, so the database's certificate
+  authority must be trusted (the image carries Amazon RDS's for ap-south-1). Do not write
+  `verify-full`: Prisma's `migrate deploy` does not know it and connects without TLS.
 - End TLS 1.2 or newer at the load balancer, which forwards to the service's `PORT`. The service
   sends HSTS.
 - Set `CP_TRUST_PROXY` to the number of proxies in front of the service.
@@ -33,11 +37,14 @@ For staging and production:
 
 ## Deploying a version of the service
 
-1. Build in CI (never on a laptop, SEC-013): `pnpm --filter @rp/control-plane build`.
+1. Build in CI (never on a laptop, SEC-013): `pnpm --filter @rp/control-plane build`. The
+   container image (`apps/control-plane/Dockerfile`, with the web app) is built, smoke-tested and
+   scanned by `.github/workflows/control-plane-image.yml`, which pushes it to Amazon ECR on main.
 2. Apply migrations before starting the new version:
-   `pnpm --filter @rp/control-plane db:migrate:deploy` with the environment's `DATABASE_URL`.
-   Migrations are forward-only.
-3. Start `node apps/control-plane/dist/main.js` (for example in a container) and wait for the
+   `pnpm --filter @rp/control-plane db:migrate:deploy` with the environment's `DATABASE_URL`, or
+   in the image `node node_modules/prisma/build/index.js migrate deploy`. Migrations are
+   forward-only.
+3. Start `node apps/control-plane/dist/main.js` (the image's default command) and wait for the
    health check.
 
 ## The web app for vendor staff
@@ -223,9 +230,10 @@ its managers see but cannot change. A PC's page shows "The PC holds these settin
 reports them. Every change needs a reason and is audited in the Control Plane and on the PC
 (`VENDOR_SETTINGS_APPLIED`).
 
-To switch AI menu import off for one restaurant while the AI provider has trouble, set
-`features.aiMenuImport` to Off on that PC. Its managers then see "Reading menus from photos is
-switched off by the vendor for now" and can still use the Excel template.
+The AI menu import is switched off for good (2026-10-25): menus are entered by hand or with the
+Excel template. Its flag (`features.aiMenuImport`) is no longer offered here or on the PC's
+Settings page; the reading service stays in the code, unused (it does nothing without
+`CP_AI_API_KEY`).
 
 ## Digital bills (BILL-012)
 

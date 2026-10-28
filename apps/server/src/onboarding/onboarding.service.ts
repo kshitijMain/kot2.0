@@ -192,7 +192,8 @@ export class OnboardingService {
     const use = {
       waiterPhones: has('WAITER_PHONE'),
       tablets: has('TABLE_TABLET'),
-      qr: marks.QR !== 'SKIPPED' && tablesWithQr > 0,
+      // Only where guests can order: the QR site and the relay are set up on this PC.
+      qr: this.qrAvailable() && marks.QR !== 'SKIPPED' && tablesWithQr > 0,
       kitchenScreens: has('KDS'),
       pagers: has('PAGER'),
     };
@@ -268,6 +269,11 @@ export class OnboardingService {
       });
     });
     return this.goLive(principal.restaurantId);
+  }
+
+  /** Whether this PC can take QR orders: the vendor set up the QR menu site and the relay. */
+  private qrAvailable(): boolean {
+    return this.config.qrSiteUrl !== undefined && this.config.relayUrl !== undefined;
   }
 
   /** What the restaurant has, counted (ONB-004). */
@@ -346,6 +352,7 @@ export class OnboardingService {
       staffWithPins,
       pairedDevices,
       tablesWithoutQr,
+      qrAvailable: this.qrAvailable(),
       goLivePassed: goLive.passed,
     };
   }

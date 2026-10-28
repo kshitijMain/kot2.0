@@ -1,10 +1,11 @@
 # Smoke flow (P2-01c, P2-02a to P2-02c, P2-06a; WTR-001 to WTR-003, WTR-006 to WTR-008, TBL-003,
 # WTR-012): pair with the local server, sign a waiter in, see the live tables, open a free table,
-# find a dish, send the KOT and see it reach the kitchen, acknowledge the alert when the kitchen has
-# it ready and serve it, then ask for the bill. TABLE must be free; DISH must be a dish without
-# options on the waiter-app menu. While the flow waits for the dish to be ready (up to 5 minutes),
-# a person marks it Ready on the kitchen screen (the console in Kitchen mode). Run against a
-# development build with Metro running (see apps/waiter-app/README.md):
+# find a dish, send the KOT and see it reach the kitchen, see it ready with its alert on the bell,
+# then served once the kitchen marks it picked up, and ask for the bill. Nothing is acknowledged or
+# marked on the phone (2026-10-25). TABLE must be free; DISH must be a dish without options on the
+# waiter-app menu. While the flow waits (up to 5 minutes each), a person marks the dish Ready and
+# then Picked up on the kitchen screen (the console in Kitchen mode). Run against a development
+# build with Metro running (see apps/waiter-app/README.md):
 #   maestro test -e PAIRING_CODE=ABCD-EFGH -e TABLE=T1 -e "DISH=Dal Makhani" apps/waiter-app/.maestro
 appId: ${APP_ID}
 env:
@@ -38,7 +39,6 @@ env:
 - tapOn: ${PIN.charAt(2)}
 - tapOn: ${PIN.charAt(3)}
 - assertVisible: Tables
-- assertVisible: Signed in as ${STAFF_NAME}
 - tapOn: All tables
 - tapOn: ${TABLE}, Free.*
 - tapOn: One more
@@ -57,20 +57,23 @@ env:
     id: send-kot
 - assertVisible: Order .* sent to the kitchen
 - assertVisible: KOT .*
-# The kitchen marks the dish Ready on its screen; the phone shows it live.
+# The kitchen marks the dish Ready on its screen; the phone shows it live, and its alert (a
+# notification, WTR-006) is counted on the bell.
 - extendedWaitUntil:
-    visible: Mark ${DISH} served
+    visible: Ready
     timeout: 300000
-# The waiter's alert for it (P2-06a, WTR-006): acknowledged here, the pager stops too (NTF-004).
-- assertVisible: .*Table ${TABLE} · Food ready.*
-- tapOn:
-    id: alert-banner-acknowledge
-- assertNotVisible:
-    id: alert-banner
-- tapOn: Mark ${DISH} served
-- assertVisible: Served
+- assertVisible: Alerts, 1 open
+# The kitchen marks it Picked up: it is served, and its alert goes.
+- extendedWaitUntil:
+    visible: Served
+    timeout: 300000
+- assertVisible: Alerts, none open
+- assertNotVisible: Mark ${DISH} served
 - tapOn: Request bill
 - assertVisible: The cashier has been asked for the bill for ${TABLE}.
 - tapOn: Back to tables
+- tapOn:
+    id: home-menu
+- assertVisible: Signed in as ${STAFF_NAME}
 - tapOn: Sign out
 - assertVisible: Tap your name

@@ -1,0 +1,37 @@
+# Build context of apps/control-plane/Dockerfile (BuildKit reads <Dockerfile>.dockerignore): only
+# what the image is built from. Every workspace manifest is in, so the lockfile matches the
+# workspace; the sources are those of the Control Plane, its web app and the packages they use.
+*
+!package.json
+!pnpm-lock.yaml
+!pnpm-workspace.yaml
+!.npmrc
+!tsconfig.base.json
+!apps/*/package.json
+!packages/*/package.json
+!infra/*/package.json
+!apps/control-plane
+!apps/control-plane-web
+!packages/config
+!packages/contracts
+!packages/design-tokens
+!packages/domain
+!packages/error-reporting
+!packages/i18n
+!packages/licensing
+!packages/totp
+!packages/ui-web
+
+# Never: installed or built output, local secrets and data, test output.
+**/node_modules
+**/dist
+**/coverage
+**/.turbo
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+**/test-results
+**/playwright-report
+**/storybook-static
+apps/control-plane/src/generated
+apps/control-plane/.cloud-backups

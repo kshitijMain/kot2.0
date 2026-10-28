@@ -2,7 +2,6 @@ package com.rp.mobilenative
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.ActivityManager
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -14,7 +13,6 @@ import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.Ringtone
 import android.media.RingtoneManager
-import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
@@ -28,10 +26,12 @@ import androidx.core.content.ContextCompat
 
 /**
  * What a waiter phone shows for its holder's alerts (P2-06b, WTR-005): one notification per open
- * alert on a high-importance channel, with sound, vibration and an Acknowledge action, shown on the
- * lock screen and alerting again on each repeat. While the app is in the foreground its banner
- * shows the alert, so the phone only rings and vibrates. Also the quiet notification of
- * [RpAlertService], which keeps the phone listening. The words come from JavaScript (NFR-L02).
+ * alert on a high-importance channel, with sound and vibration, shown on the lock screen and
+ * alerting again on each repeat. It pops up over whatever is on the screen, the app included, and
+ * goes; it stays in the notification shade until its cause is dealt with, and a tap opens the
+ * app at its table. Nobody acknowledges it (Business Owner, 2026-10-25). Also the quiet
+ * notification of [RpAlertService], which keeps the phone listening. The words come from
+ * JavaScript (NFR-L02).
  */
 object AlertNotifications {
   /**
@@ -66,12 +66,15 @@ object AlertNotifications {
     val listeningChannel: String,
   )
 
-  /** One alert as JavaScript words it (`describeAlert`). */
+  /** The extra a tapped alert's intent carries: the table session the app opens. */
+  const val EXTRA_TABLE_SESSION = "com.rp.mobilenative.alerts.TABLE_SESSION"
+
+  /** One alert as JavaScript words it (`describeAlert`), and the table a tap opens. */
   class Alert(
     val id: String,
     val title: String,
     val text: String,
-    val acknowledge: String,
+    val tableSessionId: String?,
     val postedAt: Long,
   )
 
@@ -142,16 +145,16 @@ object AlertNotifications {
       .setCategory(NotificationCompat.CATEGORY_SERVICE)
       .setPriority(NotificationCompat.PRIORITY_LOW)
       .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-      .setContentIntent(openApp(context))
+      .setContentIntent(openApp(context, LISTENING_ID, null))
       .build()
 
   /**
-   * An alert that is new or came back (a repeat): a notification in the background (posting it
-   * again alerts again), and only the ring and the vibration in the foreground, where the banner
-   * shows it. With notifications turned off the phone still rings, so the alert is not missed.
+   * An alert that is new or came back (a repeat): a notification, in the foreground too (posting
+   * it again alerts again). With notifications turned off the phone still rings, so the alert is
+   * not missed.
    */
   fun announce(context: Context, alert: Alert) {
-    if (!inForeground() && enabled(context)) {
+    if (enabled(context)) {
       post(context, alert)
     } else {
       ring(context)
@@ -201,18 +204,9 @@ object AlertNotifications {
         .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
         .setWhen(alert.postedAt)
         .setShowWhen(true)
-        .setAutoCancel(false)
-        .setContentIntent(openApp(context))
-        .addAction(
-          NotificationCompat.Action.Builder(
-              R.drawable.rp_alert_bell,
-              alert.acknowledge,
-              acknowledgeIntent(context, alert.id),
-            )
-            // Acknowledging counts as the phone's holder, so a locked phone unlocks first (MOBILE-R2).
-            .setAuthenticationRequired(true)
-            .build()
-        )
+        // A tap opens its table and takes it off the shade; the app lists it until it closes.
+        .setAutoCancel(true)
+        .setContentIntent(openApp(context, alert.id.hashCode(), alert.tableSessionId))
     // What anyone sees on the locked screen: that there is an alert, not what it says.
     listening(context)?.let { shown ->
       builder.setPublicVersion(
@@ -227,13 +221,6 @@ object AlertNotifications {
       builder.setContentText(alert.text).setStyle(NotificationCompat.BigTextStyle().bigText(alert.text))
     }
     NotificationManagerCompat.from(context).notify(TAG_PREFIX + alert.id, ALERT_ID, builder.build())
-  }
-
-  /** The app's own screen is on top: the banner shows the alert. */
-  private fun inForeground(): Boolean {
-    val state = ActivityManager.RunningAppProcessInfo()
-    ActivityManager.getMyMemoryState(state)
-    return state.importance == ActivityManager.RunningAppProcessInfo.IMPORTANCE_FOREGROUND
   }
 
   private var ringtone: Ringtone? = null
@@ -274,37 +261,32 @@ object AlertNotifications {
       context.getSystemService(Vibrator::class.java)
     }
 
-  /** Opens the app where it was, like its launcher icon. */
-  private fun openApp(context: Context): PendingIntent? {
+  /**
+   * Opens the app where it was, like its launcher icon, and at the alert's table when it has one.
+   * Each alert has its own request code: pending intents that differ only in extras are one.
+   */
+  private fun openApp(context: Context, requestCode: Int, tableSessionId: String?): PendingIntent? {
     val launch = context.packageManager.getLaunchIntentForPackage(context.packageName) ?: return null
     launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+    if (tableSessionId != null) launch.putExtra(EXTRA_TABLE_SESSION, tableSessionId)
     return PendingIntent.getActivity(
       context,
-      0,
+      requestCode,
       launch,
       PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
     )
   }
 
-  /** One pending intent per alert: the data URI keeps them apart, the extras do not. */
-  private fun acknowledgeIntent(context: Context, alertId: String): PendingIntent {
-    val intent =
-      Intent(context, RpAlertActionReceiver::class.java)
-        .setAction(RpAlertActionReceiver.ACKNOWLEDGE)
-        .setData(Uri.fromParts(ALERT_SCHEME, alertId, null))
-        .putExtra(RpAlertActionReceiver.EXTRA_ALERT_ID, alertId)
-    return PendingIntent.getBroadcast(
-      context,
-      0,
-      intent,
-      PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
-    )
+  /** The table session a tapped alert asks for, taken off the intent so it opens it once. */
+  fun takeTableSession(intent: Intent?): String? {
+    val sessionId = intent?.getStringExtra(EXTRA_TABLE_SESSION) ?: return null
+    intent.removeExtra(EXTRA_TABLE_SESSION)
+    return sessionId
   }
 
   private fun preferences(context: Context) =
     context.getSharedPreferences(PREFERENCES, Context.MODE_PRIVATE)
 
-  private const val ALERT_SCHEME = "rp-alert"
   private const val KEY_TITLE = "title"
   private const val KEY_TEXT = "text"
   private const val KEY_ALERTS_CHANNEL = "alertsChannel"

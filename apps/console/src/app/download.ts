@@ -23,3 +23,13 @@ export function downloadFile(file: ServerFile): void {
   link.click();
   URL.revokeObjectURL(url);
 }
+
+/** Hands bytes the server sent as themselves (a menu file) to the browser's download. */
+export function saveBlob(filename: string, blob: Blob): void {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}

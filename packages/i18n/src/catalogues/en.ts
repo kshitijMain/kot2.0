@@ -126,13 +126,14 @@ export const en = {
   },
   alerts: {
     title: 'Alerts',
-    titleFor: 'Alerts for {name}',
     for: 'For {name}',
     none: 'No open alerts. New ones ring here and on the pager.',
+    bellLabel:
+      '{count, plural, =0 {Alerts, none open} one {Alerts, # open} other {Alerts, # open}}',
+    open: 'Open',
+    openTable: 'Opens the table',
     atTable: 'Table {table} · {what}',
     atToken: 'Token {token} · {what}',
-    more: '+{count} more',
-    showAll: '{count, plural, one {Show the alert} other {Show all # alerts}}',
     acknowledge: 'Acknowledge',
     acknowledgeOf: 'Acknowledge {title}',
     acknowledgeFailed: 'Not acknowledged: {message}',
@@ -140,7 +141,6 @@ export const en = {
     ageHours: '{hours} h {minutes} min ago',
     reminded: '{count, plural, one {Reminded once} other {Reminded # times}}',
     escalated: 'Managers were alerted too',
-    holderNote: 'Alerts for {name} keep coming to this phone until they sign out on it.',
     type: {
       ORDER_PENDING_APPROVAL: 'New order to approve',
       ITEM_READY: 'Food ready',
@@ -281,6 +281,11 @@ export const en = {
     unverified: 'Check the server’s certificate before pairing.',
   },
   mobile: {
+    startupFailed: {
+      title: 'The app could not start',
+      description:
+        'Something on this device did not open. Try again; if it keeps happening, restart the device and tell a manager.',
+    },
     update: {
       title: 'Update this app',
       staff:
@@ -328,6 +333,9 @@ export const en = {
     },
     tables: {
       title: 'Tables',
+      menu: 'Menu',
+      menuLabel: 'Menu: break, takeaway, pager and signing out',
+      backLabel: 'Back to tables',
       empty: 'No tables yet. A manager adds them in Manage → Floor.',
       view: 'Which tables to show',
       mine: 'My tables',
@@ -411,12 +419,8 @@ export const en = {
       },
     },
     item: {
-      pickUp: 'Mark picked up',
-      pickUpOf: 'Mark {name} picked up',
-      serve: 'Mark served',
-      serveOf: 'Mark {name} served',
-      serveAll: 'Mark all {count} ready dishes served',
-      servedAll: '{count, plural, one {# dish marked served} other {# dishes marked served}}',
+      more: 'More',
+      moreOf: 'More for {name}',
       cancel: 'Cancel',
       cancelOf: 'Cancel {name}',
       void: 'Void',
@@ -1155,64 +1159,6 @@ export const en = {
     },
   },
   /** The manager's menu editor (P4-02d, MGR-005, MENU-001 to MENU-011). */
-  aiImport: {
-    title: 'Read a printed menu',
-    open: 'Read a printed menu',
-    back: 'Back to the menu',
-    intro:
-      'Take clear photos of each page of your printed menu, or choose a PDF. The vendor’s service reads them into a draft in about a minute. You then check every dish before anything is added to your menu.',
-    files: 'Photos or PDF of the menu',
-    filesHint:
-      'Up to 10 files: photos up to 15 MB each, PDFs up to 20 MB. Straight, well-lit photos read best.',
-    choose: 'Choose files',
-    removeFile: 'Remove {name}',
-    read: 'Read the menu',
-    tooMany: 'Choose at most 10 files.',
-    tooLarge: '{name} is too large.',
-    reading: 'Reading your menu…',
-    readingHint: 'This takes about a minute. You can stay on this page.',
-    failed: 'The menu could not be read',
-    startAgain: 'Start again',
-    review: {
-      title: 'Check every dish',
-      hint: 'Compare each dish with your printed menu, correct anything misread, then mark it checked. Nothing is added until every dish is checked.',
-      progress: '{checked} of {total} dishes checked',
-      sectionName: 'Section name',
-      station: 'Station for this section',
-      taxGroup: 'Tax group for this section',
-      checkAll: 'Mark all in {name} checked',
-      name: 'Name',
-      price: 'Price (₹)',
-      sizes: 'Sizes',
-      sizeName: 'Size {number}',
-      sizePrice: 'Price of {name} (₹)',
-      foodType: 'Veg, non-veg or egg',
-      chooseFoodType: 'Choose',
-      description: 'Description',
-      spice: 'Spice',
-      checked: 'Checked',
-      checkedFor: '{name} checked',
-      leaveOut: 'Leave out',
-      leaveOutFor: 'Leave out {name}',
-      unsure: 'The reader was unsure: {note}',
-      problem: {
-        NAME: 'Give it a name.',
-        PRICE: 'Give it a price, or a price for each size.',
-        FOOD_TYPE: 'Say whether it is veg, non-veg or egg.',
-      },
-      addOns:
-        'Extras found: {names}. They are added as option groups; attach them to dishes in the menu editor.',
-      notes: 'Notes from the reader',
-      add: 'Add these dishes to the menu',
-      notReady: 'Check every dish and fix what is marked before adding.',
-    },
-    issues: 'The dishes could not be added. Fix these and try again:',
-    issue: '{sheet}, row {row}: {message}',
-    done: 'Added to your menu',
-    doneSummary:
-      '{items, plural, one {# dish} other {# dishes}} in {categories, plural, one {# section} other {# sections}} were added and menu version {version} is published.',
-    toEditor: 'Open the menu editor',
-  },
   bulkPhotos: {
     title: 'Add photos in bulk',
     open: 'Add photos in bulk',
@@ -1222,6 +1168,11 @@ export const en = {
     files: 'Dish photos',
     filesHint: 'JPEG, PNG or WebP, up to 5 MB each.',
     choose: 'Choose photos',
+    chooseFolder: 'Choose a folder',
+    folderHint:
+      'Or put all the dish photos in one folder on this PC (copied from a phone, for example) and choose the folder: every photo in it is matched at once.',
+    skipped:
+      '{count, plural, one {# file in the folder is} other {# files in the folder are}} not a photo and {count, plural, one {was} other {were}} left out.',
     dish: 'Dish for {file}',
     noDish: 'No dish',
     byCode: 'Matched by short code',
@@ -1236,6 +1187,96 @@ export const en = {
     failed: 'Not uploaded: {message}',
     done: '{count, plural, one {# photo was} other {# photos were}} added to the draft menu. Publish the menu so every device shows them.',
     toEditor: 'Back to the menu to publish',
+    leaveOut: 'Leave out',
+    guide:
+      'Use the restaurant’s own photos: landscape, in good light, one dish on a plain background. Name each file after its dish or short code.',
+  },
+  /** The menu file (ONB-005, ONB-007): a .zip with menu.xlsx, photos and a README. */
+  menuFile: {
+    title: 'Menu file',
+    back: 'Back to the menu',
+    intro:
+      'A menu file is one .zip with the menu sheet (menu.xlsx), the dishes’ photos and a README. Fill it in on any computer, then load it here. Nothing is saved until you confirm, and nothing reaches the devices until you publish.',
+    step1: '1. Download the empty menu file',
+    step1Text:
+      'menu.xlsx has a sheet for dishes, one for sizes (Half and Full), one for add-on groups and one for combos; the second row of each sheet says what goes in each column. Put the photos in the photos folder, each named after the dish’s short code or exact name, like PT01.jpg or Paneer Tikka.jpg.',
+    download: 'Download empty menu file',
+    step2: '2. Load the filled file',
+    step2Text:
+      'The .zip, or a plain menu.xlsx for a menu without photos, up to {size} MB. Dishes already on the menu cannot be loaded again; change them in the menu editor.',
+    load: 'Load menu file',
+    loading: 'Reading the file and checking its photos…',
+    tooLarge: 'The file is larger than {size} MB. Use smaller photos.',
+    review: '3. Check what it adds',
+    loaded: 'Loaded: {file}',
+    names: 'Match the names to this PC',
+    namesHint:
+      'The file names tax groups and kitchen stations. Choose which of this PC’s each one is; tax rates always come from this PC, never from the file.',
+    taxGroup: 'Tax group “{name}” in the file',
+    station: 'Kitchen station “{name}” in the file',
+    pick: 'Choose one',
+    noNames: 'The file names no tax groups or stations yet.',
+    checking: 'Checking…',
+    problems:
+      '{count, plural, one {# problem} other {# problems}} found. Nothing has been added. Fix them, in the file or above, and check again.',
+    issue: '{sheet} sheet, row {row}: {message}',
+    issueColumn: '{sheet} sheet, row {row}, {column}: {message}',
+    issueSheet: '{sheet} sheet: {message}',
+    ready:
+      'Ready to add: {items, plural, one {# dish} other {# dishes}}, {variants, plural, one {# size} other {# sizes}}, {groups, plural, one {# add-on group} other {# add-on groups}} and {combos, plural, one {# combo} other {# combos}}.',
+    dishes: '{count, plural, one {# dish} other {# dishes}} in the file',
+    dishColumn: 'Dish',
+    categoryColumn: 'Category',
+    priceColumn: 'Price',
+    addOnsColumn: 'Add-ons',
+    photoColumn: 'Photo',
+    noPrice: 'No price',
+    combo: 'Combo',
+    photos: 'Photos: {matched} of {count} go with a dish',
+    photosHint:
+      'Each photo is matched by its file name: the short code first, then the dish’s name. Choose another dish, or leave a photo out.',
+    photoFor: 'Dish for {file}',
+    leaveOut: 'Leave this photo out',
+    byCode: 'Matched by short code',
+    byName: 'Matched by name',
+    unmatched: 'No dish matched; choose one or leave it out',
+    taken: '{dish} already has a photo from this file; only the first one is used.',
+    noPhotos: 'No photos in this file. You can add them later with Add photos in bulk.',
+    confirmNote:
+      'The dishes and their photos are added to the draft menu. Nothing reaches the devices until you press Publish.',
+    confirm: 'Add to the menu as a draft',
+    added:
+      'Added {items, plural, one {# dish} other {# dishes}} and {photos, plural, one {# photo} other {# photos}} to the draft. Check the menu, then publish it.',
+    reviewMenu: 'Check and publish the menu',
+    another: 'Load another file',
+    export: 'Export menu file',
+    exportHint:
+      'The whole menu with its photos as a menu file: to load at another restaurant, or to keep as a copy.',
+    readme: `How to fill in this menu file
+
+1. Open menu.xlsx. It has four sheets:
+   - Items: one row per dish.
+   - Variants: one row per size, such as Half and Full.
+   - Modifiers: one row per option of an add-on group, such as Roti type.
+   - Combos: one row per part of a combo.
+   The second row of each sheet says what goes in each column and whether it is required.
+   Leave it as it is; it is skipped.
+
+2. Prices are in rupees, like 250 or 249.50.
+   Tax group and Station are names. On the restaurant's PC you match each one to a tax group
+   and a kitchen station set up there. Tax rates are never in this file.
+
+3. Put the dishes' photos in the photos folder. Name each photo after the dish's short code
+   (PT01.jpg) or its exact name (Paneer Tikka.jpg). JPEG, PNG, WebP or HEIF, up to 5 MB each.
+   Good photos are landscape, in good light, one dish on a plain background.
+
+4. Zip the folder again (menu.xlsx, the photos folder and this README) and load it on the
+   restaurant's PC: Manage, Menu, Load menu file. A plain menu.xlsx works too, for a menu
+   without photos.
+
+Nothing is saved until you confirm, and nothing reaches the waiters, the tablets or the QR menu
+until you press Publish.
+`,
   },
   menuEditor: {
     title: 'Menu',
@@ -1245,11 +1286,53 @@ export const en = {
     published: 'Menu version {version} is published. Every device has it now.',
     unchanged: 'Nothing changed since version {version}.',
     loadFailed: 'The menu could not be loaded.',
+    fromExcel: 'Load menu file',
+    bulkPhotos: 'Add photos in bulk',
     tabs: {
       label: 'Menu parts',
       items: 'Dishes',
       categories: 'Categories',
-      groups: 'Option groups',
+      groups: 'Add-on groups',
+    },
+    /** The menu check before publishing: problems that block, and warnings. */
+    health: {
+      title: 'Menu check',
+      ok: 'Everything is ready to publish.',
+      blocking: 'Fix these before publishing',
+      warnings: 'Worth a look (they do not stop publishing)',
+      NO_PRICE: '{name} has no price.',
+      NO_STATION: '{name} has no kitchen station.',
+      NO_TAX_GROUP: '{name} has no tax group.',
+      SAME_NAME: 'More than one dish is called {name}.',
+      EMPTY_CATEGORY: 'The category {name} has no dishes.',
+      noPhoto:
+        '{count, plural, one {# dish has no photo} other {# dishes have no photo}}: {names}. They show a plain placeholder.',
+      fix: 'Fix {name}',
+      addPhotos: 'Add photos in bulk',
+    },
+    /** Publishing: what changes, then which devices have it. */
+    publishing: {
+      title: 'Publish the menu',
+      first: 'This is the first menu: every dish goes to the devices.',
+      changes: 'What changes on the devices',
+      added: '{count, plural, one {# dish added} other {# dishes added}}: {names}',
+      removed: '{count, plural, one {# dish taken off} other {# dishes taken off}}: {names}',
+      renamed: '{from} is now called {to}',
+      price: '{name}: {before} now {after}',
+      photos: '{count, plural, one {New or changed photo} other {New or changed photos}}: {names}',
+      none: 'Nothing the devices show changes. Details such as descriptions may still differ.',
+      blocked: 'The menu check found problems. Fix them, then publish.',
+      warnings:
+        '{count, plural, one {# warning} other {# warnings}} from the menu check. You can publish anyway.',
+      confirm: 'Publish now',
+      done: 'Menu version {version} is published.',
+      unchanged: 'Nothing changed since version {version}; the devices already have it.',
+      connected: 'Connected now, so they have it: {names}',
+      later: 'Not connected now; each gets it as soon as it reconnects: {names}',
+      noDevices:
+        'No phones, tablets or kitchen screens are paired yet. Each gets this menu when it is paired.',
+      devicesUnknown: 'Which devices have it could not be checked: {message}',
+      close: 'Done',
     },
     reason: 'Reason',
     reasonHint: 'For the audit trail, like “Off the menu for the season”.',
@@ -1295,10 +1378,12 @@ export const en = {
       addTitle: 'Add a dish',
       editTitle: 'Edit {name}',
       sectionBasics: 'The dish',
-      sectionPrice: 'Price and tax',
+      sectionPrice: 'Price and sizes',
       sectionKitchen: 'Kitchen',
-      sectionOptions: 'Sizes and options',
-      sectionMore: 'Search and labels',
+      sectionOptions: 'Add-ons',
+      sectionMore: 'More options',
+      moreHint:
+        'Tax, short code, search words, hours and the rest. Most dishes need none of these.',
       sectionCombo: 'Combo',
       name: 'Name',
       category: 'Category',
@@ -1307,16 +1392,20 @@ export const en = {
       shortCodeHint: 'Optional. Letters, digits or dashes, up to 12, for quick entry on the POS.',
       description: 'Description',
       photo: 'Photo',
-      photoHint: 'JPEG, PNG or WebP up to 5 MB. It is resized and cleaned of camera data.',
+      photoHint:
+        'Use the restaurant’s own photo: landscape, in good light, one dish on a plain background. JPEG, PNG or WebP up to 5 MB.',
       photoAlt: 'Photo of {name}',
       uploadPhoto: 'Add a photo',
       replacePhoto: 'Replace photo',
       removePhoto: 'Remove photo',
       uploading: 'Uploading…',
       photoTooLarge: 'The photo is larger than 5 MB. Choose a smaller one.',
+      noPhoto: 'No photo yet: a plain placeholder shows until you add one.',
       price: 'Price (₹)',
-      priceHint: 'With sizes, the price shown before a size is chosen.',
+      priceHint: 'One price for the dish. For Half and Full, use the sizes below instead.',
+      sizesPriced: 'Each size has its own price below.',
       taxGroup: 'Tax group',
+      taxGroupUsual: 'Most dishes use {name}. Change it only if this dish is taxed differently.',
       chooseTaxGroup: 'Choose a tax group',
       foodType: 'Food type',
       spiceLevel: 'Spice level',
@@ -1345,12 +1434,21 @@ export const en = {
       variantsHint: 'Like Half and Full, each with its own price. Leave empty for one size.',
       variantName: 'Size name',
       variantPrice: 'Size price (₹)',
-      addVariant: 'Add a size',
+      addVariant: 'Add another size',
+      halfFull: 'Half and Full',
+      half: 'Half',
+      full: 'Full',
       removeVariant: 'Remove {name}',
-      groups: 'Option groups',
+      groups: 'Add-on groups',
       groupsHint:
-        'Choices diners make, like roti type or add-ons. Manage them on the Option groups tab.',
-      noGroups: 'No option groups yet.',
+        'Pick from the groups already made, like Roti type. Make or change groups on the Add-on groups tab.',
+      noGroups: 'No add-on groups yet. Make one on the Add-on groups tab, then pick it here.',
+      preview: 'Preview',
+      previewHint: 'How the dish looks once the menu is published.',
+      previewPhone: 'On the waiter phone',
+      previewTablet: 'On the table tablet',
+      previewName: 'New dish',
+      previewChoose: 'Choose options',
       tags: 'Tags',
       tagsHint: 'Comma-separated, like Jain, bestseller, chef’s special, contains nuts.',
       synonyms: 'Search words',
@@ -1367,7 +1465,7 @@ export const en = {
       problems: {
         nameRequired: 'Give the dish a name of up to 80 characters.',
         categoryRequired: 'Choose a category.',
-        priceInvalid: 'Enter a price like 250 or 120.50.',
+        priceInvalid: 'Enter a price above ₹0, like 250 or 120.50.',
         taxGroupRequired: 'Choose a tax group.',
         stationRequired: 'Choose the kitchen station.',
         shortCodeInvalid: 'Use up to 12 letters, digits or dashes.',
@@ -1750,6 +1848,7 @@ export const en = {
       ONCE_PER_STATE: 'Once each time it changes',
       UNTIL_RESOLVED: 'Until it is put right',
       DAILY: 'Once a day',
+      AUTO_CLOSE: 'Once, then closes itself',
     },
     dialog: {
       title: 'Rule for “{name}”',
@@ -2424,6 +2523,18 @@ export const en = {
     failed: 'That did not work: {message}',
   },
   setupPage: {
+    /** Step 7: the two ways to load a menu, side by side (ONB-004, ONB-005). */
+    menuWays: {
+      title: 'Two ways to load the menu',
+      byHand: 'Type it in',
+      byHandText: 'Best for a short menu, or to add or change a few dishes: one dish at a time.',
+      byHandOpen: 'Open the menu editor',
+      excel: 'Fill the menu file',
+      excelText:
+        'Best for a whole menu: every dish, size and add-on in one sheet, the photos in its folder, checked before anything is added.',
+      upload: 'Load the filled menu file',
+      photos: 'Then add any missing photos in bulk',
+    },
     title: 'Set up',
     intro:
       'Everything this restaurant needs before its first guest, in order. Each step opens the page that does it; you can stop at any time and carry on later.',
@@ -2485,7 +2596,7 @@ export const en = {
       },
       MENU: {
         title: 'Menu',
-        hint: 'Import the menu (from the Excel template or photos), check it and publish it.',
+        hint: 'Load the menu by hand or with the menu file (the sheet and the photos in one zip), check it and publish it.',
         open: 'Open Menu',
       },
       STAFF: {
@@ -3463,6 +3574,7 @@ export const en = {
     notifications: {
       escalationSeconds: 'Escalate to the manager after (N)',
       repeatSeconds: 'Alert again every (R)',
+      autoCloseMinutes: 'Messages close themselves after',
       rules: 'Notification rules',
       nudgePresets: 'Manager nudge messages',
       diskAlertPercent: 'Disk alert at',
@@ -3476,6 +3588,7 @@ export const en = {
       ageRedMinutes: 'Ticket turns red after',
       readyNotCollectedMinutes: 'Ready food not collected after',
       autoEscalateNotCollected: 'Tell the manager about food not collected',
+      pickupMarksServed: 'Picked up also means served',
       soundVolumePercent: 'Kitchen screen sound volume',
       theme: 'Kitchen screen colours',
     },
@@ -3637,6 +3750,8 @@ export const en = {
       escalationSeconds:
         'N: an alert not acknowledged within this time goes to the manager on duty.',
       repeatSeconds: 'R: an unacknowledged alert or service request alerts again this often.',
+      autoCloseMinutes:
+        'A message that needs no answer, such as a manager nudge, closes itself after this long.',
       rules:
         'Changes to the factory notification rules (Appendix C), per event: recipients, channels, pager text, escalation and repeat.',
       nudgePresets:
@@ -3654,6 +3769,8 @@ export const en = {
       ageRedMinutes: 'A ticket turns red at this age (later than amber).',
       readyNotCollectedMinutes: 'Ready items not picked up after this long make the ticket flash.',
       autoEscalateNotCollected: 'Alert the manager without the kitchen pressing "Notify manager".',
+      pickupMarksServed:
+        'When the kitchen marks a dish picked up, it is served too, so waiters have nothing to mark.',
       soundVolumePercent:
         'Volume of the new-ticket chime and the cancellation sound (our default).',
       theme:
@@ -5050,6 +5167,9 @@ export const en = {
     empty: 'Nothing here yet.',
     error: 'Something went wrong.',
     retry: 'Try again',
+    crashTitle: 'This screen ran into a problem',
+    crashDescription:
+      'Orders already sent are safe. Try again; if it keeps happening, close and reopen the app and tell a manager.',
   },
   errors: {
     generic: 'Something went wrong. Try again.',

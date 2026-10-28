@@ -25,7 +25,10 @@ export const SignedPaise = z.int();
 /** Rates in basis points: 250 = 2.5 %. */
 export const BasisPoints = z.int().nonnegative().max(10_000);
 
-export const IsoDate = z.iso.date();
+/** A calendar date; year 0 is refused, because PostgreSQL has none (QA-004). */
+export const IsoDate = z.iso
+  .date()
+  .refine((date) => !date.startsWith('0000-'), { message: 'Give a real date.' });
 /** Instants are ISO-8601 in UTC (NFR-L03); clients display them in IST. */
 export const Timestamp = z.iso.datetime({ offset: false });
 

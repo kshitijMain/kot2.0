@@ -134,6 +134,12 @@ interface Prepared {
   readonly body: string | undefined;
 }
 
+/** A file sent as the request's body itself, not as JSON. */
+interface RawBody {
+  readonly content: Blob;
+  readonly contentType: string;
+}
+
 /**
  * The typed REST client of the local server (P0-14). Every call is checked against the contract
  * before it is sent and its answer after it arrives. The client:
@@ -383,7 +389,48 @@ export class ApiClient implements RealtimeAuthority {
 
   // Internals.
 
+  /**
+   * A file the server answers with as itself (a menu file, ONB-005): the same credentials,
+   * renewals and errors as any call; the body as a Blob.
+   */
+  async download<Op extends OperationId>(operationId: Op, ...args: RequestArgs<Op>): Promise<Blob> {
+    const { response } = await this.exchange(operationId, args[0] ?? {});
+    return response.blob();
+  }
+
+  /**
+   * Sends a file as the body itself (a menu file, ONB-005), with the same credentials, renewals
+   * and errors as any call; the answer is checked against the contract.
+   */
+  async upload<Op extends OperationId>(
+    operationId: Op,
+    file: { readonly content: Blob; readonly contentType: string },
+    ...args: RequestArgs<Op>
+  ): Promise<ResponseOf<Op>> {
+    const { prepared, response, correlationId } = await this.exchange(
+      operationId,
+      args[0] ?? {},
+      file,
+    );
+    return this.success(
+      prepared.route,
+      response.status,
+      await readJson(response),
+      correlationId,
+    ) as ResponseOf<Op>;
+  }
+
   private async call(operationId: OperationId, input: AnyInput): Promise<unknown> {
+    const { prepared, response, correlationId } = await this.exchange(operationId, input);
+    return this.success(prepared.route, response.status, await readJson(response), correlationId);
+  }
+
+  /** Sends the request, renewing the session or device token once if needed; a refusal throws. */
+  private async exchange(
+    operationId: OperationId,
+    input: AnyInput,
+    raw?: RawBody,
+  ): Promise<{ prepared: Prepared; response: Response; correlationId: string }> {
     const prepared = this.prepare(routeFor(operationId), input);
     const access = accessOf(prepared.route);
     let retried = false;
@@ -393,10 +440,11 @@ export class ApiClient implements RealtimeAuthority {
         prepared,
         await this.headers(access, input, correlationId),
         input,
+        raw,
       );
       this.observeClock(response);
+      if (response.ok) return { prepared, response, correlationId };
       const body = await readJson(response);
-      if (response.ok) return this.success(prepared.route, response.status, body, correlationId);
       const error = errorFromResponse(response.status, body, correlationId);
       if (response.status === 401 && !retried && access !== 'public') {
         if (
@@ -495,6 +543,7 @@ export class ApiClient implements RealtimeAuthority {
     prepared: Prepared,
     headers: Record<string, string>,
     input: CallOptions,
+    raw?: RawBody,
   ): Promise<Response> {
     const { signal } = input;
     if (aborted(signal)) throw signal?.reason;
@@ -510,13 +559,13 @@ export class ApiClient implements RealtimeAuthority {
       input.timeoutMs ?? this.options.timeoutMs ?? DEFAULT_TIMEOUT_MS,
     );
     try {
+      const body = raw?.content ?? prepared.body;
+      const contentType =
+        raw?.contentType ?? (prepared.body === undefined ? undefined : 'application/json');
       return await this.fetcher(prepared.url, {
         method: prepared.route.method,
-        headers:
-          prepared.body === undefined
-            ? headers
-            : { ...headers, 'content-type': 'application/json' },
-        ...(prepared.body !== undefined && { body: prepared.body }),
+        headers: contentType === undefined ? headers : { ...headers, 'content-type': contentType },
+        ...(body !== undefined && { body }),
         signal: controller.signal,
       });
     } catch (error) {

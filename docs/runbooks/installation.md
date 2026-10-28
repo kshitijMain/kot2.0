@@ -3,8 +3,8 @@
 The order of work for a new restaurant, with the runbook that holds the detail for each step
 (NFR-M06, ONB). Done by vendor support with the Owner present.
 
-1. **Before the visit.** Licence and Control Plane record exist (`control-plane.md`). Menu
-   spreadsheet filled in from `docs/onboarding/menu-template.xlsx`. Wi-Fi coverage test done
+1. **Before the visit.** Licence and Control Plane record exist (`control-plane.md`). Menu file
+   prepared and exported on a test PC (`restaurant-onboarding.md`, section 2). Wi-Fi coverage test done
    (manual task 11). Printers and tablets chosen (manual tasks 12, 13).
 2. **The PC.** Windows hardening and accounts (`windows-host.md`). Run the installer: data
    drive, services, firewall (`windows-installer.md`, `windows-services.md`). Confirm the three

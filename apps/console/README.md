@@ -93,6 +93,28 @@ screens come with P1-08, P1-09, P1-12 and P4-01 to P4-07.
   issue a new credential after a warning. The credential shows once, in a dialog only "I have
   entered it" closes. The list follows `RestaurantChanged` and `DeviceStatusChanged`, and reads
   batteries again every minute.
+- Menu (`/manage/menu`, P4-02d, MGR-005, guided since 2026-10-25): `src/manage/menu/`.
+  `MenuEditor.tsx` has the menu check (`HealthPanel.tsx`, `@rp/domain` `menuHealth`: a dish
+  without a price, kitchen station or tax group blocks publishing; no photo, an empty category or
+  two dishes with one name are warnings), the dishes, categories and add-on groups, and buttons to
+  "Load menu file", "Add photos in bulk" and "Export menu file". `ItemDialog.tsx` asks in plain words for name,
+  category, description, veg mark, spice, photo (with guidance), price or sizes ("Half and Full"
+  in one tap, "Add another size"), kitchen station, add-on groups and combo; tax group (on the one
+  most dishes use, `usualTaxGroupId`), short code, search words, tags, hours, channels and the
+  rest wait under "More options", which opens by itself on a mistake inside it. With sizes the
+  dish's own price is its highest size's. `DishPreview.tsx` shows the dish on the waiter phone
+  (the shared `MenuItemCard`) and the table tablet (`DishPhoto` with its placeholder) as it is
+  typed. `PublishDialog.tsx` says what publishing changes (`menuChanges`), refuses while the check
+  blocks, then lists the devices connected now (they have it) and those that get it when they
+  reconnect. `MenuFileScreen.tsx` (`/manage/menu/import`) is the menu file (ONB-005): it
+  downloads the empty file (a zip with menu.xlsx, photos/ and a README), loads a filled one (or a
+  plain .xlsx) through the controller's `files.upload`, and shows the review: the file's tax group
+  and station names to map to this PC's, the check (every problem by sheet, row and column), every
+  dish with its photo, and every photo with its match to correct; "Add to the menu as a draft"
+  imports it, and publishing is the menu's own step. `ExportMenuFile` saves the menu as the same
+  file. `BulkPhotosScreen.tsx` matches many photos, or a whole folder's, to dishes. Set up step 7
+  offers typing it in and the menu file side by side. The AI menu reading is not offered (decided
+  2026-10-25). The POS (`src/pos/OrderEntry.tsx`) shows each dish's photo or the placeholder.
 - The Owner's second factor (`src/owner/second-factor.tsx`, AUTH-006): `useSecondFactor` tries an
   action and, when the server answers SECOND_FACTOR_REQUIRED, asks for the Owner password and an
   authenticator code (or a recovery code, typed like a pairing code), confirms them with

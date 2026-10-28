@@ -1,7 +1,16 @@
 import type { ItemView } from '@rp/contracts';
 import { photoUrl } from '@rp/contracts';
 import { formatRupees } from '@rp/domain';
-import { Badge, Button, EmptyState, Icon, Select, TextField, useToast } from '@rp/ui-web';
+import {
+  Badge,
+  Button,
+  DishPhoto,
+  EmptyState,
+  Icon,
+  Select,
+  TextField,
+  useToast,
+} from '@rp/ui-web';
 import { useCallback, useState } from 'react';
 import { useConsole } from '../../app/console-context.js';
 import { useT } from '../../app/i18n.js';
@@ -223,16 +232,14 @@ function ItemRow({
   const variants = item.variants.filter((variant) => variant.archivedAt === null).length;
   return (
     <li className="staff-row menu-row" data-inactive={archived ? '' : undefined}>
-      {item.photoId === null ? null : (
-        <img
-          className="menu-row__photo"
-          src={photoUrl(item.photoId, 160)}
-          alt={t('menuEditor.item.photoAlt', { name: item.name })}
-          width={64}
-          height={64}
-          loading="lazy"
-        />
-      )}
+      {/* The photo, or the same placeholder the devices show (MENU-008). */}
+      <DishPhoto
+        className="menu-row__photo"
+        src={item.photoId === null ? undefined : photoUrl(item.photoId, 160)}
+        alt={t('menuEditor.item.photoAlt', { name: item.name })}
+        width={64}
+        height={64}
+      />
       <div className="staff-row__who">
         <h3 className="staff-row__name">
           {item.name}

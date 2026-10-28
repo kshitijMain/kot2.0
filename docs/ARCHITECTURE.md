@@ -9,7 +9,8 @@ the same commit. If it disagrees with an ADR, the ADR wins.
 ```
 VENDOR CLOUD (India region, outbound connections only; nothing connects into the restaurant)
   Control Plane (apps/control-plane)   enrolment, signed heartbeats, releases [built]
-                                       tenants, licences, fleet, backups, AI import [P7, P6-04]
+                                       tenants, licences, fleet, backups [P7]
+                                       (AI menu import P6-04: switched off, unused)
   QR relay (infra/supabase)            Postgres + RLS, Edge Functions, Realtime, Storage [P5]
   QR menu site (apps/qr-menu)          public Next.js site for diners' phones [P5]
         ^  HTTPS/WSS out

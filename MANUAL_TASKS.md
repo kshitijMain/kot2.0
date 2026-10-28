@@ -27,6 +27,9 @@ code from going live:
 
 - [ ] Domain name + DNS (QR site, Control Plane, update server).
 - [ ] Cloud hosting in India + cloud KMS / secrets manager (Control Plane, licence-signing key).
+      On AWS in Mumbai, staging first, click by click with the steps a cloud engineer reviews and
+      the expected monthly costs:
+      [`docs/runbooks/control-plane-aws.md`](docs/runbooks/control-plane-aws.md).
 - [ ] Windows code-signing certificate (signed installer and updates). Put it into the secrets of
       the GitHub environment `release-signing` (never the repository's own secrets, which every
       branch can read) as `WINDOWS_CERTIFICATE_P12` (the .p12 file in base64) and
@@ -50,6 +53,10 @@ code from going live:
 - [ ] Android checks on a real phone and tablet: backups off, PIN screens not captured, the private
       lock-screen alert, the kiosk's user restrictions, a rogue server refused (threats MOBILE-E2,
       R2, I4, S1): [`manual-tasks/33-android-device-checks.md`](manual-tasks/33-android-device-checks.md).
+- [ ] The waiter phone after the 2026-10-25 feedback, on the release-variant APK (no development
+      gear): waiters-only sign-in, the back button, the screen's edges, notifications that come and
+      go, Picked up meaning served, the new home screen:
+      [`manual-tasks/37-waiter-phone-feedback.md`](manual-tasks/37-waiter-phone-feedback.md).
 - [ ] Supabase organisation, Mumbai region (QR relay), then deploy the relay schema and give the
       edge functions and the Control Plane their logins:
       [`manual-tasks/20-supabase-relay.md`](manual-tasks/20-supabase-relay.md).

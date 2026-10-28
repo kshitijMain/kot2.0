@@ -13,6 +13,19 @@ export const XLSX_MAX_ENTRY_BYTES = 20 * 1024 * 1024;
 export const XLSX_MAX_TOTAL_BYTES = 60 * 1024 * 1024;
 const MAX_ENTRIES = 200;
 
+/** How much an archive may hold once unpacked, by its central directory and as it inflates. */
+export interface ZipLimits {
+  readonly maxEntries: number;
+  readonly maxEntryBytes: number;
+  readonly maxTotalBytes: number;
+}
+
+const WORKBOOK_LIMITS: ZipLimits = {
+  maxEntries: MAX_ENTRIES,
+  maxEntryBytes: XLSX_MAX_ENTRY_BYTES,
+  maxTotalBytes: XLSX_MAX_TOTAL_BYTES,
+};
+
 const END_OF_CENTRAL_DIRECTORY = 0x06054b50;
 const CENTRAL_DIRECTORY_ENTRY = 0x02014b50;
 const LOCAL_FILE_HEADER = 0x04034b50;
@@ -41,11 +54,21 @@ type Directory =
 
 export type ZipCheck = { ok: true } | { ok: false; reason: 'NOT_ZIP' | 'TOO_LARGE' };
 
+export type UnpackedZip =
+  | {
+      readonly ok: true;
+      /** Every entry's name as the archive gives it, folders included, in archive order. */
+      readonly names: readonly string[];
+      /** The entries asked for, inflated and checked. */
+      readonly files: ReadonlyMap<string, Buffer>;
+    }
+  | { readonly ok: false; readonly reason: 'NOT_ZIP' | 'TOO_LARGE' | 'DAMAGED' };
+
 export type UnpackedWorkbook =
   | { readonly ok: true; readonly archive: Buffer }
   | { readonly ok: false; readonly reason: 'NOT_ZIP' | 'TOO_LARGE' | 'DAMAGED' };
 
-function readDirectory(data: Buffer): Directory {
+function readDirectory(data: Buffer, limits: ZipLimits = WORKBOOK_LIMITS): Directory {
   // The end record is 22 bytes plus a comment of up to 65,535 bytes.
   let end = -1;
   for (
@@ -62,7 +85,7 @@ function readDirectory(data: Buffer): Directory {
   const count = data.readUInt16LE(end + 10);
   const start = data.readUInt32LE(end + 16);
   if (count === 0xffff || start === 0xffffffff) return { ok: false, reason: 'TOO_LARGE' };
-  if (count > MAX_ENTRIES) return { ok: false, reason: 'TOO_LARGE' };
+  if (count > limits.maxEntries) return { ok: false, reason: 'TOO_LARGE' };
   const entries: ZipEntry[] = [];
   let offset = start;
   let total = 0;
@@ -71,10 +94,11 @@ function readDirectory(data: Buffer): Directory {
       return { ok: false, reason: 'NOT_ZIP' };
     }
     const size = data.readUInt32LE(offset + 24);
-    if (size === 0xffffffff || size > XLSX_MAX_ENTRY_BYTES)
+    if (size === 0xffffffff || size > limits.maxEntryBytes) {
       return { ok: false, reason: 'TOO_LARGE' };
+    }
     total += size;
-    if (total > XLSX_MAX_TOTAL_BYTES) return { ok: false, reason: 'TOO_LARGE' };
+    if (total > limits.maxTotalBytes) return { ok: false, reason: 'TOO_LARGE' };
     const nameLength = data.readUInt16LE(offset + 28);
     if (offset + 46 + nameLength > data.length) return { ok: false, reason: 'NOT_ZIP' };
     entries.push({
@@ -149,6 +173,31 @@ export async function unpackWorkbook(data: Buffer): Promise<UnpackedWorkbook> {
     parts.set(entry.name, content);
   }
   return { ok: true, archive: storedZip(parts) };
+}
+
+/**
+ * Any archive within `limits`: the names of all its entries, and the content of those `keep`
+ * asks for, each inflated to at most the size its directory gives and checked against its
+ * checksum. An entry named twice is damage; so is one encrypted or compressed another way.
+ */
+export async function unpackZip(
+  data: Buffer,
+  limits: ZipLimits,
+  keep: (name: string) => boolean,
+): Promise<UnpackedZip> {
+  const directory = readDirectory(data, limits);
+  if (!directory.ok) return directory;
+  const names = directory.entries.map((entry) => entry.name);
+  if (new Set(names).size !== names.length) return { ok: false, reason: 'DAMAGED' };
+  const files = new Map<string, Buffer>();
+  for (const entry of directory.entries) {
+    if (!keep(entry.name)) continue;
+    const content = await contentOf(data, entry);
+    if (content === 'TOO_LARGE') return { ok: false, reason: 'TOO_LARGE' };
+    if (content === undefined) return { ok: false, reason: 'DAMAGED' };
+    files.set(entry.name, content);
+  }
+  return { ok: true, names, files };
 }
 
 /** A ZIP of the given files, stored without compression. */

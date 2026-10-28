@@ -87,6 +87,106 @@ export function isBodyParserError(error: unknown): boolean {
   return bodyParserError(error) !== undefined;
 }
 
+interface DatabaseAnswer {
+  readonly status: number;
+  readonly code: string;
+  readonly message: string;
+  /** Reported to the vendor: a clash or an outage is worth knowing about. */
+  readonly unexpected: boolean;
+}
+
+/** A 503: clients and the phones' order outbox try again by themselves, with the same key. */
+const TRY_AGAIN: DatabaseAnswer = {
+  status: HttpStatus.SERVICE_UNAVAILABLE,
+  code: 'TRY_AGAIN',
+  message: 'Someone changed this at the same moment. Try again.',
+  unexpected: true,
+};
+const DATABASE_UNAVAILABLE: DatabaseAnswer = {
+  status: HttpStatus.SERVICE_UNAVAILABLE,
+  code: 'DATABASE_UNAVAILABLE',
+  message:
+    'The restaurant server cannot reach its database. Try again in a moment; if it keeps happening, restart the restaurant PC.',
+  unexpected: true,
+};
+const OUT_OF_RANGE: DatabaseAnswer = {
+  status: HttpStatus.UNPROCESSABLE_ENTITY,
+  code: 'VALUE_OUT_OF_RANGE',
+  message: 'A number or date is too large or not valid. Check it and try again.',
+  unexpected: false,
+};
+
+const CLASH: DatabaseAnswer = {
+  status: HttpStatus.CONFLICT,
+  code: 'CONFLICT',
+  message: 'This was changed at the same moment. Refresh and try again.',
+  unexpected: true,
+};
+
+/** PostgreSQL's own codes (SQLSTATE) behind a raw query's error. */
+const BY_SQLSTATE: Readonly<Record<string, DatabaseAnswer>> = {
+  '23505': CLASH,
+  '40P01': TRY_AGAIN,
+  '40001': TRY_AGAIN,
+  '22021': {
+    status: HttpStatus.BAD_REQUEST,
+    code: 'INVALID_TEXT',
+    message: 'Some text holds a hidden control character. Retype it and try again.',
+    unexpected: false,
+  },
+  '22P05': {
+    status: HttpStatus.BAD_REQUEST,
+    code: 'INVALID_TEXT',
+    message: 'Some text holds a hidden control character. Retype it and try again.',
+    unexpected: false,
+  },
+  '22003': OUT_OF_RANGE,
+  '22008': OUT_OF_RANGE,
+  '57P01': DATABASE_UNAVAILABLE,
+  '57P03': DATABASE_UNAVAILABLE,
+  '08000': DATABASE_UNAVAILABLE,
+  '08003': DATABASE_UNAVAILABLE,
+  '08006': DATABASE_UNAVAILABLE,
+};
+
+/** Prisma's codes (https://www.prisma.io/docs/orm/reference/error-reference). */
+const BY_PRISMA_CODE: Readonly<Record<string, DatabaseAnswer>> = {
+  P2002: CLASH,
+  P2034: TRY_AGAIN,
+  P2025: {
+    status: HttpStatus.NOT_FOUND,
+    code: 'NOT_FOUND',
+    message: 'That item no longer exists. Refresh and try again.',
+    unexpected: false,
+  },
+  P2020: OUT_OF_RANGE,
+  P1001: DATABASE_UNAVAILABLE,
+  P1002: DATABASE_UNAVAILABLE,
+  P1008: DATABASE_UNAVAILABLE,
+  P1017: DATABASE_UNAVAILABLE,
+  P2024: DATABASE_UNAVAILABLE,
+};
+
+/**
+ * What to tell people about an error from the database (Prisma's errors, by their shape so no
+ * engine type is imported): a clash with another device, an outage or a value the database
+ * refuses gets a plain answer instead of an internal error (QA-021). Others stay unexpected.
+ */
+function databaseAnswer(error: unknown): DatabaseAnswer | undefined {
+  if (!(error instanceof Error) || !error.name.startsWith('PrismaClient')) return undefined;
+  const { code, errorCode, meta } = error as Error & {
+    code?: unknown;
+    errorCode?: unknown;
+    meta?: { driverAdapterError?: { cause?: { originalCode?: unknown } } };
+  };
+  const sqlState = meta?.driverAdapterError?.cause?.originalCode;
+  if (typeof sqlState === 'string' && BY_SQLSTATE[sqlState] !== undefined) {
+    return BY_SQLSTATE[sqlState];
+  }
+  const prismaCode = typeof code === 'string' ? code : errorCode;
+  return typeof prismaCode === 'string' ? BY_PRISMA_CODE[prismaCode] : undefined;
+}
+
 /**
  * Maps any thrown value to the `ApiError` contract and an HTTP status. Stack traces and internal
  * messages of unexpected errors never reach the client (SEC-004).
@@ -152,6 +252,14 @@ export function mapError(error: unknown, correlationId?: string): MappedError {
         correlationId,
       ),
       unexpected: status >= 500,
+    };
+  }
+  const database = databaseAnswer(error);
+  if (database !== undefined) {
+    return {
+      status: database.status,
+      body: withCorrelation({ code: database.code, message: database.message }, correlationId),
+      unexpected: database.unexpected,
     };
   }
   const parserError = bodyParserError(error);

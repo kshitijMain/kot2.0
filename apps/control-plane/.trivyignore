@@ -1,0 +1,3 @@
+# Findings in the Control Plane image accepted after review (.github/workflows/control-plane-image.yml).
+# One per line: the CVE or secret rule id, with a comment saying why it does not apply, who
+# reviewed it and when to look again. Remove each one when a fix ships.

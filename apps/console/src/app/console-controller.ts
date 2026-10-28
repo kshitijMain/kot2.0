@@ -90,6 +90,14 @@ export class ConsoleController {
     return this.client.api;
   }
 
+  /**
+   * Files sent and received as themselves (the menu file, ONB-005), with the same credentials:
+   * `download` gives the body as a Blob, `upload` sends a file as the body.
+   */
+  get files(): Pick<ApiClient, 'download' | 'upload'> {
+    return this.client;
+  }
+
   /** Loads the stored device and session and checks them with the server. */
   async start(): Promise<void> {
     const record = await this.options.storage.loadDevice();

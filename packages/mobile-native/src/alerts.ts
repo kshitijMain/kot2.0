@@ -9,12 +9,15 @@ export interface ListeningNotice {
   readonly listeningChannel: string;
 }
 
-/** One alert's notification. `postedAt` is when it was raised, in epoch milliseconds. */
+/**
+ * One alert's notification. `postedAt` is when it was raised, in epoch milliseconds;
+ * `tableSessionId` the table a tap on it opens.
+ */
 export interface AlertNotice {
   readonly id: string;
   readonly title: string;
   readonly text: string;
-  readonly acknowledge: string;
+  readonly tableSessionId: string | null;
   readonly postedAt: number;
 }
 
@@ -27,9 +30,11 @@ export interface AlertsNative {
   notificationsEnabled(): Promise<boolean>;
   requestPermission(): Promise<boolean>;
   openSettings(): Promise<void>;
+  /** The table of the notification whose tap started the app, once. */
+  takeOpenedTable(): Promise<string | null>;
   addListener(
-    eventName: 'onAcknowledge',
-    listener: (event: { alertId: string }) => void,
+    eventName: 'onOpenTable',
+    listener: (event: { tableSessionId: string }) => void,
   ): { remove(): void };
 }
 
@@ -39,8 +44,6 @@ export interface AlertNotificationText {
   listening(holder: AlertHolder): { title: string; text: string };
   /** One alert's notification. */
   alert(alert: AlertView): { title: string; text: string };
-  /** The notification's Acknowledge button. */
-  readonly acknowledge: string;
   /** The channels' names in the app's notification settings. */
   readonly channels: { readonly alerts: string; readonly listening: string };
 }
@@ -59,19 +62,30 @@ async function nativeModule(): Promise<AlertsNative> {
   return requireNativeModule<AlertsNative>('RpAlerts');
 }
 
+/** A tapped alert notification asks for its table (the waiter app opens it). */
+export interface AlertTableOpener {
+  /** Calls `listener` with the table session of each notification tapped while the app runs. */
+  onOpenTable(listener: (tableSessionId: string) => void): () => void;
+  /** The table of the notification whose tap started the app, once; null otherwise. */
+  takeOpenedTable(): Promise<string | null>;
+}
+
 export interface AndroidAlertNotifierOptions {
   readonly native?: () => Promise<AlertsNative>;
-  /** Where a failure to listen for Acknowledge presses is reported. */
+  /** Where a failure to listen for taps on notifications is reported. */
   readonly onError?: (error: unknown) => void;
 }
 
 /**
  * The waiter phone's alerts outside its screen (P2-06b, WTR-005): while the phone has a holder, a
  * foreground service keeps it listening with the screen off or the app closed, and each alert is a
- * notification that rings, vibrates, shows on the lock screen and has Acknowledge, posted again
- * on each repeat. With the app on screen the banner shows the alert and the phone only rings.
+ * notification that rings, vibrates and shows on the lock screen, posted again on each repeat. It
+ * pops up over the app too and goes, and stays in the shade until its cause is dealt with; a tap
+ * opens its table. Nobody acknowledges it (Business Owner, 2026-10-25).
  */
-export class AndroidAlertNotifier implements AlertNotifier, NotificationPermission {
+export class AndroidAlertNotifier
+  implements AlertNotifier, NotificationPermission, AlertTableOpener
+{
   private readonly native: () => Promise<AlertsNative>;
 
   constructor(
@@ -106,7 +120,7 @@ export class AndroidAlertNotifier implements AlertNotifier, NotificationPermissi
       id: alert.id,
       title,
       text,
-      acknowledge: this.text.acknowledge,
+      tableSessionId: alert.tableSessionId,
       postedAt: Number.isNaN(raised) ? Date.now() : raised,
     });
   }
@@ -115,14 +129,14 @@ export class AndroidAlertNotifier implements AlertNotifier, NotificationPermissi
     await (await this.native()).dismiss(alertId);
   }
 
-  onAcknowledge(listener: (alertId: string) => void): () => void {
+  onOpenTable(listener: (tableSessionId: string) => void): () => void {
     let subscription: { remove(): void } | undefined;
     let removed = false;
     this.native()
       .then((native) => {
         if (removed) return;
-        subscription = native.addListener('onAcknowledge', ({ alertId }) => {
-          listener(alertId);
+        subscription = native.addListener('onOpenTable', ({ tableSessionId }) => {
+          listener(tableSessionId);
         });
       })
       .catch((error: unknown) => this.options.onError?.(error));
@@ -130,6 +144,10 @@ export class AndroidAlertNotifier implements AlertNotifier, NotificationPermissi
       removed = true;
       subscription?.remove();
     };
+  }
+
+  async takeOpenedTable(): Promise<string | null> {
+    return (await this.native()).takeOpenedTable();
   }
 
   async enabled(): Promise<boolean> {

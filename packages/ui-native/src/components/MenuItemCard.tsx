@@ -1,7 +1,8 @@
 import { elevation, fontSize, fontWeight, radius, spacing, touchTarget } from '@rp/design-tokens';
 import { formatRupees, type Paise } from '@rp/domain';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { type ImageSourcePropType, Pressable, StyleSheet, View } from 'react-native';
 import { useTheme, weight } from '../theme.js';
+import { DishPhoto } from './DishPhoto.js';
 import { Money } from './Money.js';
 import { Text } from './Text.js';
 
@@ -18,6 +19,12 @@ export interface MenuItemCardProps {
   /** Why it cannot be ordered, e.g. "Sold out"; the card is then disabled. */
   unavailable?: string;
   onSelect?: () => void;
+  /**
+   * The dish's photo beside its name, or null for the placeholder (MENU-008). Left out, the card
+   * has no photo area at all.
+   */
+  photo?: ImageSourcePropType | null;
+  testID?: string;
 }
 
 /** The Indian veg / non-veg / egg mark colours, as in `@rp/ui-web`. */
@@ -25,7 +32,8 @@ const FOOD_TONE = { VEG: 'success', NON_VEG: 'danger', EGG: 'warning' } as const
 
 /**
  * One dish on an ordering screen (MENU-012): name, price, the veg/non-veg/egg mark and a note, as
- * a large touch target (NFR-U03). The native twin of `@rp/ui-web` MenuItemCard.
+ * a large touch target (NFR-U03), with the dish's photo (or the placeholder) when given. The native
+ * twin of `@rp/ui-web` MenuItemCard.
  */
 export function MenuItemCard({
   name,
@@ -35,6 +43,8 @@ export function MenuItemCard({
   note,
   unavailable,
   onSelect,
+  photo,
+  testID,
 }: MenuItemCardProps) {
   const { colors } = useTheme();
   const spoken = [name, formatRupees(price), foodTypeLabel, unavailable ?? note].filter(
@@ -43,23 +53,8 @@ export function MenuItemCard({
   const off = unavailable !== undefined;
   const mark = colors[FOOD_TONE[foodType]];
   const detail = unavailable ?? note;
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={spoken.join(', ')}
-      accessibilityState={{ disabled: off }}
-      disabled={off}
-      onPress={onSelect}
-      style={({ pressed }) => [
-        styles.card,
-        {
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
-          opacity: off ? 0.6 : 1,
-          transform: [{ scale: pressed ? 0.98 : 1 }],
-        },
-      ]}
-    >
+  const details = (
+    <>
       <View style={styles.top}>
         <View testID={`food-${foodType}`} style={[styles.mark, { borderColor: mark }]}>
           <View style={[styles.markDot, { backgroundColor: mark }]} />
@@ -74,6 +69,41 @@ export function MenuItemCard({
           {detail}
         </Text>
       )}
+    </>
+  );
+  return (
+    <Pressable
+      testID={testID}
+      accessibilityRole="button"
+      accessibilityLabel={spoken.join(', ')}
+      accessibilityState={{ disabled: off }}
+      disabled={off}
+      onPress={onSelect}
+      style={({ pressed }) => [
+        styles.card,
+        {
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+          opacity: off ? 0.6 : 1,
+          transform: [{ scale: pressed ? 0.98 : 1 }],
+        },
+        photo !== undefined && styles.withPhoto,
+      ]}
+    >
+      {photo === undefined ? (
+        details
+      ) : (
+        <>
+          {/* The card's label names the dish, so the photo itself is decorative here. */}
+          <DishPhoto
+            source={photo ?? undefined}
+            alt=""
+            style={styles.photo}
+            {...(testID !== undefined && { testID: `${testID}-photo` })}
+          />
+          <View style={styles.body}>{details}</View>
+        </>
+      )}
     </Pressable>
   );
 }
@@ -87,6 +117,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     elevation: elevation[1].androidElevation,
   },
+  /** With a photo: a small square beside the name, so the list stays quick to scan. */
+  withPhoto: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], padding: spacing[3] },
+  photo: { width: touchTarget.comfortable * 1.25, aspectRatio: 1, borderRadius: radius.md },
+  body: { flex: 1, gap: spacing[2] },
   top: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[2] },
   mark: {
     width: 16,

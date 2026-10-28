@@ -430,7 +430,8 @@ test.describe.serial('the web console', () => {
     await page.getByRole('button', { name: /^7, Occupied/ }).click();
     await page.getByRole('button', { name: t('pos.table.takeOrder') }).click();
     const sent = page.getByRole('region', { name: t('pos.sent.title') });
-    await expect(sent.getByText(t('pos.itemState.PICKED_UP')).first()).toBeVisible();
+    // Picked up at the pass is served (kds.pickupMarksServed, decided 2026-10-25).
+    await expect(sent.getByText(t('pos.itemState.SERVED')).first()).toBeVisible();
     await expect(sent.getByText(t('pos.itemState.READY')).first()).toBeVisible();
   });
 
@@ -889,6 +890,8 @@ test.describe.serial('the web console', () => {
       .getByLabel(t('menuEditor.item.category'), { exact: false })
       .selectOption({ label: 'Breads' });
     await dish.getByLabel(/^Price/).fill('120');
+    // The tax group waits under "More options", already on the one most dishes use.
+    await dish.getByText(t('menuEditor.item.sectionMore')).click();
     await dish
       .getByLabel(t('menuEditor.item.taxGroup'), { exact: false })
       .selectOption({ label: 'GST 5 %' });
@@ -925,8 +928,13 @@ test.describe.serial('the web console', () => {
       page.getByText(t('menuEditor.items.added', { name: 'Kulcha Platter' })),
     ).toBeVisible();
 
+    // Publishing is a step: what changes, then which devices have it.
     await page.getByRole('button', { name: t('menuEditor.publish') }).click();
-    await expect(page.getByText(/^Menu version \d+ is published/)).toBeVisible();
+    const publish = page.getByRole('dialog', { name: t('menuEditor.publishing.title') });
+    await expect(publish.getByText(/Kulcha Platter/)).toBeVisible();
+    await publish.getByRole('button', { name: t('menuEditor.publishing.confirm') }).click();
+    await expect(publish.getByText(/^Menu version \d+ is published/)).toBeVisible();
+    await publish.getByRole('button', { name: t('menuEditor.publishing.close') }).click();
 
     // A 360 px phone: the menu editor fits (MGR-011).
     await page.setViewportSize({ width: 360, height: 780 });

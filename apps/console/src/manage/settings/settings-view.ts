@@ -1,4 +1,4 @@
-import { settingDefinition, type SettingView } from '@rp/contracts';
+import { settingDefinition, type SettingView, UNUSED_SETTING_KEYS } from '@rp/contracts';
 import { formatRupees, OWNER_SECOND_FACTOR_CAPABILITIES, parseRupees } from '@rp/domain';
 import type { z } from 'zod';
 
@@ -282,7 +282,10 @@ export interface SettingGroup {
   readonly settings: readonly SettingView[];
 }
 
-/** Settings by area in catalogue order, filtered by a search over labels, hints and keys. */
+/**
+ * Settings by area in catalogue order, filtered by a search over labels, hints and keys. Unused
+ * settings (kept for code left in place, such as the AI menu reading) are not shown.
+ */
 export function groupSettings(
   settings: readonly SettingView[],
   search: string,
@@ -291,6 +294,7 @@ export function groupSettings(
   const words = search.trim().toLowerCase().split(/\s+/).filter(Boolean);
   const groups = new Map<string, SettingView[]>();
   for (const setting of settings) {
+    if (UNUSED_SETTING_KEYS.includes(setting.key)) continue;
     const text = `${textOf(setting)} ${setting.key}`.toLowerCase();
     if (!words.every((word) => text.includes(word))) continue;
     const prefix = setting.key.split('.')[0] ?? setting.key;

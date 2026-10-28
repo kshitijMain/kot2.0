@@ -2,6 +2,7 @@ import { newIdempotencyKey, uuidV4 } from '@rp/api-client';
 import type { MenuItem } from '@rp/contracts';
 import { elevation, fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
 import {
+  AlertBell,
   ItemSheet,
   messageOf,
   Note,
@@ -21,8 +22,8 @@ import {
   requestLines,
 } from '@rp/ordering';
 import { Button, StatusChip, Text, TextField, useTheme, useToast, weight } from '@rp/ui-native';
-import { useMemo, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useState } from 'react';
+import { BackHandler, StyleSheet, View } from 'react-native';
 import { CartList } from './CartList';
 import { MenuBrowser } from './MenuBrowser';
 
@@ -38,7 +39,14 @@ const affectsTakeaway = (eventType: string) =>
  * phone if given, sent straight to the kitchen with a token (TBL-008), and the open takeaway
  * orders with their tokens and progress. Billing stays at the POS.
  */
-export function TakeawayScreen({ onBack }: { onBack: () => void }) {
+export function TakeawayScreen({
+  onBack,
+  onOpenTable,
+}: {
+  onBack: () => void;
+  /** An alert in the bell's list opens its table. */
+  onOpenTable?: (sessionId: string) => void;
+}) {
   const session = useDeviceSession();
   const t = useT();
   const toast = useToast();
@@ -55,6 +63,16 @@ export function TakeawayScreen({ onBack }: { onBack: () => void }) {
     async () => (await session.api.listTakeawayOrders()).orders,
     affectsTakeaway,
   );
+  // The phone's back button goes back to the tables, not out of the app.
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      onBack();
+      return true;
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, [onBack]);
   const problems = useMemo(
     () =>
       menu === null || menu === undefined
@@ -127,9 +145,12 @@ export function TakeawayScreen({ onBack }: { onBack: () => void }) {
     <Screen
       title={t('mobile.takeaway.title')}
       actions={
-        <Button variant="ghost" onPress={onBack}>
-          {t('mobile.takeaway.back')}
-        </Button>
+        <View style={styles.headerActions}>
+          <AlertBell {...(onOpenTable !== undefined && { onOpenTable })} />
+          <Button variant="ghost" accessibilityLabel={t('mobile.takeaway.back')} onPress={onBack}>
+            {t('mobile.tables.back')}
+          </Button>
+        </View>
       }
     >
       {menu === null || menu === undefined ? (
@@ -214,6 +235,7 @@ export function TakeawayScreen({ onBack }: { onBack: () => void }) {
 }
 
 const styles = StyleSheet.create({
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing[1] },
   form: { gap: spacing[2] },
   heading: { fontSize: fontSize.lg, fontWeight: weight(fontWeight.semibold) },
   order: {

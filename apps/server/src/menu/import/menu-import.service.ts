@@ -40,8 +40,10 @@ const refused = (message: string): MenuImportReport => ({
 /**
  * Menu import (P1-05, ONB-005, ONB-009): reads the template (.xlsx or CSV sheets), plans it with
  * `@rp/domain` `planMenuImport` against the restaurant's setup, and writes the plan through the
- * menu services in one transaction with the setup lock, then publishes. Every entry written is
- * audited as the menu editor would audit it, plus one MENU_IMPORTED entry with the summary.
+ * menu services into the draft, in one transaction with the setup lock. Nothing reaches the
+ * devices until a manager publishes (the one way of working for the editor, the workbook and the
+ * menu file). Every entry written is audited as the menu editor would audit it, plus one
+ * MENU_IMPORTED entry with the summary.
  */
 @Injectable()
 export class MenuImportService {
@@ -63,8 +65,13 @@ export class MenuImportService {
   async check(principal: Principal, request: MenuImportRequest): Promise<MenuImportReport> {
     const read = await this.sheetsOf(request);
     if (!read.ok) return read.report;
+    return this.checkSheets(principal, read.sheets);
+  }
+
+  /** The check of sheets already read (a workbook, a menu file): every problem, nothing written. */
+  async checkSheets(principal: Principal, sheets: MenuImportSheets): Promise<MenuImportReport> {
     const context = await this.contextOf(this.prisma, principal.restaurantId);
-    const result = planMenuImport(read.sheets, context);
+    const result = planMenuImport(sheets, context);
     return result.ok
       ? { ok: true, committed: false, issues: [], summary: result.summary, menuVersion: null }
       : {
@@ -83,13 +90,15 @@ export class MenuImportService {
   }
 
   /**
-   * Imports sheets already read (a file, or a checked AI draft, P6-04b): planned again inside the
-   * lock, written, audited with `source` and published; or every problem, with nothing written.
+   * Imports sheets already read (a file, a menu file, or a checked AI draft, P6-04b) into the
+   * draft: planned again inside the lock, written and audited with `source`; or every problem,
+   * with nothing written. `photos` gives new dishes their photo, by dish name (any case).
    */
   async commitSheets(
     principal: Principal,
     sheets: MenuImportSheets,
     source: Readonly<Record<string, string>>,
+    photos: ReadonlyMap<string, string> = new Map(),
   ): Promise<MenuImportReport> {
     return this.prisma.transaction(
       async (tx) => {
@@ -105,7 +114,7 @@ export class MenuImportService {
             menuVersion: null,
           };
         }
-        await this.write(tx, principal, result.plan);
+        await this.write(tx, principal, result.plan, photos);
         await this.audit.record(tx, {
           action: 'MENU_IMPORTED',
           entityType: 'menu',
@@ -117,13 +126,12 @@ export class MenuImportService {
           after: { ...result.summary, ...source },
           reason: null,
         });
-        const published = await this.publisher.publishIn(tx, principal);
         return {
           ok: true,
           committed: true,
           issues: [],
           summary: result.summary,
-          menuVersion: published.version,
+          menuVersion: null,
         };
       },
       { timeout: IMPORT_TIMEOUT_MS },
@@ -134,7 +142,9 @@ export class MenuImportService {
     tx: TransactionClient,
     principal: Principal,
     plan: MenuImportPlan,
+    photos: ReadonlyMap<string, string>,
   ): Promise<void> {
+    const photoOf = new Map([...photos].map(([name, id]) => [name.trim().toLowerCase(), id]));
     const ids = new Map<string, string>();
     const idOf = (ref: ImportRef): string => {
       if ('existingId' in ref) return ref.existingId;
@@ -166,7 +176,7 @@ export class MenuImportService {
         name: item.name,
         shortCode: item.shortCode,
         description: item.description,
-        photoId: null,
+        photoId: photoOf.get(item.name.trim().toLowerCase()) ?? null,
         basePrice: item.basePrice,
         taxGroupId: item.taxGroupId,
         foodType: item.foodType,
@@ -174,6 +184,7 @@ export class MenuImportService {
         tags: item.tags,
         stationId: item.stationId,
         prepTimeMinutes: item.prepTimeMinutes,
+        timeWindow: item.timeWindow,
         displayOrder: item.displayOrder,
         channels: item.channels,
         variants: item.variants,

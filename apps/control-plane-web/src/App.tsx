@@ -1,8 +1,8 @@
 import type { Translator } from '@rp/i18n';
-import { LoadingState, ToastProvider } from '@rp/ui-web';
+import { ErrorBoundary, ErrorState, LoadingState, ToastProvider } from '@rp/ui-web';
 import type { VendorCapability } from '@rp/contracts/control-plane';
 import type { ReactNode } from 'react';
-import { Navigate, Route, Routes } from 'react-router';
+import { Navigate, Route, Routes, useLocation } from 'react-router';
 import { I18nProvider, useT } from './app/i18n.js';
 import { AuditScreen } from './audit/AuditScreen.js';
 import { InvoicesScreen } from './billing/InvoicesScreen.js';
@@ -73,12 +73,40 @@ export function AppRoutes() {
 }
 
 /** The web app for vendor staff (VCP-001), on the Control Plane's API. */
+/**
+ * A bug in one screen shows a message with a way back, never a white page (NFR-U04); moving to
+ * another screen clears it.
+ */
+function ScreenBoundary({ children }: { children: ReactNode }) {
+  const t = useT();
+  const { pathname } = useLocation();
+  return (
+    <ErrorBoundary
+      resetKey={pathname}
+      fallback={(retry) => (
+        <main className="cp-center">
+          <ErrorState
+            title={t('states.crashTitle')}
+            description={t('states.crashDescription')}
+            retryLabel={t('states.retry')}
+            onRetry={retry}
+          />
+        </main>
+      )}
+    >
+      {children}
+    </ErrorBoundary>
+  );
+}
+
 export function App({ services, translator }: { services: Services; translator: Translator }) {
   return (
     <I18nProvider translator={translator}>
       <ServicesProvider services={services}>
         <ToastProvider>
-          <AppRoutes />
+          <ScreenBoundary>
+            <AppRoutes />
+          </ScreenBoundary>
           <StepUpDialog />
         </ToastProvider>
       </ServicesProvider>

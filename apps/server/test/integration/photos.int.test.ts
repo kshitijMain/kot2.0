@@ -1,10 +1,12 @@
+import { mkdtempSync } from 'node:fs';
 import { mkdir, utimes } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { INestApplication } from '@nestjs/common';
 import { ApiError, type LoginResponse, PHOTO_MAX_BYTES, PhotoView } from '@rp/contracts';
 import sharp from 'sharp';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../src/database/prisma.service.js';
 import { PhotosService } from '../../src/photos/photos.service.js';
 import { authHeaders, type AuthKit, createAuthKit, signIn } from '../helpers/auth-kit.js';
@@ -21,7 +23,12 @@ let waiter: LoginResponse;
 
 beforeAll(async () => {
   database = await createTestDatabase();
-  app = await createTestApp({ databaseUrl: database.url });
+  // The data folder sits in a dot folder, as the development `./.data` does: photos are still
+  // served (only the path under the photo store is checked for hidden files).
+  app = await createTestApp({
+    databaseUrl: database.url,
+    config: { dataDir: join(mkdtempSync(join(tmpdir(), 'rp-photos-')), '.data') },
+  });
   prisma = app.get(PrismaService);
   photos = app.get(PhotosService);
   kit = await createAuthKit(app);
@@ -155,6 +162,26 @@ describe('[ONB-007] [MENU-008] a dish’s photo on its own (bulk upload)', () =>
     expect((await prisma.item.findUniqueOrThrow({ where: { id: dish.id } })).photoId).toBeNull();
     await prisma.item.update({ where: { id: dish.id }, data: { archivedAt: new Date() } });
     expect((await set(photo.id)).status).toBe(409);
+  });
+});
+
+describe('[MENU-008] a rendition that cannot be sent', () => {
+  it('is an error that is not cached as if it were the photo', async () => {
+    const response = await upload(await jpeg());
+    const photo = PhotoView.parse(response.body);
+    // The file goes between the check and the sending (a clean-up, a disk problem).
+    const sent = vi
+      .spyOn(photos, 'renditionFile')
+      .mockResolvedValueOnce({ root: photos.store.root, path: 'gone/480.webp' });
+    const failed = await server().get(`/api/v1/photos/${photo.id}/480`);
+    sent.mockRestore();
+    expect(failed.status).toBeGreaterThanOrEqual(400);
+    expect(failed.headers['cache-control'] ?? '').not.toContain('immutable');
+    // The photo itself still comes with the year-long caching.
+    const served = await server().get(`/api/v1/photos/${photo.id}/480`);
+    expect(served.status).toBe(200);
+    expect(served.headers['cache-control']).toBe('public, max-age=31536000, immutable');
+    expect(served.headers['content-type']).toBe('image/webp');
   });
 });
 

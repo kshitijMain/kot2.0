@@ -20,6 +20,7 @@ import {
 } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import type { GlyphName } from '../glyphs.js';
+import { useScreenInsets } from '../insets.js';
 import { useUiStrings } from '../strings.js';
 import { toneColors, useTheme, weight } from '../theme.js';
 import { Glyph } from './Glyph.js';
@@ -72,6 +73,8 @@ export interface ToastProviderProps {
 export function ToastProvider({ children, duration = 5000, max = 3 }: ToastProviderProps) {
   const [toasts, setToasts] = useState<readonly ToastRecord[]>([]);
   const nextId = useRef(0);
+  // Above the navigation bar, and above a screen's footer button such as Send KOT's bar.
+  const { bottom } = useScreenInsets();
 
   const dismiss = useCallback((id: string) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
@@ -92,7 +95,11 @@ export function ToastProvider({ children, duration = 5000, max = 3 }: ToastProvi
   return (
     <ToastContext value={api}>
       {children}
-      <View pointerEvents="box-none" style={styles.region}>
+      <View
+        pointerEvents="box-none"
+        testID="toast-region"
+        style={[styles.region, { bottom: spacing[6] + bottom }]}
+      >
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} defaultDuration={duration} onDismiss={dismiss} />
         ))}

@@ -70,7 +70,12 @@ const MENU: MenuSnapshot = {
   publishedAt: '2026-10-02T08:00:00.000Z',
   categories: [{ id: CATEGORY, name: 'Mains', parentId: null, displayOrder: 1 }],
   items: [
-    dish(DISH.tikka, 'Paneer Tikka', { spiceLevel: 2, tags: ['Starter'], basePrice: 28_000 }),
+    dish(DISH.tikka, 'Paneer Tikka', {
+      spiceLevel: 2,
+      tags: ['Starter'],
+      basePrice: 28_000,
+      photoId: '0199a0e0-0000-7000-8000-00000000f001',
+    }),
     dish(DISH.dal, 'Dal Makhani', { basePrice: 24_000, displayOrder: 2 }),
     dish(DISH.omelette, 'Masala Omelette', { foodType: 'EGG', displayOrder: 3 }),
     dish(DISH.lassi, 'Mango Lassi', { available: false, stockCount: 0, displayOrder: 4 }),
@@ -298,6 +303,12 @@ describe('[TAB-005] [TAB-006] [TAB-012] the menu on the tablet', () => {
     const tikka = within(screen.getByTestId(`dish-${DISH.tikka}`));
     expect(tikka.getByText('Veg · Medium spicy · Starter')).toBeOnTheScreen();
     expect(screen.getByTestId(`dish-${DISH.lassi}`)).toBeDisabled();
+    // MENU-008: the restaurant's photo, or the same placeholder on every dish without one.
+    expect(tikka.getByLabelText('Paneer Tikka')).toBeOnTheScreen();
+    expect(screen.queryByTestId(`dish-${DISH.tikka}-photo-placeholder`)).toBeNull();
+    expect(
+      screen.getByTestId(`dish-${DISH.dal}-photo-placeholder`, { includeHiddenElements: true }),
+    ).toBeTruthy();
     expect(
       within(screen.getByTestId(`dish-${DISH.lassi}`)).getByText(
         t('mobile.tablet.ordering.soldOut'),

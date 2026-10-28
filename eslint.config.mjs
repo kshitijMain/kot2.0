@@ -21,6 +21,8 @@ export default tseslint.config(
       '**/storybook-static/**',
       // Hand-written declarations for the shared ESLint helpers (not part of a TS project).
       'packages/config/eslint/*.d.mts',
+      // The virtual printer's parser types (development tooling, not part of a TS project).
+      'scripts/virtual-printer/*.d.mts',
       'firmware/**',
       // The Windows installer's staging folder and output (P0-16d).
       'apps/desktop/staging/**',

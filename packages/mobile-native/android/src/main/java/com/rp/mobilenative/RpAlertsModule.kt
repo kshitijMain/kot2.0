@@ -22,35 +22,40 @@ class ListeningNotice : Record {
   @Field val listeningChannel: String = ""
 }
 
-/** One alert as JavaScript words it. `postedAt` is when it was raised, in epoch milliseconds. */
+/**
+ * One alert as JavaScript words it. `postedAt` is when it was raised, in epoch milliseconds;
+ * `tableSessionId` is the table a tap on it opens, if any.
+ */
 class AlertNotice : Record {
   @Field val id: String = ""
   @Field val title: String = ""
   @Field val text: String = ""
-  @Field val acknowledge: String = ""
+  @Field val tableSessionId: String? = null
   @Field val postedAt: Double = 0.0
 }
 
 /**
  * The waiter phone's alerts outside the app's screen (P2-06b, WTR-005, WTR-006): [RpAlertService]
- * while the phone has a holder, the notifications of [AlertNotifications], and Acknowledge
- * pressed on one, sent to JavaScript as `onAcknowledge`.
+ * while the phone has a holder, the notifications of [AlertNotifications], and the table a tapped
+ * notification asks for: sent as `onOpenTable` while the app runs, or read with `takeOpenedTable`
+ * when the tap started it.
  */
 class RpAlertsModule : Module() {
-  private val deliver: (String) -> Unit = { alertId ->
-    sendEvent(ACKNOWLEDGED, mapOf("alertId" to alertId))
-  }
-
   override fun definition() = ModuleDefinition {
     Name("RpAlerts")
 
-    Events(ACKNOWLEDGED)
+    Events(OPEN_TABLE)
 
-    OnStartObserving(ACKNOWLEDGED) { AlertActions.listen(context(), deliver) }
+    OnNewIntent { intent ->
+      AlertNotifications.takeTableSession(intent)?.let { sessionId ->
+        sendEvent(OPEN_TABLE, mapOf("tableSessionId" to sessionId))
+      }
+    }
 
-    OnStopObserving(ACKNOWLEDGED) { AlertActions.stopListening(deliver) }
-
-    OnDestroy { AlertActions.stopListening(deliver) }
+    /** The table of the notification whose tap started the app, once; null otherwise. */
+    AsyncFunction("takeOpenedTable") {
+      return@AsyncFunction AlertNotifications.takeTableSession(appContext.currentActivity?.intent)
+    }
 
     /** The phone has a holder: listen for their alerts, also with the screen off. */
     AsyncFunction("start") { notice: ListeningNotice ->
@@ -86,7 +91,7 @@ class RpAlertsModule : Module() {
           notice.id,
           notice.title,
           notice.text,
-          notice.acknowledge,
+          notice.tableSessionId,
           notice.postedAt.toLong(),
         ),
       )
@@ -141,6 +146,6 @@ class RpAlertsModule : Module() {
     )
 
   private companion object {
-    const val ACKNOWLEDGED = "onAcknowledge"
+    const val OPEN_TABLE = "onOpenTable"
   }
 }

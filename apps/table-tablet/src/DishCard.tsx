@@ -2,14 +2,14 @@ import type { MenuItem } from '@rp/contracts';
 import { fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
 import { useSessionState, useT } from '@rp/mobile-shell';
 import { displayPrice } from '@rp/ordering';
-import { Money, Text, toneColors, useTheme, weight } from '@rp/ui-native';
-import { Image, Pressable, StyleSheet, View } from 'react-native';
+import { DishPhoto, Money, Text, toneColors, useTheme, weight } from '@rp/ui-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { photoSource } from './branding';
 
 const FOOD_TONE = { VEG: 'success', NON_VEG: 'danger', EGG: 'warning' } as const;
 
 /**
- * A dish on the tablet's menu (TAB-005): photo, name, price, the veg / non-veg / egg mark with
+ * A dish on the tablet's menu (TAB-005): photo (or the placeholder), name, price, the veg / non-veg / egg mark with
  * its word, spice level, tags and the bestseller badge; sold-out dishes, and combos outside their
  * hours, cannot be chosen (TAB-012, MENU-005). A large touch target, in plain words (TAB-016).
  */
@@ -58,14 +58,13 @@ export function DishCard({
         },
       ]}
     >
-      {photo !== undefined && (
-        <Image
-          source={photo}
-          style={styles.photo}
-          resizeMode="cover"
-          accessibilityIgnoresInvertColors
-        />
-      )}
+      {/* The restaurant's photo, or the same quiet placeholder on every dish without one. */}
+      <DishPhoto
+        source={photo}
+        alt={item.name}
+        style={styles.photo}
+        testID={`dish-${item.id}-photo`}
+      />
       <View style={styles.body}>
         <View style={styles.header}>
           <View style={[styles.mark, { borderColor: food.solid }]}>
@@ -110,7 +109,7 @@ const styles = StyleSheet.create({
     borderRadius: radius.lg,
     overflow: 'hidden',
   },
-  photo: { width: '100%', height: 140 },
+  photo: { height: 140, aspectRatio: undefined },
   body: { gap: spacing[1], padding: spacing[3] },
   header: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
   mark: {

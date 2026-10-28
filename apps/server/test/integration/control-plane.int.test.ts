@@ -374,34 +374,29 @@ describe('[VCP-005] [SEC-002] enrolment and heartbeats (P0-17)', () => {
     );
   });
 
-  it('[UPD-010] applies the vendor’s settings and feature flags, and the flag gates AI import', async () => {
+  it('[UPD-010] applies the vendor’s settings, the fleet’s with the PC’s own on top', async () => {
     const remote = controlPlane.get(RemoteSettingsService);
     await remote.setFleet({ 'qr.pickupTimeoutSeconds': 90 }, 'Pilot tuning', 'vendor:admin');
     const view = await remote.setInstallation(
       installationId,
-      { 'features.aiMenuImport': false },
-      'AI provider down for this restaurant',
+      { 'qr.submissionsPerWindow': 3 },
+      'Busy QR tables at this restaurant',
       'vendor:admin',
     );
     await heartbeats.beat();
     const restaurant = await prisma.restaurant.findFirstOrThrow();
     const settings = await server.get(SettingsService).snapshot(restaurant.id);
     expect(settings.get('qr.pickupTimeoutSeconds')).toBe(90);
-    expect(settings.get('features.aiMenuImport')).toBe(false);
+    expect(settings.get('qr.submissionsPerWindow')).toBe(3);
     const audit = await prisma.auditLog.findFirstOrThrow({
       where: { action: 'VENDOR_SETTINGS_APPLIED' },
     });
-    expect(audit.after).toEqual({ 'qr.pickupTimeoutSeconds': 90, 'features.aiMenuImport': false });
+    expect(audit.after).toEqual({ 'qr.pickupTimeoutSeconds': 90, 'qr.submissionsPerWindow': 3 });
     // The next heartbeat reports holding them; nothing more is pushed.
     await heartbeats.beat();
     expect((await remote.installation(installationId)).appliedDigest).toBe(view.digest);
 
     const headers = await asManager();
-    const ai = await request(httpServer(server))
-      .post('/api/v1/menu/ai-imports')
-      .set(headers)
-      .send({ files: [{ name: 'menu.jpg', contentType: 'image/jpeg', contentBase64: 'AAAA' }] });
-    expect([ai.status, (ai.body as { code: string }).code]).toEqual([409, 'FEATURE_OFF']);
     // Managers see the vendor's value but cannot change it.
     const change = await request(httpServer(server))
       .put('/api/v1/settings/qr.pickupTimeoutSeconds')
@@ -414,8 +409,8 @@ describe('[VCP-005] [SEC-002] enrolment and heartbeats (P0-17)', () => {
     await heartbeats.beat();
     server.get(SettingsService).invalidate();
     expect(
-      (await server.get(SettingsService).snapshot(restaurant.id)).get('features.aiMenuImport'),
-    ).toBe(true);
+      (await server.get(SettingsService).snapshot(restaurant.id)).get('qr.submissionsPerWindow'),
+    ).toBe(5);
   });
 
   it('[NFR-A01] keeps working while the Control Plane is down and reports again when it is back', async () => {

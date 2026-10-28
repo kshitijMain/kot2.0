@@ -1,6 +1,7 @@
 import { elevation, fontSize, fontWeight, radius, spacing, touchTarget } from '@rp/design-tokens';
 import type { ReactNode } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { useScreenInsets } from '../insets.js';
 import { useUiStrings } from '../strings.js';
 import { useTheme, weight } from '../theme.js';
 import { Glyph } from './Glyph.js';
@@ -25,11 +26,20 @@ export interface SheetProps {
 export function Sheet({ open, onClose, title, children, footer, dismissible = true }: SheetProps) {
   const { colors } = useTheme();
   const strings = useUiStrings().dialog;
+  // Drawn under the system bars (edge to edge): the last part keeps above the navigation bar.
+  const { bottom } = useScreenInsets();
   const close = () => {
     if (dismissible) onClose();
   };
   return (
-    <Modal visible={open} transparent animationType="slide" onRequestClose={close}>
+    <Modal
+      visible={open}
+      transparent
+      animationType="slide"
+      statusBarTranslucent
+      navigationBarTranslucent
+      onRequestClose={close}
+    >
       <View style={styles.backdrop}>
         <Pressable
           accessibilityRole="button"
@@ -60,9 +70,24 @@ export function Sheet({ open, onClose, title, children, footer, dismissible = tr
               <Glyph name="close" color={colors.textMuted} size={fontSize.xl} />
             </Pressable>
           </View>
-          <ScrollView contentContainerStyle={styles.body}>{children}</ScrollView>
+          <ScrollView
+            contentContainerStyle={[
+              styles.body,
+              footer === undefined && { paddingBottom: spacing[4] + bottom },
+            ]}
+          >
+            {children}
+          </ScrollView>
           {footer === undefined ? null : (
-            <View style={[styles.footer, { borderTopColor: colors.border }]}>{footer}</View>
+            <View
+              testID="sheet-footer"
+              style={[
+                styles.footer,
+                { borderTopColor: colors.border, paddingBottom: spacing[4] + bottom },
+              ]}
+            >
+              {footer}
+            </View>
           )}
         </View>
       </View>

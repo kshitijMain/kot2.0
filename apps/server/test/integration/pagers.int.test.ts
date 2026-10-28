@@ -14,6 +14,7 @@ import mqtt, { type MqttClient } from 'mqtt';
 import request from 'supertest';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { PrismaService } from '../../src/database/prisma.service.js';
+import { SettingsService } from '../../src/settings/settings.service.js';
 import { NOTIFICATION_CLOCK, NOTIFICATION_OPTIONS } from '../../src/notifications/clock.js';
 import { NotificationsService } from '../../src/notifications/notifications.service.js';
 import { PAGER_OPTIONS, PagerBroker } from '../../src/pagers/pager-broker.js';
@@ -278,6 +279,15 @@ describe('[PGR-006] [PGR-008] [NFR-P03] alerts on the pager', () => {
 
 describe('[WTR-006] [NTF-004] the waiter phone and the pager share one acknowledgement', () => {
   it('stops the pager repeats when the phone acknowledges, and tells the pager', async () => {
+    // Waiters' alerts ring once by default (2026-10-25); a manager brings bill repeats back.
+    await prisma.setting.create({
+      data: {
+        restaurantId: kit.restaurantId,
+        key: 'notifications.rules',
+        value: { BILL_REQUEST: { repeat: 'UNTIL_ACKED' } },
+      },
+    });
+    app.get(SettingsService).invalidate();
     const phone = await addDevice(app, kit, 'WAITER_PHONE');
     await signIn(app, kit, 'WAITER', phone);
     const a = await connect(pagerA);
@@ -318,6 +328,10 @@ describe('[WTR-006] [NTF-004] the waiter phone and the pager share one acknowled
       acknowledgedById: kit.staff.WAITER,
       acknowledgedByDeviceId: phone,
     });
+    await prisma.setting.deleteMany({
+      where: { restaurantId: kit.restaurantId, key: 'notifications.rules' },
+    });
+    app.get(SettingsService).invalidate();
   });
 
   it('keeps alerts meant for the POS and dashboard off the pager', async () => {

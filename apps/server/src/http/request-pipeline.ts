@@ -41,6 +41,34 @@ export function bodyParserErrorHandler(
   response.status(mapped.status).json(mapped.body);
 }
 
+/** Whether a parsed body or query holds a NUL character anywhere, however deep. */
+function holdsNul(value: unknown, depth = 0): boolean {
+  if (typeof value === 'string') return value.includes('\u0000');
+  if (depth > 64 || typeof value !== 'object' || value === null) return false;
+  if (Array.isArray(value)) return value.some((entry) => holdsNul(entry, depth + 1));
+  return Object.entries(value).some(
+    ([key, entry]) => key.includes('\u0000') || holdsNul(entry, depth + 1),
+  );
+}
+
+/**
+ * Refuses text with a NUL character in a body or query, which PostgreSQL cannot store: without
+ * this the write failed with a 500 (QA-003), and a phone's order outbox retried it forever ahead
+ * of every later order. Runs after the JSON parser.
+ */
+export function refuseNulText(request: Request, response: Response, next: NextFunction): void {
+  if (!holdsNul(request.body) && !holdsNul(request.query)) {
+    next();
+    return;
+  }
+  const id = (request as RequestWithId).id;
+  response.status(400).json({
+    code: 'INVALID_TEXT',
+    message: 'Some text holds a hidden control character. Retype it and try again.',
+    ...(typeof id === 'string' && { correlationId: id }),
+  });
+}
+
 /**
  * Last: a path outside the API that nothing before served (the console's files, the CA) is a 404
  * in the ApiError shape, with the security headers already set. Nest answers unknown paths only

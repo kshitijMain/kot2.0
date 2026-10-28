@@ -3,6 +3,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FakeResponse, FakeServer } from './fake-server.js';
 import { expectNoAxeViolations, renderConsole, server, signsInAs, t } from './harness.js';
+import { deviceView, KDS_TANDOOR, PHONE_RAVI } from './devices-fixture.js';
 import {
   BREADS,
   draftMenu,
@@ -12,6 +13,7 @@ import {
   MAINS,
   NAAN,
   PANEER,
+  publishedMenu,
   ROTI_TYPE,
   stations,
   taxGroups,
@@ -86,7 +88,7 @@ describe('[MGR-005] [MENU-002] [MENU-006] the dishes', () => {
     await expectNoAxeViolations(container);
   });
 
-  it('adds a dish only once it is complete, with its photo, size and option group', async () => {
+  it('adds a dish only once it is complete, with its photo, Half and Full, and an add-on group', async () => {
     const created = item({ id: '0199a0e0-0000-7000-8000-000000001099', name: 'Garlic Naan' });
     const after = draftMenu();
     after.items.push(created);
@@ -103,7 +105,7 @@ describe('[MGR-005] [MENU-002] [MENU-006] the dishes', () => {
         },
       }))
       .on('POST', ITEMS, () => ({ status: 201, body: created }));
-    const { user } = await renderConsole({ fake, path: PATH, signedIn: 'MANAGER' });
+    const { user, container } = await renderConsole({ fake, path: PATH, signedIn: 'MANAGER' });
     await user.click(await screen.findByRole('button', { name: t('menuEditor.items.add') }));
     const dialog = within(
       await screen.findByRole('dialog', { name: t('menuEditor.item.addTitle') }),
@@ -117,6 +119,9 @@ describe('[MGR-005] [MENU-002] [MENU-006] the dishes', () => {
     await user.selectOptions(field(dialog, t('menuEditor.item.category')), BREADS);
     await user.type(field(dialog, t('menuEditor.item.price')), '80');
     await user.selectOptions(field(dialog, t('menuEditor.item.station')), KITCHEN);
+    // Photos come from the restaurant: the picker says what makes a good one.
+    expect(dialog.getByText(t('menuEditor.item.photoHint'))).toBeVisible();
+    expect(dialog.getByText(t('menuEditor.item.noPhoto'))).toBeVisible();
     await user.upload(
       dialog.getByLabelText(t('menuEditor.item.uploadPhoto')),
       new File(['photo'], 'naan.jpg', { type: 'image/jpeg' }),
@@ -126,11 +131,29 @@ describe('[MGR-005] [MENU-002] [MENU-006] the dishes', () => {
         name: t('menuEditor.item.photoAlt', { name: 'Garlic Naan' }),
       }),
     ).toBeVisible();
-    await user.click(dialog.getByRole('button', { name: t('menuEditor.item.addVariant') }));
-    await user.type(field(dialog, t('menuEditor.item.variantName')), 'Two pieces');
-    await user.type(field(dialog, t('menuEditor.item.variantPrice')), '150');
+    // Half and Full in one tap: the price typed becomes the Full price, Half is to be priced.
+    await user.click(dialog.getByRole('button', { name: t('menuEditor.item.halfFull') }));
+    expect(
+      dialog.queryByLabelText(new RegExp(`^${t('menuEditor.item.price').replace(/[()₹]/g, '.')}`)),
+    ).toBeNull();
+    expect(dialog.getByText(t('menuEditor.item.sizesPriced'))).toBeVisible();
+    const sizes = dialog.getAllByLabelText(/^Size name/);
+    const prices = dialog.getAllByLabelText(/^Size price/);
+    expect(sizes.map((input) => (input as HTMLInputElement).value)).toEqual(['Half', 'Full']);
+    expect(prices.map((input) => (input as HTMLInputElement).value)).toEqual(['', '80']);
+    await user.type(prices[0]!, '50');
+    expect(dialog.queryByRole('button', { name: t('menuEditor.item.halfFull') })).toBeNull();
     await user.click(dialog.getByRole('checkbox', { name: 'Roti type' }));
+    // Tags are under "More options", with the tax group most dishes use already chosen.
+    await user.click(dialog.getByText(t('menuEditor.item.sectionMore')));
+    expect(field(dialog, t('menuEditor.item.taxGroup'))).toHaveValue(GST5);
     await user.type(field(dialog, t('menuEditor.item.tags')), 'Jain, bestseller');
+    // The preview shows the dish on the waiter phone and the tablet, "from" the Half price.
+    const preview = within(dialog.getByRole('region', { name: t('menuEditor.item.preview') }));
+    expect(preview.getAllByText('Garlic Naan')).toHaveLength(2);
+    expect(preview.getByText(t('menuEditor.item.previewChoose'))).toBeVisible();
+    expect(preview.getAllByText('₹50.00')).toHaveLength(2);
+    await expectNoAxeViolations(container);
     await user.click(dialog.getByRole('button', { name: t('menuEditor.item.add') }));
 
     expect(
@@ -146,12 +169,32 @@ describe('[MGR-005] [MENU-002] [MENU-006] the dishes', () => {
       taxGroupId: GST5,
       stationId: KITCHEN,
       photoId: '0199a0e0-0000-7000-8000-000000001098',
-      variants: [{ name: 'Two pieces', price: 15000 }],
+      variants: [
+        { name: 'Half', price: 5000 },
+        { name: 'Full', price: 8000 },
+      ],
       modifierGroupIds: [ROTI_TYPE],
       tags: ['Jain', 'bestseller'],
       channels: ['POS', 'WAITER_APP', 'TABLE_TABLET', 'QR'],
     });
     expect(await rowOf('Garlic Naan')).toBeVisible();
+  });
+
+  it('opens "More options" by itself when the mistake is in there', async () => {
+    const fake = signsInAs(server(), 'MANAGER')
+      .on('GET', '/api/v1/tax-groups', () => ({ status: 200, body: { taxGroups: [] } }))
+      .on('GET', '/api/v1/stations', () => ({ status: 200, body: stations() }))
+      .on('GET', DRAFT, () => ({ status: 200, body: draftMenu() }));
+    const { user } = await renderConsole({ fake, path: PATH, signedIn: 'MANAGER' });
+    await user.click(await screen.findByRole('button', { name: t('menuEditor.items.add') }));
+    const dialog = within(
+      await screen.findByRole('dialog', { name: t('menuEditor.item.addTitle') }),
+    );
+    expect(
+      dialog.getByText(t('menuEditor.item.taxGroup'), { selector: 'label' }),
+    ).not.toBeVisible();
+    await user.click(dialog.getByRole('button', { name: t('menuEditor.item.add') }));
+    expect(dialog.getByText(t('menuEditor.item.problems.taxGroupRequired'))).toBeVisible();
   });
 
   it('[MENU-009] asks why when a price changes, and keeps the answer with the change', async () => {
@@ -335,11 +378,14 @@ describe('[MGR-005] [MENU-002] [MENU-006] the dishes', () => {
 });
 
 describe('[MENU-013] publishing', () => {
-  it('publishes the draft, or says nothing changed', async () => {
-    const fake = menuServer().on(
-      'POST',
-      '/api/v1/menu/publish',
-      () => ({
+  it('says what changes, publishes, and names the devices that have it and those that will', async () => {
+    const fake = menuServer()
+      .on('GET', '/api/v1/menu', () => ({
+        status: 200,
+        // The devices have Butter Naan at ₹55 and no Paneer Tikka Masala yet.
+        body: publishedMenu({ drop: [PANEER], items: { [NAAN]: { basePrice: 5500 } } }),
+      }))
+      .on('POST', '/api/v1/menu/publish', () => ({
         status: 200,
         body: {
           version: 4,
@@ -347,8 +393,67 @@ describe('[MENU-013] publishing', () => {
           checksum: 'a',
           published: true,
         },
-      }),
-      () => ({
+      }))
+      .on('GET', '/api/v1/devices', () => ({
+        status: 200,
+        body: {
+          devices: [
+            deviceView(),
+            deviceView({ id: KDS_TANDOOR, type: 'KDS', name: 'Tandoor screen' }),
+            deviceView({
+              id: PHONE_RAVI,
+              type: 'WAITER_PHONE',
+              name: 'Ravi’s phone',
+              connected: false,
+            }),
+            deviceView({
+              id: '0199a0e0-0000-7000-8000-000000000999',
+              type: 'PAGER',
+              name: 'Pager 1',
+            }),
+          ],
+        },
+      }));
+    const { user, container } = await renderConsole({ fake, path: PATH, signedIn: 'MANAGER' });
+    await user.click(await screen.findByRole('button', { name: t('menuEditor.publish') }));
+    const dialog = within(
+      await screen.findByRole('dialog', { name: t('menuEditor.publishing.title') }),
+    );
+    expect(
+      await dialog.findByText(
+        t('menuEditor.publishing.added', { count: 1, names: 'Paneer Tikka Masala' }),
+      ),
+    ).toBeVisible();
+    expect(
+      dialog.getByText(
+        t('menuEditor.publishing.price', {
+          name: 'Butter Naan',
+          before: '₹55.00',
+          after: '₹60.00',
+        }),
+      ),
+    ).toBeVisible();
+    await expectNoAxeViolations(container);
+    await user.click(dialog.getByRole('button', { name: t('menuEditor.publishing.confirm') }));
+    expect(await dialog.findByText(t('menuEditor.publishing.done', { version: 4 }))).toBeVisible();
+    expect(
+      dialog.getByText(
+        t('menuEditor.publishing.connected', { names: 'Tablet T7, Tandoor screen' }),
+      ),
+    ).toBeVisible();
+    expect(
+      dialog.getByText(t('menuEditor.publishing.later', { names: 'Ravi’s phone' })),
+    ).toBeVisible();
+    expect(fake.callsTo('POST', '/api/v1/menu/publish')).toHaveLength(1);
+  });
+
+  it('publishes the first menu, or says nothing changed', async () => {
+    const fake = menuServer()
+      .on('GET', '/api/v1/menu', () => ({
+        status: 404,
+        body: { code: 'MENU_NOT_PUBLISHED', message: 'No menu has been published yet.' },
+      }))
+      .on('POST', '/api/v1/menu/publish', () => ({
         status: 200,
         body: {
           version: 4,
@@ -356,13 +461,96 @@ describe('[MENU-013] publishing', () => {
           checksum: 'a',
           published: false,
         },
-      }),
-    );
+      }))
+      .on('GET', '/api/v1/devices', () => ({ status: 200, body: { devices: [] } }));
     const { user } = await renderConsole({ fake, path: PATH, signedIn: 'MANAGER' });
     await user.click(await screen.findByRole('button', { name: t('menuEditor.publish') }));
-    expect(await screen.findByText(t('menuEditor.published', { version: 4 }))).toBeVisible();
+    const dialog = within(
+      await screen.findByRole('dialog', { name: t('menuEditor.publishing.title') }),
+    );
+    expect(await dialog.findByText(t('menuEditor.publishing.first'))).toBeVisible();
+    await user.click(dialog.getByRole('button', { name: t('menuEditor.publishing.confirm') }));
+    expect(
+      await dialog.findByText(t('menuEditor.publishing.unchanged', { version: 4 })),
+    ).toBeVisible();
+    expect(dialog.getByText(t('menuEditor.publishing.noDevices'))).toBeVisible();
+  });
+
+  it('[MENU-002] says why the server refused to publish, and publishes nothing', async () => {
+    const reason = 'The menu cannot be published until these are fixed: Dal Makhani has no price.';
+    const fake = menuServer()
+      .on('GET', '/api/v1/menu', () => ({ status: 200, body: publishedMenu() }))
+      .on('POST', '/api/v1/menu/publish', () => ({
+        status: 422,
+        body: { code: 'MENU_NOT_READY', message: reason },
+      }));
+    const { user } = await renderConsole({ fake, path: PATH, signedIn: 'MANAGER' });
+    await user.click(await screen.findByRole('button', { name: t('menuEditor.publish') }));
+    const dialog = within(
+      await screen.findByRole('dialog', { name: t('menuEditor.publishing.title') }),
+    );
+    await user.click(
+      await dialog.findByRole('button', { name: t('menuEditor.publishing.confirm') }),
+    );
+    expect(await dialog.findByText(reason)).toBeVisible();
+    expect(dialog.queryByText(/is published/)).toBeNull();
+  });
+});
+
+describe('[MENU-002] [ONB-004] the menu check', () => {
+  it('blocks publishing on a dish without a station, with a way to fix it, and warns about photos', async () => {
+    const draft = draftMenu();
+    draft.items = draft.items.map((entry) =>
+      entry.id === NAAN ? { ...entry, stationId: '0199a0e0-0000-7000-8000-000000000777' } : entry,
+    );
+    const fake = menuServer(draft).on('GET', '/api/v1/menu', () => ({
+      status: 200,
+      body: publishedMenu(),
+    }));
+    const { user } = await renderConsole({ fake, path: PATH, signedIn: 'MANAGER' });
+    const check = within(await screen.findByRole('region', { name: t('menuEditor.health.title') }));
+    expect(
+      check.getByText(t('menuEditor.health.NO_STATION', { name: 'Butter Naan' })),
+    ).toBeVisible();
+    expect(check.getByRole('link', { name: t('menuEditor.health.addPhotos') })).toHaveAttribute(
+      'href',
+      '/manage/menu/photos',
+    );
     await user.click(screen.getByRole('button', { name: t('menuEditor.publish') }));
-    expect(await screen.findByText(t('menuEditor.unchanged', { version: 4 }))).toBeVisible();
+    const dialog = within(
+      await screen.findByRole('dialog', { name: t('menuEditor.publishing.title') }),
+    );
+    expect(await dialog.findByText(t('menuEditor.publishing.blocked'))).toBeVisible();
+    expect(dialog.getByRole('button', { name: t('menuEditor.publishing.confirm') })).toBeDisabled();
+    await user.click(dialog.getByRole('button', { name: t('menuEditor.cancel') }));
+    await user.click(
+      check.getByRole('button', { name: t('menuEditor.health.fix', { name: 'Butter Naan' }) }),
+    );
+    expect(
+      await screen.findByRole('dialog', {
+        name: t('menuEditor.item.editTitle', { name: 'Butter Naan' }),
+      }),
+    ).toBeVisible();
+  });
+
+  it('offers the menu file, bulk photos and the export, and no AI menu reading', async () => {
+    const createObjectURL = vi.fn((_file: Blob) => 'blob:menu');
+    vi.stubGlobal('URL', Object.assign(URL, { createObjectURL, revokeObjectURL: vi.fn() }));
+    const fake = menuServer().on('GET', '/api/v1/menu/files/export', () => ({
+      status: 200,
+      body: 'PK zip',
+      headers: { 'content-type': 'application/zip' },
+    }));
+    const { user } = await renderConsole({ fake, path: PATH, signedIn: 'MANAGER' });
+    await screen.findByRole('button', { name: t('menuEditor.fromExcel') });
+    expect(screen.queryByText(/printed menu/i)).toBeNull();
+    await user.click(screen.getByRole('button', { name: t('menuFile.export') }));
+    await vi.waitFor(() => {
+      expect(createObjectURL).toHaveBeenCalledTimes(1);
+    });
+    vi.unstubAllGlobals();
+    await user.click(screen.getByRole('button', { name: t('menuEditor.fromExcel') }));
+    expect(await screen.findByRole('heading', { name: t('menuFile.title') })).toBeVisible();
   });
 });
 

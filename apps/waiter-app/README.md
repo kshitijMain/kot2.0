@@ -6,12 +6,16 @@ inbox) and P3-05 (upsell).
 
 What it does today (P2-01c, P2-01d, P2-02a to P2-02c, P2-06a to P2-06d): pairs with the local
 server by scanning the manager's QR code, or with the address and code typed (the device key is created in the Android
-Keystore, and over TLS only the restaurant's CA is trusted from then on), lists the staff who may
-use a waiter phone (waiters, managers, the owner) and signs one in with their PIN. Home is "My
-tables" (the waiter's sections and tables for today, and any table they are responsible for) or all
-tables, grouped by section with state, guests, time seated, waiter and anything waiting; orders on
-the phone not yet sent; the waiter's pager with its connection and battery, and a warning when it is
-offline or low (WTR-014).
+Keystore, and over TLS only the restaurant's CA is trusted from then on), lists the waiters (only
+waiters sign in on a waiter phone, and the server refuses anyone else, 2026-10-25) and signs one
+in with their PIN. A phone opens on the PIN pad of the waiter it alerts (who last signed in on
+it), with "Not you?" for the list. Home is "My tables" (the waiter's sections and tables for
+today, and any table they are responsible for) or all tables, grouped by section two to a row
+with state, guests, time seated, waiter and anything waiting. Above them only what asks for the
+waiter: orders on the phone not yet sent, orders to approve, requests from the tables, the pager
+when it is offline or low (WTR-014) and the break while it lasts. The header has the alerts' bell
+and Menu: who is signed in, the pager with its connection and battery, On break, New takeaway and
+Sign out.
 
 Tapping an open table opens its table screen; a free table is opened with its guests first
 (TBL-003) and then lands there. The table screen has the new items and the menu (categories,
@@ -24,26 +28,35 @@ the same key when the phone reconnects, while the waiter who took it is signed i
 ORD-013). Sold-out dishes are marked live in the menu and the new items, and block sending until
 they are removed (WTR-010).
 
-Each sent item shows its live state with what can be done now (WTR-007, WTR-009, ORD-011): mark
-it picked up or served (all ready dishes at once too), cancel it with a reason while the kitchen
-has not started it (waiters on their own tables), or void it with a reason after, which a manager
-approves by entering their PIN on the phone (AUTH-011). Home shows how many dishes are ready at
-the pass for each table.
+Each sent item shows its live state (WTR-007, WTR-009, ORD-011) with "Again"; behind "More" it
+can be cancelled with a reason while the kitchen has not started it (waiters on their own tables),
+or voided with a reason after, which a manager approves by entering their PIN on the phone
+(AUTH-011). The waiter marks nothing picked up or served: the kitchen's "Picked up" serves the
+dish (`kds.pickupMarksServed`, 2026-10-25). Home shows how many dishes are ready at the pass for
+each table.
 
 The phone alerts the person who last signed in on it, as their pager does (P2-06a, WTR-006): food
 ready, a new order to approve, a bill asked for, a manager's message and anything escalated to a
-manager. The newest open alert shows over every screen with Acknowledge, and a tap lists them all;
-acknowledging on the phone stops the pager too (NTF-004). An inactivity sign-out keeps the alerts
-coming, shown on the sign-in screen; signing out on the phone, or signing in on another phone,
-ends them.
+manager. Each alert is an Android notification, with the app on screen too: it drops in from the
+top and goes, stays in the notification shade, and a tap opens its table. Nobody acknowledges
+anything on the phone (2026-10-25): an alert goes when its cause is dealt with (the kitchen picks
+the food up, the order is approved, the request resolved, the bill printed), a manager's nudge
+closes itself after `notifications.autoCloseMinutes`. Food nobody picks up calls the manager after
+`kds.readyNotCollectedMinutes` (KDS-006); the other alerts after N when their cause is still
+there. The bell in each header counts the open alerts and lists them for one that was missed. An
+inactivity sign-out keeps the alerts coming; signing out on the phone, or signing in on another
+phone, ends them.
 
 They are hard to miss outside the app too (P2-06b, WTR-005). While someone holds the phone, a
 foreground service keeps it listening with the screen off or the app closed from the recents list
-(its quiet notification says "Alerts for Ravi"), and each alert is a notification that rings,
-vibrates and shows on the lock screen, with Acknowledge; a repeat rings again. With the app on
-screen the banner shows the alert and the phone rings and vibrates. Android 13 and later ask for
-notifications when someone signs in; while they are off, home says alerts ring only while the app
-is open, with a button to the settings.
+(its quiet notification says "Alerts for Ravi"), and each alert rings, vibrates and shows on the
+lock screen. Android 13 and later ask for notifications when someone signs in; while they are off,
+home says alerts ring only while the app is open, with a button to the settings.
+
+The phone's back button goes back a screen: a sheet closes, a table's menu goes back to its order,
+a table or the takeaway screen to the tables, a PIN pad to the list of names. The screens are drawn
+edge to edge and keep clear of the status bar and the navigation bar
+(`react-native-safe-area-context` into `@rp/ui-native`'s `ScreenInsetsProvider`).
 
 Requests from the tables (Water, Waiter, Bill) show on home for the tables shown, and on each
 table's screen for that table (P2-06d, WTR-005): oldest first, with the table, how long ago, who is
@@ -54,11 +67,12 @@ Where things are:
 
 - `src/App.tsx`: pairing → login → signed in, from the device session's state.
 - `src/SignedIn.tsx`: the tables and one table's screen, the new items of every table kept while
-  the waiter is signed in (`src/carts.tsx`), and a note when a kept order reaches the kitchen
-  later.
+  the waiter is signed in (`src/carts.tsx`), a note when a kept order reaches the kitchen later,
+  and the table a tapped notification asks for (`AlertTableOpener` from `@rp/mobile-native`).
 - `src/TablesScreen.tsx`: "My tables" and all tables, read again after table, order, bill and
   service-request events (`@rp/ordering` `myTableIds`, `floorSections`); `src/OpenTableSheet.tsx`
-  opens a free table.
+  opens a free table; `src/HomeMenu.tsx` is the Menu (pager, break from `src/BreakCard.tsx`,
+  takeaway, signing out).
 - `src/TableScreen.tsx`: one table session: new items (`src/CartList.tsx`), the menu
   (`src/MenuBrowser.tsx`, `src/ItemSheet.tsx`), sent orders with serving, cancel and void
   (`src/SentOrders.tsx`, `src/EndItemSheet.tsx`, `@rp/mobile-shell` `useOverride` for the
@@ -76,9 +90,9 @@ Where things are:
 - `src/Root.tsx`: the screen, on that session. `index.ts` registers it and the alert service's
   keep-alive task (`registerAlertKeepAlive`), which starts the session when Android restarts the
   service in a new process.
-- `src/notifications.tsx`: the notifications' words (`describeAlert`, as the banner), asking for
-  them at sign-in and the "notifications are off" note on home.
-- The alert banner and list are `@rp/mobile-shell` `AlertBanner`, on every screen.
+- `src/notifications.tsx`: the notifications' words (`describeAlert`), asking for them at sign-in
+  and the "notifications are off" note on home.
+- The bell and the alerts' list are `@rp/mobile-shell` `AlertBell`, in each screen's header.
 - Shared screens and hooks (pairing, PIN login, connection banner, `useLive`, `useMenu`,
   `useUnsentOrders`) are in `@rp/mobile-shell`; cart, menu and reorder rules shared with the POS
   are in `@rp/ordering`.
@@ -90,9 +104,10 @@ Where things are:
   `@rp/mobile-native`); the microphone is blocked.
 - `eas.json`: EAS Build profiles (APKs) and EAS Update channels.
 - `.maestro/`: the smoke flow `pair-login-tables.yaml` (pair, sign in, open a free table, order a
-  dish and send the KOT, acknowledge the alert and serve it once the kitchen marks it ready, ask
-  for the bill), then `background-alert.yaml` (the same with the app in the background, acknowledged
-  from the notification shade; signing out ends the listening), in the order `config.yaml` sets.
+  dish and send the KOT, see it ready with its alert on the bell and served once the kitchen marks
+  it picked up, ask for the bill), then `background-alert.yaml` (the same with the app in the
+  background, its notification tapped in the shade to open the table; signing out ends the
+  listening), in the order `config.yaml` sets.
   The smoke flow types the development server's `http://` address, as an emulator cannot scan the
   QR code.
 
@@ -108,7 +123,10 @@ pnpm --filter @rp/waiter-app start         Metro for a development build
 
 Build the workspace packages first (`pnpm build`): the app and Jest use their `dist/` output.
 CI (`.github/workflows/android.yml`) builds a debug APK with Gradle on every change and keeps it
-as an artifact.
+as an artifact, and a release-variant APK (`waiter-app-release-apk`): the JavaScript inside, no
+Metro and no development menu or its floating gear, to try the app as staff see it. It is the
+development environment signed with the template's debug key, so it installs over the debug
+build; `manual-tasks/37-waiter-phone-feedback.md` says what to check on it.
 
 ## Running the smoke flow (Maestro)
 
@@ -118,9 +136,9 @@ as an artifact.
    start Metro: `pnpm --filter @rp/waiter-app start`.
 3. `maestro test -e PAIRING_CODE=ABCD-EFGH -e TABLE=T1 -e TABLE2=T2 -e "DISH=Dal Makhani" apps/waiter-app/.maestro`,
    where `TABLE` and `TABLE2` are free tables and `DISH` a dish without options on the waiter-app
-   menu (each flow opens its table, sends that dish to the kitchen, serves it and asks for the
-   bill). Each time a flow waits for the dish, mark it Ready on the kitchen screen (the console in
-   Kitchen mode) within 5 minutes. Keep the emulator's screen on for the background flow
+   menu (each flow opens its table, sends that dish to the kitchen and asks for the bill). Each
+   time a flow waits for the dish, mark it Ready and then Picked up on the kitchen screen (the
+   console in Kitchen mode), each within 5 minutes. Keep the emulator's screen on for the background flow
    (`adb shell svc power stayon true`). The flows assume the emulator reaches the PC as
    `10.0.2.2` (server on 3000, Metro on 8081); override `SERVER`, `METRO`, `STAFF_NAME` and `PIN`
    with `-e` for a real phone.

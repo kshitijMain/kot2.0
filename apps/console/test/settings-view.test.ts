@@ -112,6 +112,10 @@ describe('[MGR-007] what people type', () => {
     expect(all.map((group) => group.area)).toContain('kds');
     // `pager.*` and `pagers.*` are one area.
     expect(all.map((group) => group.area)).not.toContain('pager');
+    // The AI menu reading is off for good: its flag is not shown (2026-10-25).
+    expect(all.flatMap((group) => group.settings.map((setting) => setting.key))).not.toContain(
+      'features.aiMenuImport',
+    );
     expect(
       all.find((group) => group.area === 'pagers')?.settings.map((setting) => setting.key),
     ).toContain('pager.lowBatteryPercent');

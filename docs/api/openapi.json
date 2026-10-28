@@ -5671,11 +5671,243 @@
         "x-requirements": ["MGR-005", "MENU-001", "MENU-002"]
       }
     },
+    "/api/v1/menu/files": {
+      "post": {
+        "operationId": "loadMenuFile",
+        "summary": "Load a menu file for review, saving nothing",
+        "description": "ONB-005, ONB-007, SEC-004. The body is the file: a zip (application/zip) with menu.xlsx, photos/ and a README, or a plain workbook. It is refused, with the reason, when it is larger than 100 MB, unpacks too large, holds a path outside the archive, a file that is neither the sheet, the README nor an image, or a photo that is not a JPEG, PNG, WebP or HEIF image. The answer lists the names to map, every dish and every photo with its match, and the check; the file is kept for a day.",
+        "tags": ["menu"],
+        "responses": {
+          "201": {
+            "description": "The review.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/MenuFileReview" } }
+            }
+          },
+          "400": {
+            "description": "The request does not match the contract.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "No valid session or device credential.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "The signed-in role lacks the required capability.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "413": {
+            "description": "The file is too large.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "422": {
+            "description": "The file is refused; the message says why.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        },
+        "x-capability": "MENU_MANAGE",
+        "x-requirements": ["ONB-005", "ONB-007", "SEC-004"]
+      }
+    },
+    "/api/v1/menu/files/{fileId}/check": {
+      "post": {
+        "operationId": "checkMenuFile",
+        "summary": "Check a loaded menu file with the manager’s choices, writing nothing",
+        "description": "ONB-005, MENU-011. The tax group and station names mapped to this PC’s, the photos matched as chosen; every problem by sheet, row and column.",
+        "tags": ["menu"],
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/MenuFileChoices" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The report.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/MenuImportReport" } }
+            }
+          },
+          "400": {
+            "description": "The request does not match the contract.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "No valid session or device credential.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "The signed-in role lacks the required capability.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "No such loaded file (or it is more than a day old).",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        },
+        "x-capability": "MENU_MANAGE",
+        "x-requirements": ["ONB-005", "MENU-011"]
+      }
+    },
+    "/api/v1/menu/files/{fileId}/import": {
+      "post": {
+        "operationId": "importMenuFile",
+        "summary": "Add a loaded menu file to the draft menu",
+        "description": "ONB-005, ONB-007, ONB-009. Checks as the check does; with no problems, adds the dishes and their photos to the draft in one transaction, audited. Nothing reaches the devices until the menu is published. The loaded file is then removed.",
+        "tags": ["menu"],
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/MenuFileChoices" } }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The report; `committed` says whether it was added.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MenuFileImportResult" }
+              }
+            }
+          },
+          "400": {
+            "description": "The request does not match the contract.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "No valid session or device credential.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "The signed-in role lacks the required capability.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "No such loaded file (or it is more than a day old).",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        },
+        "x-capability": "MENU_MANAGE",
+        "x-requirements": ["ONB-005", "ONB-007", "ONB-009", "AUD-001"]
+      }
+    },
+    "/api/v1/menu/files/empty": {
+      "get": {
+        "operationId": "emptyMenuFile",
+        "summary": "The empty menu file (.zip)",
+        "description": "ONB-005, ONB-007. A zip with the empty template (menu.xlsx), an empty photos folder and a README saying how to fill it in. The body is the file itself (application/zip).",
+        "tags": ["menu"],
+        "responses": {
+          "200": { "description": "The zip (application/zip)." },
+          "400": {
+            "description": "The request does not match the contract.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "No valid session or device credential.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "The signed-in role lacks the required capability.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        },
+        "x-capability": "MENU_MANAGE",
+        "x-requirements": ["ONB-005", "ONB-007"]
+      }
+    },
+    "/api/v1/menu/files/export": {
+      "get": {
+        "operationId": "exportMenuFile",
+        "summary": "The menu as a menu file (.zip)",
+        "description": "ONB-005, ONB-007, DATA-003. The draft menu (active entries) in the template, with each dish’s photo in photos/ named by its short code or name; loading it into a restaurant without these dishes gives the same menu. Tax rates are never in it, only tax group names. The body is the file itself (application/zip).",
+        "tags": ["menu"],
+        "responses": {
+          "200": { "description": "The zip (application/zip)." },
+          "400": {
+            "description": "The request does not match the contract.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "No valid session or device credential.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "The signed-in role lacks the required capability.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        },
+        "x-capability": "MENU_MANAGE",
+        "x-requirements": ["ONB-005", "ONB-007"]
+      }
+    },
     "/api/v1/menu/import": {
       "post": {
         "operationId": "importMenu",
-        "summary": "Import a menu file and publish it",
-        "description": "ONB-005, ONB-009. Checks the file as the check does; with no problems, adds everything in one transaction, audited, and publishes a new menu version. With problems nothing is written and the report lists them.",
+        "summary": "Import a menu workbook into the draft",
+        "description": "ONB-005, ONB-009. Checks the file as the check does; with no problems, adds everything to the draft menu in one transaction, audited. Nothing reaches the devices until the menu is published. With problems nothing is written and the report lists them.",
         "tags": ["menu"],
         "requestBody": {
           "required": true,
@@ -5710,7 +5942,7 @@
           }
         },
         "x-capability": "MENU_MANAGE",
-        "x-requirements": ["ONB-005", "ONB-009", "MENU-011", "MENU-013", "AUD-001"]
+        "x-requirements": ["ONB-005", "ONB-009", "MENU-011", "AUD-001"]
       }
     },
     "/api/v1/menu/import/check": {
@@ -6563,6 +6795,12 @@
           },
           "403": {
             "description": "The signed-in role lacks the required capability.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "422": {
+            "description": "MENU_NOT_READY: a dish has no price above ₹0, no active kitchen station or no active tax group; the message names them and `details.problems` lists them. Nothing is published.",
             "content": {
               "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
@@ -17586,7 +17824,12 @@
           },
           "description": { "anyOf": [{ "type": "string", "maxLength": 500 }, { "type": "null" }] },
           "photoId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
-          "basePrice": { "maximum": 10000000, "$ref": "#/components/schemas/Paise" },
+          "basePrice": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000000,
+            "$ref": "#/components/schemas/Paise"
+          },
           "taxGroupId": { "$ref": "#/components/schemas/Id" },
           "foodType": { "$ref": "#/components/schemas/FoodType" },
           "spiceLevel": { "type": "integer", "minimum": 0, "maximum": 3 },
@@ -18950,6 +19193,160 @@
         "type": "object",
         "properties": { "id": { "$ref": "#/components/schemas/Id" } },
         "required": ["id"],
+        "additionalProperties": false
+      },
+      "MenuFileChoices": {
+        "type": "object",
+        "properties": {
+          "taxGroups": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+                "id": { "$ref": "#/components/schemas/Id" }
+              },
+              "required": ["name", "id"],
+              "additionalProperties": false
+            }
+          },
+          "stations": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+                "id": { "$ref": "#/components/schemas/Id" }
+              },
+              "required": ["name", "id"],
+              "additionalProperties": false
+            }
+          },
+          "photos": {
+            "maxItems": 500,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "file": { "type": "string", "minLength": 1, "maxLength": 255 },
+                "dish": {
+                  "anyOf": [
+                    { "type": "string", "minLength": 1, "maxLength": 80 },
+                    { "type": "null" }
+                  ]
+                }
+              },
+              "required": ["file", "dish"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": ["taxGroups", "stations", "photos"],
+        "additionalProperties": false
+      },
+      "MenuFileDish": {
+        "type": "object",
+        "properties": {
+          "row": { "type": "integer", "exclusiveMinimum": 0, "maximum": 9007199254740991 },
+          "name": { "type": "string" },
+          "shortCode": { "type": ["string", "null"] },
+          "category": { "type": "string" },
+          "subCategory": { "type": ["string", "null"] },
+          "foodType": {
+            "anyOf": [{ "$ref": "#/components/schemas/FoodType" }, { "type": "null" }]
+          },
+          "price": { "anyOf": [{ "$ref": "#/components/schemas/Paise" }, { "type": "null" }] },
+          "sizes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": { "type": "string" },
+                "price": { "anyOf": [{ "$ref": "#/components/schemas/Paise" }, { "type": "null" }] }
+              },
+              "required": ["name", "price"],
+              "additionalProperties": false
+            }
+          },
+          "addOnGroups": { "type": "array", "items": { "type": "string" } },
+          "combo": { "type": "boolean" }
+        },
+        "required": [
+          "row",
+          "name",
+          "shortCode",
+          "category",
+          "subCategory",
+          "foodType",
+          "price",
+          "sizes",
+          "addOnGroups",
+          "combo"
+        ],
+        "additionalProperties": false
+      },
+      "MenuFileImportResult": {
+        "type": "object",
+        "properties": {
+          "report": { "$ref": "#/components/schemas/MenuImportReport" },
+          "photos": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+        },
+        "required": ["report", "photos"],
+        "additionalProperties": false
+      },
+      "MenuFileName": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "suggestedId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] }
+        },
+        "required": ["name", "suggestedId"],
+        "additionalProperties": false
+      },
+      "MenuFileParams": {
+        "type": "object",
+        "properties": { "fileId": { "$ref": "#/components/schemas/Id" } },
+        "required": ["fileId"],
+        "additionalProperties": false
+      },
+      "MenuFilePhoto": {
+        "type": "object",
+        "properties": {
+          "file": { "type": "string" },
+          "dish": { "type": ["string", "null"] },
+          "by": { "anyOf": [{ "type": "string", "enum": ["CODE", "NAME"] }, { "type": "null" }] },
+          "thumbnailBase64": { "type": "string" }
+        },
+        "required": ["file", "dish", "by", "thumbnailBase64"],
+        "additionalProperties": false
+      },
+      "MenuFileReview": {
+        "type": "object",
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Id" },
+          "kind": { "type": "string", "enum": ["ZIP", "XLSX"] },
+          "names": {
+            "type": "object",
+            "properties": {
+              "taxGroups": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/MenuFileName" }
+              },
+              "stations": {
+                "type": "array",
+                "items": { "$ref": "#/components/schemas/MenuFileName" }
+              }
+            },
+            "required": ["taxGroups", "stations"],
+            "additionalProperties": false
+          },
+          "dishes": { "type": "array", "items": { "$ref": "#/components/schemas/MenuFileDish" } },
+          "photos": { "type": "array", "items": { "$ref": "#/components/schemas/MenuFilePhoto" } },
+          "report": { "$ref": "#/components/schemas/MenuImportReport" }
+        },
+        "required": ["id", "kind", "names", "dishes", "photos", "report"],
         "additionalProperties": false
       },
       "MenuImportFile": {
@@ -25126,7 +25523,12 @@
         "properties": {
           "id": { "$ref": "#/components/schemas/Id" },
           "name": { "type": "string", "minLength": 1, "maxLength": 40 },
-          "price": { "maximum": 10000000, "$ref": "#/components/schemas/Paise" },
+          "price": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 10000000,
+            "$ref": "#/components/schemas/Paise"
+          },
           "externalId": {
             "anyOf": [{ "type": "string", "minLength": 1, "maxLength": 128 }, { "type": "null" }]
           }

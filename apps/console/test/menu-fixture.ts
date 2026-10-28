@@ -2,6 +2,8 @@ import type {
   CategoryView,
   ItemView,
   MenuDraftResponse,
+  MenuItem,
+  MenuSnapshot,
   ModifierGroupView,
   StationView,
   TaxGroupView,
@@ -210,5 +212,55 @@ export function stations(): { stations: StationView[] } {
       { id: KITCHEN, name: 'Kitchen', mode: 'SCREEN', printerId: null, archivedAt: null },
       { id: TANDOOR, name: 'Tandoor', mode: 'SCREEN', printerId: null, archivedAt: null },
     ],
+  };
+}
+
+/**
+ * The menu as the devices have it after the last publication: the draft's active dishes, as a
+ * published snapshot, with `changes` applied (a dish's fields by id; `drop` leaves dishes out).
+ */
+export function publishedMenu(
+  changes: {
+    readonly drop?: readonly string[];
+    readonly items?: Record<string, Partial<MenuItem>>;
+  } = {},
+): MenuSnapshot {
+  const draft = draftMenu();
+  return {
+    version: 3,
+    publishedAt: AT,
+    categories: draft.categories
+      .filter((entry) => entry.archivedAt === null)
+      .map(({ id, name, parentId, displayOrder }) => ({ id, name, parentId, displayOrder })),
+    items: draft.items
+      .filter((entry) => entry.archivedAt === null && !(changes.drop ?? []).includes(entry.id))
+      .map((entry) => ({
+        id: entry.id,
+        categoryId: entry.categoryId,
+        name: entry.name,
+        ...(entry.photoId !== null && { photoId: entry.photoId }),
+        basePrice: entry.basePrice,
+        taxGroupId: entry.taxGroupId,
+        foodType: entry.foodType,
+        spiceLevel: entry.spiceLevel,
+        tags: entry.tags,
+        stationId: entry.stationId,
+        available: entry.available,
+        stockCount: entry.stockCount,
+        displayOrder: entry.displayOrder,
+        channels: entry.channels,
+        variants: entry.variants
+          .filter((variant) => variant.archivedAt === null)
+          .map(({ id, name, price }) => ({ id, name, price })),
+        modifierGroupIds: [],
+        synonyms: entry.synonyms,
+        repeatable: entry.repeatable,
+        archived: false,
+        ...changes.items?.[entry.id],
+      })),
+    modifierGroups: [],
+    combos: [],
+    taxGroups: [],
+    stations: [],
   };
 }

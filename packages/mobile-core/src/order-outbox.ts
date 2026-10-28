@@ -165,6 +165,10 @@ export class OrderOutbox {
       if (error instanceof ApiRequestError && isRefusal(error)) {
         return this.refused(entry, { kind: 'REFUSED', code: error.code, message: error.message });
       }
+      if (error instanceof ApiRequestError && error.status >= 500) {
+        // The server answered with an error for this order: it waits, the next ones still go.
+        return { kind: 'RETRY', error: error.message, next: true };
+      }
       if (error instanceof ApiContractError) {
         // The request or answer does not fit the contract: sending it again cannot help.
         return this.refused(entry, {

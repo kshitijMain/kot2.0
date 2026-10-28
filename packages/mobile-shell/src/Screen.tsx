@@ -1,8 +1,7 @@
 import { elevation, fontSize, fontWeight, spacing } from '@rp/design-tokens';
-import { Text, useTheme, weight } from '@rp/ui-native';
+import { Text, useScreenInsets, useTheme, weight } from '@rp/ui-native';
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import { AlertBanner } from './alerts.js';
 import { BrandLogo } from './brand.js';
 import { useSessionState, useT } from './context.js';
 import { LicenceBanner } from './licence.js';
@@ -32,9 +31,11 @@ export function ConnectionBanner() {
 }
 
 /**
- * A full screen with the connection banner, the licence's banner (LIC-005), the alert banner
- * (P2-06a), a title and scrolling
+ * A full screen with the connection banner, the licence's banner (LIC-005), a title and scrolling
  * content; `footer` stays at the bottom while the content scrolls (e.g. the order's Send button).
+ * Android draws the app under the status bar and the navigation bar, so the screen keeps clear of
+ * both: nothing sits under the clock or the phone's back and home buttons. Alerts are Android
+ * notifications, with `AlertBell` in a header for those missed (2026-10-25).
  */
 export function Screen({
   title,
@@ -51,13 +52,27 @@ export function Screen({
   children: ReactNode;
 }) {
   const { colors } = useTheme();
+  const insets = useScreenInsets();
   return (
-    <View style={[styles.screen, { backgroundColor: colors.background }]}>
+    <View
+      style={[
+        styles.screen,
+        {
+          backgroundColor: colors.background,
+          paddingTop: insets.top,
+          paddingLeft: insets.left,
+          paddingRight: insets.right,
+        },
+      ]}
+    >
       <ConnectionBanner />
       <LicenceBanner />
-      <AlertBanner />
       <ScrollView
-        contentContainerStyle={[styles.content, brand && styles.branded]}
+        contentContainerStyle={[
+          styles.content,
+          brand && styles.branded,
+          footer === undefined && { paddingBottom: spacing[5] + insets.bottom },
+        ]}
         keyboardShouldPersistTaps="handled"
       >
         {brand ? <BrandLogo /> : null}
@@ -73,9 +88,14 @@ export function Screen({
       </ScrollView>
       {footer === undefined ? null : (
         <View
+          testID="screen-footer"
           style={[
             styles.footer,
-            { backgroundColor: colors.surface, borderTopColor: colors.border },
+            {
+              backgroundColor: colors.surface,
+              borderTopColor: colors.border,
+              paddingBottom: spacing[3] + insets.bottom,
+            },
           ]}
         >
           {footer}

@@ -1,5 +1,12 @@
-import { DEVICE_TOKEN_HEADER } from '@rp/contracts';
-import { json, type NextFunction, type Request, type RequestHandler, type Response } from 'express';
+import { DEVICE_TOKEN_HEADER, MENU_FILE_MAX_BYTES } from '@rp/contracts';
+import {
+  json,
+  type NextFunction,
+  raw,
+  type Request,
+  type RequestHandler,
+  type Response,
+} from 'express';
 import { authErrors } from '../auth/auth-errors.js';
 import { type DeviceAuthenticator, rememberDevice } from '../auth/device.js';
 import { AppError } from '../errors/app-error.js';
@@ -20,6 +27,12 @@ export const UPLOAD_BODY_LIMIT = '7mb';
 /** Up to 40 MB of menu photos or PDFs for AI import (P6-04b), in base64. */
 export const AI_IMPORT_BODY_LIMIT = '55mb';
 
+/**
+ * A menu file (ONB-005): the zip itself as the body, photos included, on its one upload path
+ * only, read as bytes and never parsed here.
+ */
+export const MENU_FILE_BODY_LIMIT = MENU_FILE_MAX_BYTES;
+
 /** A path and everything under it. */
 const under = (prefix: string) => (path: string) =>
   path === prefix || path.startsWith(`${prefix}/`);
@@ -37,12 +50,18 @@ type RequestWithId = Request & { id?: unknown };
  */
 export function bodyParsers(
   devices: DeviceAuthenticator,
-  paths: { readonly uploads: readonly string[]; readonly aiImport: string },
+  paths: {
+    readonly uploads: readonly string[];
+    readonly aiImport: string;
+    /** The menu file's upload: exactly this path, POST. */
+    readonly menuFile: string;
+  },
 ): RequestHandler {
   const anonymous = json({ limit: ANONYMOUS_BODY_LIMIT });
   const standard = json({ limit: JSON_BODY_LIMIT });
   const upload = json({ limit: UPLOAD_BODY_LIMIT });
   const aiImport = json({ limit: AI_IMPORT_BODY_LIMIT });
+  const menuFile = raw({ type: () => true, limit: MENU_FILE_BODY_LIMIT });
   const isUpload = paths.uploads.map(under);
   const isAiImport = under(paths.aiImport);
 
@@ -73,6 +92,10 @@ export function bodyParsers(
       return;
     }
     const path = request.path;
+    if (request.method === 'POST' && path === paths.menuFile) {
+      menuFile(request, response, next);
+      return;
+    }
     const parser = isAiImport(path)
       ? aiImport
       : isUpload.some((matches) => matches(path))

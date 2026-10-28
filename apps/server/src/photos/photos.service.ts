@@ -1,3 +1,4 @@
+import { relative } from 'node:path';
 import {
   Inject,
   Injectable,
@@ -82,7 +83,11 @@ export class PhotosService implements OnApplicationBootstrap, OnModuleDestroy {
   }
 
   async upload(principal: Principal, request: UploadPhotoRequest): Promise<PhotoView> {
-    const content = Buffer.from(request.contentBase64, 'base64');
+    return this.uploadContent(principal, Buffer.from(request.contentBase64, 'base64'));
+  }
+
+  /** A photo's bytes, checked, re-encoded and stored: an upload, or one from a menu file. */
+  async uploadContent(principal: Principal, content: Buffer): Promise<PhotoView> {
     if (content.length > PHOTO_MAX_BYTES) {
       throw new AppError(
         413,
@@ -135,7 +140,12 @@ export class PhotosService implements OnApplicationBootstrap, OnModuleDestroy {
   }
 
   /** The file of one rendition. Any restaurant's photo: the id is the secret-free handle. */
-  async renditionFile(id: string, width: PhotoWidth): Promise<string> {
+  /**
+   * Where a rendition is: the store's folder and the file's path inside it. They are apart so that
+   * the file is sent relative to the store, and a data folder whose path has a dot folder in it
+   * (the development `./.data`, or a home folder's `.local`) does not count as a hidden file.
+   */
+  async renditionFile(id: string, width: PhotoWidth): Promise<{ root: string; path: string }> {
     const photo = await this.prisma.photo.findUnique({
       where: { id },
       select: { storageKey: true },
@@ -143,7 +153,10 @@ export class PhotosService implements OnApplicationBootstrap, OnModuleDestroy {
     if (photo === null || !(await this.store.exists(photo.storageKey, width))) {
       throw new AppError(404, 'PHOTO_NOT_FOUND', 'There is no such photo.');
     }
-    return this.store.fileOf(photo.storageKey, width);
+    return {
+      root: this.store.root,
+      path: relative(this.store.root, this.store.fileOf(photo.storageKey, width)),
+    };
   }
 
   /**

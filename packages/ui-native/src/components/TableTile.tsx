@@ -138,7 +138,14 @@ const styles = StyleSheet.create({
     gap: spacing[2],
     elevation: elevation[1].androidElevation,
   },
-  top: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  // Two tiles to a row on a phone: the state goes under the label when they do not fit.
+  top: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing[1],
+  },
   label: { fontSize: fontSize.xl, fontWeight: weight(fontWeight.bold) },
   state: {
     flexDirection: 'row',

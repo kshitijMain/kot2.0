@@ -5,8 +5,7 @@ import { alertAge, describeAlert } from '@rp/ordering';
 import { Button, Glyph, Sheet, Text, useTheme, weight } from '@rp/ui-native';
 import { useCallback, useState, useSyncExternalStore } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
-import { useDeviceSession, useSessionState, useT } from './context.js';
-import { messageOf } from './messages.js';
+import { useDeviceSession, useT } from './context.js';
 import { useNow } from './use-now.js';
 
 /** How often the alerts' ages ("4 min ago") are brought up to date. */
@@ -18,185 +17,84 @@ export function useAlerts(): AlertCenterSnapshot {
   return useSyncExternalStore(session.alerts.subscribe, session.alerts.getSnapshot);
 }
 
-interface Acknowledging {
-  /** Alerts whose acknowledgement is on its way. */
-  readonly pending: ReadonlySet<string>;
-  /** What went wrong with the last one, in plain words (NFR-U04). */
-  readonly error: string | null;
-  readonly acknowledge: (alertId: string) => void;
-}
-
-/** Acknowledging as the phone's holder, from the banner or the list (NTF-004). */
-function useAcknowledge(): Acknowledging {
-  const session = useDeviceSession();
-  const t = useT();
-  const [pending, setPending] = useState<ReadonlySet<string>>(() => new Set());
-  const [error, setError] = useState<string | null>(null);
-  const acknowledge = useCallback(
-    (alertId: string) => {
-      setError(null);
-      setPending((current) => new Set([...current, alertId]));
-      void session.alerts
-        .acknowledge(alertId)
-        .catch((failure: unknown) => {
-          setError(t('alerts.acknowledgeFailed', { message: messageOf(failure, t) }));
-        })
-        .finally(() => {
-          setPending((current) => new Set([...current].filter((id) => id !== alertId)));
-        });
-    },
-    [session, t],
-  );
-  return { pending, error, acknowledge };
-}
-
-/** The holder's name when someone else, or nobody, is signed in: whose alerts these are. */
-function useOtherHolder(): string | null {
-  const { holder } = useAlerts();
-  const { person } = useSessionState();
-  return holder !== null && holder.staffId !== person?.id ? holder.displayName : null;
-}
-
 /**
- * The newest open alert of the person the phone alerts, on every screen (WTR-006): where and what,
- * how many more, and Acknowledge in one tap (NFR-U03); a tap on it lists them all. It shows on the
- * sign-in screen too, since the phone goes on alerting after an inactivity sign-out (AUTH-005).
- * Nothing shows when no alert is open, or on a device that follows none (the table tablet).
+ * The bell in a screen's header (WTR-006): how many of the holder's alerts are open, and a tap
+ * lists them. The alerts themselves ring as Android notifications, which come and go; this is
+ * where a missed one can be read again. Nobody acknowledges them here (Business Owner,
+ * 2026-10-25): each goes when its cause is dealt with. A tap on one with a table opens it.
+ * Nothing shows on a device that follows no one's alerts (the table tablet).
  */
-export function AlertBanner() {
-  const { alerts } = useAlerts();
-  const [listOpen, setListOpen] = useState(false);
-  const acknowledging = useAcknowledge();
-  const openList = useCallback(() => {
-    setListOpen(true);
+export function AlertBell({ onOpenTable }: { onOpenTable?: (tableSessionId: string) => void }) {
+  const { holder, alerts } = useAlerts();
+  const t = useT();
+  const { colors } = useTheme();
+  const [open, setOpen] = useState(false);
+  const close = useCallback(() => {
+    setOpen(false);
   }, []);
-  const closeList = useCallback(() => {
-    setListOpen(false);
-  }, []);
-  const newest = alerts.at(-1);
+  if (holder === null) return null;
+  const count = alerts.length;
   return (
     <>
-      {newest === undefined ? null : (
-        <Banner
-          alert={newest}
-          more={alerts.length - 1}
-          acknowledging={acknowledging}
-          onOpenList={openList}
+      <Button
+        variant={count > 0 ? 'primary' : 'ghost'}
+        startIcon={
+          <Glyph
+            name="bell"
+            color={count > 0 ? colors.onPrimary : colors.text}
+            size={fontSize.md}
+          />
+        }
+        accessibilityLabel={t('alerts.bellLabel', { count })}
+        testID="alert-bell"
+        onPress={() => {
+          setOpen(true);
+        }}
+      >
+        {String(count)}
+      </Button>
+      {open ? (
+        <AlertsSheet
+          onClose={close}
+          {...(onOpenTable !== undefined && {
+            onOpenTable: (sessionId: string) => {
+              close();
+              onOpenTable(sessionId);
+            },
+          })}
         />
-      )}
-      {listOpen ? <AlertsSheet acknowledging={acknowledging} onClose={closeList} /> : null}
+      ) : null}
     </>
   );
 }
 
-function Banner({
-  alert,
-  more,
-  acknowledging,
-  onOpenList,
-}: {
-  alert: AlertView;
-  more: number;
-  acknowledging: Acknowledging;
-  onOpenList: () => void;
-}) {
-  const t = useT();
-  const { colors } = useTheme();
-  const now = useNow(AGE_TICK_MS);
-  const holder = useOtherHolder();
-  const { title, detail } = describeAlert(alert, t);
-  const facts = [
-    detail,
-    alertAge(alert.createdAt, now, t),
-    more > 0 ? t('alerts.more', { count: more }) : null,
-    holder === null ? null : t('alerts.for', { name: holder }),
-  ].filter((fact) => fact !== null);
-  return (
-    <View testID="alert-banner" style={[styles.banner, { backgroundColor: colors.warning }]}>
-      <View style={styles.bannerRow}>
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel={[title, ...facts, t('alerts.showAll', { count: more + 1 })].join(
-            '. ',
-          )}
-          accessibilityHint={t('alerts.showAll', { count: more + 1 })}
-          onPress={onOpenList}
-          testID="alert-banner-open"
-          style={styles.bannerText}
-        >
-          <Text
-            accessibilityLiveRegion="assertive"
-            numberOfLines={2}
-            style={[styles.title, { color: colors.onWarning }]}
-          >
-            <Glyph name="bell" color={colors.onWarning} size={fontSize.md} /> {title}
-          </Text>
-          <Text numberOfLines={2} style={[styles.facts, { color: colors.onWarning }]}>
-            {facts.join(' · ')}
-          </Text>
-        </Pressable>
-        <Button
-          variant="secondary"
-          loading={acknowledging.pending.has(alert.id)}
-          onPress={() => {
-            acknowledging.acknowledge(alert.id);
-          }}
-          accessibilityLabel={t('alerts.acknowledgeOf', { title })}
-          testID="alert-banner-acknowledge"
-        >
-          {t('alerts.acknowledge')}
-        </Button>
-      </View>
-      {acknowledging.error === null ? null : (
-        <Text
-          accessibilityRole="alert"
-          testID="alert-banner-error"
-          style={[styles.error, { backgroundColor: colors.dangerSubtle, color: colors.dangerText }]}
-        >
-          {acknowledging.error}
-        </Text>
-      )}
-    </View>
-  );
-}
-
-/** Every open alert, newest first, with its age, reminders and escalation. */
+/** Every open alert, newest first, with its age and whether the managers were told. */
 function AlertsSheet({
-  acknowledging,
   onClose,
+  onOpenTable,
 }: {
-  acknowledging: Acknowledging;
   onClose: () => void;
+  onOpenTable?: (tableSessionId: string) => void;
 }) {
   const { alerts } = useAlerts();
-  const holder = useOtherHolder();
   const t = useT();
   const { colors } = useTheme();
   const now = useNow(AGE_TICK_MS);
   return (
-    <Sheet
-      open
-      onClose={onClose}
-      title={holder === null ? t('alerts.title') : t('alerts.titleFor', { name: holder })}
-    >
-      {holder === null ? null : (
-        <Text style={[styles.note, { color: colors.textMuted }]}>
-          {t('alerts.holderNote', { name: holder })}
-        </Text>
-      )}
+    <Sheet open onClose={onClose} title={t('alerts.title')}>
       {alerts.length === 0 ? (
         <Text testID="alerts-none" style={[styles.note, { color: colors.textMuted }]}>
           {t('alerts.none')}
         </Text>
       ) : null}
       {[...alerts].reverse().map((alert) => (
-        <AlertRow key={alert.id} alert={alert} now={now} acknowledging={acknowledging} />
+        <AlertRow
+          key={alert.id}
+          alert={alert}
+          now={now}
+          {...(onOpenTable !== undefined && { onOpenTable })}
+        />
       ))}
-      {acknowledging.error === null ? null : (
-        <Text accessibilityRole="alert" style={[styles.note, { color: colors.dangerText }]}>
-          {acknowledging.error}
-        </Text>
-      )}
     </Sheet>
   );
 }
@@ -204,11 +102,11 @@ function AlertsSheet({
 function AlertRow({
   alert,
   now,
-  acknowledging,
+  onOpenTable,
 }: {
   alert: AlertView;
   now: number;
-  acknowledging: Acknowledging;
+  onOpenTable?: (tableSessionId: string) => void;
 }) {
   const t = useT();
   const { colors } = useTheme();
@@ -218,10 +116,25 @@ function AlertRow({
     alert.repeatCount > 0 ? t('alerts.reminded', { count: alert.repeatCount }) : null,
     alert.escalatedAt === null ? null : t('alerts.escalated'),
   ].filter((fact) => fact !== null);
+  const sessionId = alert.tableSessionId;
+  const opens = sessionId !== null && onOpenTable !== undefined;
   return (
-    <View
+    <Pressable
       testID={`alert-${alert.id}`}
-      style={[styles.row, { backgroundColor: colors.surface, borderColor: colors.border }]}
+      disabled={!opens}
+      accessibilityRole={opens ? 'button' : 'text'}
+      accessibilityLabel={[title, detail, ...facts].filter((part) => part !== null).join('. ')}
+      {...(opens && { accessibilityHint: t('alerts.openTable') })}
+      onPress={() => {
+        if (sessionId !== null) onOpenTable?.(sessionId);
+      }}
+      style={({ pressed }) => [
+        styles.row,
+        {
+          backgroundColor: pressed ? colors.surfaceSunken : colors.surface,
+          borderColor: colors.border,
+        },
+      ]}
     >
       <View style={styles.rowText}>
         <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
@@ -230,32 +143,23 @@ function AlertRow({
         )}
         <Text style={[styles.facts, { color: colors.textMuted }]}>{facts.join(' · ')}</Text>
       </View>
-      <Button
-        loading={acknowledging.pending.has(alert.id)}
-        onPress={() => {
-          acknowledging.acknowledge(alert.id);
-        }}
-        accessibilityLabel={t('alerts.acknowledgeOf', { title })}
-        testID={`alert-${alert.id}-acknowledge`}
-      >
-        {t('alerts.acknowledge')}
-      </Button>
-    </View>
+      {opens ? (
+        <Text style={[styles.open, { color: colors.primary }]}>{t('alerts.open')}</Text>
+      ) : null}
+    </Pressable>
   );
 }
 
 const styles = StyleSheet.create({
-  banner: { paddingHorizontal: spacing[3], paddingVertical: spacing[2], gap: spacing[2] },
-  bannerRow: { flexDirection: 'row', alignItems: 'center', gap: spacing[3] },
-  bannerText: { flex: 1, minHeight: touchTarget.min, justifyContent: 'center' },
   title: { fontSize: fontSize.md, fontWeight: weight(fontWeight.bold) },
   facts: { fontSize: fontSize.sm },
-  error: { padding: spacing[2], borderRadius: radius.md, fontSize: fontSize.sm },
   note: { fontSize: fontSize.md },
+  open: { fontSize: fontSize.md, fontWeight: weight(fontWeight.semibold) },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing[3],
+    minHeight: touchTarget.min,
     padding: spacing[3],
     borderWidth: 1,
     borderRadius: radius.lg,

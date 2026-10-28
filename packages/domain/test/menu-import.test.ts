@@ -392,6 +392,20 @@ describe('[ONB-005] [MENU-011] planning a menu import', () => {
     ]);
   });
 
+  it('[MENU-002] refuses a price of ₹0 for a dish or a size', () => {
+    const issues = issuesOf({
+      Items: [ITEMS_HEADER, item({ ...base, Item: 'Free Water', Price: '0' })],
+      Variants: [
+        MENU_IMPORT_COLUMNS.Variants.map((column) => column.name),
+        ['Free Water', 'Large', '0.00', ''],
+      ],
+    });
+    expect(issues).toEqual([
+      { sheet: 'Items', row: 2, column: 'Price', message: 'A price above ₹0' },
+      { sheet: 'Variants', row: 2, column: 'Price', message: 'A price above ₹0' },
+    ]);
+  });
+
   it('reads food types loosely', () => {
     expect(['Veg', 'Non-Veg', 'non veg', 'EGG', 'Vegan'].map(parseFoodType)).toEqual([
       'VEG',

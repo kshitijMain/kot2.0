@@ -470,6 +470,7 @@ function MenuPage({
               base={menu.photoBase}
               sizes="(min-width: 40rem) 36rem, 100vw"
               className="qr-sheet__photo"
+              placeholder={false}
             />
           }
           recommendation={open.recommendation}

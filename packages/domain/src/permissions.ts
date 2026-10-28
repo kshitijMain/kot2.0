@@ -230,6 +230,21 @@ export function grantFor(
   return matrix[capability][role];
 }
 
+/**
+ * Who may sign in on each kind of device; a device not listed takes every role. A waiter phone is
+ * the waiters' (Business Owner, 2026-10-25): managers and the Owner work at the POS and the
+ * dashboard, and a manager's PIN for a void on the phone is an approval, not a sign-in (AUTH-011).
+ */
+export const SIGN_IN_ROLES: Readonly<Partial<Record<string, readonly Role[]>>> = {
+  WAITER_PHONE: ['WAITER'],
+};
+
+/** Whether `role` may sign in on a device of `deviceType` (AUTH-001, AUTH-010). */
+export function maySignInOn(deviceType: string, role: Role): boolean {
+  const roles = SIGN_IN_ROLES[deviceType];
+  return roles === undefined || roles.includes(role);
+}
+
 export function canApproveOverride(role: Role): boolean {
   return OVERRIDE_APPROVER_ROLES.has(role);
 }

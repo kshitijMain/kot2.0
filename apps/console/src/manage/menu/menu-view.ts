@@ -6,11 +6,14 @@ import {
   type ItemRequest,
   type ItemView,
   type MenuDraftResponse,
+  type MenuSnapshot,
   type ModifierGroupRequest,
   type ModifierGroupView,
   SalesChannel,
+  type StationView,
+  type TaxGroupView,
 } from '@rp/contracts';
-import { formatRupees, parseRupees } from '@rp/domain';
+import { type ChangeDish, formatRupees, type HealthInput, parseRupees } from '@rp/domain';
 
 /**
  * The menu editor (P4-02d, MGR-005, MENU-001 to MENU-011): forms that mirror the server's checks,
@@ -297,18 +300,22 @@ export function itemFormOf(item: ItemView | undefined, defaults: ItemDefaults): 
 
 const MAX_PRICE = 10_000_000;
 
+/** A dish's price: above ₹0 (a dish without a price is never accepted) and at most ₹1,00,000. */
 function priceOk(text: string): boolean {
   const paise = paiseOf(text);
-  return paise !== undefined && paise <= MAX_PRICE;
+  return paise !== undefined && paise > 0 && paise <= MAX_PRICE;
 }
 
-/** The same checks as the server's `ItemRequest` (MENU-002 to MENU-004). */
+/**
+ * The same checks as the server's `ItemRequest` (MENU-002 to MENU-004). A dish with sizes has no
+ * price of its own to give: each size has one.
+ */
 export function checkItem(form: ItemForm): Partial<Record<ItemField, ItemProblem>> {
   const problems: Partial<Record<ItemField, ItemProblem>> = {};
   const name = form.name.trim();
   if (name === '' || name.length > 80) problems.name = 'nameRequired';
   if (form.categoryId === '') problems.categoryId = 'categoryRequired';
-  if (!priceOk(form.basePrice)) problems.basePrice = 'priceInvalid';
+  if (form.variants.length === 0 && !priceOk(form.basePrice)) problems.basePrice = 'priceInvalid';
   if (form.taxGroupId === '') problems.taxGroupId = 'taxGroupRequired';
   if (form.stationId === '') problems.stationId = 'stationRequired';
   if (form.shortCode.trim() !== '' && !/^[A-Za-z0-9-]{1,12}$/.test(form.shortCode.trim())) {
@@ -347,6 +354,37 @@ export function checkItem(form: ItemForm): Partial<Record<ItemField, ItemProblem
   return problems;
 }
 
+/**
+ * The dish's own price: what was typed, or with sizes the highest size's (the Full price), which
+ * the server keeps as the dish's price; every screen shows "from" the cheapest size.
+ */
+export function basePriceOf(form: ItemForm): number {
+  if (form.variants.length === 0) return paiseOf(form.basePrice) ?? 0;
+  return Math.max(...form.variants.map((variant) => paiseOf(variant.price) ?? 0));
+}
+
+/**
+ * Half and Full in one tap: the two sizes, each to be priced, added to those already there (a
+ * price typed for the dish becomes the Full price). Names come from the catalogue.
+ */
+export function withHalfAndFull(
+  form: ItemForm,
+  names: { readonly half: string; readonly full: string },
+): readonly VariantForm[] {
+  const has = (name: string) =>
+    form.variants.some((variant) => variant.name.trim().toLowerCase() === name.toLowerCase());
+  const added: VariantForm[] = [];
+  if (!has(names.half)) added.push({ key: newKey(), name: names.half, price: '' });
+  if (!has(names.full)) {
+    added.push({
+      key: newKey(),
+      name: names.full,
+      price: form.variants.length === 0 ? form.basePrice.trim() : '',
+    });
+  }
+  return [...form.variants, ...added];
+}
+
 /** The request for a checked form. */
 export function itemRequestOf(form: ItemForm): ItemRequest {
   const text = (value: string) => (value.trim() === '' ? null : value.trim());
@@ -356,7 +394,7 @@ export function itemRequestOf(form: ItemForm): ItemRequest {
     shortCode: text(form.shortCode),
     description: text(form.description),
     photoId: form.photoId,
-    basePrice: paiseOf(form.basePrice) ?? 0,
+    basePrice: basePriceOf(form),
     taxGroupId: form.taxGroupId,
     foodType: form.foodType,
     spiceLevel: form.spiceLevel,
@@ -382,7 +420,7 @@ export function itemRequestOf(form: ItemForm): ItemRequest {
 /** Whether a saved item's prices would change (the reason field is offered then, MENU-009). */
 export function changesPrice(item: ItemView | undefined, form: ItemForm): boolean {
   if (item === undefined) return false;
-  if (paiseOf(form.basePrice) !== item.basePrice) return true;
+  if (basePriceOf(form) !== item.basePrice) return true;
   const before = new Map(
     item.variants
       .filter((variant) => variant.archivedAt === null)
@@ -659,4 +697,61 @@ export function comboRequestOf(form: ComboForm): ComboRequest {
     activeUntil: form.activeUntil === '' ? null : form.activeUntil,
     timeWindow: form.windowStart === '' ? null : { start: form.windowStart, end: form.windowEnd },
   };
+}
+
+// ---------------------------------------------------------------- the check and publishing
+
+/** The draft as the menu check reads it (`menuHealth` in `@rp/domain`). */
+export function healthInputOf(
+  draft: MenuDraftResponse,
+  taxGroups: readonly TaxGroupView[],
+  stations: readonly StationView[],
+): HealthInput {
+  return {
+    dishes: draft.items.map((item) => ({
+      id: item.id,
+      name: item.name,
+      categoryId: item.categoryId,
+      basePrice: item.basePrice,
+      sizes: item.variants
+        .filter((variant) => variant.archivedAt === null)
+        .map((variant) => ({ name: variant.name, price: variant.price })),
+      taxGroupId: item.taxGroupId,
+      stationId: item.stationId,
+      photoId: item.photoId,
+      archived: item.archivedAt !== null,
+    })),
+    categories: draft.categories.map((category) => ({
+      id: category.id,
+      name: category.name,
+      parentId: category.parentId,
+      archived: category.archivedAt !== null,
+    })),
+    taxGroupIds: new Set(taxGroups.filter((group) => group.archivedAt === null).map((g) => g.id)),
+    stationIds: new Set(stations.filter((station) => station.archivedAt === null).map((s) => s.id)),
+  };
+}
+
+/** The draft's active dishes, for what publishing changes (`menuChanges`). */
+export function draftDishes(draft: MenuDraftResponse): ChangeDish[] {
+  return filterItems(draft, { categoryId: '', search: '', archived: false }).map((item) => ({
+    id: item.id,
+    name: item.name,
+    basePrice: item.basePrice,
+    sizes: item.variants
+      .filter((variant) => variant.archivedAt === null)
+      .map((variant) => ({ name: variant.name, price: variant.price })),
+    photoId: item.photoId,
+  }));
+}
+
+/** The published menu's dishes, as the devices have them now. */
+export function publishedDishes(menu: MenuSnapshot): ChangeDish[] {
+  return menu.items.map((item) => ({
+    id: item.id,
+    name: item.name,
+    basePrice: item.basePrice,
+    sizes: item.variants.map((variant) => ({ name: variant.name, price: variant.price })),
+    photoId: item.photoId ?? null,
+  }));
 }

@@ -1,6 +1,7 @@
 export * from './alerts.js';
 export * from './ApkOffer.js';
 export * from './context.js';
+export * from './crash.js';
 export * from './ItemSheet.js';
 export * from './licence.js';
 export * from './LoginScreen.js';

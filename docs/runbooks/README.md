@@ -7,6 +7,10 @@ support playbook. Created by the WPs that build each capability (P0-16, P7-04, P
   certificate problems (P0-15).
 - `control-plane.md`: operating the Vendor Control Plane: environments, deploying, connecting a
   restaurant PC, publishing releases, disconnecting an installation (P0-17a).
+- `control-plane-aws.md`: setting the Control Plane up on AWS in Mumbai, staging then production,
+  click by click for the Owner with the steps a cloud engineer reviews: network, RDS, the image
+  from GitHub, secrets and the licence KMS key, the backup bucket, logs, the load balancer and
+  WAF, migrations, the first Super Admin, checks and monthly costs.
 - `waiter-phone.md`: setting a waiter phone up so alerts ring with the screen off or the app
   closed (notifications, battery settings by phone maker, Do Not Disturb), checking it and fixing
   a phone that does not ring (P2-06b).
@@ -47,6 +51,10 @@ support playbook. Created by the WPs that build each capability (P0-16, P7-04, P
 - `pager-firmware.md`: pager firmware through the restaurant PC: releasing signed firmware in the
   Control Plane, the PC's checks, when a pager is offered it, "Update now", what the pager does
   (P2-05) and support (P2-04b1, ADR-0018).
+- `restaurant-onboarding.md`: for the onboarding team, a new restaurant from signed contract to
+  go-live: what to collect beforehand, preparing the menu file on a test PC, install day with
+  each set-up step, loading the menu file and mapping names, pairing devices, QR tents and the
+  go-live test, later menu changes, common problems and the ONB-009 one-day timeline.
 - `installation.md`, `restore.md`, `update-and-rollback.md`: the front door for each job, with the
   order of work and which detailed runbook to open (P8-05).
 - `support-playbook.md`: triage, the paper fallback, common problems and closing a ticket (P8-05).

@@ -102,6 +102,12 @@ export const authErrors = {
     ),
   approverNotAllowed: () =>
     new AppError(403, 'APPROVER_NOT_ALLOWED', 'Only a manager or the Owner can approve this.'),
+  notOnThisDevice: () =>
+    new AppError(
+      403,
+      'ROLE_NOT_ON_DEVICE',
+      'This phone is for waiters. Sign in on the POS or the manager dashboard instead.',
+    ),
   kitchenStationMode: () =>
     new AppError(
       403,

@@ -281,7 +281,8 @@ As built:
 - Routes, all `MENU_MANAGE`:
   - `GET /api/v1/menu/import/template`;
   - `POST /api/v1/menu/import/check` (dry run);
-  - `POST /api/v1/menu/import` (commit and publish).
+  - `POST /api/v1/menu/import` (commit; into the draft since 2026-10-25, published by the
+    manager).
     Both POST routes answer with a `MenuImportReport` (`ok`, `committed`, `issues`, `summary`,
     `menuVersion`).
 - The import only adds, and never changes or archives what exists:

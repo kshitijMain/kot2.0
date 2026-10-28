@@ -321,16 +321,21 @@ describe('[KDS-005] [KDS-006] [KDS-007] kitchen steps, bump, recall and notify m
     expect((await kitchenTicket()).managerNotified).toBe(true);
   });
 
-  it('[KDS-006] alerts the managers by itself when the restaurant wants it, once per ticket', async () => {
+  it('[KDS-006] alerts the managers by itself unless the restaurant turns it off, once per ticket', async () => {
     const escalation = app.get(KdsEscalationService);
     const bar = (await tickets(screen('barScreen'))).tickets[0];
     const lassi = bar?.lines[0]?.orderItemId ?? '';
     expect((await step(lassi, 'MARK_READY', screen('barScreen'))).status).toBe(200);
     const later = new Date(Date.now() + 4 * 60_000);
-    // Off by default: the kitchen presses "Notify manager".
-    expect(await escalation.sweep(later)).toBe(0);
+    // Turned off, the kitchen presses "Notify manager".
     await prisma.setting.create({
-      data: { restaurantId: kit.restaurantId, key: 'kds.autoEscalateNotCollected', value: true },
+      data: { restaurantId: kit.restaurantId, key: 'kds.autoEscalateNotCollected', value: false },
+    });
+    app.get(SettingsService).invalidate();
+    expect(await escalation.sweep(later)).toBe(0);
+    // On by default (2026-10-25): waiters do not acknowledge food ready, so this calls the manager.
+    await prisma.setting.deleteMany({
+      where: { restaurantId: kit.restaurantId, key: 'kds.autoEscalateNotCollected' },
     });
     app.get(SettingsService).invalidate();
     // Not yet three minutes.
@@ -384,10 +389,12 @@ describe('[KDS-005] [KDS-006] [KDS-007] kitchen steps, bump, recall and notify m
     ).toEqual([true, false]);
   });
 
-  it('[KDS-007] lets the pass mark items picked up', async () => {
+  it('[KDS-007] lets the pass mark items picked up, which serves them', async () => {
     const ticket = await kitchenTicket();
     const dal = ticket.lines[0]?.orderItemId ?? '';
     expect((await step(dal, 'PICK_UP')).status).toBe(200);
+    // `kds.pickupMarksServed`: the waiter has nothing to mark (2026-10-25).
+    expect((await prisma.orderItem.findUniqueOrThrow({ where: { id: dal } })).state).toBe('SERVED');
     // Nothing left at the station: the ticket leaves the open list by itself.
     expect((await tickets(screen('kitchenScreen'))).tickets).toEqual([]);
   });

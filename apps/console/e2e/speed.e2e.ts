@@ -215,7 +215,9 @@ test.describe.serial('[NFR-P07] taps and screen changes at the design capacityâ€
     await expect(page).toHaveURL(/\/manage$/);
     await page.goto(`${server.url}/manage/menu`);
     await page.getByRole('button', { name: t('menuEditor.publish') }).click();
-    await expect(page.getByText(/^Menu version \d+ is published/)).toBeVisible();
+    const publishing = page.getByRole('dialog', { name: t('menuEditor.publishing.title') });
+    await publishing.getByRole('button', { name: t('menuEditor.publishing.confirm') }).click();
+    await publishing.getByRole('button', { name: t('menuEditor.publishing.close') }).click();
     await signOut.click();
     await expect(page.getByRole('heading', { name: t('login.title') })).toBeVisible();
 

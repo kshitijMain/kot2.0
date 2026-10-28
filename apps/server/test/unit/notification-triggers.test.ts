@@ -56,6 +56,12 @@ describe('[NTF-003] [ORD-005] [KDS-006] what raises and clears alerts', () => {
       orderId,
       dedupeKey: `ready:${sessionId}`,
       payload: { items: ['Dal Makhani'] },
+      renotify: expect.any(Function) as unknown,
+    });
+    // Another dish for the table while its alert is open is added to it, and rings it again.
+    const [, raised] = raise.mock.calls[0] as [unknown, { renotify: (before: object) => object }];
+    expect(raised.renotify({ items: ['Paneer Tikka'] })).toEqual({
+      items: ['Paneer Tikka', 'Dal Makhani'],
     });
     const takeaway = setup({ tableSessionId: null });
     await takeaway.triggers.handle(changed('READY'), takeaway.tx);

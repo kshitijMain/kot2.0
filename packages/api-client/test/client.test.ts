@@ -742,3 +742,55 @@ describe('[WTR-001] a download another HTTP client makes (P7-04e2)', () => {
     expect(request.headers.authorization).toBe('Bearer access-1');
   });
 });
+
+describe('[ONB-005] files sent and received as themselves (the menu file)', () => {
+  const FILE_ID = '0199a0e0-0000-7000-8000-000000000009';
+  const REPORT = { ok: true, committed: false, issues: [], summary: null, menuVersion: null };
+
+  it('downloads a file with the person’s credentials', async () => {
+    const server = new FakeServer().on('GET', '/api/v1/menu/files/empty', () => ({
+      status: 200,
+      body: 'PK-zip-bytes',
+      headers: { 'content-type': 'application/zip' },
+    }));
+    const client = new ApiClient({ baseUrl: BASE, fetch: server.fetch, credentials: signedIn() });
+    const file = await client.download('emptyMenuFile');
+    expect(await file.text()).toBe('PK-zip-bytes');
+    expect(server.calls[0]?.headers.authorization).toBe('Bearer access-1');
+  });
+
+  it('uploads a file as the body with its type, and checks the answer', async () => {
+    const review = {
+      id: FILE_ID,
+      kind: 'XLSX',
+      names: { taxGroups: [], stations: [] },
+      dishes: [],
+      photos: [],
+      report: REPORT,
+    };
+    const server = new FakeServer().on('POST', '/api/v1/menu/files', () => ({
+      status: 201,
+      body: review,
+    }));
+    const client = new ApiClient({ baseUrl: BASE, fetch: server.fetch, credentials: signedIn() });
+    const answer = await client.upload('loadMenuFile', {
+      content: new Blob(['xlsx-bytes']),
+      contentType: 'application/zip',
+    });
+    expect(answer).toEqual(review);
+    const [call] = server.calls;
+    expect(call?.headers['content-type']).toBe('application/zip');
+    expect(await call?.file?.text()).toBe('xlsx-bytes');
+  });
+
+  it('turns a refused file into the server’s plain message', async () => {
+    const server = new FakeServer().on('POST', '/api/v1/menu/files', () => ({
+      status: 422,
+      body: { code: 'MENU_FILE_REFUSED', message: 'The file holds notes.docx.' },
+    }));
+    const client = new ApiClient({ baseUrl: BASE, fetch: server.fetch, credentials: signedIn() });
+    await expect(
+      client.upload('loadMenuFile', { content: new Blob(['x']), contentType: 'application/zip' }),
+    ).rejects.toMatchObject({ code: 'MENU_FILE_REFUSED', message: 'The file holds notes.docx.' });
+  });
+});

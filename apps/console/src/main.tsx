@@ -63,7 +63,7 @@ createRoot(root).render(
     */}
     <BrowserRouter useTransitions={false}>
       <ThemeRoot theme="light" className="console-root">
-        <App controller={controller} translator={translator} />
+        <App controller={controller} translator={translator} onError={report} />
       </ThemeRoot>
     </BrowserRouter>
   </StrictMode>,

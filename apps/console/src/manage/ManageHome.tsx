@@ -7,7 +7,7 @@ import { useT } from '../app/i18n.js';
 import { ScreenHelp } from '../help/ScreenHelp.js';
 import { OwnerSecurityScreen } from '../owner/OwnerSecurityScreen.js';
 import { DevicesScreen } from './devices/DevicesScreen.js';
-import { AiImportScreen } from './menu/AiImportScreen.js';
+import { MenuFileScreen } from './menu/MenuFileScreen.js';
 import { BulkPhotosScreen } from './menu/BulkPhotosScreen.js';
 import { MenuEditor } from './menu/MenuEditor.js';
 import { PrintingScreen } from './printing/PrintingScreen.js';
@@ -174,7 +174,7 @@ export function ManageHome() {
           {managesStaff ? <Route path="floor" element={<FloorScreen />} /> : null}
           {managesStaff ? <Route path="qr-codes" element={<QrCodesScreen />} /> : null}
           {managesMenu ? <Route path="menu" element={<MenuEditor />} /> : null}
-          {managesMenu ? <Route path="menu/ai-import" element={<AiImportScreen />} /> : null}
+          {managesMenu ? <Route path="menu/import" element={<MenuFileScreen />} /> : null}
           {managesMenu ? <Route path="menu/photos" element={<BulkPhotosScreen />} /> : null}
           {pairsDevices ? <Route path="devices" element={<DevicesScreen />} /> : null}
           {operates ? <Route path="setup" element={<SetupScreen />} /> : null}

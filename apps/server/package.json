@@ -27,7 +27,8 @@
     "backup:restore": "node --env-file-if-exists=.env dist/backups/restore-cli.js",
     "menu:template": "node dist/menu/import/menu-template-cli.js",
     "scenario:service-day": "vitest run --project scenario",
-    "test:perf": "RP_PERF=1 vitest run --project performance"
+    "test:perf": "RP_PERF=1 vitest run --project performance",
+    "printer:virtual": "node ../../scripts/virtual-printer/virtual-printer.mjs"
   },
   "dependencies": {
     "@nestjs/common": "^12.1.0",
@@ -40,6 +41,7 @@
     "@rp/contracts": "workspace:*",
     "@rp/domain": "workspace:*",
     "@rp/error-reporting": "workspace:*",
+    "@rp/i18n": "workspace:*",
     "@rp/licensing": "workspace:*",
     "@rp/ordering": "workspace:*",
     "@rp/totp": "workspace:*",

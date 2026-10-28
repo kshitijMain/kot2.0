@@ -1,0 +1,23 @@
+{
+  "input": {
+    "type": "object",
+    "properties": {
+      "file": { "type": "string" },
+      "dish": { "type": ["string", "null"] },
+      "by": { "anyOf": [{ "type": "string", "enum": ["CODE", "NAME"] }, { "type": "null" }] },
+      "thumbnailBase64": { "type": "string" }
+    },
+    "required": ["file", "dish", "by", "thumbnailBase64"]
+  },
+  "output": {
+    "type": "object",
+    "properties": {
+      "file": { "type": "string" },
+      "dish": { "type": ["string", "null"] },
+      "by": { "anyOf": [{ "type": "string", "enum": ["CODE", "NAME"] }, { "type": "null" }] },
+      "thumbnailBase64": { "type": "string" }
+    },
+    "required": ["file", "dish", "by", "thumbnailBase64"],
+    "additionalProperties": false
+  }
+}

@@ -127,7 +127,7 @@ describe('[ONB-005] [ONB-009] [MENU-011] importing a menu', () => {
     expect(await prisma.item.count({ where: { restaurantId: kit.restaurantId } })).toBe(before);
   });
 
-  it('checks, then imports 150 items with variants, modifiers and a combo in one go and publishes', async () => {
+  it('checks, then imports 150 items with variants, modifiers and a combo in one go, as a draft', async () => {
     const rows: string[][] = [header('Items')];
     for (let index = 1; index <= 150; index += 1) {
       rows.push(
@@ -187,7 +187,7 @@ describe('[ONB-005] [ONB-009] [MENU-011] importing a menu', () => {
     const response = await send('', file);
     const seconds = (performance.now() - started) / 1000;
     const report = MenuImportReport.parse(response.body);
-    expect(report).toMatchObject({ ok: true, committed: true, menuVersion: 1 });
+    expect(report).toMatchObject({ ok: true, committed: true, menuVersion: null });
     // ONB-009: a 150-item menu imports in seconds, far inside the hour.
     expect(seconds).toBeLessThan(30);
 
@@ -211,9 +211,9 @@ describe('[ONB-005] [ONB-009] [MENU-011] importing a menu', () => {
       'Mains',
     );
 
-    const menu = MenuSnapshot.parse((await server().get('/api/v1/menu').set(as(manager))).body);
-    expect(menu.version).toBe(1);
-    expect(menu.items.find((item) => item.name === 'Lunch Combo')).toBeDefined();
+    // Nothing reaches the devices until a manager publishes.
+    const unpublished = await server().get('/api/v1/menu').set(as(manager));
+    expect(unpublished.status).toBe(404);
     const audit = await prisma.auditLog.findMany({
       where: {
         restaurantId: kit.restaurantId,
@@ -221,7 +221,11 @@ describe('[ONB-005] [ONB-009] [MENU-011] importing a menu', () => {
       },
       select: { action: true, after: true },
     });
-    expect(audit.map((entry) => entry.action).sort()).toEqual(['MENU_IMPORTED', 'MENU_PUBLISHED']);
+    expect(audit.map((entry) => entry.action)).toEqual(['MENU_IMPORTED']);
+    expect((await server().post('/api/v1/menu/publish').set(as(manager))).status).toBe(200);
+    const menu = MenuSnapshot.parse((await server().get('/api/v1/menu').set(as(manager))).body);
+    expect(menu.version).toBe(1);
+    expect(menu.items.find((item) => item.name === 'Lunch Combo')).toBeDefined();
     expect(
       await prisma.auditLog.count({
         where: { restaurantId: kit.restaurantId, action: 'MENU_ITEM_CREATED' },
@@ -257,7 +261,7 @@ describe('[ONB-005] [ONB-009] [MENU-011] importing a menu', () => {
       ok: true,
       committed: true,
       summary: { categories: 0, modifierGroups: 0, items: 1 },
-      menuVersion: 2,
+      menuVersion: null,
     });
     const broken = MenuImportReport.parse(
       (await send('check', { format: 'CSV', sheets: { Items: '"unclosed' } })).body,

@@ -51,3 +51,23 @@ updates:
     groups:
       actions:
         patterns: ['*']
+
+  # The Control Plane image's base (Node.js on Debian), pinned by digest in its Dockerfile:
+  # Dependabot moves the tag and the digest together. New images age first, as above.
+  - package-ecosystem: docker
+    directory: /apps/control-plane
+    schedule:
+      interval: weekly
+      day: monday
+      time: '06:00'
+      timezone: Asia/Kolkata
+    open-pull-requests-limit: 2
+    cooldown:
+      default-days: 5
+      semver-major-days: 14
+    commit-message:
+      prefix: deps
+    ignore:
+      # Node.js majors follow .nvmrc and the restaurant PC's runtime, decided together.
+      - dependency-name: node
+        update-types: ['version-update:semver-major']

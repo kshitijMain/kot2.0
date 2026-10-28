@@ -65,11 +65,30 @@ describe('[MENU-008] [QR-012] a dish’s photo', () => {
     expect(image).toHaveAttribute('width', '160');
   });
 
-  it('shows nothing without a photo or when the relay keeps none', () => {
-    const none = render(<DishPhoto photo={undefined} base={base} sizes="1rem" className="x" />);
-    expect(none.container).toBeEmptyDOMElement();
-    const off = render(<DishPhoto photo={photo} base={null} sizes="1rem" className="x" />);
-    expect(off.container).toBeEmptyDOMElement();
+  it('shows the shared placeholder without a photo or when the relay keeps none', () => {
+    for (const [given, at] of [
+      [undefined, base],
+      [photo, null],
+    ] as const) {
+      const { container } = render(
+        <DishPhoto photo={given} base={at} sizes="1rem" className="qr-dish__photo" />,
+      );
+      expect(container.querySelector('img')).toBeNull();
+      expect(container.querySelector('.rp-dish-photo.qr-dish__photo')).toHaveAttribute(
+        'data-placeholder',
+      );
+      expect(container.querySelector('.rp-dish-photo__plate')).toHaveAttribute(
+        'aria-hidden',
+        'true',
+      );
+    }
+  });
+
+  it('shows nothing in the dish sheet without a photo', () => {
+    const { container } = render(
+      <DishPhoto photo={undefined} base={base} sizes="1rem" className="x" placeholder={false} />,
+    );
+    expect(container).toBeEmptyDOMElement();
   });
 });
 

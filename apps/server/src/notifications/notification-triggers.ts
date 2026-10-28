@@ -9,7 +9,7 @@ import { NotificationsService } from './notifications.service.js';
  * Turns domain events into alerts and clears them when their cause goes away (P2-03, NTF-003):
  * - an order waiting for approval (ORD-005), until approved or rejected;
  * - food ready for a table, until nothing of that table is waiting at the pass;
- * - a bill request, until the table closes;
+ * - a bill request, until the bill is printed or the table closes;
  * - "ready, not collected" from the kitchen, until that ticket is collected or bumped.
  * It runs as a durable event-bus consumer, so every alert is raised once, even after a restart.
  */
@@ -29,6 +29,7 @@ export class NotificationTriggers implements OnModuleInit {
         'OrderRejected',
         'ItemStatusChanged',
         'BillRequested',
+        'BillPrinted',
         'TableClosed',
         'KotBumped',
         'DeviceStatusChanged',
@@ -90,6 +91,17 @@ export class NotificationTriggers implements OnModuleInit {
           raisedById: requestedBy ?? null,
           askedById: requestedBy ?? null,
         });
+        return;
+      }
+      case 'BillPrinted': {
+        // The cashier did what was asked; nobody needs to be told any more.
+        const invoice = await tx.invoice.findUnique({
+          where: { id: event.payload.invoiceId },
+          select: { tableSessionId: true },
+        });
+        const sessionId = invoice?.tableSessionId ?? null;
+        if (sessionId === null) return;
+        await this.notifications.clear(tx, { restaurantId, dedupeKey: `bill:${sessionId}` });
         return;
       }
       case 'TableClosed':
@@ -203,6 +215,8 @@ export class NotificationTriggers implements OnModuleInit {
         where: { id: change.orderItemId },
         select: { name: true, parentOrderItemId: true },
       });
+      // Nobody acknowledges food ready: each dish that becomes ready rings again (2026-10-25).
+      const name = item?.name;
       await this.notifications.raise(tx, {
         restaurantId,
         type: 'ITEM_READY',
@@ -211,6 +225,10 @@ export class NotificationTriggers implements OnModuleInit {
         orderId: change.orderId,
         dedupeKey: `ready:${order.tableSessionId}`,
         payload: { items: item === null ? [] : [item.name] },
+        renotify: (before) => {
+          const items: unknown[] = Array.isArray(before.items) ? (before.items as unknown[]) : [];
+          return { ...before, items: name === undefined ? items : [...items, name] };
+        },
       });
       return;
     }

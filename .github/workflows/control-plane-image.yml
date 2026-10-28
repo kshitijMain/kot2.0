@@ -1,0 +1,205 @@
+# The Vendor Control Plane's production image (apps/control-plane/Dockerfile, VCP-009): built,
+# checked that it migrates a database, starts with its web app and turns healthy, and scanned on
+# every change to what it is built from; on main, pushed to Amazon ECR in Mumbai
+# (docs/runbooks/control-plane-aws.md).
+#
+# The build job runs the dependencies' install scripts and never holds a registry credential. The
+# push job gets 15-minute credentials for one IAM role from GitHub's OIDC token, in the
+# `control-plane-registry` environment, on main only (SEC-013): no AWS key is stored in GitHub.
+name: Control Plane image
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - apps/control-plane/**
+      - apps/control-plane-web/**
+      - packages/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - .npmrc
+      - tsconfig.base.json
+      - .github/workflows/control-plane-image.yml
+  pull_request:
+    paths:
+      - apps/control-plane/**
+      - apps/control-plane-web/**
+      - packages/**
+      - package.json
+      - pnpm-lock.yaml
+      - pnpm-workspace.yaml
+      - .npmrc
+      - tsconfig.base.json
+      - .github/workflows/control-plane-image.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: control-plane-image-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE: rp-control-plane:ci
+  AWS_REGION: ap-south-1
+  # Image scanner, by digest; bump deliberately (Dependabot does not see versions pinned here).
+  TRIVY_IMAGE: aquasec/trivy:0.75.0@sha256:af6acf9a6b85dfe389a1941505c0ce9efef52a4719635e1a962f022a3d855daa
+
+jobs:
+  build:
+    name: Build, smoke-test and scan
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write
+    services:
+      # A database for the smoke test: migrations, then the health check.
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Build the image
+        run: >-
+          docker build
+          --file apps/control-plane/Dockerfile
+          --tag "$IMAGE"
+          --label "org.opencontainers.image.revision=${GITHUB_SHA}"
+          --label "org.opencontainers.image.source=${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}"
+          .
+
+      - name: It runs as a non-root user
+        run: |
+          user="$(docker image inspect --format '{{.Config.User}}' "$IMAGE")"
+          echo "USER $user"
+          test -n "$user" && test "${user%%:*}" != 0 && test "${user%%:*}" != root
+          test "$(docker run --rm --entrypoint id "$IMAGE" -u)" != 0
+
+      - name: It migrates a database, serves the web app and turns healthy
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/postgres
+        run: |
+          docker run --rm --network host -e DATABASE_URL "$IMAGE" \
+            node node_modules/prisma/build/index.js migrate deploy
+          docker run --detach --name control-plane --network host -e DATABASE_URL "$IMAGE"
+          for _ in $(seq 1 36); do
+            status="$(docker inspect --format '{{.State.Health.Status}}' control-plane)"
+            [ "$status" = healthy ] && break
+            sleep 5
+          done
+          echo "Health: $status"
+          test "$status" = healthy
+          curl --silent --show-error --fail http://127.0.0.1:8090/v1/health
+          echo
+          curl --silent --show-error --fail --output /dev/null --write-out '%{content_type}\n' \
+            http://127.0.0.1:8090/ | grep text/html
+
+      - name: The service's log
+        if: always()
+        run: docker logs control-plane 2>&1 | tail -n 100 || true
+
+      - name: Save the image
+        run: docker save "$IMAGE" --output control-plane-image.tar
+
+      # Every finding goes to code scanning; fixable high and critical vulnerabilities, and any
+      # secret in the image (SEC-002), fail the build. An accepted finding goes in
+      # apps/control-plane/.trivyignore with its reason and a review date.
+      - name: Scan the image (Trivy)
+        run: |
+          scan() {
+            docker run --rm -v "$PWD:/scan" -v trivy-cache:/root/.cache "$TRIVY_IMAGE" image \
+              --input /scan/control-plane-image.tar --scanners vuln,secret \
+              --ignorefile /scan/apps/control-plane/.trivyignore "$@"
+          }
+          scan --format sarif --output /scan/trivy.sarif
+          scan --skip-db-update --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1
+
+      - name: Upload findings to code scanning
+        if: always() && hashFiles('trivy.sarif') != ''
+        uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4.38.2
+        with:
+          sarif_file: trivy.sarif
+          category: control-plane-image
+
+      - name: Keep the image for the push
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: control-plane-image-${{ github.sha }}
+          path: control-plane-image.tar
+          if-no-files-found: error
+          retention-days: 3
+
+  push:
+    name: Push to Amazon ECR (Mumbai)
+    needs: build
+    # Repository variables (not secrets: an ARN and an address); until they are set, nothing is pushed.
+    if: >-
+      github.event_name != 'pull_request' && github.ref == 'refs/heads/main' &&
+      vars.CP_ECR_REPOSITORY != '' && vars.CP_AWS_ROLE_ARN != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment: control-plane-registry
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: control-plane-image-${{ github.sha }}
+
+      - name: Push, tagged with the commit
+        env:
+          ROLE_ARN: ${{ vars.CP_AWS_ROLE_ARN }}
+          # <account>.dkr.ecr.ap-south-1.amazonaws.com/rp-control-plane
+          REPOSITORY: ${{ vars.CP_ECR_REPOSITORY }}
+        run: |
+          token="$(curl --silent --show-error --fail \
+            --header "Authorization: bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com" | jq -r .value)"
+          echo "::add-mask::${token}"
+          read -r AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN < <(
+            aws sts assume-role-with-web-identity --region "$AWS_REGION" \
+              --role-arn "$ROLE_ARN" --role-session-name "github-${GITHUB_RUN_ID}" \
+              --web-identity-token "$token" --duration-seconds 900 \
+              --query 'Credentials.[AccessKeyId,SecretAccessKey,SessionToken]' --output text
+          )
+          echo "::add-mask::${AWS_SECRET_ACCESS_KEY}"
+          echo "::add-mask::${AWS_SESSION_TOKEN}"
+          export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN
+
+          registry="${REPOSITORY%%/*}"
+          name="${REPOSITORY#*/}"
+          docker load --input control-plane-image.tar
+          docker tag "$IMAGE" "${REPOSITORY}:${GITHUB_SHA}"
+          aws ecr get-login-password --region "$AWS_REGION" \
+            | docker login --username AWS --password-stdin "$registry"
+          # Tags are immutable in the repository: a re-run of the same commit pushes nothing.
+          if aws ecr describe-images --region "$AWS_REGION" --repository-name "$name" \
+            --image-ids "imageTag=${GITHUB_SHA}" > /dev/null 2>&1; then
+            echo "${GITHUB_SHA} is already in ${REPOSITORY}"
+          else
+            docker push "${REPOSITORY}:${GITHUB_SHA}"
+          fi
+          digest="$(aws ecr describe-images --region "$AWS_REGION" --repository-name "$name" \
+            --image-ids "imageTag=${GITHUB_SHA}" --query 'imageDetails[0].imageDigest' --output text)"
+          docker logout "$registry"
+          {
+            echo "### Control Plane image"
+            echo
+            echo "Image for the task definition: \`${REPOSITORY}@${digest}\`"
+            echo
+            echo "Tag: \`${GITHUB_SHA}\`"
+          } >> "$GITHUB_STEP_SUMMARY"

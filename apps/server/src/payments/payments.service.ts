@@ -93,11 +93,32 @@ export class PaymentsService {
         return { view: await this.view(tx, principal.restaurantId, invoiceId), tookCash: false };
       }
 
+      // Table, bill, then invoice: the order voiding and reopening take them in, so a payment
+      // and a void at the same moment wait for each other instead of deadlocking (QA-006).
+      const where = await tx.invoice.findFirst({
+        where: { id: invoiceId, restaurantId: principal.restaurantId },
+        select: { billId: true, tableSession: { select: { tableId: true } } },
+      });
+      if (where === null) throw invoiceNotFound();
+      if (where.tableSession !== null) {
+        await tx.$queryRaw`SELECT 1 AS locked FROM tables WHERE id = ${where.tableSession.tableId}::uuid FOR UPDATE`;
+      }
+      if (where.billId !== null) {
+        await tx.$queryRaw`SELECT 1 AS locked FROM bills WHERE id = ${where.billId}::uuid FOR UPDATE`;
+      }
       await tx.$queryRaw`SELECT 1 AS locked FROM invoices WHERE id = ${invoiceId}::uuid FOR UPDATE`;
       const invoice = await tx.invoice.findFirst({
         where: { id: invoiceId, restaurantId: principal.restaurantId },
+        include: { bill: { select: { editingInvoiceId: true } } },
       });
       if (invoice === null) throw invoiceNotFound();
+      if (invoice.bill?.editingInvoiceId === invoice.id) {
+        throw new AppError(
+          409,
+          'INVOICE_BEING_EDITED',
+          'This bill is open for changes. Print it again before taking payment.',
+        );
+      }
       if (invoice.status === 'VOIDED') {
         throw new AppError(
           409,
@@ -113,7 +134,7 @@ export class PaymentsService {
       if (request.payments.length === 0 && !outcome.settled) {
         throw new AppError(422, 'NO_PAYMENTS', 'Record at least one payment.');
       }
-      const shift = await this.shifts.openShiftOf(tx, principal);
+      const shift = await this.shifts.lockedOpenShiftOf(tx, principal);
       if (shift === null && request.payments.some((payment) => payment.mode === 'CASH')) {
         throw new AppError(
           409,

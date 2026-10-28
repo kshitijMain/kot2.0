@@ -84,10 +84,23 @@ const KIND_BANNERS: Readonly<Record<KotTicket['kind'], string | null>> = {
   CANCELLED: '** CANCELLED **',
 };
 
-/** Printable ASCII only: accents are dropped, anything else becomes "?". */
+/** A phone keyboard's quotes and dashes, printed as the plain ones (QA-019). */
+const PLAIN_PUNCTUATION: readonly (readonly [RegExp, string])[] = [
+  [/[\u2018\u2019\u201a\u201b\u2032]/g, "'"],
+  [/[\u201c\u201d\u201e\u201f\u2033]/g, '"'],
+  [/[\u2010-\u2015\u2212]/g, '-'],
+];
+
+/**
+ * Printable ASCII only: accents are dropped, curly quotes and dashes made plain, anything else
+ * becomes "?". No control character can reach the printer, so text never acts as a command.
+ */
 export function toPrintable(text: string): string {
-  return text
-    .normalize('NFKD')
+  let plain = text.normalize('NFKD');
+  for (const [pattern, replacement] of PLAIN_PUNCTUATION) {
+    plain = plain.replace(pattern, replacement);
+  }
+  return plain
     .replace(/[̀-ͯ]/g, '')
     .replace(/[\r\n\t]+/g, ' ')
     .replace(/[^\x20-\x7e]/g, '?');

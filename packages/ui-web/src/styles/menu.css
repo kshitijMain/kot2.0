@@ -29,6 +29,30 @@
   opacity: 0.6;
 }
 
+/* With a photo: a small square beside the name, so a list stays quick to scan (NFR-U03). */
+.rp-menu-item--photo {
+  flex-direction: row;
+  align-items: center;
+  gap: var(--rp-space-3);
+  padding: var(--rp-space-3);
+}
+
+/* Two classes: DishPhoto's own full width comes later in the stylesheet. */
+.rp-menu-item--photo > .rp-menu-item__photo {
+  flex: none;
+  width: calc(var(--rp-touch-target) * 1.25);
+  border-radius: var(--rp-radius-md);
+  aspect-ratio: 1;
+}
+
+.rp-menu-item__body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--rp-space-1);
+  min-width: 0;
+}
+
 .rp-menu-item__top {
   display: flex;
   align-items: flex-start;

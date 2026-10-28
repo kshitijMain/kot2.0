@@ -49,6 +49,12 @@ export const MENU_IMPORT_COLUMNS: Readonly<Record<MenuImportSheet, readonly Colu
     column('Modifier groups', false, 'Comma separated group names from the Modifiers sheet'),
     column('Repeatable', false, 'Yes if it may be recommended again when already ordered'),
     column('External ID', false, 'Your own reference, e.g. from an aggregator'),
+    column('Served from', false, 'Optional daily start time, HH:MM; blank is all day'),
+    column(
+      'Served until',
+      false,
+      'Optional daily end time, HH:MM; before the start runs past midnight',
+    ),
   ],
   Variants: [
     column('Item', true, 'Item name from the Items sheet'),
@@ -142,6 +148,8 @@ export interface PlannedItem {
   readonly tags: readonly string[];
   readonly stationId: string;
   readonly prepTimeMinutes: number | null;
+  /** MENU-007: served only at these hours each day, or null for all day. */
+  readonly timeWindow: { readonly start: string; readonly end: string } | null;
   readonly displayOrder: number;
   readonly channels: readonly ImportChannel[];
   readonly variants: readonly { name: string; price: Paise; externalId: string | null }[];
@@ -199,9 +207,52 @@ const splitList = (text: string, separator: string | RegExp) =>
     .map((part) => part.trim())
     .filter((part) => part !== '');
 
-interface SheetRow {
+/** A filled row of a sheet: its spreadsheet row number and its cells by column name. */
+export interface SheetRow {
   readonly row: number;
   get(column: string): string;
+}
+
+/**
+ * The filled rows of a sheet, the header and the template's notes row left out; columns are found
+ * by their names in any order. `onIssue` hears about unknown and missing columns.
+ */
+export function importSheetRows(
+  sheets: MenuImportSheets,
+  sheet: MenuImportSheet,
+  onIssue?: (sheet: MenuImportSheet, row: number, column: string, message: string) => void,
+): SheetRow[] {
+  const raw = sheets[sheet];
+  if (raw === undefined) return [];
+  const [header = [], ...body] = raw;
+  const known = new Map(MENU_IMPORT_COLUMNS[sheet].map((spec) => [headerKey(spec.name), spec]));
+  const positions = new Map<string, number>();
+  header.forEach((cell, index) => {
+    const spec = known.get(headerKey(cell));
+    if (spec !== undefined && !positions.has(spec.name)) positions.set(spec.name, index);
+    else if (cell.trim() !== '' && spec === undefined) {
+      onIssue?.(sheet, 1, cell.trim(), 'Unknown column; use the template’s column names');
+    }
+  });
+  for (const spec of MENU_IMPORT_COLUMNS[sheet]) {
+    if (spec.required && !positions.has(spec.name)) {
+      onIssue?.(sheet, 1, spec.name, 'This column is missing');
+    }
+  }
+  const rows: SheetRow[] = [];
+  body.forEach((cells, index) => {
+    if (cells.every((cell) => cell.trim() === '')) return;
+    // The template's second row explains each column; it is skipped.
+    if (index === 0 && cells.some((cell) => cell.trim().startsWith('Required'))) return;
+    rows.push({
+      row: index + 2,
+      get: (name) => {
+        const position = positions.get(name);
+        return position === undefined ? '' : (cells[position] ?? '').trim();
+      },
+    });
+  });
+  return rows;
 }
 
 /** Plans an import, or lists every problem found. */
@@ -220,39 +271,11 @@ export function planMenuImport(
   };
 
   const rowsOf = (sheet: MenuImportSheet): SheetRow[] => {
-    const raw = sheets[sheet];
-    if (raw === undefined) {
+    if (sheets[sheet] === undefined) {
       if (sheet === 'Items') issue(sheet, null, null, 'The Items sheet is missing');
       return [];
     }
-    const [header = [], ...body] = raw;
-    const known = new Map(MENU_IMPORT_COLUMNS[sheet].map((spec) => [headerKey(spec.name), spec]));
-    const positions = new Map<string, number>();
-    header.forEach((cell, index) => {
-      const spec = known.get(headerKey(cell));
-      if (spec !== undefined && !positions.has(spec.name)) positions.set(spec.name, index);
-      else if (cell.trim() !== '' && spec === undefined) {
-        issue(sheet, 1, cell.trim(), 'Unknown column; use the template’s column names');
-      }
-    });
-    for (const spec of MENU_IMPORT_COLUMNS[sheet]) {
-      if (spec.required && !positions.has(spec.name)) {
-        issue(sheet, 1, spec.name, 'This column is missing');
-      }
-    }
-    const rows: SheetRow[] = [];
-    body.forEach((cells, index) => {
-      if (cells.every((cell) => cell.trim() === '')) return;
-      // The template's second row explains each column; it is skipped.
-      if (index === 0 && cells.some((cell) => cell.trim().startsWith('Required'))) return;
-      rows.push({
-        row: index + 2,
-        get: (name) => {
-          const position = positions.get(name);
-          return position === undefined ? '' : (cells[position] ?? '').trim();
-        },
-      });
-    });
+    const rows = importSheetRows(sheets, sheet, issue);
     if (rows.length > MENU_IMPORT_MAX_ROWS) {
       issue(sheet, null, null, `More than ${String(MENU_IMPORT_MAX_ROWS)} rows`);
       return [];
@@ -282,7 +305,7 @@ export function planMenuImport(
     sheet: MenuImportSheet,
     row: SheetRow,
     name: string,
-    options: { required: boolean; allowNegative?: boolean },
+    options: { required: boolean; allowNegative?: boolean; aboveZero?: boolean },
   ): Paise | null => {
     const value = row.get(name);
     if (value === '') {
@@ -293,6 +316,10 @@ export function planMenuImport(
       const paise = parseRupees(value, { allowNegative: options.allowNegative ?? false });
       if (Math.abs(paise) > 10_000_000) {
         issue(sheet, row.row, name, 'At most ₹1,00,000');
+        return null;
+      }
+      if (options.aboveZero === true && paise <= 0) {
+        issue(sheet, row.row, name, 'A price above ₹0');
         return null;
       }
       return paise;
@@ -470,7 +497,7 @@ export function planMenuImport(
     const sub = text('Items', row, 'Sub-category', { required: false, max: 60 });
     const shortCode = row.get('Short code');
     const description = text('Items', row, 'Description', { required: false, max: 500 });
-    const price = rupees('Items', row, 'Price', { required: false });
+    const price = rupees('Items', row, 'Price', { required: false, aboveZero: true });
     const taxName = row.get('Tax group');
     const tax = taxGroups.get(fold(taxName));
     if (taxName === '') issue('Items', row.row, 'Tax group', 'Required');
@@ -494,6 +521,23 @@ export function planMenuImport(
     const repeatable = parseYesNo(row.get('Repeatable'));
     if (repeatable === null) issue('Items', row.row, 'Repeatable', 'Yes or No');
     const externalId = text('Items', row, 'External ID', { required: false, max: 128 });
+    const servedFrom = timeOf(row.get('Served from'));
+    const servedUntil = timeOf(row.get('Served until'));
+    if (servedFrom === undefined) issue('Items', row.row, 'Served from', 'A time, HH:MM');
+    if (servedUntil === undefined) issue('Items', row.row, 'Served until', 'A time, HH:MM');
+    let hoursValid = servedFrom !== undefined && servedUntil !== undefined;
+    if (hoursValid && (servedFrom === null) !== (servedUntil === null)) {
+      issue(
+        'Items',
+        row.row,
+        servedFrom === null ? 'Served from' : 'Served until',
+        'Give both times or neither',
+      );
+      hoursValid = false;
+    } else if (hoursValid && servedFrom !== null && servedFrom === servedUntil) {
+      issue('Items', row.row, 'Served until', 'The hours must start and end at different times');
+      hoursValid = false;
+    }
     const tags = listOf('Items', row, 'Tags', { max: 30, count: 20 });
     const synonyms = listOf('Items', row, 'Synonyms', { max: 40, count: 20 });
     const groupRefs: ImportRef[] = [];
@@ -547,7 +591,8 @@ export function planMenuImport(
       channels === null ||
       repeatable === null ||
       tags === null ||
-      synonyms === null
+      synonyms === null ||
+      !hoursValid
     ) {
       continue;
     }
@@ -570,6 +615,10 @@ export function planMenuImport(
       tags,
       stationId: station.id,
       prepTimeMinutes: prep === -1 ? null : prep,
+      timeWindow:
+        typeof servedFrom === 'string' && typeof servedUntil === 'string'
+          ? { start: servedFrom, end: servedUntil }
+          : null,
       displayOrder,
       channels,
       variants: [],
@@ -584,7 +633,7 @@ export function planMenuImport(
   for (const row of rowsOf('Variants')) {
     const itemName = text('Variants', row, 'Item', { required: true, max: 80 });
     const name = text('Variants', row, 'Variant', { required: true, max: 40 });
-    const price = rupees('Variants', row, 'Price', { required: true });
+    const price = rupees('Variants', row, 'Price', { required: true, aboveZero: true });
     const externalId = text('Variants', row, 'External ID', { required: false, max: 128 });
     if (itemName === null) continue;
     const item = items.get(fold(itemName));

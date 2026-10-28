@@ -12,6 +12,7 @@ import { PrismaService } from '../../src/database/prisma.service.js';
 import { NOTIFICATION_CLOCK, NOTIFICATION_OPTIONS } from '../../src/notifications/clock.js';
 import { NotificationsService } from '../../src/notifications/notifications.service.js';
 import { PRESENCE } from '../../src/notifications/presence.js';
+import { SettingsService } from '../../src/settings/settings.service.js';
 import { authHeaders, type AuthKit, createAuthKit, signIn } from '../helpers/auth-kit.js';
 import { createTestApp, httpServer } from '../helpers/test-app.js';
 import { createTestDatabase, type TestDatabase } from '../helpers/test-database.js';
@@ -124,7 +125,8 @@ describe('[NTF-001] [NTF-003] [NTF-004] a bill request', () => {
     });
     expect([...alert.recipientIds].sort()).toEqual([kit.staff.WAITER, kit.staff.CASHIER].sort());
     expect(alert.escalateAt).toEqual(new Date(now.getTime() + 60_000));
-    expect(alert.nextRepeatAt).toEqual(new Date(now.getTime() + 60_000));
+    // A waiter's alert rings once (2026-10-25); escalating is what follows it up.
+    expect(alert.nextRepeatAt).toBeNull();
     const raised = await events(alert.id, 'AlertRaised');
     expect(raised).toHaveLength(1);
     expect(raised[0]?.audience).toMatchObject({ staffIds: alert.recipientIds });
@@ -174,6 +176,15 @@ describe('[NTF-001] [NTF-003] [NTF-004] a bill request', () => {
 
 describe('[NTF-002] [NTF-005] repeats and escalation', () => {
   it('repeats every R and escalates after N to the managers on duty, once', async () => {
+    // A manager brings the repeats back for bill requests (NTF-002), as the BRD's factory rule had.
+    await prisma.setting.create({
+      data: {
+        restaurantId: kit.restaurantId,
+        key: 'notifications.rules',
+        value: { BILL_REQUEST: { repeat: 'UNTIL_ACKED' } },
+      },
+    });
+    app.get(SettingsService).invalidate();
     const session = await openTable('6');
     const alert = await requestBill(session);
     later(59);
@@ -207,6 +218,10 @@ describe('[NTF-002] [NTF-005] repeats and escalation', () => {
     expect((await prisma.alert.findUniqueOrThrow({ where: { id: alert.id } })).status).toBe(
       'CLEARED',
     );
+    await prisma.setting.deleteMany({
+      where: { restaurantId: kit.restaurantId, key: 'notifications.rules' },
+    });
+    app.get(SettingsService).invalidate();
   });
 
   it('[NTF-007] goes to the managers at once when the waiter has neither pager nor app', async () => {
@@ -217,6 +232,63 @@ describe('[NTF-002] [NTF-005] repeats and escalation', () => {
     expect(alert.recipientIds).toContain(kit.staff.MANAGER);
     expect(alert.escalateAt).toBeNull();
     expect(await events(alert.id, 'AlertEscalated')).toHaveLength(1);
+  });
+});
+
+describe('[NTF-006] waiters’ alerts that need no acknowledgement (2026-10-25)', () => {
+  const repeats = async (alertId: string) =>
+    (await events(alertId, 'AlertRaised')).map(
+      (row) => (row.payload as { payload: { repeat: number } }).payload.repeat,
+    );
+
+  it('rings food ready again for each dish, once for a whole ticket marked at once', async () => {
+    const ready = (item: string) =>
+      prisma.transaction((tx) =>
+        service().raise(tx, {
+          restaurantId: kit.restaurantId,
+          type: 'ITEM_READY',
+          tableId: tables['4'] ?? null,
+          dedupeKey: 'ready:rings-again',
+          payload: { items: [item] },
+          renotify: (before) => ({
+            ...before,
+            items: [...(Array.isArray(before.items) ? (before.items as unknown[]) : []), item],
+          }),
+        }),
+      );
+    const first = await ready('Dal Makhani');
+    // The rest of the ticket a moment later: the dishes are added, the phone rings once.
+    expect(await ready('Butter Naan')).toEqual({ alertId: first.alertId, alreadyOpen: true });
+    let alert = await prisma.alert.findUniqueOrThrow({ where: { id: first.alertId } });
+    expect(alert.payload).toEqual({ items: ['Dal Makhani', 'Butter Naan'] });
+    expect(await repeats(first.alertId)).toEqual([0, 0]);
+
+    // Another dish later: it rings again, as a repeat does.
+    later(30);
+    await ready('Paneer Tikka');
+    alert = await prisma.alert.findUniqueOrThrow({ where: { id: first.alertId } });
+    expect(alert.payload).toEqual({ items: ['Dal Makhani', 'Butter Naan', 'Paneer Tikka'] });
+    expect(alert.repeatCount).toBe(1);
+    expect(await repeats(first.alertId)).toEqual([0, 0, 1]);
+    // It neither repeats nor escalates by itself: the kitchen's clock does that (KDS-006).
+    expect(alert).toMatchObject({ escalateAt: null, nextRepeatAt: null });
+  });
+
+  it('[NTF-008] closes a manager’s nudge by itself after a while', async () => {
+    const response = await server()
+      .post('/api/v1/alerts/nudge')
+      .set(as(manager))
+      .send({ staffIds: [kit.staff.WAITER], message: 'Come to counter' });
+    expect(response.status, JSON.stringify(response.body)).toBe(201);
+    const alertId = (response.body as { alertIds: string[] }).alertIds[0] ?? '';
+    later(9 * 60);
+    await service().processDue();
+    expect((await prisma.alert.findUniqueOrThrow({ where: { id: alertId } })).status).toBe('OPEN');
+    later(60);
+    await service().processDue();
+    const closed = await prisma.alert.findUniqueOrThrow({ where: { id: alertId } });
+    expect(closed).toMatchObject({ status: 'CLEARED', clearedAt: now, escalatedAt: null });
+    expect(await events(alertId, 'AlertCleared')).toHaveLength(1);
   });
 });
 
@@ -231,7 +303,7 @@ describe('[NTF-005] timers survive a restart', () => {
     expect(await service().processDue()).toBeGreaterThanOrEqual(1);
     const after = await prisma.alert.findUniqueOrThrow({ where: { id: pending.id } });
     expect(after.escalatedAt).toEqual(now);
-    // Missed repeats come out as one, not a burst.
-    expect(after.repeatCount).toBe(pending.repeatCount + 1);
+    // It rings once: no repeats were owed.
+    expect(after.repeatCount).toBe(pending.repeatCount);
   });
 });

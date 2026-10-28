@@ -70,7 +70,14 @@ export async function buildMenuContent(tx: MenuContentClient, restaurantId: stri
     tx.modifierGroup.findMany({
       where: active,
       orderBy: { id: 'asc' },
-      include: { options: { where: { archivedAt: null }, orderBy: { displayOrder: 'asc' } } },
+      // An add-on marked not available is left out like an archived one, so no surface offers it
+      // and no order can name it (QA-015).
+      include: {
+        options: {
+          where: { archivedAt: null, available: true },
+          orderBy: { displayOrder: 'asc' },
+        },
+      },
     }),
     tx.taxGroup.findMany({
       where: active,

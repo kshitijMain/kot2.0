@@ -20,5 +20,8 @@
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "clean": "rm -rf dist coverage"
+  },
+  "devDependencies": {
+    "fast-check": "4.10.2"
   }
 }

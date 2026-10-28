@@ -19,7 +19,7 @@ import {
   selectable,
   visibleItems,
 } from '../src/menu-view.js';
-import { lineActions, servableLines } from '../src/item-actions.js';
+import { lineActions } from '../src/item-actions.js';
 import { displayState, kotDelivery, kotDeliveryText } from '../src/order-state.js';
 import { IDS, MENU, sentOrder } from '../src/testing/index.js';
 
@@ -216,18 +216,13 @@ describe('[WTR-007] [WTR-009] [ORD-011] what can be done with a sent line', () =
     expect(lineActions(line('READY'), 'KITCHEN', false).void).toBeNull();
   });
 
-  it('takes no steps on a combo part, and lists the lines that can be served', () => {
+  it('takes no steps on a combo part', () => {
     expect(lineActions(line('READY', 'combo'), 'MANAGER', true)).toEqual({
       pickUp: false,
       serve: false,
       cancel: false,
       void: null,
     });
-    const ready = sentOrder('READY');
-    const cooking = sentOrder('PREPARING', { id: 'second' });
-    expect(servableLines([ready, cooking], 'WAITER', true).map((served) => served.state)).toEqual([
-      'READY',
-    ]);
   });
 });
 

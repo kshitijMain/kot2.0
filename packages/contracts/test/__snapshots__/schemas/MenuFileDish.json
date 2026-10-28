@@ -1,0 +1,102 @@
+{
+  "input": {
+    "type": "object",
+    "properties": {
+      "row": { "type": "integer", "exclusiveMinimum": 0, "maximum": 9007199254740991 },
+      "name": { "type": "string" },
+      "shortCode": { "type": ["string", "null"] },
+      "category": { "type": "string" },
+      "subCategory": { "type": ["string", "null"] },
+      "foodType": {
+        "anyOf": [{ "type": "string", "enum": ["VEG", "NON_VEG", "EGG"] }, { "type": "null" }]
+      },
+      "price": {
+        "anyOf": [
+          { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+          { "type": "null" }
+        ]
+      },
+      "sizes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "price": {
+              "anyOf": [
+                { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+                { "type": "null" }
+              ]
+            }
+          },
+          "required": ["name", "price"]
+        }
+      },
+      "addOnGroups": { "type": "array", "items": { "type": "string" } },
+      "combo": { "type": "boolean" }
+    },
+    "required": [
+      "row",
+      "name",
+      "shortCode",
+      "category",
+      "subCategory",
+      "foodType",
+      "price",
+      "sizes",
+      "addOnGroups",
+      "combo"
+    ]
+  },
+  "output": {
+    "type": "object",
+    "properties": {
+      "row": { "type": "integer", "exclusiveMinimum": 0, "maximum": 9007199254740991 },
+      "name": { "type": "string" },
+      "shortCode": { "type": ["string", "null"] },
+      "category": { "type": "string" },
+      "subCategory": { "type": ["string", "null"] },
+      "foodType": {
+        "anyOf": [{ "type": "string", "enum": ["VEG", "NON_VEG", "EGG"] }, { "type": "null" }]
+      },
+      "price": {
+        "anyOf": [
+          { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+          { "type": "null" }
+        ]
+      },
+      "sizes": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "name": { "type": "string" },
+            "price": {
+              "anyOf": [
+                { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+                { "type": "null" }
+              ]
+            }
+          },
+          "required": ["name", "price"],
+          "additionalProperties": false
+        }
+      },
+      "addOnGroups": { "type": "array", "items": { "type": "string" } },
+      "combo": { "type": "boolean" }
+    },
+    "required": [
+      "row",
+      "name",
+      "shortCode",
+      "category",
+      "subCategory",
+      "foodType",
+      "price",
+      "sizes",
+      "addOnGroups",
+      "combo"
+    ],
+    "additionalProperties": false
+  }
+}

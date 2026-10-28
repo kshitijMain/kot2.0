@@ -217,7 +217,7 @@ describe('[TAB-004] [NTF-003] a diner calls from the table tablet', () => {
     expect(await prisma.serviceRequest.count({ where: { tableSessionId: session.id } })).toBe(2);
   });
 
-  it('[NTF-002] [NTF-005] repeats every R, escalates after N, and stops when acknowledged', async () => {
+  it('[NTF-002] [NTF-005] escalates after N without repeating, and stops when acknowledged', async () => {
     await openTable('2');
     const call = await press('2', 'WAITER');
     // Other tests' alerts are due at the same times, so this one is looked at on its own.
@@ -227,7 +227,8 @@ describe('[TAB-004] [NTF-003] a diner calls from the table tablet', () => {
     later(1);
     await notifications().processDue();
     const escalated = await alertOf(call.id);
-    expect(escalated).toMatchObject({ repeatCount: 1, escalatedAt: now });
+    // It rang once (2026-10-25): the escalation follows it up, not reminders.
+    expect(escalated).toMatchObject({ repeatCount: 0, escalatedAt: now });
     expect(escalated.recipientIds).toEqual(
       expect.arrayContaining([kit.staff.WAITER, kit.staff.MANAGER]),
     );
@@ -263,7 +264,7 @@ describe('[TAB-004] [NTF-003] a diner calls from the table tablet', () => {
     });
     later(600);
     await notifications().processDue();
-    expect(await alertOf(call.id)).toMatchObject({ repeatCount: 1, status: 'ACKNOWLEDGED' });
+    expect(await alertOf(call.id)).toMatchObject({ repeatCount: 0, status: 'ACKNOWLEDGED' });
     // The tablet shows "Waiter is on the way".
     expect((await tabletView('2')).requests[0]?.state).toBe('ACKNOWLEDGED');
 

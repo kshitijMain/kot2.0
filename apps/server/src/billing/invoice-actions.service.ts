@@ -332,6 +332,16 @@ export class InvoiceActionsService {
       if (invoice.status === 'VOIDED') {
         throw new AppError(409, 'INVOICE_VOIDED', 'This invoice is voided. Edit its replacement.');
       }
+      // Only an unpaid bill is edited (decision 84): cutting a part-paid bill below what was paid
+      // would leave it impossible to settle (QA-005).
+      const paid = await tx.payment.count({ where: { invoiceId, status: 'CAPTURED' } });
+      if (paid > 0) {
+        throw new AppError(
+          409,
+          'INVOICE_PART_PAID',
+          'Part of this bill is paid. Take the rest, or void it and issue a new one (manager PIN needed).',
+        );
+      }
       const bill = await tx.bill.findUniqueOrThrow({ where: { id: found.billId } });
       if (bill.status === 'OPEN') {
         throw new AppError(409, 'BILL_ALREADY_OPEN', 'This bill is already open for changes.');

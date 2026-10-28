@@ -1,6 +1,8 @@
 export * from './components/Button.js';
 export * from './components/ChoiceGroup.js';
 export * from './components/ComboChoices.js';
+export * from './components/DishPhoto.js';
+export * from './components/ErrorBoundary.js';
 export * from './components/Glyph.js';
 export * from './components/ItemOptions.js';
 export * from './components/MenuItemCard.js';
@@ -15,6 +17,7 @@ export * from './components/Text.js';
 export * from './components/TextField.js';
 export * from './components/Toast.js';
 export * from './glyphs.js';
+export * from './insets.js';
 export * from './screen-guard.js';
 export * from './strings.js';
 export * from './theme.js';

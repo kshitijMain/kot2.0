@@ -2,6 +2,7 @@
 module.exports = {
   preset: '@react-native/jest-preset',
   testMatch: ['<rootDir>/test/**/*.test.tsx'],
+  setupFiles: ['<rootDir>/test/setup.ts'],
   // The first render in each test file transforms and loads React Native's renderer. On a CI runner
   // with every package's tests running at once and a cold transform cache, that alone has taken
   // over 30 s, so tests get 2 minutes; CI keeps the transform cache between runs (ci.yml).

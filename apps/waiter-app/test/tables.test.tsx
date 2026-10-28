@@ -1,6 +1,6 @@
 import { en } from '@rp/i18n';
 import { eventFrame } from '@rp/mobile-core/testing';
-import { act, fireEvent, screen, within } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import { BackHandler } from 'react-native';
 import { PAGER_REFRESH_MS } from '../src/PagerCard';
 import { mayMove } from '../src/MoveSheet';
@@ -250,23 +250,57 @@ describe('[TBL-005] [WTR-008] moving a table and asking for the bill', () => {
   });
 });
 
+describe('the phone’s back button on a table', () => {
+  it('goes from the menu to the order, then to the tables', async () => {
+    const back = jest.spyOn(BackHandler, 'addEventListener');
+    await signedInApp();
+    await fireEvent.press(await tile(/^T2, Occupied/));
+    await fireEvent.press(await screen.findByRole('tab', { name: 'Menu' }));
+    expect(screen.getByRole('tab', { name: 'Menu' })).toBeSelected();
+
+    const press = async () => {
+      const handler = back.mock.calls.at(-1)?.[1];
+      await act(async () => {
+        expect(handler?.({ type: 'hardwareBackPress', timeStamp: 0 })).toBe(true);
+        await Promise.resolve();
+      });
+    };
+    await press();
+    expect(screen.getByRole('tab', { name: 'Order' })).toBeSelected();
+    expect(screen.getByRole('header', { name: 'Table T2' })).toBeOnTheScreen();
+    await press();
+    expect(await tile(/^T2, Occupied/)).toBeOnTheScreen();
+    back.mockRestore();
+  });
+});
+
+/** The home screen's Menu: pager, break, takeaway and signing out (2026-10-25). */
+async function openMenu() {
+  await fireEvent.press(await screen.findByTestId('home-menu'));
+  expect(screen.getByRole('header', { name: 'Menu' })).toBeOnTheScreen();
+}
+
 describe('[WTR-014] the waiter’s pager', () => {
   afterEach(() => {
     jest.useRealTimers();
   });
 
-  it('shows it connected with its battery', async () => {
+  it('shows it connected with its battery in the Menu, and nothing on the tables', async () => {
     await signedInApp();
+    expect(await screen.findByRole('button', { name: /^T2, Occupied/ })).toBeOnTheScreen();
+    expect(screen.queryByTestId('pager-card')).toBeNull();
+    await openMenu();
     const card = await screen.findByTestId('pager-card');
     expect(card).toHaveProp('accessibilityLabel', 'My pager: Pager 3, Connected, Battery 80%');
   });
 
-  it('warns when the pager is not connected or low, and reads it again when that changes', async () => {
+  it('warns on the tables when the pager is not connected or low, and reads it again', async () => {
     // Fake time from the start, so the card's minute timer is a fake one too.
     jest.useFakeTimers();
     const restaurant = new Restaurant();
     const { sockets } = await signedInApp(restaurant);
-    expect(await screen.findByTestId('pager-card')).toBeOnTheScreen();
+    expect(await screen.findByRole('button', { name: /^T2, Occupied/ })).toBeOnTheScreen();
+    expect(screen.queryByTestId('pager-card')).toBeNull();
     if (restaurant.pager !== null) restaurant.pager = { ...restaurant.pager, online: false };
     await act(async () => {
       sockets.sync(0);
@@ -304,6 +338,7 @@ describe('[WTR-014] the waiter’s pager', () => {
     const given = restaurant.pager;
     restaurant.pager = null;
     const { sockets } = await signedInApp(restaurant);
+    await openMenu();
     expect(await screen.findByText('No pager is given to you.')).toBeOnTheScreen();
     restaurant.pager = given;
     await act(async () => {
@@ -321,6 +356,7 @@ describe('[WTR-014] the waiter’s pager', () => {
     const restaurant = new Restaurant();
     restaurant.pager = null;
     await signedInApp(restaurant);
+    await openMenu();
     expect(await screen.findByText('No pager is given to you.')).toBeOnTheScreen();
 
     const broken = new Restaurant();
@@ -329,28 +365,42 @@ describe('[WTR-014] the waiter’s pager', () => {
       body: { code: 'INTERNAL', message: 'The server had a problem.' },
     }));
     await signedInApp(broken, server);
+    expect(await screen.findByRole('button', { name: /^T2, Occupied/ })).toBeOnTheScreen();
+    expect(screen.queryByText('Your pager status could not be read.')).toBeNull();
+    await openMenu();
     expect(await screen.findByText('Your pager status could not be read.')).toBeOnTheScreen();
   });
 });
 
 describe('[NTF-009] on break', () => {
-  it('goes on break, says where the alerts go, and comes back', async () => {
+  it('goes on break from the Menu, says so on the tables, and comes back', async () => {
     const restaurant = new Restaurant();
     await signedInApp(restaurant);
+    expect(await screen.findByRole('button', { name: /^T2, Occupied/ })).toBeOnTheScreen();
+    expect(screen.queryByTestId('break-card')).toBeNull();
+    await openMenu();
     const card = await screen.findByTestId('break-card');
     await fireEvent.press(within(card).getByText(en.mobile.break.start));
     expect(await within(card).findByText(/^On break since .*manager on duty\.$/)).toBeOnTheScreen();
     expect(restaurant.breakSince).not.toBeNull();
-    await fireEvent.press(within(card).getByText(en.mobile.break.end));
-    expect(await within(card).findByText(en.mobile.break.hint)).toBeOnTheScreen();
+    await fireEvent.press(screen.getByRole('button', { name: 'Close' }));
+
+    // On the tables while the break lasts, with the way back.
+    const shown = await screen.findByTestId('break-card');
+    await fireEvent.press(within(shown).getByText(en.mobile.break.end));
     expect(restaurant.breakSince).toBeNull();
+    await waitFor(() => {
+      expect(screen.queryByTestId('break-card')).toBeNull();
+    });
   });
 });
 
 describe('[WTR-013] a takeaway order from the phone', () => {
   it('sends it to the kitchen with the customer’s name, and shows its token', async () => {
     const restaurant = new Restaurant();
+    const back = jest.spyOn(BackHandler, 'addEventListener');
     const { server } = await signedInApp(restaurant);
+    await openMenu();
     await fireEvent.press(await screen.findByTestId('new-takeaway'));
     expect(await screen.findByText(en.mobile.takeaway.none)).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'Main Course' }));
@@ -367,5 +417,14 @@ describe('[WTR-013] a takeaway order from the phone', () => {
     });
     expect(await screen.findByTestId('takeaway-61')).toBeOnTheScreen();
     expect(screen.getByText('Token 61 · Asha')).toBeOnTheScreen();
+
+    // The phone's back button goes back to the tables, not out of the app.
+    const handler = back.mock.calls.at(-1)?.[1];
+    await act(async () => {
+      expect(handler?.({ type: 'hardwareBackPress', timeStamp: 0 })).toBe(true);
+      await Promise.resolve();
+    });
+    expect(await screen.findByRole('button', { name: /^T2, Occupied/ })).toBeOnTheScreen();
+    back.mockRestore();
   });
 });

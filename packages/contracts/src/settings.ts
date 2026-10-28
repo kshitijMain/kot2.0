@@ -105,7 +105,9 @@ const NotificationRuleOverrides = z.partialRecord(
       .optional(),
     pagerText: z.string().trim().min(1).max(20).nullable().optional(),
     escalate: z.boolean().optional(),
-    repeat: z.enum(['UNTIL_ACKED', 'NONE', 'ONCE_PER_STATE', 'UNTIL_RESOLVED', 'DAILY']).optional(),
+    repeat: z
+      .enum(['UNTIL_ACKED', 'NONE', 'ONCE_PER_STATE', 'UNTIL_RESOLVED', 'DAILY', 'AUTO_CLOSE'])
+      .optional(),
   }),
 );
 /** `HH:MM`, 24-hour clock. */
@@ -516,6 +518,17 @@ export const SETTINGS = [
     unit: 'seconds',
   }),
   setting({
+    key: 'notifications.autoCloseMinutes',
+    schema: int(1, 120),
+    defaultValue: 10,
+    scope: 'RESTAURANT',
+    capability: 'OPERATIONS_CONFIGURE',
+    description:
+      'A message that needs no answer, such as a manager nudge, closes itself after this long (our default).',
+    requirements: ['NTF-002', 'NTF-008'],
+    unit: 'minutes',
+  }),
+  setting({
     key: 'notifications.rules',
     schema: NotificationRuleOverrides,
     defaultValue: {},
@@ -605,11 +618,23 @@ export const SETTINGS = [
   setting({
     key: 'kds.autoEscalateNotCollected',
     schema: z.boolean(),
-    defaultValue: false,
+    // On (Business Owner, 2026-10-25): waiters do not acknowledge food ready, so food nobody picks
+    // up is what calls the manager.
+    defaultValue: true,
     scope: 'RESTAURANT',
     capability: 'OPERATIONS_CONFIGURE',
     description: 'Alert the manager without the kitchen pressing "Notify manager".',
     requirements: ['KDS-006'],
+  }),
+  setting({
+    key: 'kds.pickupMarksServed',
+    schema: z.boolean(),
+    defaultValue: true,
+    scope: 'RESTAURANT',
+    capability: 'OPERATIONS_CONFIGURE',
+    description:
+      'Picked up at the pass also marks the dish served, so waiters have nothing to mark (Business Owner, 2026-10-25).',
+    requirements: ['KDS-007', 'WTR-007'],
   }),
   setting({
     key: 'kds.soundVolumePercent',
@@ -1120,12 +1145,21 @@ const BY_KEY = new Map<string, SettingDefinition>(
 );
 
 /**
+ * Settings no screen shows and the Control Plane does not push: kept for code that is left in
+ * place but unused. The AI menu reading (ONB-006) is switched off for good (Business Owner,
+ * 2026-10-25): menus are entered by hand or with the Excel template.
+ */
+export const UNUSED_SETTING_KEYS: readonly string[] = ['features.aiMenuImport'];
+
+/**
  * The vendor settings the Control Plane pushes (UPD-010, P7-08c): every VENDOR setting except
- * those with a source of their own (the signed licence, the heartbeat answer, the installer).
+ * those with a source of their own (the signed licence, the heartbeat answer, the installer) and
+ * the unused ones.
  */
 export const REMOTE_SETTING_KEYS: readonly string[] = SETTINGS.filter(
   (definition) =>
     definition.scope === 'VENDOR' &&
+    !UNUSED_SETTING_KEYS.includes(definition.key) &&
     !['licence.', 'controlPlane.', 'onboarding.'].some((prefix) =>
       definition.key.startsWith(prefix),
     ),

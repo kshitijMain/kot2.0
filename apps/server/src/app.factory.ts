@@ -23,6 +23,7 @@ import {
   bodyParserErrorHandler,
   correlationMiddleware,
   notFoundOutsideApi,
+  refuseNulText,
 } from './http/request-pipeline.js';
 
 export const API_PREFIX = 'api/v1';
@@ -31,6 +32,7 @@ export const API_PREFIX = 'api/v1';
 type HttpsOptions = NonNullable<NestApplicationOptions['httpsOptions']>;
 const UPLOAD_PATHS = [`/${API_PREFIX}/photos`, `/${API_PREFIX}/menu/import`];
 const AI_IMPORT_PATH = `/${API_PREFIX}/menu/ai-imports`;
+const MENU_FILE_PATH = `/${API_PREFIX}/menu/files`;
 
 /**
  * Options for creating the Nest application. Nest's own body parser is disabled because
@@ -62,7 +64,8 @@ export function configureApp(
   // Order matters: correlation ID first, then the security headers every answer carries, then the
   // limit on requests per address (PC-D3) before anything reads one, then the apps the server no
   // longer serves (UPD-006), then the CA download and the console's files, then the device check
-  // and the JSON parser it chooses (PC-D1), then the parser's error handler.
+  // and the JSON parser it chooses (PC-D1), then the parser's error handler, then text the
+  // database cannot store (QA-003).
   express.use(correlationMiddleware);
   express.use(securityHeadersMiddleware);
   express.use(limitRequests);
@@ -74,9 +77,11 @@ export function configureApp(
     bodyParsers(app.get<DeviceAuthenticator>(DEVICE_AUTHENTICATOR), {
       uploads: UPLOAD_PATHS,
       aiImport: AI_IMPORT_PATH,
+      menuFile: MENU_FILE_PATH,
     }),
   );
   express.use(bodyParserErrorHandler);
+  express.use(refuseNulText);
   express.use(notFoundOutsideApi(API_PREFIX));
   app.setGlobalPrefix(API_PREFIX);
   app.enableShutdownHooks();

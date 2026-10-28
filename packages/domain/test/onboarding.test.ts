@@ -21,6 +21,7 @@ const NOTHING: OnboardingFacts = {
   staffWithPins: 0,
   pairedDevices: 0,
   tablesWithoutQr: 0,
+  qrAvailable: false,
   goLivePassed: false,
 };
 
@@ -36,6 +37,7 @@ const READY: OnboardingFacts = {
   menuPublished: true,
   staffWithPins: 6,
   pairedDevices: 3,
+  qrAvailable: true,
   goLivePassed: true,
 };
 
@@ -74,6 +76,15 @@ describe('[ONB-004] the first-run setup', () => {
     const printer = onboardingProgress({ ...facts, stationsWithoutWorkingPrinter: 1 }, marks);
     expect(printer.complete).toBe(false);
     expect(printer.steps.find((entry) => entry.step === 'GO_LIVE')?.status).toBe('TODO');
+  });
+
+  it('does not count QR table tents done on a PC that cannot take QR orders yet', () => {
+    // Every table has a code, but the vendor has not set up the QR site and relay: the codes
+    // cannot be printed and no guest can order, so the step is still to do (or to skip).
+    const facts = { ...READY, qrAvailable: false };
+    expect(stepReady('QR', facts)).toBe(false);
+    const progress = onboardingProgress(facts, { QR: 'SKIPPED' });
+    expect(progress.steps.find((entry) => entry.step === 'QR')?.status).toBe('SKIPPED');
   });
 
   it('says which marks a person may make', () => {

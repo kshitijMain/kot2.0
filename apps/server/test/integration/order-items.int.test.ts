@@ -12,6 +12,7 @@ import {
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PrismaService } from '../../src/database/prisma.service.js';
+import { SettingsService } from '../../src/settings/settings.service.js';
 import {
   authHeaders,
   type AuthKit,
@@ -154,6 +155,34 @@ describe('[ORD-010] item status', () => {
     const backwards = await step(kitchen, dal, 'MARK_READY');
     expect([backwards.status, codeOf(backwards)]).toEqual([409, 'INVALID_TRANSITION']);
     expect(await prisma.outboxEvent.count({ where: { eventType: 'ItemStatusChanged' } })).toBe(3);
+  });
+
+  it('[KDS-007] [WTR-007] serves a dish the kitchen marks picked up, unless the restaurant says not', async () => {
+    const pick = async () => {
+      const placed = await order([{ itemId: id('Dal') }]);
+      const dal = placed.items[0]?.id ?? '';
+      expect((await step(kitchen, dal, 'MARK_READY')).status).toBe(200);
+      const picked = await step(kitchen, dal, 'PICK_UP');
+      expect(picked.status, JSON.stringify(picked.body)).toBe(200);
+      return prisma.orderItem.findUniqueOrThrow({ where: { id: dal } });
+    };
+    // By default (2026-10-25) the waiter has nothing to mark: picked up is served.
+    const served = await pick();
+    expect(served.state).toBe('SERVED');
+    expect(served.pickedUpAt).not.toBeNull();
+    expect(served.servedAt).toEqual(served.pickedUpAt);
+
+    await prisma.setting.create({
+      data: { restaurantId: kit.restaurantId, key: 'kds.pickupMarksServed', value: false },
+    });
+    app.get(SettingsService).invalidate();
+    const picked = await pick();
+    expect(picked.state).toBe('PICKED_UP');
+    expect(picked.servedAt).toBeNull();
+    await prisma.setting.deleteMany({
+      where: { restaurantId: kit.restaurantId, key: 'kds.pickupMarksServed' },
+    });
+    app.get(SettingsService).invalidate();
   });
 
   it('moves the parts of a combo with the combo line', async () => {

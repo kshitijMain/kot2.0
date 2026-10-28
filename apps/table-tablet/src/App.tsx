@@ -2,6 +2,7 @@ import type { Translator } from '@rp/i18n';
 import type { ApkUpdater, DeviceSession, OtaUpdater } from '@rp/mobile-core';
 import {
   PairingScreen,
+  ScreenBoundary,
   ShellProvider,
   UpdateRequiredScreen,
   useSessionState,
@@ -46,7 +47,9 @@ export function App({
     >
       <ToastProvider>
         <StatusBar hidden />
-        <Screens device={device} />
+        <ScreenBoundary>
+          <Screens device={device} />
+        </ScreenBoundary>
       </ToastProvider>
     </ShellProvider>
   );

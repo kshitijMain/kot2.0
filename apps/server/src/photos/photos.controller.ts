@@ -40,14 +40,26 @@ export class PhotosController {
     @Res() response: Response,
   ): Promise<void> {
     const file = await this.photos.renditionFile(id, Number(width) as PhotoWidth);
-    response.setHeader('Cache-Control', CACHE_CONTROL);
-    response.setHeader('X-Content-Type-Options', 'nosniff');
-    response.type('image/webp');
     await new Promise<void>((resolve, reject) => {
-      response.sendFile(file, { dotfiles: 'deny', cacheControl: false }, (error) => {
-        if (error === undefined) resolve();
-        else reject(error);
-      });
+      // Relative to the store: only the part under it is checked for dot files. The headers go
+      // out only with the file: an error must never be cached for a year as if it were the photo.
+      response.sendFile(
+        file.path,
+        {
+          root: file.root,
+          dotfiles: 'deny',
+          cacheControl: false,
+          headers: {
+            'Cache-Control': CACHE_CONTROL,
+            'X-Content-Type-Options': 'nosniff',
+            'Content-Type': 'image/webp',
+          },
+        },
+        (error) => {
+          if (error === undefined) resolve();
+          else reject(error);
+        },
+      );
     });
   }
 }

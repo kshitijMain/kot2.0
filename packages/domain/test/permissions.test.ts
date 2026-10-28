@@ -12,6 +12,7 @@ import {
   OVERRIDE_RECORD_TYPES,
   OWNER_SECOND_FACTOR_CAPABILITIES,
   ROLES,
+  maySignInOn,
 } from '../src/index.js';
 
 describe('[AUTH-010] role permission matrix (BRD §4.2)', () => {
@@ -170,5 +171,16 @@ describe('[AUTH-012] custom roles', () => {
     expect(checkCustomRole({ ...draft, capabilities: ['ORDER_CREATE'] }, [])).toEqual([
       'NOTHING_ADDED',
     ]);
+  });
+});
+
+describe('[AUTH-001] [AUTH-010] who signs in on which device', () => {
+  it('keeps a waiter phone for waiters (2026-10-25), and every other device for everyone', () => {
+    expect(maySignInOn('WAITER_PHONE', 'WAITER')).toBe(true);
+    for (const role of ['OWNER', 'MANAGER', 'CASHIER', 'KITCHEN'] as const) {
+      expect(maySignInOn('WAITER_PHONE', role)).toBe(false);
+      expect(maySignInOn('POS', role)).toBe(true);
+    }
+    expect(maySignInOn('MANAGER_BROWSER', 'MANAGER')).toBe(true);
   });
 });

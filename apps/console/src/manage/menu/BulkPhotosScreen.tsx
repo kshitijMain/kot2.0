@@ -21,6 +21,11 @@ interface Row {
 
 let rows = 0;
 
+/** Photos the upload takes, by their names (a folder may hold other files too). */
+const PHOTO_FILE = /\.(jpe?g|png|webp)$/i;
+/** Chrome, Edge and Firefox pick a folder with this attribute; React passes it on as it is. */
+const FOLDER_PICKER = { webkitdirectory: '' } as Record<string, string>;
+
 /**
  * Bulk photo upload (P6-04c, ONB-007): many dish photos at once, each matched to a dish by its
  * file name or short code (`matchPhotos` in `@rp/domain`), with a dish list on every row to
@@ -32,6 +37,8 @@ export function BulkPhotosScreen() {
   const controller = useConsole();
   const toast = useToast();
   const input = useRef<HTMLInputElement>(null);
+  const folder = useRef<HTMLInputElement>(null);
+  const [skipped, setSkipped] = useState(0);
   const { data, reload } = useLive(
     async () =>
       (await controller.api.getMenuDraft()).items.filter((item) => item.archivedAt === null),
@@ -153,14 +160,46 @@ export function BulkPhotosScreen() {
             event.target.value = '';
           }}
         />
-        <Button
-          variant="secondary"
-          onClick={() => {
-            input.current?.click();
+        {/* A whole folder (ONB-007): the browser hands over every file in it and its folders. */}
+        <input
+          ref={folder}
+          type="file"
+          multiple
+          className="menu-photo__input"
+          aria-label={t('bulkPhotos.chooseFolder')}
+          {...FOLDER_PICKER}
+          onChange={(event) => {
+            const files = Array.from(event.target.files ?? []);
+            const photos = files.filter((file) => PHOTO_FILE.test(file.name));
+            setSkipped(files.length - photos.length);
+            add(photos);
+            event.target.value = '';
           }}
-        >
-          {t('bulkPhotos.choose')}
-        </Button>
+        />
+        <div className="menu-actions">
+          <Button
+            variant="secondary"
+            onClick={() => {
+              input.current?.click();
+            }}
+          >
+            {t('bulkPhotos.choose')}
+          </Button>
+          <Button
+            variant="secondary"
+            onClick={() => {
+              folder.current?.click();
+            }}
+          >
+            {t('bulkPhotos.chooseFolder')}
+          </Button>
+        </div>
+        <p className="dashboard-section__hint">{t('bulkPhotos.folderHint')}</p>
+        {skipped === 0 ? null : (
+          <p className="dashboard-section__hint" role="status">
+            {t('bulkPhotos.skipped', { count: skipped })}
+          </p>
+        )}
         {chosen.length === 0 ? null : (
           <ul className="staff-list" aria-label={t('bulkPhotos.files')}>
             {chosen.map((row, index) => {
@@ -226,7 +265,7 @@ export function BulkPhotosScreen() {
                         setChosen(chosen.filter((entry) => entry.key !== row.key));
                       }}
                     >
-                      {t('aiImport.review.leaveOut')}
+                      {t('bulkPhotos.leaveOut')}
                     </Button>
                   )}
                 </li>
@@ -266,6 +305,8 @@ export function BulkPhotosScreen() {
         </Link>
       </div>
       <p className="dashboard-section__hint">{t('bulkPhotos.intro')}</p>
+      {/* Photos come only from the restaurant: what makes a good one. */}
+      <p className="console-notice">{t('bulkPhotos.guide')}</p>
       {content}
     </section>
   );

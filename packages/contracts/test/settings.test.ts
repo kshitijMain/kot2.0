@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   crossSettingProblems,
+  REMOTE_SETTING_KEYS,
   SETTING_KEYS,
   SETTINGS,
   SettingKeyParams,
   settingDefinition,
+  UNUSED_SETTING_KEYS,
 } from '../src/settings.js';
 
 function defaultOf(key: string): unknown {
@@ -70,7 +72,10 @@ describe('[MGR-007] [UPD-010] settings catalogue', () => {
       'kds.ageAmberMinutes': 10, // KDS-004
       'kds.ageRedMinutes': 20, // KDS-004
       'kds.readyNotCollectedMinutes': 3, // KDS-006
-      'kds.autoEscalateNotCollected': false, // KDS-006 (S)
+      // On: waiters do not acknowledge food ready, the kitchen's clock calls the manager (2026-10-25).
+      'kds.autoEscalateNotCollected': true, // KDS-006 (S)
+      'kds.pickupMarksServed': true, // KDS-007, 2026-10-25
+      'notifications.autoCloseMinutes': 10,
       'devices.lowBatteryAlertPercent': 20, // TAB-015
       'pager.lowBatteryPercent': 15, // PGR-013
       'pager.heartbeatSeconds': 30, // PGR-007
@@ -140,5 +145,13 @@ describe('[MGR-007] [UPD-010] settings catalogue', () => {
       'The red age must be later than the amber age.',
     ]);
     expect(crossSettingProblems({ ...defaults, 'storage.criticalPercent': 80 })).toHaveLength(1);
+  });
+});
+
+describe('[UPD-010] [ONB-006] unused settings', () => {
+  it('keeps the switched-off AI menu reading out of what the vendor pushes', () => {
+    expect(UNUSED_SETTING_KEYS).toEqual(['features.aiMenuImport']);
+    expect(REMOTE_SETTING_KEYS).not.toContain('features.aiMenuImport');
+    expect(REMOTE_SETTING_KEYS).toContain('qr.pickupTimeoutSeconds');
   });
 });

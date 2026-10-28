@@ -1,6 +1,6 @@
-import type { MenuItem, MenuSnapshot } from '@rp/contracts';
+import { type MenuItem, type MenuSnapshot, photoUrl } from '@rp/contracts';
 import { spacing } from '@rp/design-tokens';
-import { Note, useNow, useT } from '@rp/mobile-shell';
+import { Note, useNow, useSessionState, useT } from '@rp/mobile-shell';
 import { channelItems, displayPrice, menuCategories, menuNote, visibleItems } from '@rp/ordering';
 import { Button, MenuItemCard, TextField } from '@rp/ui-native';
 import { useMemo, useState } from 'react';
@@ -10,6 +10,7 @@ import { ScrollView, StyleSheet, View } from 'react-native';
  * The menu on the phone (WTR-003, MENU-012): categories, search by name, short code or synonym,
  * and the dishes the waiter app sells, each with its price, food type and what is left. Sold-out
  * and switched-off dishes are shown but cannot be chosen (WTR-010), live as availability changes.
+ * Each dish shows its photo from the restaurant's PC, or the placeholder (MENU-008).
  */
 export function MenuBrowser({
   menu,
@@ -21,6 +22,12 @@ export function MenuBrowser({
   const t = useT();
   // MENU-005: a combo shows as unavailable outside its hours.
   const now = useNow(30_000);
+  const { serverUrl } = useSessionState();
+  /** A small rendition from the restaurant's PC (photos are public there), or the placeholder. */
+  const photoOf = (item: MenuItem) =>
+    item.photoId === undefined || serverUrl === undefined
+      ? null
+      : { uri: `${serverUrl}${photoUrl(item.photoId, 160)}` };
   const items = useMemo(() => channelItems(menu, 'WAITER_APP'), [menu]);
   const categories = useMemo(() => menuCategories(menu, items), [menu, items]);
   const [query, setQuery] = useState('');
@@ -77,6 +84,8 @@ export function MenuBrowser({
                 price={displayPrice(item)}
                 foodType={item.foodType}
                 foodTypeLabel={t(`pos.menu.foodType.${item.foodType}`)}
+                photo={photoOf(item)}
+                testID={`dish-${item.id}`}
                 {...menuNote(menu, item, t, now)}
                 onSelect={() => {
                   onChoose(item);

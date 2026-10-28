@@ -67,10 +67,16 @@ async function pressDigits(pin: string) {
   }
 }
 
+/** Cancel or Void sits behind the dish's "More" (2026-10-25). */
+async function endItem(action: 'Cancel' | 'Void', name: string) {
+  await fireEvent.press(await screen.findByRole('button', { name: `More for ${name}` }));
+  await fireEvent.press(button(`${action} ${name}`));
+}
+
 describe('[WTR-007] [KDS-007] serving', () => {
-  it('shows ready dishes on the table tile, and marks one picked up and then served', async () => {
+  it('shows each dish’s live state, with nothing for the waiter to mark', async () => {
     const restaurant = new Restaurant();
-    sent(restaurant, 'READY', 'PREPARING');
+    sent(restaurant, 'READY', 'SERVED');
     const { server } = await signedInApp(restaurant);
     expect(
       await screen.findByRole('button', {
@@ -79,45 +85,12 @@ describe('[WTR-007] [KDS-007] serving', () => {
     ).toBeOnTheScreen();
     await openTable('T2');
 
-    await screen.findByText('1 × Dal Makhani');
-    // Still cooking: nothing to serve yet.
-    expect(screen.queryByRole('button', { name: 'Mark Paneer Tikka served' })).toBeNull();
-    await fireEvent.press(button('Mark Dal Makhani picked up'));
-    expect(await within(line(DAL)).findByText('Picked up')).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Mark Dal Makhani picked up' })).toBeNull();
-
-    await fireEvent.press(button('Mark Dal Makhani served'));
-    expect(await within(line(DAL)).findByText('Served')).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Mark Dal Makhani served' })).toBeNull();
-    expect(
-      server.callsTo('POST', `/api/v1/order-items/${DAL}/status`).map((call) => call.body),
-    ).toEqual([{ event: 'PICK_UP' }, { event: 'SERVE' }]);
-  });
-
-  it('marks every ready dish served in one tap', async () => {
-    const restaurant = new Restaurant();
-    sent(restaurant, 'READY', 'PICKED_UP');
-    await signedInApp(restaurant);
-    await openTable('T2');
-
-    await fireEvent.press(await screen.findByTestId('serve-all'));
-    expect(await screen.findByText('2 dishes marked served')).toBeOnTheScreen();
-    expect(restaurant.item(DAL)?.state).toBe('SERVED');
-    expect(restaurant.item(TIKKA)?.state).toBe('SERVED');
+    expect(await within(line(DAL)).findByText('Ready')).toBeOnTheScreen();
+    expect(within(line(TIKKA)).getByText('Served')).toBeOnTheScreen();
+    // The kitchen's "Picked up" serves it: no picked up or served buttons on the phone.
+    expect(screen.queryByRole('button', { name: /picked up|served/i })).toBeNull();
     expect(screen.queryByTestId('serve-all')).toBeNull();
-  });
-
-  it("says why a step was refused, and shows the item's state now", async () => {
-    const restaurant = new Restaurant();
-    sent(restaurant, 'READY', 'PREPARING');
-    await signedInApp(restaurant);
-    await openTable('T2');
-    await screen.findByText('1 × Dal Makhani');
-    // Someone served it from another device a moment ago.
-    restaurant.setState(DAL, 'SERVED');
-    await fireEvent.press(button('Mark Dal Makhani picked up'));
-    expect(await screen.findByText('Dal Makhani has moved on already.')).toBeOnTheScreen();
-    expect(await within(line(DAL)).findByText('Served')).toBeOnTheScreen();
+    expect(server.callsTo('POST', `/api/v1/order-items/${DAL}/status`)).toHaveLength(0);
   });
 });
 
@@ -128,17 +101,20 @@ describe('[WTR-009] [ORD-011] cancellations and voids', () => {
     const { server } = await signedInApp(restaurant);
     await openTable('T2');
 
-    // Started dishes can only be voided.
+    // Started dishes can only be voided; neither shows until "More" is pressed.
     await screen.findByText('1 × Paneer Tikka');
+    expect(screen.queryByRole('button', { name: 'Cancel Dal Makhani' })).toBeNull();
+    await fireEvent.press(button('More for Paneer Tikka'));
     expect(screen.queryByRole('button', { name: 'Cancel Paneer Tikka' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Void Dal Makhani' })).toBeNull();
+    expect(button('Void Paneer Tikka')).toBeOnTheScreen();
+    await fireEvent.press(button('Close'));
 
-    await fireEvent.press(button('Cancel Dal Makhani'));
+    await endItem('Cancel', 'Dal Makhani');
     expect(screen.getByRole('header', { name: 'Cancel Dal Makhani?' })).toBeOnTheScreen();
     await fireEvent.press(button('Keep it'));
     expect(screen.queryByRole('header', { name: 'Cancel Dal Makhani?' })).toBeNull();
 
-    await fireEvent.press(button('Cancel Dal Makhani'));
+    await endItem('Cancel', 'Dal Makhani');
     expect(screen.getByTestId('end-item-confirm')).toBeDisabled();
     await fireEvent.press(button('Guest changed their mind'));
     expect(button('Guest changed their mind')).toBeSelected();
@@ -159,11 +135,11 @@ describe('[WTR-009] [ORD-011] cancellations and voids', () => {
     await fireEvent.press(await screen.findByRole('tab', { name: 'All tables' }));
     await openTable('T5');
     await screen.findByText('1 × Dal Makhani');
-    expect(screen.queryByRole('button', { name: 'Cancel Dal Makhani' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'More for Dal Makhani' })).toBeNull();
     await fireEvent.press(button('Back to tables'));
 
     await openTable('T2');
-    await fireEvent.press(await screen.findByRole('button', { name: 'Cancel Dal Makhani' }));
+    await endItem('Cancel', 'Dal Makhani');
     await fireEvent.changeText(screen.getByTestId('end-item-reason'), 'Wrong table');
     // The kitchen starts it just before the cancel arrives.
     restaurant.setState(DAL, 'PREPARING');
@@ -171,7 +147,8 @@ describe('[WTR-009] [ORD-011] cancellations and voids', () => {
     expect(
       await screen.findByText('The kitchen has started this item. Void it instead.'),
     ).toBeOnTheScreen();
-    expect(await screen.findByRole('button', { name: 'Void Dal Makhani' })).toBeOnTheScreen();
+    await fireEvent.press(await screen.findByRole('button', { name: 'More for Dal Makhani' }));
+    expect(button('Void Dal Makhani')).toBeOnTheScreen();
   });
 
   it('voids a started dish once a manager enters their PIN on the phone', async () => {
@@ -180,7 +157,7 @@ describe('[WTR-009] [ORD-011] cancellations and voids', () => {
     const { server } = await signedInApp(restaurant);
     await openTable('T2');
 
-    await fireEvent.press(await screen.findByRole('button', { name: 'Void Paneer Tikka' }));
+    await endItem('Void', 'Paneer Tikka');
     expect(screen.getByRole('header', { name: 'Void Paneer Tikka?' })).toBeOnTheScreen();
     expect(
       screen.getByText('A manager approves it with their PIN on this phone.'),
@@ -216,7 +193,7 @@ describe('[WTR-009] [ORD-011] cancellations and voids', () => {
     sent(restaurant, 'SENT', 'SERVED');
     await signedInApp(restaurant);
     await openTable('T2');
-    await fireEvent.press(await screen.findByRole('button', { name: 'Void Paneer Tikka' }));
+    await endItem('Void', 'Paneer Tikka');
     await fireEvent.press(button('Guest sent it back'));
     await fireEvent.press(screen.getByTestId('end-item-confirm'));
     await screen.findByRole('button', { name: 'Meera' });

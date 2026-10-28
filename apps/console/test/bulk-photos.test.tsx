@@ -102,4 +102,19 @@ describe('[ONB-007] adding dish photos in bulk', () => {
       screen.getAllByText(new RegExp(t('bulkPhotos.done', { count: 3 }).slice(0, 20))).length,
     ).toBeGreaterThan(0);
   });
+
+  it('takes a whole folder of photos, leaving out files that are not photos', async () => {
+    const fake = photosServer();
+    const { user } = await renderConsole({ fake, path: PATH, signedIn: 'MANAGER' });
+    const folder = await screen.findByLabelText(t('bulkPhotos.chooseFolder'));
+    expect(folder).toHaveAttribute('webkitdirectory');
+    await user.upload(folder, [
+      photo('Swaad/PTM.jpg'),
+      photo('Swaad/veg thali.png'),
+      new File(['x'], 'Swaad/notes.txt'),
+    ]);
+    const list = within(screen.getByRole('list', { name: t('bulkPhotos.files') }));
+    expect(list.getAllByRole('combobox')).toHaveLength(2);
+    expect(screen.getByText(t('bulkPhotos.skipped', { count: 1 }))).toBeVisible();
+  });
 });

@@ -131,6 +131,14 @@ export class OrderItemsService {
     ) {
       throw authErrors.forbidden();
     }
+    // KDS-007: where `kds.pickupMarksServed` is on, picked up at the pass is served at the table
+    // too, so the floor has nothing to mark (Business Owner, 2026-10-25). It needs the pick-up
+    // grant only: the kitchen does what it always did.
+    const applied: OrderItemEvent =
+      event === 'PICK_UP' &&
+      (await this.settings.snapshot(principal.restaurantId)).get('kds.pickupMarksServed')
+        ? 'SERVE'
+        : event;
     const orderId = await this.prisma.transaction(async (tx) => {
       // The combo line is locked before its part, in the order cancel and void lock them.
       const found = await tx.orderItem.findFirst({
@@ -140,16 +148,22 @@ export class OrderItemsService {
       const parentId = found?.parentOrderItemId ?? null;
       if (parentId !== null) await this.lockRow(tx, parentId);
       const item = await this.lock(tx, principal.restaurantId, orderItemId);
-      const station = principal.stationId ?? null;
-      if (station !== null && item.stationId !== station) {
+      // A screen acts for every station it shows, its extra ones too (KDS-002, QA-017).
+      const stations =
+        principal.stationIds !== undefined && principal.stationIds.length > 0
+          ? principal.stationIds
+          : principal.stationId !== undefined && principal.stationId !== null
+            ? [principal.stationId]
+            : [];
+      if (stations.length > 0 && !stations.includes(item.stationId)) {
         throw authErrors.forbidden();
       }
       const now = new Date();
-      await this.step(tx, principal, item.order, item, event, now);
+      await this.step(tx, principal, item.order, item, applied, now);
       // Parts follow their combo where they can; the line itself must be able to move.
       for (const part of item.components) {
-        if (canTransition(orderItemMachine, part.state, event)) {
-          await this.step(tx, principal, item.order, part, event, now);
+        if (canTransition(orderItemMachine, part.state, applied)) {
+          await this.step(tx, principal, item.order, part, applied, now);
         }
       }
       if (item.parentOrderItemId !== null) {
@@ -264,7 +278,7 @@ export class OrderItemsService {
     ownOnly: boolean,
   ): Promise<OrderView> {
     const orderId = await this.prisma.transaction(async (tx) => {
-      const item = await this.lock(tx, principal.restaurantId, orderItemId);
+      const item = await this.lockOffBill(tx, principal.restaurantId, orderItemId);
       this.assertLine(item);
       if (ownOnly) this.assertOwn(principal, item);
       const ended = await this.end(tx, principal, item, 'CANCEL', reason);
@@ -293,7 +307,7 @@ export class OrderItemsService {
     override: ConsumedOverride | undefined,
   ): Promise<OrderView> {
     const orderId = await this.prisma.transaction(async (tx) => {
-      const item = await this.lock(tx, principal.restaurantId, orderItemId);
+      const item = await this.lockOffBill(tx, principal.restaurantId, orderItemId);
       this.assertLine(item);
       if (item.state === 'SENT') {
         throw new AppError(
@@ -337,7 +351,7 @@ export class OrderItemsService {
       );
     }
     const orderId = await this.prisma.transaction(async (tx) => {
-      const item = await this.lock(tx, principal.restaurantId, orderItemId);
+      const item = await this.lockOffBill(tx, principal.restaurantId, orderItemId);
       this.assertLine(item);
       if (item.components.length > 0) {
         throw new AppError(
@@ -357,6 +371,16 @@ export class OrderItemsService {
       const instructions =
         change.instructions === undefined ? item.instructions : change.instructions;
       if (quantity === item.quantity && instructions === item.instructions) return item.orderId;
+      // Fewer of a dish is a cancel of the rest: it follows the cancel grant, so a waiter lowers
+      // dishes on their own tables only (BRD §4.2, QA-018). More may be added as with any order.
+      if (quantity < item.quantity) {
+        const grant = actorGrant(
+          { role: principal.role, extraCapabilities: principal.capabilities },
+          'ITEM_CANCEL_BEFORE_PREP',
+        );
+        if (grant === 'DENY' || grant === 'OVERRIDE') throw authErrors.forbidden();
+        if (grant === 'OWN') this.assertOwn(principal, item);
+      }
 
       // Stock follows the quantity for items already sent (staff orders, approved ones).
       const delta = quantity - item.quantity;
@@ -628,6 +652,54 @@ export class OrderItemsService {
   }
 
   /** Locks the item row and loads it with its order and combo parts. */
+  /**
+   * Locks a line that is about to be changed, cancelled or voided, refusing one on a printed bill:
+   * the bill would no longer match what the kitchen made and what the guest pays (QA-002). Such a
+   * line changes only while its bill is reopened ("Edit bill", BILL-010). The table is locked
+   * first, as printing a bill does, so a bill printed at the same moment is seen and the locks are
+   * always taken in the same order (table, then line).
+   */
+  private async lockOffBill(
+    tx: TransactionClient,
+    restaurantId: string,
+    orderItemId: string,
+  ): Promise<ItemWithOrder> {
+    const found = await tx.orderItem.findFirst({
+      where: { id: orderItemId, restaurantId },
+      select: { order: { select: { tableId: true } } },
+    });
+    if (found !== null && found.order.tableId !== null) {
+      await tx.$queryRaw`SELECT 1 AS locked FROM tables WHERE id = ${found.order.tableId}::uuid FOR UPDATE`;
+    }
+    const item = await this.lock(tx, restaurantId, orderItemId);
+    const printed = await tx.invoiceLine.findFirst({
+      where: {
+        restaurantId,
+        orderItemId: { in: [item.id, ...item.components.map((part) => part.id)] },
+        invoice: { status: { not: 'VOIDED' } },
+      },
+      select: {
+        invoice: {
+          select: { id: true, status: true, bill: { select: { editingInvoiceId: true } } },
+        },
+      },
+    });
+    if (
+      printed !== null &&
+      !(
+        printed.invoice.status === 'ISSUED' &&
+        printed.invoice.bill?.editingInvoiceId === printed.invoice.id
+      )
+    ) {
+      throw new AppError(
+        409,
+        'ITEM_ON_PRINTED_BILL',
+        `${item.name} is on a printed bill. Use Edit bill to change it.`,
+      );
+    }
+    return item;
+  }
+
   private async lock(
     tx: TransactionClient,
     restaurantId: string,

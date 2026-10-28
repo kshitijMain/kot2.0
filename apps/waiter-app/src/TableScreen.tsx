@@ -4,6 +4,7 @@ import { fontSize, fontWeight, spacing } from '@rp/design-tokens';
 import { formatRupees } from '@rp/domain';
 import { type OrderDraft, SuggestionTracker } from '@rp/mobile-core';
 import {
+  AlertBell,
   ItemSheet,
   messageOf,
   Note,
@@ -62,11 +63,22 @@ const affectsOrders = (eventType: string) =>
 /**
  * One table in the waiter app (WTR-003, WTR-005, WTR-007 to WTR-009, WTR-012): its new items and
  * the menu to add them from, what was already sent with each ticket's delivery and each item's
- * state, to mark picked up or served, cancel, void (with a manager's PIN on this phone) or order
- * again, its orders not yet sent, its open requests, and moving it or asking for the bill. Opened
- * by the table session, so a moved table stays open here under its new name.
+ * live state, to cancel, void (with a manager's PIN on this phone) or order again, its orders not
+ * yet sent, its open requests, and moving it or asking for the bill. The kitchen marks dishes
+ * picked up, which serves them (`kds.pickupMarksServed`): the waiter has nothing to mark
+ * (2026-10-25). Opened by the table session, so a moved table stays open here under its new
+ * name. The phone's back button goes from the menu to the order, then to the tables.
  */
-export function TableScreen({ sessionId, onBack }: { sessionId: string; onBack: () => void }) {
+export function TableScreen({
+  sessionId,
+  onBack,
+  onOpenTable,
+}: {
+  sessionId: string;
+  onBack: () => void;
+  /** An alert in the bell's list opens its table. */
+  onOpenTable?: (sessionId: string) => void;
+}) {
   const session = useDeviceSession();
   const { person } = useSessionState();
   const t = useT();
@@ -140,13 +152,14 @@ export function TableScreen({ sessionId, onBack }: { sessionId: string; onBack: 
 
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      onBack();
+      if (view === 'menu') setView('order');
+      else onBack();
       return true;
     });
     return () => {
       subscription.remove();
     };
-  }, [onBack]);
+  }, [onBack, view]);
 
   if (person === undefined) return null;
   const table: TableOverviewEntry | undefined =
@@ -273,24 +286,6 @@ export function TableScreen({ sessionId, onBack }: { sessionId: string; onBack: 
     tables.reload();
   };
 
-  /** Picked up from the pass or served at the table (WTR-007, KDS-007). */
-  const step = (line: SentLine, event: 'PICK_UP' | 'SERVE') => {
-    setNotice(undefined);
-    working([line.id], true);
-    session.api.setOrderItemStatus({ params: { orderItemId: line.id }, body: { event } }).then(
-      () => {
-        working([line.id], false);
-        settled();
-      },
-      (failure: unknown) => {
-        working([line.id], false);
-        setNotice(messageOf(failure, t));
-        settled();
-      },
-    );
-  };
-
-  /** Several dishes carried to the table at once, one after another; stops at a refusal. */
   /** ORD-016: the order's held items go to the kitchen now. */
   const fire = async (order: { readonly id: string }) => {
     setNotice(undefined);
@@ -300,28 +295,6 @@ export function TableScreen({ sessionId, onBack }: { sessionId: string; onBack: 
     } catch (failure) {
       setNotice(messageOf(failure, t));
     } finally {
-      settled();
-    }
-  };
-
-  const serveAll = async (lines: readonly SentLine[]) => {
-    setNotice(undefined);
-    const ids = lines.map((line) => line.id);
-    working(ids, true);
-    let served = 0;
-    try {
-      for (const line of lines) {
-        await session.api.setOrderItemStatus({
-          params: { orderItemId: line.id },
-          body: { event: 'SERVE' },
-        });
-        served += 1;
-      }
-      toast.show({ title: t('mobile.item.servedAll', { count: served }), tone: 'success' });
-    } catch (failure) {
-      setNotice(messageOf(failure, t));
-    } finally {
-      working(ids, false);
       settled();
     }
   };
@@ -432,9 +405,16 @@ export function TableScreen({ sessionId, onBack }: { sessionId: string; onBack: 
     <Screen
       title={t('pos.table.title', { table: label })}
       actions={
-        <Button variant="ghost" onPress={onBack}>
-          {t('pos.backToTables')}
-        </Button>
+        <View style={styles.headerActions}>
+          <AlertBell {...(onOpenTable !== undefined && { onOpenTable })} />
+          <Button
+            variant="ghost"
+            accessibilityLabel={t('mobile.tables.backLabel')}
+            onPress={onBack}
+          >
+            {t('mobile.tables.back')}
+          </Button>
+        </View>
       }
       {...(!closed &&
         cart.length > 0 && {
@@ -577,10 +557,6 @@ export function TableScreen({ sessionId, onBack }: { sessionId: string; onBack: 
                   role: person.role,
                   ownTable,
                   busy: busyLines,
-                  onStep: step,
-                  onServeAll: (lines) => {
-                    void serveAll(lines);
-                  },
                   onEnd: (line, kind) => {
                     setEnding({ line, ending: kind });
                   },
@@ -644,6 +620,7 @@ export function TableScreen({ sessionId, onBack }: { sessionId: string; onBack: 
 }
 
 const styles = StyleSheet.create({
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing[1] },
   actions: { flexDirection: 'row', gap: spacing[2] },
   grow: { flex: 1 },
   heading: { fontSize: fontSize.lg, fontWeight: weight(fontWeight.semibold) },

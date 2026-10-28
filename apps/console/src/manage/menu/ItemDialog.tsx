@@ -4,8 +4,10 @@ import { useId, useState } from 'react';
 import { useConsole } from '../../app/console-context.js';
 import { useT } from '../../app/i18n.js';
 import { messageOf } from '../../app/messages.js';
+import { usualTaxGroupId } from '@rp/domain';
 import { PhotoPicker } from '../PhotoPicker.js';
 import { ComboFields } from './ComboFields.js';
+import { DishPreview } from './DishPreview.js';
 import type { MenuData } from './MenuEditor.js';
 import {
   categoryRows,
@@ -22,14 +24,32 @@ import {
   itemRequestOf,
   newKey,
   nextOrder,
+  paiseOf,
   SALES_CHANNELS,
   SPICE_LEVELS,
+  splitList,
+  withHalfAndFull,
 } from './menu-view.js';
 
+/** Fields kept under "More options": a problem in one opens it. */
+const MORE_FIELDS: readonly ItemField[] = [
+  'taxGroupId',
+  'shortCode',
+  'tags',
+  'synonyms',
+  'prepTime',
+  'hours',
+  'channels',
+  'displayOrder',
+];
+
 /**
- * Adds or edits a dish (MENU-002 to MENU-005, MENU-008, MENU-011): every attribute, a photo, sizes
- * with their own prices, the option groups it offers, and whether it is a combo of other dishes.
- * The form checks what the server checks before sending; the server checks again.
+ * Adds or edits a dish (MENU-002 to MENU-005, MENU-008, MENU-011) in plain words: name, category,
+ * a short description, photo, veg / non-veg / egg, spice, price or sizes (Half and Full in one
+ * tap), kitchen station, the add-on groups it offers and whether it is a combo. Tax group, short
+ * code, search words and the rest wait under "More options"; a new dish starts on the tax group
+ * most dishes use. A preview shows it on the waiter phone and the table tablet. The form checks
+ * what the server checks before sending; the server checks again.
  */
 export function ItemDialog({
   data,
@@ -50,12 +70,19 @@ export function ItemDialog({
   const { draft } = data;
   const activeTaxGroups = data.taxGroups.filter((group) => group.archivedAt === null);
   const activeStations = data.stations.filter((station) => station.archivedAt === null);
+  const usualTax = usualTaxGroupId(
+    draft.items.map((entry) => ({
+      taxGroupId: entry.taxGroupId,
+      archived: entry.archivedAt !== null,
+    })),
+    activeTaxGroups.map((group) => group.id),
+  );
   const existingCombo =
     item === undefined ? undefined : draft.combos.find((c) => c.itemId === item.id);
   const [form, setForm] = useState<ItemForm>(() =>
     itemFormOf(item, {
       categoryId: defaultCategoryId,
-      taxGroupId: activeTaxGroups.length === 1 ? (activeTaxGroups[0]?.id ?? '') : '',
+      taxGroupId: usualTax ?? '',
       stationId: activeStations.length === 1 ? (activeStations[0]?.id ?? '') : '',
       displayOrder: nextOrder(draft.items.map((entry) => entry.displayOrder)),
     }),
@@ -65,6 +92,7 @@ export function ItemDialog({
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [error, setError] = useState<string | undefined>();
   const problems = checkItem(form);
   const comboProblems = isCombo ? checkCombo(combo) : {};
@@ -80,6 +108,7 @@ export function ItemDialog({
 
   const save = async () => {
     setSubmitted(true);
+    if (MORE_FIELDS.some((field) => problems[field] !== undefined)) setMoreOpen(true);
     if (Object.keys(problems).length > 0 || Object.keys(comboProblems).length > 0) return;
     setError(undefined);
     setBusy(true);
@@ -100,6 +129,15 @@ export function ItemDialog({
   };
 
   const activeGroups = draft.modifierGroups.filter((group) => group.archivedAt === null);
+  const sized = form.variants.length > 0;
+  const halfFull = { half: t('menuEditor.item.half'), full: t('menuEditor.item.full') };
+  const hasHalfAndFull = [halfFull.half, halfFull.full].every((name) =>
+    form.variants.some((variant) => variant.name.trim().toLowerCase() === name.toLowerCase()),
+  );
+  const sizePrices = form.variants
+    .map((variant) => paiseOf(variant.price))
+    .filter((price): price is number => price !== undefined);
+  const usualTaxName = activeTaxGroups.find((group) => group.id === usualTax)?.name;
   return (
     <Dialog
       open
@@ -122,372 +160,430 @@ export function ItemDialog({
         </>
       }
     >
-      <form
-        id={formId}
-        className="console-form menu-form"
-        noValidate
-        onSubmit={(event) => {
-          event.preventDefault();
-          void save();
-        }}
-      >
-        <fieldset className="menu-form__section">
-          <legend>{t('menuEditor.item.sectionBasics')}</legend>
-          <TextField
-            label={t('menuEditor.item.name')}
-            value={form.name}
-            maxLength={80}
-            autoComplete="off"
-            required
-            data-autofocus
-            error={problemOf('name')}
-            onChange={(event) => {
-              set('name', event.target.value);
-            }}
-          />
-          <Select
-            label={t('menuEditor.item.category')}
-            value={form.categoryId}
-            required
-            error={problemOf('categoryId')}
-            options={[
-              { value: '', label: t('menuEditor.item.chooseCategory') },
-              ...categoryRows(draft.categories).map(({ category, depth }) => ({
-                value: category.id,
-                label: depth === 0 ? category.name : `— ${category.name}`,
-              })),
-            ]}
-            onChange={(event) => {
-              set('categoryId', event.target.value);
-            }}
-          />
-          <TextField
-            label={t('menuEditor.item.description')}
-            value={form.description}
-            maxLength={500}
-            autoComplete="off"
-            error={problemOf('description')}
-            onChange={(event) => {
-              set('description', event.target.value);
-            }}
-          />
-          <PhotoPicker
-            photoId={form.photoId}
-            onChange={(photoId) => {
-              set('photoId', photoId);
-            }}
-            onUploading={setUploading}
-            onError={setError}
-            label={t('menuEditor.item.photo')}
-            hint={t('menuEditor.item.photoHint')}
-            alt={t('menuEditor.item.photoAlt', { name: form.name })}
-            uploadLabel={t('menuEditor.item.uploadPhoto')}
-            replaceLabel={t('menuEditor.item.replacePhoto')}
-            removeLabel={t('menuEditor.item.removePhoto')}
-            tooLarge={t('menuEditor.item.photoTooLarge')}
-          />
-          <ChoiceGroup
-            legend={t('menuEditor.item.foodType')}
-            mode="single"
-            options={FOOD_TYPES.map((type) => ({
-              id: type,
-              label: t(`pos.menu.foodType.${type}`),
-            }))}
-            value={[form.foodType]}
-            onChange={([type]) => {
-              if (type !== undefined) set('foodType', type as ItemForm['foodType']);
-            }}
-          />
-          <ChoiceGroup
-            legend={t('menuEditor.item.spiceLevel')}
-            mode="single"
-            options={SPICE_LEVELS.map((name, level) => ({
-              id: String(level),
-              label: t(`menuEditor.item.spice.${name}`),
-            }))}
-            value={[String(form.spiceLevel)]}
-            onChange={([level]) => {
-              if (level !== undefined) set('spiceLevel', Number(level));
-            }}
-          />
-        </fieldset>
-
-        <fieldset className="menu-form__section">
-          <legend>{t('menuEditor.item.sectionPrice')}</legend>
-          <TextField
-            label={t('menuEditor.item.price')}
-            hint={t('menuEditor.item.priceHint')}
-            value={form.basePrice}
-            inputMode="decimal"
-            autoComplete="off"
-            required
-            error={problemOf('basePrice')}
-            onChange={(event) => {
-              set('basePrice', event.target.value);
-            }}
-          />
-          <Select
-            label={t('menuEditor.item.taxGroup')}
-            value={form.taxGroupId}
-            required
-            error={problemOf('taxGroupId')}
-            options={[
-              { value: '', label: t('menuEditor.item.chooseTaxGroup') },
-              ...activeTaxGroups.map((group) => ({ value: group.id, label: group.name })),
-            ]}
-            onChange={(event) => {
-              set('taxGroupId', event.target.value);
-            }}
-          />
-          {changesPrice(item, form) ? (
+      <div className="menu-form__layout">
+        <form
+          id={formId}
+          className="console-form menu-form"
+          noValidate
+          onSubmit={(event) => {
+            event.preventDefault();
+            void save();
+          }}
+        >
+          <fieldset className="menu-form__section">
+            <legend>{t('menuEditor.item.sectionBasics')}</legend>
             <TextField
-              label={t('menuEditor.item.reason')}
-              hint={t('menuEditor.item.reasonHint')}
-              value={form.reason}
-              maxLength={200}
+              label={t('menuEditor.item.name')}
+              value={form.name}
+              maxLength={80}
               autoComplete="off"
+              required
+              data-autofocus
+              error={problemOf('name')}
               onChange={(event) => {
-                set('reason', event.target.value);
+                set('name', event.target.value);
               }}
             />
-          ) : null}
-          <ChoiceGroup
-            legend={t('menuEditor.item.channels')}
-            mode="multiple"
-            options={SALES_CHANNELS.map((channel) => ({
-              id: channel,
-              label: t(`menuEditor.item.channel.${channel}`),
-            }))}
-            value={[...form.channels]}
-            error={problemOf('channels')}
-            onChange={(channels) => {
-              set('channels', channels as ItemForm['channels']);
-            }}
-          />
-        </fieldset>
-
-        <fieldset className="menu-form__section">
-          <legend>{t('menuEditor.item.sectionKitchen')}</legend>
-          <Select
-            label={t('menuEditor.item.station')}
-            value={form.stationId}
-            required
-            error={problemOf('stationId')}
-            options={[
-              { value: '', label: t('menuEditor.item.chooseStation') },
-              ...activeStations.map((station) => ({ value: station.id, label: station.name })),
-            ]}
-            onChange={(event) => {
-              set('stationId', event.target.value);
-            }}
-          />
-          <TextField
-            label={t('menuEditor.item.prepTime')}
-            hint={t('menuEditor.item.prepTimeHint')}
-            value={form.prepTime}
-            inputMode="numeric"
-            autoComplete="off"
-            error={problemOf('prepTime')}
-            onChange={(event) => {
-              set('prepTime', event.target.value);
-            }}
-          />
-          <p className="menu-form__hint">{t('menuEditor.item.hoursHint')}</p>
-          <div className="menu-form__row">
-            <TextField
-              label={t('menuEditor.item.servedFrom')}
-              type="time"
-              value={form.servedFrom}
+            <Select
+              label={t('menuEditor.item.category')}
+              value={form.categoryId}
+              required
+              error={problemOf('categoryId')}
+              options={[
+                { value: '', label: t('menuEditor.item.chooseCategory') },
+                ...categoryRows(draft.categories).map(({ category, depth }) => ({
+                  value: category.id,
+                  label: depth === 0 ? category.name : `— ${category.name}`,
+                })),
+              ]}
               onChange={(event) => {
-                set('servedFrom', event.target.value);
+                set('categoryId', event.target.value);
               }}
             />
             <TextField
-              label={t('menuEditor.item.servedUntil')}
-              type="time"
-              value={form.servedUntil}
-              error={problemOf('hours')}
+              label={t('menuEditor.item.description')}
+              value={form.description}
+              maxLength={500}
+              autoComplete="off"
+              error={problemOf('description')}
               onChange={(event) => {
-                set('servedUntil', event.target.value);
+                set('description', event.target.value);
               }}
             />
-          </div>
-          <TextField
-            label={t('menuEditor.item.shortCode')}
-            hint={t('menuEditor.item.shortCodeHint')}
-            value={form.shortCode}
-            maxLength={12}
-            autoComplete="off"
-            error={problemOf('shortCode')}
-            onChange={(event) => {
-              set('shortCode', event.target.value);
-            }}
-          />
-          <TextField
-            label={t('menuEditor.order')}
-            hint={t('menuEditor.orderHint')}
-            value={form.displayOrder}
-            inputMode="numeric"
-            autoComplete="off"
-            error={problemOf('displayOrder')}
-            onChange={(event) => {
-              set('displayOrder', event.target.value);
-            }}
-          />
-        </fieldset>
+            <ChoiceGroup
+              legend={t('menuEditor.item.foodType')}
+              mode="single"
+              options={FOOD_TYPES.map((type) => ({
+                id: type,
+                label: t(`pos.menu.foodType.${type}`),
+              }))}
+              value={[form.foodType]}
+              onChange={([type]) => {
+                if (type !== undefined) set('foodType', type as ItemForm['foodType']);
+              }}
+            />
+            <ChoiceGroup
+              legend={t('menuEditor.item.spiceLevel')}
+              mode="single"
+              options={SPICE_LEVELS.map((name, level) => ({
+                id: String(level),
+                label: t(`menuEditor.item.spice.${name}`),
+              }))}
+              value={[String(form.spiceLevel)]}
+              onChange={([level]) => {
+                if (level !== undefined) set('spiceLevel', Number(level));
+              }}
+            />
+          </fieldset>
 
-        <fieldset className="menu-form__section">
-          <legend>{t('menuEditor.item.sectionOptions')}</legend>
-          <p className="menu-form__hint">{t('menuEditor.item.variantsHint')}</p>
-          {form.variants.map((variant, index) => (
-            <div className="menu-form__row" key={variant.key}>
+          <fieldset className="menu-form__section">
+            <legend>{t('menuEditor.item.photo')}</legend>
+            <PhotoPicker
+              photoId={form.photoId}
+              onChange={(photoId) => {
+                set('photoId', photoId);
+              }}
+              onUploading={setUploading}
+              onError={setError}
+              label={t('menuEditor.item.photo')}
+              hint={t('menuEditor.item.photoHint')}
+              alt={t('menuEditor.item.photoAlt', { name: form.name })}
+              uploadLabel={t('menuEditor.item.uploadPhoto')}
+              replaceLabel={t('menuEditor.item.replacePhoto')}
+              removeLabel={t('menuEditor.item.removePhoto')}
+              tooLarge={t('menuEditor.item.photoTooLarge')}
+            />
+            {form.photoId === null ? (
+              <p className="menu-form__hint">{t('menuEditor.item.noPhoto')}</p>
+            ) : null}
+          </fieldset>
+
+          <fieldset className="menu-form__section">
+            <legend>{t('menuEditor.item.sectionPrice')}</legend>
+            {sized ? (
+              <p className="menu-form__hint">{t('menuEditor.item.sizesPriced')}</p>
+            ) : (
               <TextField
-                label={t('menuEditor.item.variantName')}
-                value={variant.name}
-                maxLength={40}
-                autoComplete="off"
-                onChange={(event) => {
-                  const variants = [...form.variants];
-                  variants[index] = { ...variant, name: event.target.value };
-                  set('variants', variants);
-                }}
-              />
-              <TextField
-                label={t('menuEditor.item.variantPrice')}
-                value={variant.price}
+                label={t('menuEditor.item.price')}
+                hint={t('menuEditor.item.priceHint')}
+                value={form.basePrice}
                 inputMode="decimal"
                 autoComplete="off"
+                required
+                error={problemOf('basePrice')}
                 onChange={(event) => {
-                  const variants = [...form.variants];
-                  variants[index] = { ...variant, price: event.target.value };
-                  set('variants', variants);
+                  set('basePrice', event.target.value);
                 }}
               />
-              <IconButton
-                label={t('menuEditor.item.removeVariant', {
-                  name: variant.name === '' ? String(index + 1) : variant.name,
-                })}
-                icon={<Icon name="close" />}
-                onClick={() => {
-                  set(
-                    'variants',
-                    form.variants.filter((entry) => entry.key !== variant.key),
-                  );
+            )}
+            {form.variants.map((variant, index) => (
+              <div className="menu-form__row menu-form__row--size" key={variant.key}>
+                <TextField
+                  label={t('menuEditor.item.variantName')}
+                  value={variant.name}
+                  maxLength={40}
+                  autoComplete="off"
+                  onChange={(event) => {
+                    const variants = [...form.variants];
+                    variants[index] = { ...variant, name: event.target.value };
+                    set('variants', variants);
+                  }}
+                />
+                <TextField
+                  label={t('menuEditor.item.variantPrice')}
+                  value={variant.price}
+                  inputMode="decimal"
+                  autoComplete="off"
+                  onChange={(event) => {
+                    const variants = [...form.variants];
+                    variants[index] = { ...variant, price: event.target.value };
+                    set('variants', variants);
+                  }}
+                />
+                <IconButton
+                  label={t('menuEditor.item.removeVariant', {
+                    name: variant.name === '' ? String(index + 1) : variant.name,
+                  })}
+                  icon={<Icon name="close" />}
+                  onClick={() => {
+                    set(
+                      'variants',
+                      form.variants.filter((entry) => entry.key !== variant.key),
+                    );
+                  }}
+                />
+              </div>
+            ))}
+            {problemOf('variants') === undefined ? null : (
+              <p role="alert" className="menu-form__error">
+                {problemOf('variants')}
+              </p>
+            )}
+            <div className="menu-form__row">
+              {hasHalfAndFull || form.variants.length > 8 ? null : (
+                <Button
+                  variant="secondary"
+                  startIcon={<Icon name="plus" />}
+                  onClick={() => {
+                    set('variants', withHalfAndFull(form, halfFull));
+                  }}
+                >
+                  {t('menuEditor.item.halfFull')}
+                </Button>
+              )}
+              {form.variants.length >= 10 ? null : (
+                <Button
+                  variant="ghost"
+                  startIcon={<Icon name="plus" />}
+                  onClick={() => {
+                    set('variants', [...form.variants, { key: newKey(), name: '', price: '' }]);
+                  }}
+                >
+                  {t('menuEditor.item.addVariant')}
+                </Button>
+              )}
+            </div>
+            {changesPrice(item, form) ? (
+              <TextField
+                label={t('menuEditor.item.reason')}
+                hint={t('menuEditor.item.reasonHint')}
+                value={form.reason}
+                maxLength={200}
+                autoComplete="off"
+                onChange={(event) => {
+                  set('reason', event.target.value);
+                }}
+              />
+            ) : null}
+          </fieldset>
+
+          <fieldset className="menu-form__section">
+            <legend>{t('menuEditor.item.sectionKitchen')}</legend>
+            <Select
+              label={t('menuEditor.item.station')}
+              value={form.stationId}
+              required
+              error={problemOf('stationId')}
+              options={[
+                { value: '', label: t('menuEditor.item.chooseStation') },
+                ...activeStations.map((station) => ({ value: station.id, label: station.name })),
+              ]}
+              onChange={(event) => {
+                set('stationId', event.target.value);
+              }}
+            />
+          </fieldset>
+
+          <fieldset className="menu-form__section">
+            <legend>{t('menuEditor.item.sectionOptions')}</legend>
+            {activeGroups.length === 0 ? (
+              <p className="menu-form__hint">{t('menuEditor.item.noGroups')}</p>
+            ) : (
+              <ChoiceGroup
+                legend={t('menuEditor.item.groups')}
+                hint={t('menuEditor.item.groupsHint')}
+                mode="multiple"
+                max={10}
+                options={activeGroups.map((group) => ({ id: group.id, label: group.name }))}
+                value={[...form.modifierGroupIds]}
+                onChange={(ids) => {
+                  set('modifierGroupIds', ids);
+                }}
+              />
+            )}
+          </fieldset>
+
+          <fieldset className="menu-form__section">
+            <legend>{t('menuEditor.item.sectionCombo')}</legend>
+            <label className="menu-toolbar__check">
+              <input
+                type="checkbox"
+                checked={isCombo}
+                // A combo stays a combo; archive the dish to stop selling it.
+                disabled={existingCombo !== undefined}
+                onChange={(event) => {
+                  setIsCombo(event.target.checked);
+                }}
+              />
+              {t('menuEditor.item.isCombo')}
+            </label>
+            {isCombo ? (
+              <>
+                <p className="menu-form__hint">{t('menuEditor.item.comboHint')}</p>
+                <ComboFields
+                  draft={draft}
+                  comboItemId={item?.id}
+                  form={combo}
+                  problems={submitted ? comboProblems : {}}
+                  onChange={setCombo}
+                />
+              </>
+            ) : null}
+          </fieldset>
+
+          <details
+            className="menu-form__more"
+            open={moreOpen}
+            onToggle={(event) => {
+              setMoreOpen(event.currentTarget.open);
+            }}
+          >
+            <summary className="menu-form__more-summary">
+              {t('menuEditor.item.sectionMore')}
+            </summary>
+            <p className="menu-form__hint">{t('menuEditor.item.moreHint')}</p>
+            <Select
+              label={t('menuEditor.item.taxGroup')}
+              hint={
+                usualTaxName === undefined
+                  ? undefined
+                  : t('menuEditor.item.taxGroupUsual', { name: usualTaxName })
+              }
+              value={form.taxGroupId}
+              required
+              error={problemOf('taxGroupId')}
+              options={[
+                { value: '', label: t('menuEditor.item.chooseTaxGroup') },
+                ...activeTaxGroups.map((group) => ({ value: group.id, label: group.name })),
+              ]}
+              onChange={(event) => {
+                set('taxGroupId', event.target.value);
+              }}
+            />
+            <TextField
+              label={t('menuEditor.item.shortCode')}
+              hint={t('menuEditor.item.shortCodeHint')}
+              value={form.shortCode}
+              maxLength={12}
+              autoComplete="off"
+              error={problemOf('shortCode')}
+              onChange={(event) => {
+                set('shortCode', event.target.value);
+              }}
+            />
+            <TextField
+              label={t('menuEditor.item.synonyms')}
+              hint={t('menuEditor.item.synonymsHint')}
+              value={form.synonyms}
+              autoComplete="off"
+              error={problemOf('synonyms')}
+              onChange={(event) => {
+                set('synonyms', event.target.value);
+              }}
+            />
+            <TextField
+              label={t('menuEditor.item.tags')}
+              hint={t('menuEditor.item.tagsHint')}
+              value={form.tags}
+              autoComplete="off"
+              error={problemOf('tags')}
+              onChange={(event) => {
+                set('tags', event.target.value);
+              }}
+            />
+            <TextField
+              label={t('menuEditor.item.prepTime')}
+              hint={t('menuEditor.item.prepTimeHint')}
+              value={form.prepTime}
+              inputMode="numeric"
+              autoComplete="off"
+              error={problemOf('prepTime')}
+              onChange={(event) => {
+                set('prepTime', event.target.value);
+              }}
+            />
+            <p className="menu-form__hint">{t('menuEditor.item.hoursHint')}</p>
+            <div className="menu-form__row">
+              <TextField
+                label={t('menuEditor.item.servedFrom')}
+                type="time"
+                value={form.servedFrom}
+                onChange={(event) => {
+                  set('servedFrom', event.target.value);
+                }}
+              />
+              <TextField
+                label={t('menuEditor.item.servedUntil')}
+                type="time"
+                value={form.servedUntil}
+                error={problemOf('hours')}
+                onChange={(event) => {
+                  set('servedUntil', event.target.value);
                 }}
               />
             </div>
-          ))}
-          {problemOf('variants') === undefined ? null : (
-            <p role="alert" className="menu-form__error">
-              {problemOf('variants')}
+            <ChoiceGroup
+              legend={t('menuEditor.item.channels')}
+              mode="multiple"
+              options={SALES_CHANNELS.map((channel) => ({
+                id: channel,
+                label: t(`menuEditor.item.channel.${channel}`),
+              }))}
+              value={[...form.channels]}
+              error={problemOf('channels')}
+              onChange={(channels) => {
+                set('channels', channels as ItemForm['channels']);
+              }}
+            />
+            <TextField
+              label={t('menuEditor.order')}
+              hint={t('menuEditor.orderHint')}
+              value={form.displayOrder}
+              inputMode="numeric"
+              autoComplete="off"
+              error={problemOf('displayOrder')}
+              onChange={(event) => {
+                set('displayOrder', event.target.value);
+              }}
+            />
+            <label className="menu-toolbar__check">
+              <input
+                type="checkbox"
+                checked={form.repeatable}
+                onChange={(event) => {
+                  set('repeatable', event.target.checked);
+                }}
+              />
+              {t('menuEditor.item.repeatable')}
+            </label>
+            <TextField
+              label={t('menuEditor.item.externalId')}
+              hint={t('menuEditor.item.externalIdHint')}
+              value={form.externalId}
+              maxLength={128}
+              autoComplete="off"
+              onChange={(event) => {
+                set('externalId', event.target.value);
+              }}
+            />
+          </details>
+
+          {error === undefined ? null : (
+            <p role="alert" className="console-notice console-notice--danger">
+              {error}
             </p>
           )}
-          {form.variants.length >= 10 ? null : (
-            <Button
-              variant="secondary"
-              startIcon={<Icon name="plus" />}
-              onClick={() => {
-                set('variants', [...form.variants, { key: newKey(), name: '', price: '' }]);
-              }}
-            >
-              {t('menuEditor.item.addVariant')}
-            </Button>
-          )}
-          {activeGroups.length === 0 ? (
-            <p className="menu-form__hint">{t('menuEditor.item.noGroups')}</p>
-          ) : (
-            <ChoiceGroup
-              legend={t('menuEditor.item.groups')}
-              hint={t('menuEditor.item.groupsHint')}
-              mode="multiple"
-              max={10}
-              options={activeGroups.map((group) => ({ id: group.id, label: group.name }))}
-              value={[...form.modifierGroupIds]}
-              onChange={(ids) => {
-                set('modifierGroupIds', ids);
-              }}
-            />
-          )}
-        </fieldset>
-
-        <fieldset className="menu-form__section">
-          <legend>{t('menuEditor.item.sectionMore')}</legend>
-          <TextField
-            label={t('menuEditor.item.tags')}
-            hint={t('menuEditor.item.tagsHint')}
-            value={form.tags}
-            autoComplete="off"
-            error={problemOf('tags')}
-            onChange={(event) => {
-              set('tags', event.target.value);
+        </form>
+        <aside className="menu-form__preview">
+          <h3 className="menu-form__preview-title">{t('menuEditor.item.preview')}</h3>
+          <DishPreview
+            dish={{
+              name: form.name,
+              price: sized
+                ? sizePrices.length === 0
+                  ? 0
+                  : Math.min(...sizePrices)
+                : (paiseOf(form.basePrice) ?? 0),
+              foodType: form.foodType,
+              spiceLevel: form.spiceLevel,
+              tags: splitList(form.tags),
+              description: form.description,
+              photoId: form.photoId,
+              needsChoice: sized || form.modifierGroupIds.length > 0 || isCombo,
             }}
           />
-          <TextField
-            label={t('menuEditor.item.synonyms')}
-            hint={t('menuEditor.item.synonymsHint')}
-            value={form.synonyms}
-            autoComplete="off"
-            error={problemOf('synonyms')}
-            onChange={(event) => {
-              set('synonyms', event.target.value);
-            }}
-          />
-          <label className="menu-toolbar__check">
-            <input
-              type="checkbox"
-              checked={form.repeatable}
-              onChange={(event) => {
-                set('repeatable', event.target.checked);
-              }}
-            />
-            {t('menuEditor.item.repeatable')}
-          </label>
-          <TextField
-            label={t('menuEditor.item.externalId')}
-            hint={t('menuEditor.item.externalIdHint')}
-            value={form.externalId}
-            maxLength={128}
-            autoComplete="off"
-            onChange={(event) => {
-              set('externalId', event.target.value);
-            }}
-          />
-        </fieldset>
-
-        <fieldset className="menu-form__section">
-          <legend>{t('menuEditor.item.sectionCombo')}</legend>
-          <label className="menu-toolbar__check">
-            <input
-              type="checkbox"
-              checked={isCombo}
-              // A combo stays a combo; archive the dish to stop selling it.
-              disabled={existingCombo !== undefined}
-              onChange={(event) => {
-                setIsCombo(event.target.checked);
-              }}
-            />
-            {t('menuEditor.item.isCombo')}
-          </label>
-          {isCombo ? (
-            <>
-              <p className="menu-form__hint">{t('menuEditor.item.comboHint')}</p>
-              <ComboFields
-                draft={draft}
-                comboItemId={item?.id}
-                form={combo}
-                problems={submitted ? comboProblems : {}}
-                onChange={setCombo}
-              />
-            </>
-          ) : null}
-        </fieldset>
-
-        {error === undefined ? null : (
-          <p role="alert" className="console-notice console-notice--danger">
-            {error}
-          </p>
-        )}
-      </form>
+        </aside>
+      </div>
     </Dialog>
   );
 }

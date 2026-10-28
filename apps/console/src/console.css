@@ -75,6 +75,11 @@ body {
   color: var(--rp-color-warning-text);
 }
 
+.console-notice--success {
+  background: var(--rp-color-success-subtle);
+  color: var(--rp-color-success-text);
+}
+
 /* Sign-in: one calm white card with the logo on top. */
 .console-login {
   align-items: stretch;
@@ -1498,7 +1503,7 @@ body {
   width: 4rem;
   height: 4rem;
   border-radius: var(--rp-radius-md);
-  object-fit: cover;
+  aspect-ratio: 1;
 }
 
 .menu-row__code {
@@ -1538,6 +1543,16 @@ body {
 
 .menu-form__row > .rp-field {
   flex: 1 1 10rem;
+}
+
+/* A size: its name, its price and the remove button stay on one line, even on a phone. */
+.menu-form__row--size {
+  flex-wrap: nowrap;
+}
+
+.menu-form__row--size > .rp-field {
+  flex: 1 1 0;
+  min-width: 0;
 }
 
 .menu-form__hint {
@@ -1590,6 +1605,262 @@ body {
   overflow: hidden;
   clip-path: inset(50%);
   white-space: nowrap;
+}
+
+/* The dish form with its preview beside it on a wide screen, under it on a narrow one. */
+.menu-form__layout {
+  display: grid;
+  gap: var(--rp-space-4);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (width >= 60rem) {
+  .menu-form__layout {
+    grid-template-columns: minmax(0, 1fr) 18rem;
+    align-items: start;
+  }
+
+  .menu-form__preview {
+    position: sticky;
+    top: 0;
+  }
+}
+
+.menu-form__preview-title {
+  margin: 0 0 var(--rp-space-2);
+  font-size: var(--rp-font-size-md);
+}
+
+/* "More options": the advanced fields, folded away until wanted. */
+.menu-form__more {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-3);
+  padding: var(--rp-space-4);
+  border: 1px solid var(--rp-color-border);
+  border-radius: var(--rp-radius-lg);
+}
+
+.menu-form__more[open] > :not(summary) {
+  margin-top: var(--rp-space-3);
+}
+
+.menu-form__more-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rp-space-3);
+  min-height: var(--rp-touch-target);
+  cursor: pointer;
+  font-weight: var(--rp-font-weight-semibold);
+  list-style: none;
+}
+
+.menu-form__more-summary::-webkit-details-marker {
+  display: none;
+}
+
+/* The open or closed mark: a chevron that turns when the section opens. */
+.menu-form__more-summary::after {
+  content: '';
+  flex: none;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-inline-end: var(--rp-space-2);
+  border-right: 2px solid currentcolor;
+  border-bottom: 2px solid currentcolor;
+  transform: rotate(45deg);
+  transition: transform var(--rp-duration-fast) var(--rp-easing-standard);
+}
+
+.menu-form__more[open] > .menu-form__more-summary::after {
+  transform: rotate(-135deg);
+}
+
+.menu-form__more-summary:focus-visible {
+  outline: 2px solid var(--rp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* How a dish looks on the waiter phone and the table tablet. */
+.dish-preview {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-3);
+}
+
+.dish-preview__devices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-4);
+}
+
+.dish-preview__device {
+  margin: 0;
+}
+
+.dish-preview__caption {
+  margin-bottom: var(--rp-space-2);
+  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-sm);
+  font-weight: var(--rp-font-weight-medium);
+}
+
+.dish-preview__screen {
+  padding: var(--rp-space-3);
+  border: 4px solid var(--rp-color-text);
+  border-radius: var(--rp-radius-xl);
+  background: var(--rp-color-background);
+}
+
+.dish-preview__device--phone .dish-preview__screen {
+  max-width: 14rem;
+}
+
+.dish-preview__screen .rp-menu-item {
+  width: 100%;
+}
+
+.dish-preview__card {
+  overflow: hidden;
+  border: 1px solid var(--rp-color-border);
+  border-radius: var(--rp-radius-lg);
+  background: var(--rp-color-surface);
+}
+
+.dish-preview__photo {
+  aspect-ratio: auto;
+  height: 7rem;
+  border-radius: 0;
+}
+
+.dish-preview__body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-1);
+  padding: var(--rp-space-3);
+}
+
+.dish-preview__name {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--rp-space-2);
+  margin: 0;
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+.dish-preview__facts {
+  margin: 0;
+  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-sm);
+}
+
+.dish-preview__price {
+  font-size: var(--rp-font-size-lg);
+  font-weight: var(--rp-font-weight-bold);
+}
+
+/* The menu page's other ways in: the Excel template and the bulk photo upload. */
+.menu-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rp-space-3);
+}
+
+/* The menu check above the dishes. */
+.menu-health {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-3);
+}
+
+.menu-health__title {
+  margin: 0;
+  font-size: var(--rp-font-size-lg);
+}
+
+.menu-health__heading {
+  margin: 0 0 var(--rp-space-2);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+.menu-health__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-2);
+  margin: 0;
+  padding-left: var(--rp-space-5);
+}
+
+.menu-health__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rp-space-2);
+}
+
+/* Publishing: what changes, then which devices have it. */
+.menu-publish {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-3);
+}
+
+.menu-publish__heading {
+  margin: 0;
+  font-size: var(--rp-font-size-md);
+}
+
+.menu-publish__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-2);
+  margin: 0;
+  padding-left: var(--rp-space-5);
+}
+
+/* Set up step 7: the two ways to load a menu, side by side. */
+.setup-steps > .staff-row {
+  flex-wrap: wrap;
+}
+
+.setup-menu-ways {
+  display: flex;
+  flex: 1 1 100%;
+  flex-direction: column;
+  gap: var(--rp-space-3);
+}
+
+.setup-menu-ways__title {
+  margin: 0;
+  font-size: var(--rp-font-size-md);
+}
+
+.setup-menu-ways__options {
+  display: grid;
+  gap: var(--rp-space-3);
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+}
+
+.setup-menu-ways__option {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--rp-space-2);
+  padding: var(--rp-space-4);
+  border: 1px solid var(--rp-color-border);
+  border-radius: var(--rp-radius-lg);
+  background: var(--rp-color-surface);
+}
+
+.setup-menu-ways__option > p {
+  margin: 0;
+}
+
+.setup-menu-ways__name {
+  margin: 0;
+  font-size: var(--rp-font-size-md);
 }
 
 .menu-combo {
@@ -2209,4 +2480,69 @@ body {
   font-size: var(--rp-font-size-xl);
   letter-spacing: -0.01em;
   text-transform: none;
+}
+
+/* The menu file (ONB-005): names to map, every dish with its photo, every photo with its dish. */
+.menu-file__subheading {
+  margin: var(--rp-space-3) 0 0;
+  font-size: var(--rp-font-size-md);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+.menu-file__names {
+  display: grid;
+  gap: var(--rp-space-3);
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+}
+
+.menu-file__dishes {
+  overflow-x: auto;
+}
+
+.menu-file__thumbnail {
+  width: 4rem;
+  border-radius: var(--rp-radius-md);
+}
+
+.menu-file__dish {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rp-space-2);
+  font-weight: var(--rp-font-weight-medium);
+}
+
+.menu-file__code {
+  color: var(--rp-color-text-muted);
+  font-family: var(--rp-font-mono);
+  font-size: var(--rp-font-size-sm);
+}
+
+.menu-file__photos {
+  display: grid;
+  gap: var(--rp-space-3);
+  margin: 0;
+  padding: 0;
+  grid-template-columns: repeat(auto-fill, minmax(18rem, 1fr));
+  list-style: none;
+}
+
+.menu-file__photo {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--rp-space-3);
+  padding: var(--rp-space-3);
+  border: 1px solid var(--rp-color-border);
+  border-radius: var(--rp-radius-lg);
+  background: var(--rp-color-surface);
+}
+
+.menu-file__photo .menu-file__thumbnail {
+  flex: none;
+  width: 6rem;
+}
+
+.menu-file__photo-body {
+  flex: 1;
+  min-width: 0;
 }

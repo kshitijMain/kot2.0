@@ -31,19 +31,21 @@ const context = (overrides: Partial<RecipientContext> = {}): RecipientContext =>
   ...overrides,
 });
 
-const TIMING = { escalationSeconds: 60, repeatSeconds: 60 };
+const TIMING = { escalationSeconds: 60, repeatSeconds: 60, closeSeconds: 600 };
 const at = (seconds: number) => new Date(Date.UTC(2026, 8, 26, 12, 0, seconds));
 
 describe('[NTF-002] [NTF-003] the Appendix C matrix', () => {
-  // Event, recipients with everyone reachable, pager text for table 7, escalates, repeat.
+  // Event, recipients with everyone reachable, pager text for table 7, escalates, repeat. The
+  // waiters' alerts ring once and need no acknowledgement (Business Owner, 2026-10-25): food ready
+  // escalates from the kitchen (KDS-006), a nudge closes itself.
   const MATRIX: readonly [NotificationEvent, string[], string | null, boolean, string][] = [
-    ['ORDER_PENDING_APPROVAL', ['ravi'], 'T7 NEW ORDER', true, 'UNTIL_ACKED'],
-    ['ITEM_READY', ['ravi'], 'T7 READY', true, 'UNTIL_ACKED'],
-    ['WATER_REQUEST', ['ravi'], 'T7 WATER', true, 'UNTIL_ACKED'],
-    ['WAITER_REQUEST', ['ravi'], 'T7 WAITER', true, 'UNTIL_ACKED'],
-    ['BILL_REQUEST', ['ravi', 'neha'], 'T7 BILL', true, 'UNTIL_ACKED'],
+    ['ORDER_PENDING_APPROVAL', ['ravi'], 'T7 NEW ORDER', true, 'NONE'],
+    ['ITEM_READY', ['ravi'], 'T7 READY', false, 'NONE'],
+    ['WATER_REQUEST', ['ravi'], 'T7 WATER', true, 'NONE'],
+    ['WAITER_REQUEST', ['ravi'], 'T7 WAITER', true, 'NONE'],
+    ['BILL_REQUEST', ['ravi', 'neha'], 'T7 BILL', true, 'NONE'],
     ['READY_NOT_COLLECTED', ['vikram'], 'T7 FOOD WAITING', false, 'UNTIL_ACKED'],
-    ['MANAGER_NUDGE', ['sunita'], 'MGR: Check T7', false, 'UNTIL_ACKED'],
+    ['MANAGER_NUDGE', ['sunita'], 'MGR: Check T7', false, 'AUTO_CLOSE'],
     ['ORDER_CHANGED', [], null, false, 'NONE'],
     ['WAITER_UNREACHABLE', ['vikram'], null, false, 'NONE'],
     ['DEVICE_LOW_BATTERY_OR_OFFLINE', ['vikram', 'arjun'], 'LOW BATTERY', false, 'ONCE_PER_STATE'],
@@ -135,7 +137,25 @@ describe('[NTF-005] [NTF-007] [NTF-009] recipients', () => {
 });
 
 describe('[NTF-004] [NTF-005] repeat and escalation deadlines', () => {
-  const rule = DEFAULT_NOTIFICATION_RULES.BILL_REQUEST;
+  // A manager can bring the repeats back (NTF-002), as the BRD's factory rule had them.
+  const rule = { ...DEFAULT_NOTIFICATION_RULES.BILL_REQUEST, repeat: 'UNTIL_ACKED' as const };
+
+  it('escalates a waiter’s alert after N without repeating it', () => {
+    const once = DEFAULT_NOTIFICATION_RULES.WATER_REQUEST;
+    const start = initialDeadlines(once, at(0), TIMING, false);
+    expect(start).toEqual({ escalateAt: at(60), nextRepeatAt: null });
+    expect(dueActions(once, start, at(60), TIMING).map((action) => action.kind)).toEqual([
+      'ESCALATE',
+    ]);
+  });
+
+  it('[NTF-008] closes a manager’s nudge by itself after a while, without escalating', () => {
+    const nudge = DEFAULT_NOTIFICATION_RULES.MANAGER_NUDGE;
+    const start = initialDeadlines(nudge, at(0), TIMING, false);
+    expect(start).toEqual({ escalateAt: null, nextRepeatAt: at(600) });
+    expect(dueActions(nudge, start, at(599), TIMING)).toEqual([]);
+    expect(dueActions(nudge, start, at(600), TIMING)).toEqual([{ kind: 'CLOSE' }]);
+  });
 
   it('escalates after N and repeats every R until acknowledged', () => {
     const start = initialDeadlines(rule, at(0), TIMING, false);
@@ -143,7 +163,11 @@ describe('[NTF-004] [NTF-005] repeat and escalation deadlines', () => {
     expect(dueActions(rule, start, at(59), TIMING)).toEqual([]);
     const due = dueActions(rule, start, at(60), TIMING);
     expect(due.map((action) => action.kind)).toEqual(['ESCALATE', 'REPEAT']);
-    expect(due.at(-1)?.next).toEqual({ escalateAt: null, nextRepeatAt: at(120) });
+    const last = due.at(-1);
+    expect(last !== undefined && last.kind !== 'CLOSE' ? last.next : undefined).toEqual({
+      escalateAt: null,
+      nextRepeatAt: at(120),
+    });
   });
 
   it('does not escalate twice, and folds missed repeats into one after a restart', () => {

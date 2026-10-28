@@ -2,8 +2,11 @@ name: Android
 
 # Builds debug APKs of the waiter app and the table tablet with Gradle (P2-01c), so native
 # configuration (Expo modules, the Keystore device key module, autolinking in the monorepo, the
-# alert service and its permissions) is checked on every change that could affect it. Signed
-# release APKs are built by EAS Build with the owner's keystore held as an EAS secret, never here.
+# alert service and its permissions) is checked on every change that could affect it. It also
+# builds a release-variant APK of each: the JavaScript inside, no Metro and no development menu
+# (its floating gear), to try the app as staff will see it. That one is signed with the Expo
+# template's debug key, so it installs over the debug build; signed production APKs are built
+# by EAS Build with the owner's keystore held as an EAS secret, never here.
 
 on:
   push:
@@ -34,7 +37,7 @@ jobs:
   debug-apk:
     name: Debug APK (${{ matrix.app }})
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 75
     strategy:
       fail-fast: false
       matrix:
@@ -129,4 +132,16 @@ jobs:
         with:
           name: ${{ matrix.app }}-debug-apk
           path: apps/${{ matrix.app }}/android/app/build/outputs/apk/debug/*.apk
+          retention-days: 14
+
+      # The app as staff see it: the JavaScript bundled in, no development menu or gear.
+      - name: Assemble the release-variant APK
+        working-directory: apps/${{ matrix.app }}/android
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Keep the release-variant APK
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: ${{ matrix.app }}-release-apk
+          path: apps/${{ matrix.app }}/android/app/build/outputs/apk/release/*.apk
           retention-days: 14

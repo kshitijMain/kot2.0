@@ -44,6 +44,10 @@ Acceptance: works on device; unavailable state handled.
 
 ## P6-04 AI-assisted menu import
 
+Switched off on 2026-10-25 (Business Owner): menus are entered by hand or with the Excel template.
+The console's review screen and its links are removed; the Control Plane reading service and the
+server's endpoints stay in place, unused. Bulk photo upload (P6-04c) stays.
+
 Requirements: ONB-006 (S), ONB-007 (S), VCP-008, SEC-002 (AI key only in the vendor cloud).
 Depends on: P0-17, P1-05.
 Deliverables: Control Plane service that accepts photos/PDF of a printed menu, calls the AI provider

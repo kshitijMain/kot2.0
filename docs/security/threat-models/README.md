@@ -73,7 +73,7 @@ Written by `pnpm security:threats --write` from the models; do not edit it by ha
 
 | Component                                               | Threats | Mitigated | Partly mitigated | Not mitigated | Accepted | Residual Medium | Residual High or Critical |
 | ------------------------------------------------------- | ------: | --------: | ---------------: | ------------: | -------: | --------------: | ------------------------: |
-| [The LAN and the local server](local-server-and-lan.md) |      45 |        37 |                5 |             0 |        3 |              18 |                         0 |
+| [The LAN and the local server](local-server-and-lan.md) |      46 |        38 |                5 |             0 |        3 |              18 |                         0 |
 | [The pager channel](pager-channel.md)                   |      26 |        19 |                5 |             1 |        1 |               4 |                         1 |
 | [The QR relay and site](qr-relay-and-site.md)           |      29 |        22 |                5 |             0 |        2 |               6 |                         0 |
 | [The update pipeline](update-pipeline.md)               |      21 |        16 |                3 |             1 |        1 |              10 |                         1 |
@@ -81,7 +81,7 @@ Written by `pnpm security:threats --write` from the models; do not edit it by ha
 | [The Vendor Control Plane](control-plane.md)            |      22 |        16 |                5 |             0 |        1 |               7 |                         0 |
 | [The desktop shell](desktop-shell.md)                   |      14 |        11 |                2 |             0 |        1 |               5 |                         0 |
 | [The phones and tablets](phones-and-tablets.md)         |      18 |        13 |                4 |             0 |        1 |               5 |                         0 |
-| All                                                     |     195 |       148 |               33 |             2 |       12 |              62 |                         2 |
+| All                                                     |     196 |       149 |               33 |             2 |       12 |              62 |                         2 |
 
 Open threats and their plans, by date:
 

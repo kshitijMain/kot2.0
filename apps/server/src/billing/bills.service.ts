@@ -92,6 +92,15 @@ export class BillsService {
   ): Promise<BillView> {
     const billId = await this.prisma.transaction(async (tx) => {
       if (target.tableSessionId !== undefined) {
+        // The table is locked first (as printing does), so two tills opening the same bill at
+        // once get the one bill instead of a clash on its key (QA-012).
+        const where = await tx.tableSession.findFirst({
+          where: { id: target.tableSessionId, restaurantId: principal.restaurantId },
+          select: { tableId: true },
+        });
+        if (where !== null) {
+          await tx.$queryRaw`SELECT 1 AS locked FROM tables WHERE id = ${where.tableId}::uuid FOR UPDATE`;
+        }
         const session = await tx.tableSession.findFirst({
           where: { id: target.tableSessionId, restaurantId: principal.restaurantId },
           select: { id: true, status: true, bill: { select: { id: true } } },
@@ -104,6 +113,9 @@ export class BillsService {
           throw new AppError(404, 'SESSION_NOT_FOUND', 'This table session is closed.');
         }
         return this.create(tx, principal, { tableSessionId: session.id });
+      }
+      if (target.orderId !== undefined) {
+        await tx.$queryRaw`SELECT 1 AS locked FROM orders WHERE id = ${target.orderId}::uuid FOR UPDATE`;
       }
       const order = await tx.order.findFirst({
         where: { id: target.orderId ?? '', restaurantId: principal.restaurantId },
@@ -198,7 +210,8 @@ export class BillsService {
           orderItemId: request.orderItemId,
           kind: request.kind,
           rateBp: request.rateBp,
-          amount: 0,
+          // A flat discount's amount is what was given; a percentage's is worked out below.
+          amount: value.kind === 'FLAT' ? value.amount : 0,
           reason: request.reason,
           appliedById: principal.staffId,
           approvedById: approverId,

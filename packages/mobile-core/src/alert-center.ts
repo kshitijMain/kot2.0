@@ -1,4 +1,4 @@
-import { ApiRequestError, type TypedApi } from '@rp/api-client';
+import type { TypedApi } from '@rp/api-client';
 import type { AlertView, DeviceAlertsResponse, DomainEvent } from '@rp/contracts';
 
 /** The person a waiter phone alerts: who last signed in on it (P2-06a). */
@@ -28,8 +28,6 @@ export interface AlertNotifier {
   announce(alert: AlertView): Promise<void>;
   /** The alert was acknowledged or cleared, anywhere. */
   dismiss(alertId: string): Promise<void>;
-  /** Acknowledge pressed on a notification, which takes it off. Returns how to stop listening. */
-  onAcknowledge(listener: (alertId: string) => void): () => void;
 }
 
 export interface AlertCenterOptions {
@@ -44,9 +42,10 @@ const IDLE: AlertCenterSnapshot = { status: 'idle', holder: null, alerts: [] };
 /**
  * The alerts of the person this waiter phone alerts, as their pager shows them (P2-06a, WTR-006):
  * read when the connection comes up or back (NTF-006), and again after an alert event for them.
- * Each alert and each repeat is announced once; acknowledging here acknowledges everywhere,
- * the pager included (NTF-004). The phone keeps its holder after an inactivity sign-out, so this
- * goes on while the person must sign in again for anything else (AUTH-005).
+ * Each alert and each repeat is announced once. The phone never acknowledges (Business Owner,
+ * 2026-10-25): an alert goes when its cause is dealt with, or when the pager's button or a
+ * manager acknowledges it (NTF-004). The phone keeps its holder after an inactivity sign-out, so
+ * this goes on while the person must sign in again for anything else (AUTH-005).
  */
 export class AlertCenter {
   private snapshot: AlertCenterSnapshot = IDLE;
@@ -57,14 +56,8 @@ export class AlertCenter {
   private readingAgain: Promise<void> | undefined;
   /** Bumped by `reset`, so a read that was on its way when the phone was unpaired is dropped. */
   private generation = 0;
-  /** Acknowledge pressed on a notification before the first read: sent after it. */
-  private readonly waiting = new Set<string>();
 
-  constructor(private readonly options: AlertCenterOptions) {
-    options.notifier?.onAcknowledge((alertId) => {
-      this.acknowledgeFromNotification(alertId);
-    });
-  }
+  constructor(private readonly options: AlertCenterOptions) {}
 
   readonly subscribe = (listener: () => void): (() => void) => {
     this.listeners.add(listener);
@@ -119,45 +112,14 @@ export class AlertCenter {
     }
   }
 
-  /**
-   * Acknowledges as the holder, like the pager's button: the repeats and the escalation stop and
-   * every device hears it (NTF-004). An alert already gone is simply taken off.
-   */
-  async acknowledge(alertId: string): Promise<void> {
-    try {
-      await this.options.api().acknowledgeDeviceAlert({ params: { alertId } });
-    } catch (error) {
-      if (!(error instanceof ApiRequestError && error.status === 404)) throw error;
-    }
-    this.remove(alertId);
-  }
-
   /** The phone was unpaired, or paired again: nothing of before applies. */
   reset(): void {
     this.generation += 1;
     const had = this.snapshot;
     this.announced.clear();
-    this.waiting.clear();
     this.update(IDLE);
     for (const alert of had.alerts) this.notify((notifier) => notifier.dismiss(alert.id));
     if (had.holder !== null) this.notify((notifier) => notifier.stop());
-  }
-
-  /**
-   * Acknowledge pressed on a notification (P2-06b). The notification went when it was pressed, so
-   * if the acknowledgement fails the alert, still open, is announced again. Pressed while the app
-   * was starting, it waits for the first read.
-   */
-  private acknowledgeFromNotification(alertId: string): void {
-    if (this.snapshot.status !== 'ready') {
-      this.waiting.add(alertId);
-      return;
-    }
-    this.acknowledge(alertId).catch((error: unknown) => {
-      this.options.onError?.(error);
-      const open = this.snapshot.alerts.find((alert) => alert.id === alertId);
-      if (open !== undefined) this.notify((notifier) => notifier.announce(open));
-    });
   }
 
   /**
@@ -207,9 +169,6 @@ export class AlertCenter {
     }
     this.update({ status: 'ready', holder, alerts });
     for (const alert of alerts) this.announce(alert);
-    const waiting = [...this.waiting];
-    this.waiting.clear();
-    for (const alertId of waiting) this.acknowledgeFromNotification(alertId);
   }
 
   /** Rings for an alert new here, or come back since it last rang (NTF-006: once per repeat). */

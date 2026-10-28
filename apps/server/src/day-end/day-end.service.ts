@@ -8,7 +8,7 @@ import {
 import { addDays, buildZReport } from '@rp/domain';
 import { AuditService } from '../audit/audit.service.js';
 import type { Principal } from '../auth/principal.js';
-import { currentBusinessDate, dbDate } from '../common/business-dates.js';
+import { currentBusinessDate, dayEndLockKey, dbDate } from '../common/business-dates.js';
 import { PrismaService, type TransactionClient } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import { ShiftsService } from '../payments/shifts.service.js';
@@ -48,7 +48,7 @@ export class DayEndService {
     await this.prisma.transaction(
       async (tx) => {
         // One day-end at a time per restaurant.
-        await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended(${`day-end:${restaurantId}`}, 0))`;
+        await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(hashtextextended(${dayEndLockKey(restaurantId)}, 0))`;
         const current = await currentBusinessDate(tx, restaurantId);
         if (businessDate > current) {
           throw new AppError(409, 'DAY_NOT_STARTED', 'That business date has not started yet.');

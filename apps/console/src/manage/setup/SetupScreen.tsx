@@ -8,6 +8,7 @@ import { messageOf } from '../../app/messages.js';
 import { grantOf } from '../../app/modes.js';
 import { useLive } from '../../app/use-live.js';
 import { SecondFactorCancelled, useSecondFactor } from '../../owner/second-factor.js';
+import { EmptyMenuFileDownload } from '../menu/MenuFileScreen.js';
 import { GoLivePanel } from './GoLivePanel.js';
 import { setupCounts, STEP_PAGES } from './setup-view.js';
 
@@ -212,6 +213,7 @@ export function SetupScreen() {
                   </Button>
                 ) : null}
               </div>
+              {entry.step === 'MENU' && entry.status === 'TODO' ? <MenuWays /> : null}
             </li>
           ))}
         </ol>
@@ -234,6 +236,42 @@ export function SetupScreen() {
         </Link>
       </p>
       {content}
+    </section>
+  );
+}
+
+/**
+ * Step 7's two ways to load a menu, side by side (ONB-004, ONB-005): typing it in, or filling the
+ * menu file (the template and the photos in one zip) and loading it; then any missing photos in
+ * bulk. Menus are not read by AI (2026-10-25).
+ */
+function MenuWays() {
+  const t = useT();
+  return (
+    <section className="setup-menu-ways" aria-labelledby="setup-menu-ways">
+      <h5 id="setup-menu-ways" className="setup-menu-ways__title">
+        {t('setupPage.menuWays.title')}
+      </h5>
+      <div className="setup-menu-ways__options">
+        <article className="setup-menu-ways__option">
+          <h6 className="setup-menu-ways__name">{t('setupPage.menuWays.byHand')}</h6>
+          <p>{t('setupPage.menuWays.byHandText')}</p>
+          <Link className="console-link" to="/manage/menu">
+            {t('setupPage.menuWays.byHandOpen')}
+          </Link>
+        </article>
+        <article className="setup-menu-ways__option">
+          <h6 className="setup-menu-ways__name">{t('setupPage.menuWays.excel')}</h6>
+          <p>{t('setupPage.menuWays.excelText')}</p>
+          <EmptyMenuFileDownload />
+          <Link className="console-link" to="/manage/menu/import">
+            {t('setupPage.menuWays.upload')}
+          </Link>
+        </article>
+      </div>
+      <Link className="console-link" to="/manage/menu/photos">
+        {t('setupPage.menuWays.photos')}
+      </Link>
     </section>
   );
 }

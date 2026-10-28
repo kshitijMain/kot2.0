@@ -319,10 +319,19 @@ backup, updates and diagnostics.
 
 - `src/menu/import/`:
   - `menu-import.service.ts`: check (dry run) and import (one transaction with the setup lock,
-    then publish);
+    into the draft; publishing is the manager's own step since 2026-10-25);
   - `workbook.ts`: read-excel-file, with cells turned into the text a person typed;
   - `zip-limits.ts`: refuses a workbook whose entries unpack beyond 20 MB each or 60 MB in total;
-  - `menu-template.ts`: the vendor template.
+    `unpackZip` reads any archive within given limits; `storedZip` writes one;
+  - `menu-template.ts`: the vendor template, and the same workbook with rows for an export;
+  - `menu-file-reader.ts` and `menu-file.service.ts`, `menu-file.controller.ts`: the menu file
+    (ONB-005, ONB-007): `GET /api/v1/menu/files/empty` and `/export` answer with the zip itself;
+    `POST /api/v1/menu/files` takes the zip (or a plain .xlsx) as the raw body, up to 100 MB, on
+    that path only (`MENU_FILE_BODY_LIMIT`), refuses anything unsafe (threat PC-T9), keeps it under
+    `<data>/menu-files/` for a day and answers with the review; `POST .../:fileId/check` and
+    `.../:fileId/import` take the manager's name mapping and photo matches. The photos go through
+    the photo upload's checks (`PhotosService.uploadContent`). No internet, Control Plane, licence
+    or signature takes part.
 - The rules live in `@rp/domain` `planMenuImport`. See ADR-0013 and `docs/onboarding/README.md`.
 
 ## Photos (P1-04)
@@ -380,6 +389,32 @@ backup, updates and diagnostics.
 
 To try a real printer on a PC: add it under Printers with its IP address and port 9100, then use
 "Test print" (`POST /api/v1/printers/:id/test`). The answer says why it did not print.
+
+### The virtual printer (development only)
+
+No thermal printer at hand? `pnpm printer:virtual` (from the repository root or this folder)
+starts a stand-in network printer: it listens on raw TCP port 9100, takes the ESC/POS bytes this
+server sends, and shows each ticket as an 80 mm or 58 mm receipt at <http://127.0.0.1:9180>,
+newest first, with bold, double-width and double-height text, alignment and each paper cut (and
+"Cash drawer opened" for a drawer pulse). It lives in `scripts/virtual-printer/`, outside the
+server's build, so it is never shipped to restaurants.
+
+1. Start the server, then `pnpm printer:virtual`, and open <http://127.0.0.1:9180>.
+2. In the console: Manage, Kitchen and printers, "Add a printer": a network printer with address
+   `127.0.0.1` and port `9100`, and the paper width to try (58 or 80 mm). Give a station that
+   printer (mode print, or both).
+3. "Print a test page": it appears on the page with the ruler across the paper's width.
+4. A KOT: on the POS, send an order with a dish from that station.
+5. A bill: on the POS, "Print bill" for that table, with the printer set as the bill printer.
+
+Options: `pnpm printer:virtual -- --port 9101 --http-port 9181` (or `VIRTUAL_PRINTER_PORT`,
+`VIRTUAL_PRINTER_HTTP_PORT`) for a second printer; `--paper 58` or `--paper 80` to draw every
+ticket on that paper (by default each ticket's widest line tells: more than 32 characters is
+80 mm); `--host 0.0.0.0` when the server runs on another machine (the page stays on
+127.0.0.1). The server sends printable ASCII only and writes amounts as "Rs", so tickets show
+"Rs", as a real printer would print them; a ₹ sent as UTF-8 would show as ₹. The parser is
+`scripts/virtual-printer/escpos-parser.mjs`, checked against the server's own test page, KOT and
+bill in `test/unit/virtual-printer.test.ts`.
 
 ## Billing (P1-10)
 

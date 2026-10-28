@@ -35,20 +35,20 @@ The Android pieces shared by the waiter app and the table tablet (P2-01c, P2-01d
     service comes back with the saved words and the task starts JavaScript and the device session
     again; a restart Android refuses in the background just ends it.
   - `AlertNotifications.kt`: the high-importance alerts channel (sound, vibration, lock screen)
-    and the silent channel of the service's own notification ("Alerts for Ravi"). An alert in the
-    background is a notification with Acknowledge, tagged with its id and posted again on each
-    repeat, which alerts again. In the foreground, where the banner shows it, the phone only rings
-    and vibrates as the ringer mode allows; it also rings when notifications are off.
-  - `RpAlertActionReceiver.kt` (not exported): Acknowledge takes the notification off and goes to
-    JavaScript; one pressed while JavaScript is not listening waits in private preferences.
+    and the silent channel of the service's own notification ("Alerts for Ravi"). Each alert is a
+    notification, with the app on screen too: it pops up and goes, tagged with its id and posted
+    again on each repeat, which alerts again. Nobody acknowledges it (2026-10-25): it stays in the
+    shade until its cause is dealt with, and a tap opens the app at its table and takes it off the
+    shade. With notifications off the phone only rings and vibrates as the ringer mode allows.
   - `RpAlertsModule.kt`: `start` and `stop` the service, `announce` and `dismiss` alerts, the
-    `onAcknowledge` event, and `POST_NOTIFICATIONS` (Android 13 and later): whether notifications
+    table a tapped notification asks for (`onOpenTable` while the app runs, `takeOpenedTable` when
+    the tap started it), and `POST_NOTIFICATIONS` (Android 13 and later): whether notifications
     can show, asking for them, and opening their settings.
   - `AndroidAlertNotifier`: that module as `@rp/mobile-core`'s `AlertNotifier`, with the words
-    from the app's catalogue (`AlertNotificationText`), and as `NotificationPermission` for the
-    screens. `registerAlertKeepAlive` registers the keep-alive task where the app registers its
-    root.
-  - The library's manifest adds the service, the receiver and their permissions to both apps; the
+    from the app's catalogue (`AlertNotificationText`), as `NotificationPermission` for the
+    screens and as `AlertTableOpener` for the waiter app. `registerAlertKeepAlive` registers the
+    keep-alive task where the app registers its root.
+  - The library's manifest adds the service, the receivers and their permissions to both apps; the
     table tablet blocks the permissions in its app config, and the Android CI job checks both APKs.
 
 - The table tablet's kiosk and health (P3-01b, TAB-001, TAB-015):

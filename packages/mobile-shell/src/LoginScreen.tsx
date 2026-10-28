@@ -1,8 +1,9 @@
 import type { StaffTile } from '@rp/contracts';
 import { spacing } from '@rp/design-tokens';
 import { Button, PinPad } from '@rp/ui-native';
-import { useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { BackHandler, StyleSheet, View } from 'react-native';
+import { useAlerts } from './alerts.js';
 import { ApkOffer } from './ApkOffer.js';
 import { useDeviceSession, useSessionState, useT } from './context.js';
 import { messageOf } from './messages.js';
@@ -11,15 +12,47 @@ import { useLive } from './use-live.js';
 
 const NEVER = () => false;
 
-/** Staff tap their name and enter their PIN (AUTH-001, AUTH-002, AUTH-004). */
+/**
+ * Staff tap their name and enter their PIN (AUTH-001, AUTH-002, AUTH-004). A waiter phone is
+ * usually one waiter's: it opens on the PIN pad of the person it alerts (who last signed in on
+ * it), with "Not you?" for the list. Back on the PIN pad goes back to the list.
+ */
 export function LoginScreen({ roles }: { roles?: readonly StaffTile['role'][] }) {
   const session = useDeviceSession();
   const { notice } = useSessionState();
+  const { holder } = useAlerts();
   const t = useT();
   const { data, reload } = useLive(() => session.staffTiles(), NEVER);
-  const [person, setPerson] = useState<StaffTile | null>(null);
+  const [chosen, setChosen] = useState<StaffTile | null>(null);
+  /** "Not you?" pressed: the list, not the phone's usual person. */
+  const [listed, setListed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const allowed = (tile: StaffTile) => roles === undefined || roles.includes(tile.role);
+  const usual =
+    listed || holder === null || data.status !== 'ready'
+      ? undefined
+      : data.value.find((tile) => tile.staffId === holder.staffId && allowed(tile));
+  const person = chosen ?? usual ?? null;
+
+  const backToList = () => {
+    setChosen(null);
+    setListed(true);
+    setError(null);
+  };
+  const choosing = person !== null;
+  useEffect(() => {
+    if (!choosing) return undefined;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      setChosen(null);
+      setListed(true);
+      setError(null);
+      return true;
+    });
+    return () => {
+      subscription.remove();
+    };
+  }, [choosing]);
 
   const signIn = (pin: string) => {
     if (person === null) return;
@@ -36,34 +69,29 @@ export function LoginScreen({ roles }: { roles?: readonly StaffTile['role'][] })
     );
   };
 
-  if (person !== null) {
-    return (
-      <Screen title={t('login.pinFor', { name: person.displayName })} brand>
-        <PinPad
-          label={t('login.pinFor', { name: person.displayName })}
-          onComplete={signIn}
-          error={error}
-          busy={busy}
-        />
-        <Button
-          variant="secondary"
-          onPress={() => {
-            setPerson(null);
-            setError(null);
-          }}
-        >
-          {t('login.notYou')}
-        </Button>
-      </Screen>
-    );
-  }
-
   const noticeText =
     notice === 'signedOutInactive'
       ? t('login.signedOutInactive')
       : notice === 'signedOut'
         ? t('login.signedOut')
         : null;
+
+  if (person !== null) {
+    return (
+      <Screen title={t('login.pinFor', { name: person.displayName })} brand>
+        {chosen === null && noticeText !== null ? <Note tone="danger">{noticeText}</Note> : null}
+        <PinPad
+          label={t('login.pinFor', { name: person.displayName })}
+          onComplete={signIn}
+          error={error}
+          busy={busy}
+        />
+        <Button variant="secondary" testID="login-not-you" onPress={backToList}>
+          {t('login.notYou')}
+        </Button>
+      </Screen>
+    );
+  }
 
   return (
     <Screen title={t('mobile.staffTitle')} brand>
@@ -82,9 +110,7 @@ export function LoginScreen({ roles }: { roles?: readonly StaffTile['role'][] })
       {data.status === 'ready' && (
         <View style={styles.tiles}>
           {(() => {
-            const staff = data.value.filter(
-              (tile) => roles === undefined || roles.includes(tile.role),
-            );
+            const staff = data.value.filter(allowed);
             if (staff.length === 0) return <Note>{t('login.noStaff')}</Note>;
             return staff.map((tile) => (
               <Button
@@ -96,7 +122,7 @@ export function LoginScreen({ roles }: { roles?: readonly StaffTile['role'][] })
                 accessibilityLabel={`${tile.displayName}, ${t(`roles.${tile.role}`)}`}
                 onPress={() => {
                   session.dismissNotice();
-                  setPerson(tile);
+                  setChosen(tile);
                 }}
               >
                 {tile.displayName}

@@ -174,14 +174,16 @@ A manager denies having let a tablet out of the kiosk, or approved a diner's ord
 Whoever holds a locked phone acknowledges its holder's alert from the lock screen, which shows the
 alert's text to anyone.
 
-- Mitigation: the acknowledgement counts as the phone's holder's; the notification is private on
-  the lock screen, which shows only that there is an alert (the public version carries the
-  phone's "Alerts for ..." words), and Acknowledge needs the phone unlocked. The channel is
+- Mitigation: since 2026-10-25 a phone's notification has no Acknowledge at all (the phone never
+  acknowledges; a tap only opens the app at the table, which is locked behind the phone's own
+  screen lock). The notification is private on the lock screen, which shows only that there is an
+  alert (the public version carries the phone's "Alerts for ..." words). The channel is
   `rp.alerts.v2` because an existing channel keeps its lock-screen setting. The phone's own screen
   lock (MDM policy) is what makes this hold.
 - Code: `packages/mobile-native/android/src/main/java/com/rp/mobilenative/AlertNotifications.kt`.
-- Tests: `packages/mobile-native/test/alerts.test.ts` "passes Acknowledge pressed on a notification
-  on until it stops listening".
+- Tests: `packages/mobile-core/test/alert-center.test.ts` "keeps an alert until it is cleared,
+  without asking the waiter for anything"; `packages/mobile-native/test/alerts.test.ts` "passes
+  the table of a tapped notification on until it stops listening".
 - Risk: likelihood Medium, impact Low: Low.
 - Status: Partly mitigated. Plan: manual task 33 by 2026-10-31: the lock screen on a real phone.
   The Kotlin cannot be compiled or run in the build environment.

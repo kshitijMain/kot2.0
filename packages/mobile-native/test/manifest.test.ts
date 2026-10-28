@@ -45,7 +45,6 @@ describe('[SEC-010] [MOBILE-T3] what the apps’ manifest exports', () => {
     const all = components();
     expect(all.map((component) => component.name)).toEqual([
       'com.rp.mobilenative.RpAlertService',
-      'com.rp.mobilenative.RpAlertActionReceiver',
       'com.rp.mobilenative.RpApkInstallReceiver',
       'com.rp.mobilenative.RpPackageReplacedReceiver',
       'com.rp.mobilenative.RpDeviceAdminReceiver',

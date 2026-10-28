@@ -3,6 +3,8 @@ export interface RecordedCall {
   readonly path: string;
   readonly headers: Readonly<Record<string, string>>;
   readonly body: unknown;
+  /** A body sent as a file rather than JSON. */
+  readonly file?: Blob;
 }
 
 export interface FakeResponse {
@@ -42,6 +44,7 @@ export class FakeServer {
       path: `${url.pathname}${url.search}`,
       headers,
       body: typeof raw === 'string' ? (JSON.parse(raw) as unknown) : undefined,
+      ...(raw instanceof Blob && { file: raw }),
     };
     this.calls.push(call);
     const queue = this.handlers.get(`${call.method} ${url.pathname}`);

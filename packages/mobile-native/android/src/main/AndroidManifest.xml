@@ -30,10 +30,6 @@
         android:value="Keeps a restaurant waiter's work phone connected to the restaurant's own server on the local network while the screen is off, so kitchen and table alerts for the waiter ring at once, like their pager." />
     </service>
 
-    <receiver
-      android:name="com.rp.mobilenative.RpAlertActionReceiver"
-      android:exported="false" />
-
     <!-- Android's answer to an install of the app's new APK (P7-04e2). -->
     <receiver
       android:name="com.rp.mobilenative.RpApkInstallReceiver"

@@ -928,6 +928,114 @@ Decided 2026-09-26 (P1-08a):
 Standing instruction (2026-09-26, the Business Owner): build everything without stopping; Claude
 decides, records decisions here and moves straight to the next WP. Recorded in CLAUDE.md.
 
+Decided 2026-10-25 (the menu, at the Business Owner's request: a guided editor, by hand or Excel):
+
+808. The AI menu reading (ONB-006, P6-04a/b) is switched off for good: menus are entered by hand
+     or with the Excel template. The console's review screen, its route and its link are removed,
+     with their test; `features.aiMenuImport` joins `UNUSED_SETTING_KEYS` (contracts), so neither
+     the vendor web app nor the PC's Settings page shows it and the Control Plane does not push
+     it. The Control Plane reading service and the server's endpoints stay, unused (nothing works
+     without `CP_AI_API_KEY`). Bulk photo upload (ONB-007) stays.
+809. The dish form asks in plain words for name, category, short description, veg mark, spice,
+     photo, price or sizes, kitchen station, add-on groups and combo; tax group, short code,
+     search words, tags, prep time, hours, channels, display order, "suggest again" and external
+     ID are under "More options". A new dish starts on the tax group most dishes use
+     (`usualTaxGroupId`), so the manager usually never sees it.
+810. "Half and Full" adds both sizes in one tap (a price already typed becomes Full). A dish with
+     sizes has no price of its own to type: the dish's price sent to the server is its highest
+     size's, so nothing changes in the API (`basePriceOf`).
+811. Photos come only from the restaurant; the pickers say what makes a good one. `DishPhoto` (web
+     and native) shows the photo or one placeholder on the POS, the waiter app (the Business Owner
+     asked for both on 2026-10-25: a small square beside the name, `MenuItemCard`'s `photo`), the
+     tablet, the QR menu and the console (editor list, previews). The QR menu's dish sheet shows
+     nothing without a photo.
+812. The menu check (`menuHealth`): a dish without a price, an active kitchen station or an active
+     tax group blocks publishing in the console; a missing photo, an empty category and two
+     dishes with one name are warnings. The server refuses such a publication too (821).
+813. Publishing is a step: what changes (`menuChanges`: added, taken off, renamed, prices, photos)
+     against the published menu, refused while the check blocks; then the devices that hold a
+     menu (POS, kitchen screens, phones, tablets; not pagers or this console) split into
+     connected now and "gets it when it reconnects", from the device list. Devices do not report
+     which version they hold, and will not (the Business Owner, 2026-10-25).
+814. Every import adds to the draft and publishes nothing (the Business Owner, 2026-10-25: one way
+     of working); the manager publishes with the publish step. This changes `importMenu`'s answer
+     (`menuVersion` is now always null). The workbook screen became the menu file's (815).
+
+Decided 2026-10-25 (the menu file, at the Business Owner's request; the vendor-cloud menu plan was
+dropped before any of it was built: the menu has nothing to do with the Control Plane):
+
+815. A menu is managed only in the manager dashboard on the restaurant's PC, with no internet,
+     Control Plane, licence or signature. The menu file is one .zip: `menu.xlsx` (the existing
+     template), `photos/` (named by short code or exact dish name, matched by `matchPhotos`) and a
+     README (from `@rp/i18n`). "Download empty menu file", "Load menu file" (the zip, or a plain
+     .xlsx) and "Export menu file" (the draft's active entries with each dish's largest photo
+     rendition) are on Manage → Menu and set-up step 7.
+816. Loading checks first and shows every problem, then the review: the file's tax group and
+     station names with this PC's of the same name suggested (any case; others chosen by the
+     manager), every dish and every photo with its match, which the manager can change; nothing is
+     saved until "Add to the menu as a draft". The loaded file waits a day on the data drive.
+817. The file travels as raw bytes, not base64 JSON: the upload is the body of
+     `POST /api/v1/menu/files` (`application/zip`), read by a raw parser on that one path, up to
+     100 MB (`MENU_FILE_MAX_BYTES`), unpacked in memory within 550 entries, 20 MB each and 200 MB
+     in all; the downloads are the zip itself. The API client gained `download` and `upload`.
+818. Anything unsafe refuses the whole file, saying why: a path outside the archive, an entry that
+     is not the sheet, a README or an image by its name, a photo that fails the photo upload's
+     checks (threat PC-T9). What zip tools add (`__MACOSX`, `.DS_Store`, `Thumbs.db`) is skipped;
+     one folder around everything (a zipped folder) is allowed.
+819. The template gained two optional Items columns, "Served from" and "Served until" (MENU-007),
+     so an exported menu loads back with its hours; files without them load as before.
+820. Wrong menu data is accepted nowhere (the Business Owner, 2026-10-25: "only the right kind of
+     data should be entered"). A dish and each of its sizes must cost more than ₹0: the contract
+     (`ItemRequest`, `VariantRequest`), the import ("A price above ₹0") and the dish form refuse
+     ₹0. Stations and tax groups already could not be archived while a dish uses them, nor a dish
+     point at an archived one. The server runs the menu check before every publication and
+     refuses with 422 `MENU_NOT_READY`, naming the dishes, so data from before the rule (or written
+     any other way) never reaches a device.
+821. "Add photos in bulk" also takes a whole folder ("Choose a folder"), leaving out files that are
+     not photos: the easy way to add photos from a phone's gallery copied into one folder.
+
+Decided 2026-10-25 (the Business Owner's feedback after trying the waiter app on a phone, approved
+by them before the build). Each changes a BRD default; each is data or a setting where it can be:
+
+799. Only waiters sign in on a waiter phone (`SIGN_IN_ROLES` in `@rp/domain` permissions, enforced
+     by the server's staff tiles and PIN and owner logins: `ROLE_NOT_ON_DEVICE`). Managers and the
+     Owner use the POS and the dashboard; a manager's PIN for a void on the phone is an approval
+     (AUTH-011), not a sign-in, and stays. Not a setting: the Business Owner saw no reason for a
+     manager to carry one. Escalations still reach managers on the POS, the dashboard and a pager.
+800. A phone opens on the PIN pad of the waiter it alerts (its holder), with "Not you?" for the
+     list (AUTH-001 still holds: the name is chosen first, by the phone).
+801. Waiters acknowledge nothing (changes NTF-004 for the phone and TAB-004's re-alert). The
+     factory rules of ORDER_PENDING_APPROVAL, ITEM_READY, WATER/WAITER/BILL_REQUEST ring once
+     (`NONE`); a manager can bring repeats back per rule (NTF-002). They escalate after N when the
+     cause is still there (not approved, not answered); ITEM_READY does not escalate by itself:
+     `kds.autoEscalateNotCollected` is on by default, so food not picked up within
+     `kds.readyNotCollectedMinutes` (3) alerts the managers (KDS-006). MANAGER_NUDGE closes itself
+     after `notifications.autoCloseMinutes` (10, new repeat policy `AUTO_CLOSE`). A waiter's bill
+     request also clears when the bill is printed. The pager's button keeps NTF-004's meaning
+     (it acknowledges); the service-request inbox keeps its optional "on my way" (Acknowledge).
+802. Every alert is an Android notification, with the app on screen too; the in-app banner is gone.
+     It drops in and goes, stays in the shade, and a tap opens its table and takes it off the
+     shade. The notification has no Acknowledge button. The bell in each header lists the open
+     alerts. Another dish ready for a table with its alert open rings it again (not within 10 s
+     of its last ring, so a ticket marked ready at once rings once).
+803. The kitchen's "Picked up" serves the dish (`kds.pickupMarksServed`, on): the server applies
+     SERVE with both times, under the pick-up grant. The waiter app has no Picked up, Served or
+     "Serve all" buttons (changes WTR-007's "mark picked up / served" and KDS-007's "or by the
+     waiter in the app"); it shows each dish's live state.
+804. The phone's back button goes back a screen (menu → order → tables; takeaway → tables; PIN
+     pad → names); on the tables Android leaves the app, which keeps alerting.
+805. The waiter app draws edge to edge and keeps clear of the system bars with
+     `react-native-safe-area-context` 5.7 (Expo 57's version, MIT) through `@rp/ui-native`'s
+     `ScreenInsetsProvider`, which `Screen`, `Sheet` and toasts read. The table tablet (status bar
+     hidden, kiosk) provides no insets and is unchanged.
+806. Home: tables two to a row; above them only what asks for the waiter (unsent orders,
+     approvals, requests, the pager when offline or low, the break while it lasts). Menu in the
+     header holds who is signed in, the pager, On break, New takeaway and Sign out. A sent dish
+     shows "Again"; Cancel and Void are behind "More".
+807. CI builds a release-variant APK of each app (`*-release-apk`: JavaScript bundled, no Metro,
+     no development menu or floating gear), signed with the template's debug key so it installs
+     over the debug build; production APKs stay with EAS Build and the owner's key.
+
 Decided 2026-10-24 (the Parossa redesign, at the Business Owner's request; ADR-0022):
 
 794. The product is Parossa (replaces decision 9's OI-01 working name): Parossa Captain (waiter
@@ -4457,6 +4565,155 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-10-27: the Control Plane ready for AWS in Mumbai (staging first)
+
+At the Business Owner's request (no WP; nothing committed). `apps/control-plane/Dockerfile` (with
+`Dockerfile.dockerignore` and `.trivyignore`): Node 24.22.1 on Debian 13 by digest, the
+`pnpm deploy --prod` layout with the web app in `/app/web` (`CP_WEB_DIR`), user 1000, a
+`/v1/health` check, Amazon RDS's ap-south-1 authorities (`NODE_EXTRA_CA_CERTS`, by checksum), no
+npm or corepack. The same image migrates (Prisma's CLI comes with the client as a peer) and runs
+the admin CLI. `.github/workflows/control-plane-image.yml`: build, non-root check, a smoke test
+(migrate, healthy, web app served) against PostgreSQL 16, Trivy 0.75.0 by digest (fixable
+high/critical and secrets fail; SARIF to code scanning), then on main a push to ECR from a
+separate job with OIDC credentials in the `control-plane-registry` environment (no stored AWS
+key). Dependabot watches the base image. `docs/runbooks/control-plane-aws.md`: the AWS set-up,
+the engineer's review points and monthly cost ranges.
+
+Verified here: the image's install, build and deploy commands in a copy holding only the context
+the image gets; from the deployed folder, `migrate deploy` (also read-only), the service with the
+web app, the health check command and `vendor-user:create`; `pnpm ci:test`. Not verified here: the
+`docker build` itself and Trivy (no Docker in this environment); the CI job is the first build.
+
+Gotchas: node-postgres treats `sslmode=require` as `verify-full`, so RDS needs its CA trusted;
+Prisma's schema engine does not know `verify-full` and silently connects without TLS, so URLs use
+`require` (`control-plane.md` corrected). S3 and KMS still need IAM users' access keys (the config
+takes no session token or role): a candidate small change.
+
+### 2026-10-25: the guided menu editor (by hand or Excel; no AI)
+
+At the Business Owner's request (no WP; nothing committed): decisions 808 to 814. Domain:
+`menu-health.ts` (`menuHealth`, `usualTaxGroupId`) and `menu-changes.ts` (`menuChanges`) with tests.
+`@rp/ui-web` and `@rp/ui-native` `DishPhoto` (photo or placeholder plate, tokens only) with tests,
+used by the tablet's dish card and the QR menu. Console: `ItemDialog` rewritten (sections, "Half
+and Full", "More options", preview), `DishPreview`, `HealthPanel`, `PublishDialog`,
+`ExcelImportScreen`, set-up step 7's `MenuWays`, bulk photos' guide; the AI import screen removed.
+Strings in `@rp/i18n` (`menuEditor.health`, `menuEditor.publishing`, `excelImport`,
+`setupPage.menuWays`). Tests: domain, ui-web, ui-native, tablet, QR menu, console (menu editor,
+Excel import, setup, settings, menu view), contracts, Control Plane and server remote settings;
+the console e2e follows the new form and publish step. Docs: DESIGN_SYSTEM (DishPhoto, "More
+options"), onboarding README, manager manual, training scripts, Control Plane runbook and README,
+ARCHITECTURE, onboarding timing, phase 6, console README.
+
+Answered by the Business Owner the same day: devices do not report their menu version; the
+POS and the waiter app show dish photos; every import is a draft; wrong menu data is refused
+everywhere, the server's publication included (decisions 811, 813, 814, 821).
+
+### 2026-10-25: the menu file (on the PC only; no vendor cloud)
+
+At the Business Owner's request (no WP; nothing committed): decisions 811, 813 to 820. The
+vendor-cloud menu plan was never built, so nothing was removed for it. Domain: `menu-file.ts`
+(`menuFileNames`, `renameMenuFileNames`, `menuFileDishes`, `menuFileRows`, `menuFileSheets`,
+`menuFilePhotoName`), `importSheetRows` shared with `planMenuImport`, the "Served from" and "Served
+until" columns. Contracts: `menu-file.ts` and five routes. API client: `download`, `upload`.
+Server: `menu-file-reader.ts`, `menu-file.service.ts`, `menu-file.controller.ts`, `unpackZip`,
+`buildMenuWorkbook`, `PhotosService.uploadContent`, the raw body parser for the one upload path,
+imports into the draft. Console: `MenuFileScreen.tsx` (replaces the workbook screen),
+`ExportMenuFile`, set-up step 7, bulk photos by folder, the editor list's placeholder, POS photos.
+`@rp/ui-web` and `@rp/ui-native` `MenuItemCard` take `photo`; the waiter app passes it. Tests:
+domain, contracts, client, server unit and integration (including a round trip into a fresh
+restaurant), console, ui-web, ui-native, waiter app, and the e2e `menu-file.e2e.ts` (empty file →
+filled with Half and Full, an add-on group, a combo and photos → load → map a station → draft →
+publish → the POS shows the photos → export → load into a restaurant without a menu → the same
+menu). Docs: onboarding README, manager manual, DESIGN_SYSTEM, console and server READMEs, threat
+model PC-T9, phase 1, onboarding timing, the API document.
+
+Then `docs/runbooks/restaurant-onboarding.md` (the onboarding team's guide: what to collect, the
+menu file prepared on a test PC, install day step by step, later changes, problems, the ONB-009
+timeline), indexed in the runbooks README. Screenshots showed the POS photo filling the card
+(`DishPhoto`'s full width came later in the stylesheet): fixed with a two-class rule.
+
+Gotchas: two e2e servers cannot run at once (the pager broker's port 8883), so the e2e runs them
+one after the other. The speed e2e (NFR-P07) misses its 100 ms tap budget on this WSL machine
+with and without the dish photos (p95 136 ms both ways); it is judged on CI. pnpm has its own `docs` command: run the contracts' with `pnpm --filter
+@rp/contracts run docs`.
+
+### 2026-10-25: onboarding tested end to end from an empty system
+
+At the Business Owner's request (no WP; nothing committed): a fresh install on an empty database
+(no seed), the first run and all 11 set-up steps in the console with Playwright, a 38-dish Indian
+menu plus a combo (6 categories, Half/Full sizes, "Roti type" reused by 7 dishes, veg/non-veg/egg)
+entered by hand (3 dishes) and with the Excel template (the rest), photos by bulk upload, publish,
+a POS order, the kitchen display, the printed KOT and bill (a stand-in ESC/POS printer on
+127.0.0.1:9100), cash payment and the go-live test. The published menu matched the source dish by
+dish on the POS, waiter-app, table-tablet and QR menu logic (`@rp/ordering` on `GET /api/v1/menu`,
+the QR document checked against `QrMenuDocument`). The AI menu reader was not used.
+
+Fixed (with tests):
+
+- Photos were refused (500) when the data folder's path has a dot folder in it, as the
+  development `./.data` does: `sendFile` with `dotfiles: 'deny'` checks the whole absolute path.
+  Renditions are now sent relative to the photo store (`photos.int.test.ts` runs from a `.data`
+  folder).
+- A rendition that failed to send still carried `Cache-Control: public, max-age=31536000,
+immutable`, so browsers kept the error for a year. The caching headers now go out only with the
+  file (`sendFile`'s `headers`).
+- The QR step counted as done once every table had a code, and the go-live test then waited for a
+  QR order, even on a PC without the QR site and relay, where no guest can order: the test could
+  never pass. QR now counts only where `RP_QR_SITE_URL` and `RP_RELAY_URL` are set
+  (`OnboardingFacts.qrAvailable`; domain and onboarding integration tests).
+
+Found, not changed (for the Business Owner; no redesign yet):
+
+- No console screen for the Excel import: the API exists (`/api/v1/menu/import/check`, `/import`,
+  `/template`) but nothing calls it, while the empty menu and set-up step 7 tell the manager to
+  import a spreadsheet. Step 7 still says "or photos" (the AI reader).
+- A PC whose browser loses its device key cannot be paired again: "Pair this PC" works only while
+  no device is paired, and a pairing code needs a signed-in Manage screen. Recovery needed (the
+  test revoked the old device in the database).
+- Set-up does not ask for the bill printer (`bills.printerId`, under Settings), nor for opening a
+  cash shift: the first bill does not print ("No bill printer is set"), and the first cash payment
+  is refused until a shift is opened. "None: choose each time" does not offer a choice; it refuses.
+- An authenticator code used a moment ago (replay protection) is reported as "That did not match".
+- Requirement codes such as "(BILL-002)" and "second factor" show in the Restaurant page's text.
+- Tax and invoice details need the Owner's password and authenticator, set up only at step 4.
+- A fresh install also shows "Pair this device / Ask a manager for a pairing code" before any
+  manager exists; the empty overview's tip talks about occupied tables.
+- Opening hours: one "Add hours" per day, no "same every day"; tables one dialog at a time.
+- The dish form asks for a main price even with sizes, and the list then shows "From" the lowest
+  size price. "Read a printed menu" and "Add photos in bulk" look like text, not buttons.
+- The Excel import publishes the menu at once, including draft dishes made by hand.
+- "GST 5%" in the sheet does not match a group named "GST 5 %" (the hint's own spelling).
+- The table tile shows the amount before tax ("Bill printed · ₹1,009") while the bill is ₹1,059.
+- The device list shows this PC as "Not connected" while it is in use.
+
+Gotchas: `menu:template` writes into `docs/onboarding/` by default; pass a path to keep the
+committed copy. The console keeps its device key in IndexedDB, so Playwright needs a persistent
+profile (`launchPersistentContext`) to stay paired between scripts.
+
+### 2026-10-25: the waiter phone after the Business Owner's feedback
+
+The Business Owner tried the waiter app on a phone and asked for: waiters-only sign-in, the back
+button going back, nothing under the status or navigation bars, alerts as notifications that come
+and go with nothing to acknowledge, no Picked up or Served on the phone, and the app without the
+development gear. Claude reviewed the app, proposed changes (decisions 799 to 807) and built them
+once approved. Server: `maySignInOn` on staff tiles and logins; the factory rules and `AUTO_CLOSE`;
+`renotify` on `raise` (food ready per dish, rings merged within 10 s, `updatedAt` keeps the last
+ring); closing auto-close alerts in the ticker; bill alerts cleared on `BillPrinted`;
+`kds.pickupMarksServed` in `OrderItemsService.setStatus`. Phone: Kotlin posts every alert as a
+notification (no Acknowledge action, `RpAlertActionReceiver` removed, auto-cancel, the table
+session in the content intent; `onOpenTable` / `takeOpenedTable`); `AlertCenter` no longer
+acknowledges; `AlertBell` replaces `AlertBanner`; `LoginScreen` opens on the holder's PIN pad;
+insets in `Screen`, `Sheet` and `Toast`; the waiter app's back handling, home Menu, two-column
+tables and "More" on dishes. Tests for each (IDs AUTH-001, AUTH-010, NTF-006, NTF-008, KDS-006,
+KDS-007, WTR-005, WTR-007), the Maestro flows, READMEs, the runbook and
+`manual-tasks/37-waiter-phone-feedback.md`.
+
+Gotchas: the Kotlin was not compiled here (no Android SDK on the laptop); the Android CI job
+compiles it and builds both APKs. The app's Jest mocks `react-native-safe-area-context`
+(`apps/waiter-app/test/setup.ts`); the library's own mock needs `@jest/globals`, not installed
+for it. A JS `BackHandler` listener registered by a parent runs before a child's (last added runs
+first), so each screen handles its own back press instead of `SignedIn`.
 
 ### 2026-10-24: the Parossa redesign (ADR-0022)
 
