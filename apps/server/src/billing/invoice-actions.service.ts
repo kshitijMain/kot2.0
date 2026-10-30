@@ -7,7 +7,6 @@ import type {
 } from '@rp/contracts';
 import { tableMachine, transition } from '@rp/domain';
 import { AuditService } from '../audit/audit.service.js';
-import { authErrors } from '../auth/auth-errors.js';
 import type { ConsumedOverride, Principal } from '../auth/principal.js';
 import { currentBusinessDate } from '../common/business-dates.js';
 import { newId } from '../common/ids.js';
@@ -20,7 +19,7 @@ import { PrintFailure, PrinterTransport } from '../printing/printer-transport.js
 import { SettingsService } from '../settings/settings.service.js';
 import { BillsService } from './bills.service.js';
 import { InvoicesService } from './invoices.service.js';
-import { mayPrintBill, printsBills } from './who-prints-bills.js';
+import { mayPrintBill } from './who-prints-bills.js';
 
 function invoiceNotFound(): AppError {
   return new AppError(404, 'INVOICE_NOT_FOUND', 'There is no such invoice.');
@@ -46,12 +45,11 @@ export class InvoiceActionsService {
   /**
    * WTR-008 (S): a table's bill printed from the waiter app. The invoice is issued as the POS
    * issues it, then printed on the bill printer; when it cannot print, it stays issued and the
-   * answer says why, so a manager can print it. Waiters print only their own tables' bills, and
+   * answer says why, so a manager can print it. Any waiter prints any table's bill (ADR-0023), but
    * only when the restaurant allows it (the BRD matrix lets them only ask for the bill). A printed
    * bill is never printed again from here: a copy is a reprint, the manager's.
    */
   async printTableBill(principal: Principal, sessionId: string): Promise<PrintTableBillResponse> {
-    const byRole = printsBills(principal);
     const settings = await this.settings.snapshot(principal.restaurantId);
     if (!mayPrintBill(principal, settings)) {
       throw new AppError(
@@ -62,12 +60,11 @@ export class InvoiceActionsService {
     }
     const session = await this.prisma.tableSession.findFirst({
       where: { id: sessionId, restaurantId: principal.restaurantId, status: 'OPEN' },
-      select: { waiterId: true, table: { select: { state: true } } },
+      select: { table: { select: { state: true } } },
     });
     if (session === null) {
       throw new AppError(404, 'TABLE_SESSION_NOT_FOUND', 'There is no such open table.');
     }
-    if (!byRole && session.waiterId !== principal.staffId) throw authErrors.forbidden();
     if (session.table.state === 'BILL_PRINTED') {
       throw new AppError(
         409,

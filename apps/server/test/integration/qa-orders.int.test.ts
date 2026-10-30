@@ -234,7 +234,7 @@ describe('[KDS-002] [AUTH-005] a kitchen screen showing two stations (QA-017)', 
 });
 
 describe('[ORD-011] [AUTH-010] lowering a dish on another waiter’s table (QA-018)', () => {
-  it('counts as a cancel: only on the waiter’s own tables, while more may be added anywhere', async () => {
+  it('counts as a cancel, which any waiter may do on any table now (ADR-0023), audited', async () => {
     const otherWaiterId = await addStaff(app, kit, 'WAITER', '8642');
     const other = await api(app)
       .post('/api/v1/auth/pin-login')
@@ -252,7 +252,12 @@ describe('[ORD-011] [AUTH-010] lowering a dish on another waiter’s table (QA-0
       .patch(`/api/v1/order-items/${line.id}`)
       .set(as(ravi))
       .send({ quantity: 1 });
-    expect(lowered.status).toBe(403);
+    expect(lowered.status, JSON.stringify(lowered.body)).toBeLessThan(300);
+    expect(
+      await prisma.auditLog.findFirstOrThrow({
+        where: { action: 'ORDER_ITEM_MODIFIED', entityId: line.id, actorId: otherWaiterId },
+      }),
+    ).toBeTruthy();
     const raised = await api(app)
       .patch(`/api/v1/order-items/${line.id}`)
       .set(as(ravi))

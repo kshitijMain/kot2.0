@@ -1,4 +1,5 @@
 import type {
+  MyKotTablesResponse,
   AlertView,
   DeviceAlertsResponse,
   FloorResponse,
@@ -14,7 +15,6 @@ import type {
   SubmitOrderResponse,
   TableOverviewEntry,
   TableSessionView,
-  WaiterAssignmentsResponse,
 } from '@rp/contracts';
 import { canTransition, type OrderItemState, orderItemMachine, transition } from '@rp/domain';
 import { createTranslator } from '@rp/i18n';
@@ -139,10 +139,8 @@ export class Restaurant {
     signInFailures: 0,
     lastSignInFailureAt: null,
   };
-  /** Ravi looks after the hall today. */
-  assignments: WaiterAssignmentsResponse['current']['assignments'] = [
-    { staffId: RAVI, staffName: 'Ravi', sectionIds: [HALL], tableIds: [] },
-  ];
+  /** The tables Ravi sent a KOT to today: T2 (ADR-0023, no assignments). */
+  sentTo: string[] = [];
 
   /** Ravi signed in on the phone, so it alerts him (P2-06a); his open alerts, oldest first. */
   holder: DeviceAlertsResponse['holder'] = { staffId: RAVI, displayName: 'Ravi' };
@@ -640,12 +638,12 @@ export class Restaurant {
         .on('GET', '/api/v1/tables/overview', () => ({ status: 200, body: this.overview() }))
         .on('GET', '/api/v1/licence', () => ({ status: 200, body: this.licence }))
         .on('GET', '/api/v1/floor', () => ({ status: 200, body: this.floor() }))
-        .on('GET', '/api/v1/waiter-assignments', () => ({
+        .on('GET', '/api/v1/tables/my-kots-today', () => ({
           status: 200,
           body: {
-            current: { businessDate: '2026-09-26', assignments: this.assignments },
-            previous: null,
-          } satisfies WaiterAssignmentsResponse,
+            businessDate: '2026-09-26',
+            tableIds: this.sentTo.length > 0 ? this.sentTo : [this.table('T2').id],
+          } satisfies MyKotTablesResponse,
         }))
         .on('GET', '/api/v1/menu', () => ({ status: 200, body: this.menu }))
         .on('POST', '/api/v1/orders', (call: RecordedCall) => {

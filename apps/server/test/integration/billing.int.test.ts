@@ -855,7 +855,7 @@ describe('[BILL-010] editing a printed bill', () => {
 });
 
 describe('[WTR-008] printing the bill from the waiter app', () => {
-  it('[WTR-008] lets a waiter print their own table’s bill from the app, when allowed', async () => {
+  it('[WTR-008] lets a waiter print a table’s bill from the app, when allowed', async () => {
     const jobs: string[] = [];
     const paper = createServer((socket) => {
       const chunks: Buffer[] = [];
@@ -890,7 +890,7 @@ describe('[WTR-008] printing the bill from the waiter app', () => {
         await server()
           .post(`/api/v1/tables/${id('T8')}/open`)
           .set(as(manager))
-          .send({ covers: 2, waiterId: kit.staff.BILLER })
+          .send({ covers: 2 })
       ).body,
     );
     const printBill = (sessionId: string, login = waiter) =>
@@ -911,8 +911,10 @@ describe('[WTR-008] printing the bill from the waiter app', () => {
       .send({ value: true, reason: 'Waiters bring the bill' });
     expect(allowed.status, JSON.stringify(allowed.body)).toBe(200);
     expect(await mayPrint(waiter)).toBe(true);
+    // Any waiter may print any table's bill (ADR-0023): another's table is refused only because
+    // it has nothing on it yet.
     const notTheirs = await printBill(theirs.id);
-    expect([notTheirs.status, codeOf(notTheirs)]).toEqual([403, 'FORBIDDEN']);
+    expect([notTheirs.status, codeOf(notTheirs)]).toEqual([409, 'NOTHING_TO_BILL']);
 
     const before = jobs.length;
     const printed = await printBill(mine.id);

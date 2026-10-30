@@ -101,7 +101,7 @@ async function openTable(label: string): Promise<TableSessionView> {
   const response = await server()
     .post(`/api/v1/tables/${idOf(label)}/open`)
     .set(as(waiter))
-    .send({ covers: 2, waiterId: kit.staff.WAITER });
+    .send({ covers: 2 });
   expect(response.status, JSON.stringify(response.body)).toBe(201);
   return TableSessionView.parse(response.body);
 }
@@ -503,10 +503,7 @@ describe('[AUTH-009] [SEC-009] who may call and how often', () => {
       },
     });
     const tablet = await addDevice(app, kit, 'TABLE_TABLET', { tableId: table.id });
-    await server()
-      .post(`/api/v1/tables/${table.id}/open`)
-      .set(as(waiter))
-      .send({ covers: 2, waiterId: kit.staff.WAITER });
+    await server().post(`/api/v1/tables/${table.id}/open`).set(as(waiter)).send({ covers: 2 });
     const raise = (type: string) =>
       server()
         .post('/api/v1/devices/current/service-requests')

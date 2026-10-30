@@ -96,7 +96,7 @@ async function billAlert(label: string) {
       await server()
         .post(`/api/v1/tables/${tables[label] ?? ''}/open`)
         .set(authHeaders(kit.deviceId, manager.accessToken))
-        .send({ covers: 2, waiterId: kit.staff.WAITER })
+        .send({ covers: 2 })
     ).body,
   );
   await server()

@@ -21,7 +21,7 @@ const byKiran = () => ({
 });
 
 describe('[WTR-005] the service request inbox', () => {
-  it('lists the requests at the waiter’s tables with table and age, then every table’s', async () => {
+  it('lists every table’s requests with table and age, oldest first, then those of my tables', async () => {
     const restaurant = new Restaurant();
     restaurant.ask('T5', 'WAITER', 3, {
       state: 'ESCALATED',
@@ -30,9 +30,11 @@ describe('[WTR-005] the service request inbox', () => {
     restaurant.ask('T3', 'BILL', 2, byKiran());
     await signedInApp(restaurant);
 
-    const mine = await inbox();
-    expect(within(mine).getByRole('header', { name: '2 requests from tables' })).toBeOnTheScreen();
-    const water = within(mine).getByTestId(`request-${T2_WATER}`);
+    // Any waiter serves any table (ADR-0023): every table's requests come first.
+    const all = await inbox();
+    expect(within(all).getByRole('header', { name: '3 requests from tables' })).toBeOnTheScreen();
+    expect(within(all).getByText('3 min ago · Managers were alerted too')).toBeOnTheScreen();
+    const water = within(all).getByTestId(`request-${T2_WATER}`);
     expect(within(water).getByText('Table T2 · Water requested')).toBeOnTheScreen();
     expect(within(water).getByText('4 min ago')).toBeOnTheScreen();
     expect(
@@ -42,23 +44,18 @@ describe('[WTR-005] the service request inbox', () => {
       within(water).getByRole('button', { name: 'Resolve Table T2 · Water requested' }),
     ).toBeOnTheScreen();
     // Someone is on the way to T3: only Resolve is left.
-    expect(within(mine).getByText('2 min ago · Kiran is on the way')).toBeOnTheScreen();
-    expect(within(mine).queryByRole('button', { name: /^Acknowledge Table T3/ })).toBeNull();
-    expect(
-      within(mine).getByRole('button', { name: 'Resolve Table T3 · Bill requested' }),
-    ).toBeOnTheScreen();
-    // T5 is Kiran's, on the terrace.
-    expect(within(mine).queryByText(/Table T5/)).toBeNull();
-
-    await fireEvent.press(screen.getByRole('tab', { name: 'All tables' }));
-    const all = await inbox();
-    expect(within(all).getByRole('header', { name: '3 requests from tables' })).toBeOnTheScreen();
-    expect(within(all).getByText('3 min ago · Managers were alerted too')).toBeOnTheScreen();
-    // Oldest first.
+    expect(within(all).getByText('2 min ago · Kiran is on the way')).toBeOnTheScreen();
+    expect(within(all).queryByRole('button', { name: /^Acknowledge Table T3/ })).toBeNull();
     const [first, second, third] = within(all).getAllByText(/^Table T/);
     expect(first).toHaveTextContent('Table T2 · Water requested');
     expect(second).toHaveTextContent('Table T5 · Waiter called');
     expect(third).toHaveTextContent('Table T3 · Bill requested');
+
+    // The tables Ravi sent a KOT to today: T2 only.
+    await fireEvent.press(screen.getByRole('tab', { name: 'Tables I sent KOTs to today' }));
+    const mine = await inbox();
+    expect(within(mine).getByRole('header', { name: '1 request from a table' })).toBeOnTheScreen();
+    expect(within(mine).queryByText(/Table T5/)).toBeNull();
   });
 
   it('acknowledges ("on my way") and resolves in one tap each', async () => {

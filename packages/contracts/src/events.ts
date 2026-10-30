@@ -80,6 +80,7 @@ export const OrdersMoved = event(
   }),
 );
 /** Another waiter now looks after an open table (TBL-002 per-session override, P1-02b). */
+/** No longer sent (ADR-0023: no responsible waiter); kept so older events still read. */
 export const TableWaiterChanged = event(
   'TableWaiterChanged',
   z.object({ tableId: Id, tableSessionId: Id, waiterId: Id }),

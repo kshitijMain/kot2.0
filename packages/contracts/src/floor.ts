@@ -99,52 +99,14 @@ export type FloorLayoutRequest = z.infer<typeof FloorLayoutRequest>;
 export const FloorArchiveRequest = z.strictObject({ reason: Reason });
 export type FloorArchiveRequest = z.infer<typeof FloorArchiveRequest>;
 
-// ---------------------------------------------------------------- waiter assignment
+// ---------------------------------------------------------------- tables a waiter sent KOTs to
 
-/** One waiter's sections and single tables for the business day (TBL-002). */
-export const WaiterAssignmentInput = z
-  .strictObject({
-    staffId: Id,
-    sectionIds: z.array(Id).max(20),
-    tableIds: z.array(Id).max(100),
-  })
-  .refine((assignment) => assignment.sectionIds.length + assignment.tableIds.length > 0, {
-    message: 'Give the waiter at least one section or table',
-  });
-export type WaiterAssignmentInput = z.infer<typeof WaiterAssignmentInput>;
-
-/** Replaces the business day's assignments; an empty list clears them. */
-export const UpdateWaiterAssignmentsRequest = z.strictObject({
-  assignments: z
-    .array(WaiterAssignmentInput)
-    .max(100)
-    .refine(
-      (assignments) =>
-        new Set(assignments.map((assignment) => assignment.staffId)).size === assignments.length,
-      { message: 'List each waiter once' },
-    ),
-  reason: Reason.optional(),
-});
-export type UpdateWaiterAssignmentsRequest = z.infer<typeof UpdateWaiterAssignmentsRequest>;
-
-export const WaiterAssignmentView = z.object({
-  staffId: Id,
-  staffName: z.string(),
-  sectionIds: z.array(Id),
+/**
+ * The tables the signed-in person sent a KOT to on the business day (ADR-0023): the waiter app's
+ * "Tables I sent KOTs to today" filter. There are no waiter assignments: any waiter serves any table.
+ */
+export const MyKotTablesResponse = z.object({
+  businessDate: IsoDate,
   tableIds: z.array(Id),
 });
-export type WaiterAssignmentView = z.infer<typeof WaiterAssignmentView>;
-
-export const WaiterAssignmentSet = z.object({
-  businessDate: IsoDate,
-  assignments: z.array(WaiterAssignmentView),
-});
-export type WaiterAssignmentSet = z.infer<typeof WaiterAssignmentSet>;
-
-export const WaiterAssignmentsResponse = z.object({
-  /** Today's business date and its assignments (empty until the manager assigns). */
-  current: WaiterAssignmentSet,
-  /** The most recent earlier set, which the manager can apply again in one step. */
-  previous: WaiterAssignmentSet.nullable(),
-});
-export type WaiterAssignmentsResponse = z.infer<typeof WaiterAssignmentsResponse>;
+export type MyKotTablesResponse = z.infer<typeof MyKotTablesResponse>;

@@ -961,6 +961,17 @@ Decided 2026-10-30 (operations changes at the Business Owner's request, ADR-0023
      stock", in their name, CANCELLED slip), rejects it from diners' orders still waiting, and
      sends one `OUT_OF_STOCK` alert per line to its sender; a combo is cancelled only while none of
      its parts has started (D-16). A count running out cancels nothing.
+831. No waiter assignment (TBL-002 changed): sections are floor areas only; Today's sections, the
+     assignment routes, the domain's responsible waiters and the change-waiter route are removed;
+     old `shift_assignments` stay as history. Pagers keep their wearer.
+832. Waiters are ALLOW on approvals, cancels before preparation and table move/merge (§4.2 OWN
+     changed); no built-in OWN grant remains. A table session records who opened it ("Opened
+     by"); any waiter prints a table's bill when `bills.waiterMayPrint` is on.
+833. `ALL_WAITERS` is every waiter on duty and not on break; floor alerts go to them (bill
+     requests also to the managers, D-19); stored rules naming the old kinds become
+     `ALL_WAITERS` (migration `20261030120000_any_waiter_any_table`).
+834. The waiter app's home shows all tables by floor area, with "Tables I sent KOTs to today"
+     (`GET /api/v1/tables/my-kots-today`, ORDER_CREATE).
 
 Decided 2026-10-25 (the menu, at the Business Owner's request: a guided editor, by hand or Excel):
 

@@ -19,8 +19,6 @@ import {
 } from '../src/index.js';
 
 const context = (overrides: Partial<RecipientContext> = {}): RecipientContext => ({
-  responsibleWaiterId: 'ravi',
-  sectionWaiterIds: ['ravi', 'sunita'],
   allWaiterIds: ['ravi', 'sunita', 'arjun'],
   managersOnDuty: ['vikram'],
   ownerIds: ['asha'],
@@ -41,11 +39,12 @@ describe('[NTF-002] [NTF-003] the Appendix C matrix', () => {
   // waiters' alerts ring once and need no acknowledgement (Business Owner, 2026-10-25): food ready
   // escalates from the kitchen (KDS-006), a nudge closes itself.
   const MATRIX: readonly [NotificationEvent, string[], string | null, boolean, string][] = [
-    ['ORDER_PENDING_APPROVAL', ['ravi'], 'T7 NEW ORDER', true, 'NONE'],
-    ['ITEM_READY', ['ravi'], 'T7 READY', false, 'NONE'],
-    ['WATER_REQUEST', ['ravi'], 'T7 WATER', true, 'NONE'],
-    ['WAITER_REQUEST', ['ravi'], 'T7 WAITER', true, 'NONE'],
-    ['BILL_REQUEST', ['ravi', 'vikram'], 'T7 BILL', true, 'NONE'],
+    // Any waiter, any table (ADR-0023): the floor's alerts go to every waiter on duty.
+    ['ORDER_PENDING_APPROVAL', ['ravi', 'sunita', 'arjun'], 'T7 NEW ORDER', true, 'NONE'],
+    ['ITEM_READY', ['ravi', 'sunita', 'arjun'], 'T7 READY', false, 'NONE'],
+    ['WATER_REQUEST', ['ravi', 'sunita', 'arjun'], 'T7 WATER', true, 'NONE'],
+    ['WAITER_REQUEST', ['ravi', 'sunita', 'arjun'], 'T7 WAITER', true, 'NONE'],
+    ['BILL_REQUEST', ['ravi', 'sunita', 'arjun', 'vikram'], 'T7 BILL', true, 'NONE'],
     ['READY_NOT_COLLECTED', ['vikram'], 'T7 FOOD WAITING', false, 'UNTIL_ACKED'],
     ['MANAGER_NUDGE', ['sunita'], 'MGR: Check T7', false, 'AUTO_CLOSE'],
     ['ORDER_CHANGED', [], null, false, 'NONE'],
@@ -78,65 +77,73 @@ describe('[NTF-002] [NTF-003] the Appendix C matrix', () => {
 });
 
 describe('[NTF-005] [NTF-007] [NTF-009] recipients', () => {
-  const ready = DEFAULT_NOTIFICATION_RULES.ITEM_READY;
+  const water = DEFAULT_NOTIFICATION_RULES.WATER_REQUEST;
 
-  it('goes to the managers at once when the waiter has neither pager nor app connected', () => {
-    const resolved = resolveRecipients(ready, context({ reachable: (id) => id !== 'ravi' }));
-    expect(resolved).toEqual({ staffIds: ['ravi', 'vikram'], stations: false, escalateNow: true });
+  it('goes to every waiter on duty, not those signed out or on break (ADR-0023)', () => {
+    expect(water.recipients).toEqual(['ALL_WAITERS']);
+    expect(
+      resolveRecipients(
+        water,
+        context({ onDuty: (id) => id !== 'arjun', onBreak: new Set(['sunita']) }),
+      ),
+    ).toEqual({ staffIds: ['ravi'], stations: false, escalateNow: false });
   });
 
-  it('goes to the managers while the waiter is on break, and when nobody looks after the table', () => {
-    expect(resolveRecipients(ready, context({ onBreak: new Set(['ravi']) }))).toEqual({
+  it('goes to the managers at once when no waiter on duty has a pager or app connected', () => {
+    expect(resolveRecipients(water, context({ reachable: () => false }))).toEqual({
+      staffIds: ['ravi', 'sunita', 'arjun', 'vikram'],
+      stations: false,
+      escalateNow: true,
+    });
+    // One connected waiter is enough.
+    expect(resolveRecipients(water, context({ reachable: (id) => id === 'arjun' }))).toMatchObject({
+      escalateNow: false,
+    });
+  });
+
+  it('goes to the managers when every waiter is on break or off duty', () => {
+    expect(resolveRecipients(water, context({ onDuty: () => false }))).toEqual({
       staffIds: ['vikram'],
       stations: false,
       escalateNow: true,
     });
-    expect(resolveRecipients(ready, context({ responsibleWaiterId: null })).staffIds).toEqual([
-      'vikram',
-    ]);
-    const section = effectiveRule('WATER_REQUEST', {
-      WATER_REQUEST: { recipients: ['SECTION_WAITERS'] },
-    });
     expect(
-      resolveRecipients(section, context({ onBreak: new Set(['ravi', 'sunita']) })),
+      resolveRecipients(water, context({ onBreak: new Set(['ravi', 'sunita', 'arjun']) })),
     ).toMatchObject({ staffIds: ['vikram'], escalateNow: true });
-    expect(resolveRecipients(section, context({ onBreak: new Set(['ravi']) })).staffIds).toEqual([
-      'sunita',
-    ]);
   });
 
-  it('[BILL-015] does not alert the waiter who asked for the bill; the managers on duty still hear', () => {
+  it('[BILL-015] does not alert whoever asked for the bill; the others and the managers hear', () => {
     const bill = DEFAULT_NOTIFICATION_RULES.BILL_REQUEST;
-    // The cashier's alerts go to the managers on duty (ADR-0023).
-    expect(bill.recipients).toEqual(['RESPONSIBLE_WAITER', 'MANAGERS_ON_DUTY']);
-    // Ravi asked on his phone: not alerted, and not "missing", even with his pager off.
-    expect(
-      resolveRecipients(bill, context({ askedById: 'ravi', reachable: (id) => id !== 'ravi' })),
-    ).toEqual({ staffIds: ['vikram'], stations: false, escalateNow: false });
-    // Vikram asked at the POS: Ravi is told, Vikram is not.
-    expect(resolveRecipients(bill, context({ askedById: 'vikram' })).staffIds).toEqual(['ravi']);
-    // Someone else's request changes nothing.
-    expect(resolveRecipients(bill, context({ askedById: null })).staffIds).toEqual([
-      'ravi',
-      'vikram',
-    ]);
-    // A manager who asked while nobody looks after the table is still called with the others.
-    expect(
-      resolveRecipients(bill, context({ askedById: 'vikram', responsibleWaiterId: null })),
-    ).toEqual({ staffIds: ['vikram'], stations: false, escalateNow: true });
-  });
-
-  it('lets a manager send an event to all waiters or the managers instead (NTF-002)', () => {
-    const rule = effectiveRule('WATER_REQUEST', {
-      WATER_REQUEST: { recipients: ['ALL_WAITERS', 'MANAGERS_ON_DUTY'], escalate: false },
-    });
-    expect(rule.channels).toEqual(['PAGER', 'WAITER_APP']);
-    expect(resolveRecipients(rule, context()).staffIds).toEqual([
-      'ravi',
+    // The cashier's alerts go to the managers on duty, the table's to every waiter (ADR-0023).
+    expect(bill.recipients).toEqual(['ALL_WAITERS', 'MANAGERS_ON_DUTY']);
+    expect(resolveRecipients(bill, context({ askedById: 'ravi' })).staffIds).toEqual([
       'sunita',
       'arjun',
       'vikram',
     ]);
+    expect(resolveRecipients(bill, context({ askedById: 'vikram' })).staffIds).toEqual([
+      'ravi',
+      'sunita',
+      'arjun',
+    ]);
+  });
+
+  it('[BILL-015] does not call the managers at once when the only waiter is the one who asked', () => {
+    const bill = DEFAULT_NOTIFICATION_RULES.BILL_REQUEST;
+    expect(
+      resolveRecipients(
+        bill,
+        context({ allWaiterIds: ['ravi'], askedById: 'ravi', reachable: () => false }),
+      ),
+    ).toEqual({ staffIds: ['vikram'], stations: false, escalateNow: false });
+  });
+
+  it('lets a manager send an event to the managers only instead (NTF-002)', () => {
+    const rule = effectiveRule('WATER_REQUEST', {
+      WATER_REQUEST: { recipients: ['MANAGERS_ON_DUTY'], escalate: false },
+    });
+    expect(rule.channels).toEqual(['PAGER', 'WAITER_APP']);
+    expect(resolveRecipients(rule, context()).staffIds).toEqual(['vikram']);
     expect(effectiveRule('ITEM_READY')).toEqual(DEFAULT_NOTIFICATION_RULES.ITEM_READY);
   });
 });
@@ -293,13 +300,10 @@ describe('[MGR-008] [NTF-005] what asks for a person at the POS and the dashboar
 
 describe('[NTF-002] a manager’s rules', () => {
   it('offers the usual people and channels, and the special ones only where they belong', () => {
-    expect(recipientChoices('ITEM_READY')).toEqual([
-      'RESPONSIBLE_WAITER',
-      'SECTION_WAITERS',
-      'ALL_WAITERS',
-      'MANAGERS_ON_DUTY',
-      'OWNER',
-    ]);
+    // No table's or section's waiter any more (ADR-0023).
+    expect(RECIPIENT_KINDS).not.toContain('RESPONSIBLE_WAITER');
+    expect(RECIPIENT_KINDS).not.toContain('SECTION_WAITERS');
+    expect(recipientChoices('ITEM_READY')).toEqual(['ALL_WAITERS', 'MANAGERS_ON_DUTY', 'OWNER']);
     // No cashier to send anything to (ADR-0023).
     expect(RECIPIENT_KINDS).not.toContain('CASHIER');
     expect(recipientChoices('ORDER_CHANGED')).toContain('STATION');
@@ -322,20 +326,20 @@ describe('[NTF-002] a manager’s rules', () => {
     expect(
       ruleOverride('BILL_REQUEST', {
         ...DEFAULT_NOTIFICATION_RULES.BILL_REQUEST,
-        recipients: ['MANAGERS_ON_DUTY', 'RESPONSIBLE_WAITER'],
+        recipients: ['MANAGERS_ON_DUTY', 'ALL_WAITERS'],
       }),
     ).toBeUndefined();
     expect(
       ruleOverride('WATER_REQUEST', {
         ...factory,
-        recipients: ['SECTION_WAITERS'],
+        recipients: ['MANAGERS_ON_DUTY'],
         escalate: false,
       }),
-    ).toEqual({ recipients: ['SECTION_WAITERS'], escalate: false });
+    ).toEqual({ recipients: ['MANAGERS_ON_DUTY'], escalate: false });
     const changed = effectiveRule('WATER_REQUEST', {
-      WATER_REQUEST: { recipients: ['SECTION_WAITERS'], escalate: false },
+      WATER_REQUEST: { recipients: ['MANAGERS_ON_DUTY'], escalate: false },
     });
-    expect(changed).toMatchObject({ recipients: ['SECTION_WAITERS'], channels: factory.channels });
+    expect(changed).toMatchObject({ recipients: ['MANAGERS_ON_DUTY'], channels: factory.channels });
   });
 
   it('needs someone, somewhere, and a pager line for the pager', () => {

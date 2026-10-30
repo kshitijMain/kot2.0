@@ -475,7 +475,7 @@ export function TableScreen({
                 {t('mobile.tables.requestBill')}
               </Button>
             ) : null}
-            {mayPrint && ownTable && table.state !== 'BILL_PRINTED' ? (
+            {mayPrint && table.state !== 'BILL_PRINTED' ? (
               <Button
                 variant="secondary"
                 style={styles.grow}

@@ -216,14 +216,12 @@ describe('[TBL-003] opening a table', () => {
     const pad = within(dialog).getByRole('group', { name: t('pos.open.guestsPad') });
     await user.click(within(pad).getByRole('button', { name: '4' }));
     expect(within(dialog).getByLabelText(t('pos.open.guests'))).toHaveValue('4');
-    await user.selectOptions(within(dialog).getByLabelText(t('pos.open.waiter')), 'Ravi');
     await user.click(within(dialog).getByRole('button', { name: t('pos.open.submit') }));
 
     expect(await screen.findByText(t('pos.open.opened', { table: 'T1' }))).toBeInTheDocument();
-    expect(fake.callsTo('POST', `/api/v1/tables/${T1}/open`)[0]?.body).toEqual({
-      covers: 4,
-      waiterId: STAFF.WAITER.staffId,
-    });
+    // No waiter is chosen: any waiter serves any table (ADR-0023).
+    expect(within(dialog).queryByRole('combobox')).toBeNull();
+    expect(fake.callsTo('POST', `/api/v1/tables/${T1}/open`)[0]?.body).toEqual({ covers: 4 });
     expect(await tile(/^T1, Occupied/)).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).toBeNull();
   });

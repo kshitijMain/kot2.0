@@ -11,7 +11,7 @@ import {
   useSessionState,
   useT,
 } from '@rp/mobile-shell';
-import { affectsFloor, floorSections, myTableIds, tileAlert, tileDetails } from '@rp/ordering';
+import { affectsFloor, floorSections, onlyTables, tileAlert, tileDetails } from '@rp/ordering';
 import {
   Button,
   Glyph,
@@ -38,9 +38,12 @@ type TablesView = 'mine' | 'all';
 /** Seated times on the tiles move on every half minute. */
 const CLOCK_MS = 30_000;
 
+/** The floor's events, and new tickets (a KOT sent puts its table among "mine"). */
+const affectsKots = (type: string) => affectsFloor(type) || type === 'KotCreated';
+
 /**
- * The waiter app's home (WTR-002): "My tables" (the waiter's sections and tables for today, and
- * any table they are responsible for) or all tables, grouped by section two to a row, each with
+ * The waiter app's home (WTR-002): all tables, grouped by floor area two to a row, or only the
+ * "Tables I sent KOTs to today" (any waiter serves any table, ADR-0023), each with
  * its state, guests, time seated, waiter and anything waiting for staff. Above them only what
  * asks for the waiter: orders on this phone not yet sent (WTR-012), orders to approve, the
  * requests from the tables shown (WTR-005), and the pager or the break when something is up
@@ -62,34 +65,28 @@ export function TablesScreen({
   const { colors } = useTheme();
   const toast = useToast();
   const now = useNow(CLOCK_MS);
-  const [view, setView] = useState<TablesView>(person?.role === 'WAITER' ? 'mine' : 'all');
+  const [view, setView] = useState<TablesView>('all');
   const [openingId, setOpeningId] = useState<string | undefined>();
   const [menuOpen, setMenuOpen] = useState(false);
   const breakState = useBreak();
   const { data, reload } = useLive(async () => {
-    const [overview, assignments, floor] = await Promise.all([
+    const [overview, sent, floor] = await Promise.all([
       session.api.getTableOverview(),
-      session.api.getWaiterAssignments(),
+      session.api.getMyKotTables(),
       session.api.getFloor(),
     ]);
-    return { overview, assignments: assignments.current.assignments, floor };
-  }, affectsFloor);
+    return { overview, sentTo: sent.tableIds, floor };
+  }, affectsKots);
 
-  const mine = useMemo(() => {
-    if (data.status !== 'ready' || person === undefined) return undefined;
-    return myTableIds(person.id, data.value.overview, data.value.assignments);
-  }, [data, person]);
+  const mine = useMemo(
+    () => (data.status === 'ready' ? new Set(data.value.sentTo) : undefined),
+    [data],
+  );
   const shown = useMemo(() => {
     if (data.status !== 'ready') return undefined;
     const sections = floorSections(data.value.floor, data.value.overview);
-    if (view === 'all') return sections;
-    if (mine === undefined) return undefined;
-    return sections
-      .map((section) => ({
-        ...section,
-        tables: section.tables.filter((table) => mine.has(table.tableId)),
-      }))
-      .filter((section) => section.tables.length > 0);
+    if (view === 'all' || mine === undefined) return sections;
+    return onlyTables(sections, mine);
   }, [data, mine, view]);
   // The requests from the tables shown (WTR-005): the waiter's own, or every table's.
   const showRequest = useCallback(
@@ -137,8 +134,8 @@ export function TablesScreen({
       <SegmentedControl
         label={t('mobile.tables.view')}
         options={[
-          { id: 'mine', label: t('mobile.tables.mine') },
           { id: 'all', label: t('mobile.tables.all') },
+          { id: 'mine', label: t('mobile.tables.mine') },
         ]}
         value={view}
         onChange={(next) => {

@@ -33,8 +33,7 @@ export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 
 /** Who an alert goes to (NTF-002). */
 export const RECIPIENT_KINDS = [
-  'RESPONSIBLE_WAITER',
-  'SECTION_WAITERS',
+  /** Every waiter on duty: any waiter may serve any table (ADR-0023). */
   'ALL_WAITERS',
   'MANAGERS_ON_DUTY',
   'STATION',
@@ -105,36 +104,25 @@ const rule = (
  */
 export const DEFAULT_NOTIFICATION_RULES: Readonly<Record<NotificationEvent, NotificationRule>> = {
   ORDER_PENDING_APPROVAL: rule(
-    ['RESPONSIBLE_WAITER'],
+    ['ALL_WAITERS'],
     ['PAGER', 'WAITER_APP', 'POS'],
     '{table} NEW ORDER',
     true,
     'NONE',
   ),
   ITEM_READY: rule(
-    ['RESPONSIBLE_WAITER'],
+    ['ALL_WAITERS'],
     ['PAGER', 'WAITER_APP', 'TABLET'],
     '{table} READY',
     false,
     'NONE',
   ),
-  WATER_REQUEST: rule(
-    ['RESPONSIBLE_WAITER'],
-    ['PAGER', 'WAITER_APP'],
-    '{table} WATER',
-    true,
-    'NONE',
-  ),
-  WAITER_REQUEST: rule(
-    ['RESPONSIBLE_WAITER'],
-    ['PAGER', 'WAITER_APP'],
-    '{table} WAITER',
-    true,
-    'NONE',
-  ),
-  // The cashier's part goes to the managers on duty, who bill now (ADR-0023).
+  WATER_REQUEST: rule(['ALL_WAITERS'], ['PAGER', 'WAITER_APP'], '{table} WATER', true, 'NONE'),
+  WAITER_REQUEST: rule(['ALL_WAITERS'], ['PAGER', 'WAITER_APP'], '{table} WAITER', true, 'NONE'),
+  // The cashier's part goes to the managers on duty, who bill now, and the table's to every waiter
+  // on duty (ADR-0023).
   BILL_REQUEST: rule(
-    ['RESPONSIBLE_WAITER', 'MANAGERS_ON_DUTY'],
+    ['ALL_WAITERS', 'MANAGERS_ON_DUTY'],
     ['PAGER', 'WAITER_APP', 'POS'],
     '{table} BILL',
     true,
@@ -201,13 +189,7 @@ export function effectiveRule(
 }
 
 /** Recipients any event can go to; the special ones only where Appendix C uses them. */
-const GENERAL_RECIPIENTS: readonly RecipientKind[] = [
-  'RESPONSIBLE_WAITER',
-  'SECTION_WAITERS',
-  'ALL_WAITERS',
-  'MANAGERS_ON_DUTY',
-  'OWNER',
-];
+const GENERAL_RECIPIENTS: readonly RecipientKind[] = ['ALL_WAITERS', 'MANAGERS_ON_DUTY', 'OWNER'];
 const GENERAL_CHANNELS: readonly NotificationChannel[] = [
   'PAGER',
   'WAITER_APP',
@@ -332,8 +314,7 @@ export function reachesConsole(alert: AlertDelivery, staffId: string): boolean {
 
 /** The restaurant's people as they are right now, for resolving a rule. */
 export interface RecipientContext {
-  readonly responsibleWaiterId: string | null;
-  readonly sectionWaiterIds: readonly string[];
+  /** Every active waiter; those on duty (`onDuty`) are alerted. */
   readonly allWaiterIds: readonly string[];
   readonly managersOnDuty: readonly string[];
   readonly ownerIds: readonly string[];
@@ -352,8 +333,7 @@ export interface RecipientContext {
   readonly reachable: (staffId: string) => boolean;
   /**
    * The person whose own request raised the alert, e.g. a waiter asking for the bill on their phone
-   * (P2-06d): they know already, so they are not alerted, and as the responsible waiter they are
-   * not missing either, so the managers are not called at once on their account.
+   * (P2-06d): they know already, so they are not alerted.
    */
   readonly askedById?: string | null;
 }
@@ -363,19 +343,13 @@ export interface ResolvedRecipients {
   /** The station(s) of the event are alerted (kitchen screens and slips). */
   readonly stations: boolean;
   /**
-   * The managers are alerted now instead of after N seconds: the responsible waiter is missing, on
-   * break, or has neither pager nor app connected (NTF-007, NTF-009).
+   * The managers are alerted now instead of after N seconds: no waiter is there to take it (all off
+   * duty or on break), or none of them has a pager or app connected (NTF-007, NTF-009).
    */
   readonly escalateNow: boolean;
 }
 
-const WAITER_KINDS: ReadonlySet<RecipientKind> = new Set([
-  'RESPONSIBLE_WAITER',
-  'SECTION_WAITERS',
-  'ALL_WAITERS',
-  'SELECTED',
-  'KOT_SENDER',
-]);
+const WAITER_KINDS: ReadonlySet<RecipientKind> = new Set(['ALL_WAITERS', 'SELECTED', 'KOT_SENDER']);
 
 export function resolveRecipients(
   rule: NotificationRule,
@@ -396,27 +370,16 @@ export function resolveRecipients(
   for (const kind of rule.recipients) {
     if (WAITER_KINDS.has(kind)) waiterWanted = true;
     switch (kind) {
-      case 'RESPONSIBLE_WAITER': {
-        const waiter = context.responsibleWaiterId;
-        if (waiter !== null && waiter === context.askedById) {
-          waiterFound = true;
-          break;
-        }
-        if (waiter === null || context.onBreak.has(waiter) || !context.reachable(waiter)) {
-          escalateNow = true;
-        }
-        if (waiter !== null && !context.onBreak.has(waiter)) {
-          people.add(waiter);
-          waiterFound = true;
-        }
+      case 'ALL_WAITERS': {
+        const onDuty = context.onDuty ?? (() => true);
+        const waiters = context.allWaiterIds.filter((id) => onDuty(id) && !context.onBreak.has(id));
+        addWaiters(waiters);
+        // Whoever asked knows already, so is there for it; NTF-007: none of the others can hear it.
+        const others = waiters.filter((id) => id !== context.askedById);
+        if (others.length < waiters.length) waiterFound = true;
+        if (others.length > 0 && !others.some((id) => context.reachable(id))) escalateNow = true;
         break;
       }
-      case 'SECTION_WAITERS':
-        addWaiters(context.sectionWaiterIds);
-        break;
-      case 'ALL_WAITERS':
-        addWaiters(context.allWaiterIds);
-        break;
       case 'SELECTED':
         addWaiters(context.selectedIds);
         break;

@@ -52,7 +52,7 @@ A manager's override is single-use, for one capability, bound to the requester's
 2 minutes (AUTH-011). An override for an action about a record (a voided item, a reopened or voided
 invoice, a discount above the limit: `OVERRIDE_RECORD_TYPES`) names its record when it is given
 and works on that record only; on another it is refused and not spent (P8-03b2a, PC-T2). When the
-matrix says OWN (a waiter's own tables), the
+matrix says OWN (no built-in role has it since ADR-0023), the
 guard lets the request through marked `ownershipRequired` and the service checks the object; see
 "Object-level checks".
 
@@ -106,7 +106,7 @@ its tests:
 | Check                                                                  | Tests                                                                                                                                                                                                                          |
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | A tablet reads and acts on its own table only (AUTH-009)               | `devices.int` "can only act on their own table", `order-approvals.int` "keeps each tablet to its own table", `service-requests.int` "lets a tablet act only for its own table", `recommendations.int` "for its own table only" |
-| A waiter approves, moves, merges and cancels on their own tables       | `order-approvals.int`, `table-sessions.int` "lets a waiter move only their own tables", `table-merge.int`, `order-items.int`                                                                                                   |
+| Any waiter approves, moves, merges and cancels on any table (ADR-0023) | `order-approvals.int`, `table-sessions.int` "lets any waiter move a table someone else opened", `table-merge.int`, `order-items.int`, `qa-orders.int`; the kitchen is refused                                                  |
 | Alerts are acknowledged only by those they are for                     | `notifications.int` "does not let someone else acknowledge an alert that is not theirs"                                                                                                                                        |
 | Staff changes: nobody changes their own role; managers are the Owner's | `staff.int`                                                                                                                                                                                                                    |
 

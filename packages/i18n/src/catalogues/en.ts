@@ -342,9 +342,9 @@ export const en = {
       backLabel: 'Back to tables',
       empty: 'No tables yet. A manager adds them in Manage → Floor.',
       view: 'Which tables to show',
-      mine: 'My tables',
+      mine: 'Tables I sent KOTs to today',
       all: 'All tables',
-      noneMine: 'No tables are assigned to you today. Show all tables, or ask a manager.',
+      noneMine: 'You have not sent a KOT to any table today. Show all tables.',
       requestBill: 'Request bill',
       printBill: 'Print bill',
       billPrinted: 'Bill {number} printed: {total}',
@@ -648,7 +648,7 @@ export const en = {
     },
     staff: {
       title: 'Your team',
-      body: 'Add people, give each a role and a PIN, and plan today’s sections and pagers. A person who leaves is deactivated, never deleted.',
+      body: 'Add people, give each a role and a PIN, and hand out the pagers. A person who leaves is deactivated, never deleted.',
       tip: 'Deactivate a leaver the same day so their PIN stops working.',
     },
     floor: {
@@ -847,7 +847,7 @@ export const en = {
     deactivateDialog: {
       title: 'Deactivate {name}?',
       description:
-        '{name} is signed out everywhere and cannot sign in. Their pager and phone are freed and they are taken off today’s sections. You can reactivate them later.',
+        '{name} is signed out everywhere and cannot sign in. Their pager and phone are freed. You can reactivate them later.',
       reason: 'Why? This goes in the audit log.',
       confirm: 'Deactivate',
     },
@@ -861,51 +861,8 @@ export const en = {
     pages: {
       label: 'Staff pages',
       people: 'People',
-      sections: 'Today’s sections',
       pagers: 'Pagers',
       roles: 'Roles',
-    },
-  },
-  /** Today's sections: who looks after which tables (P4-02b, TBL-002, MGR-004). */
-  sections: {
-    title: 'Today’s sections',
-    intro: 'Who looks after which tables on {day}. Waiters see theirs as “My tables”.',
-    loadFailed: 'Today’s sections could not be loaded.',
-    noTables: 'No tables yet. They are added in the floor settings.',
-    noPeople: 'Nobody who takes orders is set up yet. Add waiters on the People page.',
-    sameAs: 'Same as {day}',
-    applied: 'The sections from {day} are given again.',
-    leftOut:
-      '{count, plural, one {{names} is} other {{names} are}} left out: no longer active or taking orders.',
-    nothingToApply: 'Nobody from {day} can be given tables again.',
-    replaceDialog: {
-      title: 'Use the sections from {day}?',
-      description: 'Today’s sections are replaced with the ones from {day}.',
-      confirm: 'Use them',
-      cancel: 'Cancel',
-    },
-    uncovered: 'Nobody looks after these tables yet',
-    uncoveredSection: '{section}: all tables',
-    uncoveredTables: '{section}: {tables}',
-    allCovered: 'Every table has someone looking after it.',
-    people: 'People',
-    none: 'No tables today',
-    sectionsLine: 'Sections: {sections}',
-    tablesLine: 'Tables: {tables}',
-    tableCount: '{count, plural, one {Looks after # table} other {Looks after # tables}}',
-    change: 'Change',
-    changeFor: 'Change the tables of {name}',
-    saved: 'The tables of {name} are saved.',
-    cleared: '{name} has no tables today.',
-    dialog: {
-      title: 'Tables for {name}',
-      description:
-        'Tick whole sections or single tables. A table given to someone directly is theirs alone, also inside someone else’s section.',
-      sections: 'Sections',
-      tableCount: '{count, plural, one {# table} other {# tables}}',
-      tables: 'Single tables in {section}',
-      save: 'Save',
-      cancel: 'Cancel',
     },
   },
   /** Wrist pagers: register, give, take back, new credential (P4-02b, PGR-012 to PGR-014). */
@@ -1828,9 +1785,7 @@ until you press Publish.
     escalates: 'Goes to the managers if not acknowledged',
     noEscalation: 'Does not go to the managers',
     recipient: {
-      RESPONSIBLE_WAITER: 'The table’s waiter',
-      SECTION_WAITERS: 'Waiters of the section',
-      ALL_WAITERS: 'All waiters',
+      ALL_WAITERS: 'All waiters on duty',
       MANAGERS_ON_DUTY: 'Managers on duty',
       STATION: 'The kitchen station',
       OWNER: 'Owner',
@@ -2607,7 +2562,7 @@ until you press Publish.
       },
       STAFF: {
         title: 'Staff and PINs',
-        hint: 'Managers, waiters and kitchen staff with their PINs, and their sections.',
+        hint: 'Managers, waiters and kitchen staff with their PINs, and the pagers.',
         open: 'Open Staff',
       },
       DEVICES: {
@@ -3972,15 +3927,13 @@ until you press Publish.
       title: 'Open {table}',
       guests: 'Guests',
       guestsPad: 'Guests keypad',
-      waiter: 'Waiter',
-      assignedWaiter: 'The waiter assigned to this table',
       submit: 'Open table',
       opened: '{table} is open',
       invalidGuests: 'Enter the number of guests, from 1 to 99.',
     },
     table: {
       title: 'Table {table}',
-      waiter: 'Waiter: {name}',
+      waiter: 'Opened by {name}',
       move: 'Move table',
       merge: 'Merge into…',
       transfer: 'Move dishes…',

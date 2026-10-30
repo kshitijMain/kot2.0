@@ -677,7 +677,7 @@ test.describe.serial('the web console', () => {
     await expect(page.getByText(t('ownerSecurity.recovery.left', { count: 9 }))).toBeVisible();
   });
 
-  test('[TBL-002] [PGR-012] [MGR-004] a manager gives waiters their sections and a pager at shift start', async () => {
+  test('[PGR-012] [MGR-004] a manager hands out pagers at shift start; there are no sections to give', async () => {
     await page.getByRole('button', { name: t('login.signOut') }).click();
     await page.getByRole('button', { name: /^Vikram \(Manager\)/ }).click();
     await page.keyboard.type('2222');
@@ -687,46 +687,10 @@ test.describe.serial('the web console', () => {
       .getByRole('link', { name: t('dashboard.section.staff') })
       .click();
     const pages = page.getByRole('navigation', { name: t('staff.pages.label') });
-    await pages.getByRole('link', { name: t('staff.pages.sections') }).click();
-    await expect(page.getByRole('heading', { level: 2, name: t('sections.title') })).toBeVisible();
-    await expect(
-      page.getByText(t('sections.uncoveredSection', { section: 'Main Hall' })),
-    ).toBeVisible();
-
-    // Ravi takes the hall; Sunita the terrace and table 1, which leaves Ravi's hall for her.
-    const change = (name: string) =>
-      page.getByRole('button', { name: t('sections.changeFor', { name }) });
-    const tablesOf = (name: string) =>
-      page.getByRole('dialog', { name: t('sections.dialog.title', { name }) });
-    await change('Ravi').click();
-    await tablesOf('Ravi')
-      .getByRole('checkbox', { name: /^Main Hall/ })
-      .check();
-    await tablesOf('Ravi')
-      .getByRole('button', { name: t('sections.dialog.save') })
-      .click();
-    await expect(page.getByText(t('sections.saved', { name: 'Ravi' }))).toBeVisible();
-
-    await change('Sunita').click();
-    await tablesOf('Sunita')
-      .getByRole('checkbox', { name: /^Terrace/ })
-      .check();
-    await tablesOf('Sunita')
-      .getByRole('group', { name: t('sections.dialog.tables', { section: 'Main Hall' }) })
-      .getByRole('checkbox', { name: '1', exact: true })
-      .check();
-    await expectAccessible(page);
-    await tablesOf('Sunita')
-      .getByRole('button', { name: t('sections.dialog.save') })
-      .click();
-    await expect(page.getByText(t('sections.saved', { name: 'Sunita' }))).toBeVisible();
-    await expect(page.getByText(t('sections.allCovered'))).toBeVisible();
+    // No sections to give out (ADR-0023): the Staff area has no such page.
+    await expect(pages.getByRole('link', { name: /sections/i })).toHaveCount(0);
     const row = (name: string) =>
       page.getByRole('listitem').filter({ has: page.getByRole('heading', { level: 3, name }) });
-    await expect(row('Ravi').getByText(t('sections.tableCount', { count: 5 }))).toBeVisible();
-    await expect(row('Sunita').getByText(t('sections.tablesLine', { tables: '1' }))).toBeVisible();
-    await expect(row('Sunita').getByText(t('sections.tableCount', { count: 5 }))).toBeVisible();
-    await expectAccessible(page);
 
     // The pagers: register one for Ravi, then hand it to Sunita at shift start.
     await pages.getByRole('link', { name: t('staff.pages.pagers') }).click();

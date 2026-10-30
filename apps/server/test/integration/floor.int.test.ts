@@ -1,17 +1,8 @@
 import type { INestApplication } from '@nestjs/common';
-import {
-  ApiError,
-  FloorResponse,
-  type LoginResponse,
-  SectionView,
-  TableView,
-  WaiterAssignmentsResponse,
-} from '@rp/contracts';
+import { ApiError, FloorResponse, type LoginResponse, SectionView, TableView } from '@rp/contracts';
 import request from 'supertest';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { dbDate } from '../../src/common/business-dates.js';
 import { PrismaService } from '../../src/database/prisma.service.js';
-import { WaiterAssignmentsService } from '../../src/floor/waiter-assignments.service.js';
 import {
   addDevice,
   authHeaders,
@@ -28,7 +19,6 @@ let prisma: PrismaService;
 let kit: AuthKit;
 let manager: LoginResponse;
 let waiter: LoginResponse;
-let cashier: LoginResponse;
 
 beforeAll(async () => {
   database = await createTestDatabase();
@@ -37,7 +27,6 @@ beforeAll(async () => {
   kit = await createAuthKit(app);
   manager = await signIn(app, kit, 'MANAGER');
   waiter = await signIn(app, kit, 'WAITER');
-  cashier = await signIn(app, kit, 'BILLER');
 });
 
 afterAll(async () => {
@@ -274,103 +263,12 @@ describe('[ONB-004] [TBL-001] the floor plan', () => {
   });
 });
 
-describe('[TBL-002] waiter assignment', () => {
-  const put = (login: LoginResponse, body: Record<string, unknown>) =>
-    server().put('/api/v1/waiter-assignments').set(as(login)).send(body);
-
-  it('assigns waiters to sections and single tables for the business day, audited', async () => {
-    expect((await put(waiter, { assignments: [] })).status).toBe(403);
-
-    const response = await put(manager, {
-      assignments: [
-        { staffId: kit.staff.WAITER, sectionIds: [hall.id], tableIds: [] },
-        { staffId: kit.staff.BILLER, sectionIds: [], tableIds: [t7.id] },
-      ],
-      reason: 'Lunch shift',
-    });
-    expect(response.status, JSON.stringify(response.body)).toBe(200);
-    const { current, previous } = WaiterAssignmentsResponse.parse(response.body);
-    expect(previous).toBeNull();
-    expect(current.assignments).toEqual([
-      { staffId: kit.staff.WAITER, staffName: 'Test waiter', sectionIds: [hall.id], tableIds: [] },
-      { staffId: kit.staff.BILLER, staffName: 'Test biller', sectionIds: [], tableIds: [t7.id] },
-    ]);
+describe('[TBL-002] no waiter assignment (ADR-0023)', () => {
+  it('has no assignment routes: any waiter serves any table', async () => {
+    expect((await server().get('/api/v1/waiter-assignments').set(as(manager))).status).toBe(404);
     expect(
-      await prisma.auditLog.findFirstOrThrow({ where: { action: 'WAITER_ASSIGNMENTS_CHANGED' } }),
-    ).toMatchObject({ reason: 'Lunch shift', actorId: kit.staff.MANAGER });
-
-    // A waiter reads them for "My tables".
-    const read = await server().get('/api/v1/waiter-assignments').set(as(waiter));
-    expect(WaiterAssignmentsResponse.parse(read.body).current.assignments).toHaveLength(2);
-
-    // The domain view keeps the table's section for the responsible-waiter rule.
-    const domain = await app
-      .get(WaiterAssignmentsService)
-      .assignmentsFor(prisma, kit.restaurantId, current.businessDate);
-    expect(domain).toEqual([
-      { staffId: kit.staff.WAITER, sectionId: hall.id, tableId: null },
-      { staffId: kit.staff.BILLER, sectionId: terrace.id, tableId: t7.id },
-    ]);
-
-    // The same set again records nothing.
-    const count = await prisma.auditLog.count({ where: { action: 'WAITER_ASSIGNMENTS_CHANGED' } });
-    await put(manager, {
-      assignments: [
-        { staffId: kit.staff.WAITER, sectionIds: [hall.id], tableIds: [] },
-        { staffId: kit.staff.BILLER, sectionIds: [], tableIds: [t7.id] },
-      ],
-    });
-    expect(await prisma.auditLog.count({ where: { action: 'WAITER_ASSIGNMENTS_CHANGED' } })).toBe(
-      count,
-    );
-  });
-
-  it('refuses kitchen staff, unknown tables and a waiter listed twice', async () => {
-    const kitchen = await put(manager, {
-      assignments: [{ staffId: kit.staff.KITCHEN, sectionIds: [hall.id], tableIds: [] }],
-    });
-    expect([kitchen.status, codeOf(kitchen)]).toEqual([422, 'STAFF_NOT_ASSIGNABLE']);
-    const unknown = await put(manager, {
-      assignments: [
-        {
-          staffId: kit.staff.WAITER,
-          sectionIds: [],
-          tableIds: ['01926a3e-0000-7000-8000-00000000000a'],
-        },
-      ],
-    });
-    expect([unknown.status, codeOf(unknown)]).toEqual([422, 'TABLE_NOT_FOUND']);
-    const twice = await put(manager, {
-      assignments: [
-        { staffId: kit.staff.WAITER, sectionIds: [hall.id], tableIds: [] },
-        { staffId: kit.staff.WAITER, sectionIds: [terrace.id], tableIds: [] },
-      ],
-    });
-    expect([twice.status, codeOf(twice)]).toEqual([400, 'VALIDATION_FAILED']);
-    const empty = await put(manager, {
-      assignments: [{ staffId: kit.staff.WAITER, sectionIds: [], tableIds: [] }],
-    });
-    expect(empty.status).toBe(400);
-  });
-
-  it('starts each business day empty and offers the previous set', async () => {
-    // Move today's set to yesterday, as if the day had ended.
-    const response = WaiterAssignmentsResponse.parse(
-      (await server().get('/api/v1/waiter-assignments').set(as(cashier))).body,
-    );
-    const today = response.current.businessDate;
-    const yesterday = new Date(dbDate(today).getTime() - 86_400_000);
-    await prisma.shiftAssignment.updateMany({ data: { businessDate: yesterday } });
-
-    const next = WaiterAssignmentsResponse.parse(
-      (await server().get('/api/v1/waiter-assignments').set(as(cashier))).body,
-    );
-    expect(next.current).toEqual({ businessDate: today, assignments: [] });
-    expect(next.previous?.assignments).toHaveLength(2);
-    expect(next.previous?.businessDate).toBe(yesterday.toISOString().slice(0, 10));
-
-    // Clearing today's (already empty) set keeps yesterday's history.
-    expect((await put(manager, { assignments: [] })).status).toBe(200);
-    expect(await prisma.shiftAssignment.count()).toBe(2);
+      (await server().put('/api/v1/waiter-assignments').set(as(manager)).send({ assignments: [] }))
+        .status,
+    ).toBe(404);
   });
 });

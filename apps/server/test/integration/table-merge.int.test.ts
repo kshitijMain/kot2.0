@@ -211,15 +211,13 @@ describe('[TBL-006] merging tables into one bill', () => {
     expect(await prisma.outboxEvent.count({ where: { eventType: 'TableClosed' } })).toBe(1);
   });
 
-  it('lets a waiter merge only their own tables, and never into a closed session', async () => {
+  it('lets any waiter merge any tables (ADR-0023), not the kitchen, never into a closed session', async () => {
     const mine = await open('T3');
     const theirs = await open('T4', manager);
     await prisma.tableSession.update({
       where: { id: theirs.id },
       data: { waiterId: kit.staff.BILLER },
     });
-    const refused = await merge(mine, theirs, waiter);
-    expect([refused.status, codeOf(refused)]).toEqual([403, 'FORBIDDEN']);
     expect((await merge(mine, theirs, kitchen)).status).toBe(403);
     const closed = await prisma.tableSession.findFirstOrThrow({ where: { status: 'CLOSED' } });
     const gone = await server()
@@ -227,7 +225,8 @@ describe('[TBL-006] merging tables into one bill', () => {
       .set(as(cashier))
       .send({ intoTableSessionId: closed.id });
     expect([gone.status, codeOf(gone)]).toEqual([404, 'TABLE_SESSION_NOT_FOUND']);
-    expect((await merge(mine, theirs)).status).toBe(200);
+    // A table another person opened: any waiter may merge it.
+    expect((await merge(mine, theirs, waiter)).status).toBe(200);
   });
 });
 

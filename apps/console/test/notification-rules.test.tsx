@@ -66,7 +66,7 @@ describe('[NTF-002] the notification rules', () => {
     const water = await rowOf('WATER_REQUEST');
     expect(
       within(water).getByText(
-        t('notificationRules.who', { list: t('notificationRules.recipient.RESPONSIBLE_WAITER') }),
+        t('notificationRules.who', { list: t('notificationRules.recipient.ALL_WAITERS') }),
       ),
     ).toBeVisible();
     expect(within(water).getByText(t('notificationRules.factory'))).toBeVisible();
@@ -79,7 +79,7 @@ describe('[NTF-002] the notification rules', () => {
   it('stores only what a manager changes, and asks for the pager line', async () => {
     const fake = rulesServer(
       withRules({}),
-      withRules({ WATER_REQUEST: { recipients: ['SECTION_WAITERS'], escalate: false } }),
+      withRules({ WATER_REQUEST: { recipients: ['MANAGERS_ON_DUTY'], escalate: false } }),
     );
     const { user } = await renderConsole({ fake, path: PATH, signedIn: 'MANAGER' });
     await user.click(
@@ -95,10 +95,10 @@ describe('[NTF-002] the notification rules', () => {
       }),
     );
     await user.click(
-      dialog.getByRole('checkbox', { name: t('notificationRules.recipient.RESPONSIBLE_WAITER') }),
+      dialog.getByRole('checkbox', { name: t('notificationRules.recipient.ALL_WAITERS') }),
     );
     await user.click(
-      dialog.getByRole('checkbox', { name: t('notificationRules.recipient.SECTION_WAITERS') }),
+      dialog.getByRole('checkbox', { name: t('notificationRules.recipient.MANAGERS_ON_DUTY') }),
     );
     await user.click(
       dialog.getByRole('checkbox', { name: t('notificationRules.dialog.escalate') }),
@@ -119,7 +119,7 @@ describe('[NTF-002] the notification rules', () => {
       ),
     ).toBeVisible();
     expect(fake.callsTo('PUT', RULES)[0]?.body).toEqual({
-      value: { WATER_REQUEST: { recipients: ['SECTION_WAITERS'], escalate: false } },
+      value: { WATER_REQUEST: { recipients: ['MANAGERS_ON_DUTY'], escalate: false } },
     });
     expect(
       await within(await rowOf('WATER_REQUEST')).findByText(t('notificationRules.changed')),

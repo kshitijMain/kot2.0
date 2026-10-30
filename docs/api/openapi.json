@@ -12778,73 +12778,6 @@
         "x-requirements": ["TBL-006", "AUD-001"]
       }
     },
-    "/api/v1/table-sessions/{sessionId}/waiter": {
-      "put": {
-        "operationId": "assignSessionWaiter",
-        "summary": "Hand an open table to another waiter",
-        "tags": ["tables"],
-        "parameters": [
-          {
-            "name": "sessionId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-            }
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/AssignSessionWaiterRequest" }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "The session as it is now.",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/TableSessionView" } }
-            }
-          },
-          "400": {
-            "description": "The request does not match the contract.",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "401": {
-            "description": "No valid session or device credential.",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "403": {
-            "description": "The signed-in role lacks the required capability.",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "404": {
-            "description": "No such open session.",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "422": {
-            "description": "The waiter cannot take tables.",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          }
-        },
-        "x-capability": "STAFF_MANAGE",
-        "x-requirements": ["TBL-002", "AUD-001"]
-      }
-    },
     "/api/v1/tables": {
       "post": {
         "operationId": "createTable",
@@ -13098,8 +13031,8 @@
     "/api/v1/tables/{tableId}/open": {
       "post": {
         "operationId": "openTable",
-        "summary": "Seat guests: open a table session with covers and a responsible waiter",
-        "description": "The waiter defaults to the one assigned to the table or its section (TBL-002), else the person opening it. Two devices opening the same table at once: one wins, the other gets 409.",
+        "summary": "Seat guests: open a table session with covers",
+        "description": "The person opening it is recorded; any waiter serves any table (ADR-0023). Two devices opening the same table at once: one wins, the other gets 409.",
         "tags": ["tables"],
         "parameters": [
           {
@@ -13286,6 +13219,44 @@
         },
         "x-capability": "STAFF_MANAGE",
         "x-requirements": ["TBL-001", "AUD-001"]
+      }
+    },
+    "/api/v1/tables/my-kots-today": {
+      "get": {
+        "operationId": "getMyKotTables",
+        "summary": "The tables the signed-in person sent a KOT to today",
+        "description": "For the waiter app's \"Tables I sent KOTs to today\" filter (ADR-0023): any waiter serves any table, so there are no assignments. The business day decides \"today\" (04:00 cut-off).",
+        "tags": ["tables"],
+        "responses": {
+          "200": {
+            "description": "The tables.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MyKotTablesResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "The request does not match the contract.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "No valid session or device credential.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "The signed-in role lacks the required capability.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        },
+        "x-capability": "ORDER_CREATE",
+        "x-requirements": ["WTR-002"]
       }
     },
     "/api/v1/tables/overview": {
@@ -13705,94 +13676,6 @@
         },
         "x-capability": "PUBLIC",
         "x-requirements": ["UPD-006"]
-      }
-    },
-    "/api/v1/waiter-assignments": {
-      "get": {
-        "operationId": "getWaiterAssignments",
-        "summary": "Today's waiter assignments, and the previous set to apply again",
-        "description": "Waiters read it for \"My tables\" (WTR-002).",
-        "tags": ["floor"],
-        "responses": {
-          "200": {
-            "description": "Assignments.",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/WaiterAssignmentsResponse" }
-              }
-            }
-          },
-          "400": {
-            "description": "The request does not match the contract.",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "401": {
-            "description": "No valid session or device credential.",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "403": {
-            "description": "The signed-in role lacks the required capability.",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          }
-        },
-        "x-capability": "SESSION",
-        "x-requirements": ["TBL-002", "WTR-002"]
-      },
-      "put": {
-        "operationId": "updateWaiterAssignments",
-        "summary": "Replace today's waiter assignments (sections and single tables)",
-        "description": "At shift start the manager assigns waiters to sections, and optionally to single tables (TBL-002). Waiters given a table take it over from the section. Audited.",
-        "tags": ["floor"],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": { "$ref": "#/components/schemas/UpdateWaiterAssignmentsRequest" }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Assignments as they are now.",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/WaiterAssignmentsResponse" }
-              }
-            }
-          },
-          "400": {
-            "description": "The request does not match the contract.",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "401": {
-            "description": "No valid session or device credential.",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "403": {
-            "description": "The signed-in role lacks the required capability.",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          },
-          "422": {
-            "description": "An unknown or inactive person, section or table.",
-            "content": {
-              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
-            }
-          }
-        },
-        "x-capability": "STAFF_MANAGE",
-        "x-requirements": ["TBL-002", "AUD-001"]
       }
     }
   },
@@ -14686,15 +14569,6 @@
           "staffId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] }
         },
         "required": ["staffId"],
-        "additionalProperties": false
-      },
-      "AssignSessionWaiterRequest": {
-        "type": "object",
-        "properties": {
-          "waiterId": { "$ref": "#/components/schemas/Id" },
-          "reason": { "type": "string", "minLength": 3, "maxLength": 200 }
-        },
-        "required": ["waiterId"],
         "additionalProperties": false
       },
       "AssignableRole": { "type": "string", "enum": ["MANAGER", "WAITER", "KITCHEN"] },
@@ -19866,6 +19740,15 @@
         "required": ["toTableId"],
         "additionalProperties": false
       },
+      "MyKotTablesResponse": {
+        "type": "object",
+        "properties": {
+          "businessDate": { "$ref": "#/components/schemas/IsoDate" },
+          "tableIds": { "type": "array", "items": { "$ref": "#/components/schemas/Id" } }
+        },
+        "required": ["businessDate", "tableIds"],
+        "additionalProperties": false
+      },
       "MyPagerResponse": {
         "type": "object",
         "properties": {
@@ -20025,10 +19908,7 @@
       },
       "OpenTableRequest": {
         "type": "object",
-        "properties": {
-          "covers": { "type": "integer", "minimum": 1, "maximum": 99 },
-          "waiterId": { "$ref": "#/components/schemas/Id" }
-        },
+        "properties": { "covers": { "type": "integer", "minimum": 1, "maximum": 99 } },
         "required": ["covers"],
         "additionalProperties": false
       },
@@ -25492,19 +25372,6 @@
         "additionalProperties": false
       },
       "UpdateWait": { "type": "string", "enum": ["WINDOW", "OPEN_TABLES", "RETRY_APPROVAL"] },
-      "UpdateWaiterAssignmentsRequest": {
-        "type": "object",
-        "properties": {
-          "assignments": {
-            "maxItems": 100,
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/WaiterAssignmentInput" }
-          },
-          "reason": { "type": "string", "minLength": 3, "maxLength": 200 }
-        },
-        "required": ["assignments"],
-        "additionalProperties": false
-      },
       "UploadPhotoRequest": {
         "type": "object",
         "properties": {
@@ -25636,58 +25503,6 @@
         "type": "object",
         "properties": { "reason": { "type": "string", "minLength": 3, "maxLength": 200 } },
         "required": ["reason"],
-        "additionalProperties": false
-      },
-      "WaiterAssignmentInput": {
-        "type": "object",
-        "properties": {
-          "staffId": { "$ref": "#/components/schemas/Id" },
-          "sectionIds": {
-            "maxItems": 20,
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/Id" }
-          },
-          "tableIds": {
-            "maxItems": 100,
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/Id" }
-          }
-        },
-        "required": ["staffId", "sectionIds", "tableIds"],
-        "additionalProperties": false
-      },
-      "WaiterAssignmentSet": {
-        "type": "object",
-        "properties": {
-          "businessDate": { "$ref": "#/components/schemas/IsoDate" },
-          "assignments": {
-            "type": "array",
-            "items": { "$ref": "#/components/schemas/WaiterAssignmentView" }
-          }
-        },
-        "required": ["businessDate", "assignments"],
-        "additionalProperties": false
-      },
-      "WaiterAssignmentView": {
-        "type": "object",
-        "properties": {
-          "staffId": { "$ref": "#/components/schemas/Id" },
-          "staffName": { "type": "string" },
-          "sectionIds": { "type": "array", "items": { "$ref": "#/components/schemas/Id" } },
-          "tableIds": { "type": "array", "items": { "$ref": "#/components/schemas/Id" } }
-        },
-        "required": ["staffId", "staffName", "sectionIds", "tableIds"],
-        "additionalProperties": false
-      },
-      "WaiterAssignmentsResponse": {
-        "type": "object",
-        "properties": {
-          "current": { "$ref": "#/components/schemas/WaiterAssignmentSet" },
-          "previous": {
-            "anyOf": [{ "$ref": "#/components/schemas/WaiterAssignmentSet" }, { "type": "null" }]
-          }
-        },
-        "required": ["current", "previous"],
         "additionalProperties": false
       },
       "Weekday": { "type": "string", "enum": ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"] },

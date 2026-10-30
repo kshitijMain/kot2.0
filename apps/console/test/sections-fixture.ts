@@ -1,15 +1,8 @@
-import type {
-  FloorResponse,
-  PagerCredentialResponse,
-  PagerView,
-  StaffView,
-  WaiterAssignmentsResponse,
-  WaiterAssignmentView,
-} from '@rp/contracts';
+import type { FloorResponse, PagerCredentialResponse, PagerView, StaffView } from '@rp/contracts';
 import { RESTAURANT_ID, STAFF } from './fakes.js';
-import { PRIYA, staffView, team } from './staff-fixture.js';
+import { staffView, team } from './staff-fixture.js';
 
-/** A floor, a crew and pagers for the Today's sections and Pagers pages (P4-02b). */
+/** A floor, a crew and pagers for the floor, devices and Pagers pages (P4-02b). */
 
 const uuid = (n: number) => `0199a0e0-0000-7000-8000-${String(n).padStart(12, '0')}`;
 const AT = '2026-09-20T10:00:00.000Z';
@@ -85,31 +78,6 @@ export function crew(): StaffView[] {
 
 export function crewList(staff: StaffView[] = crew()) {
   return { staff, pinLength: 4 as const };
-}
-
-const NAMES: Readonly<Record<string, string>> = {
-  [RAVI]: 'Ravi',
-  [MEERA]: 'Meera',
-  [SUNIL.id]: 'Sunil',
-  [PRIYA.id]: 'Priya',
-};
-
-export function assignment(
-  staffId: string,
-  sectionIds: string[],
-  tableIds: string[] = [],
-): WaiterAssignmentView {
-  return { staffId, staffName: NAMES[staffId] ?? 'Someone', sectionIds, tableIds };
-}
-
-export function assignments(
-  current: WaiterAssignmentView[],
-  previous: WaiterAssignmentView[] | null = null,
-): WaiterAssignmentsResponse {
-  return {
-    current: { businessDate: TODAY, assignments: current },
-    previous: previous === null ? null : { businessDate: YESTERDAY, assignments: previous },
-  };
 }
 
 export const PAGER_1 = uuid(851);

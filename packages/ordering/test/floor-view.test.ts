@@ -6,7 +6,7 @@ import {
   floorSections,
   freeTables,
   minutesSince,
-  myTableIds,
+  onlyTables,
   seatedFor,
   tileAlert,
   tileDetails,
@@ -134,9 +134,8 @@ describe('[TBL-007] floor view', () => {
   });
 });
 
-describe('[WTR-002] [TBL-002] my tables', () => {
+describe('[WTR-002] tables I sent KOTs to today', () => {
   const ravi = id(501);
-  const asha = id(502);
   const hall = id(100);
   const terrace = id(101);
   const session = (waiterId: string) => ({
@@ -159,18 +158,16 @@ describe('[WTR-002] [TBL-002] my tables', () => {
     ],
   };
 
-  it('takes the waiter’s sections, minus tables given to someone else, plus tables given to them', () => {
-    const assignments = [
-      { staffId: ravi, staffName: 'Ravi', sectionIds: [hall], tableIds: [] },
-      { staffId: asha, staffName: 'Asha', sectionIds: [], tableIds: [id(2), id(4)] },
+  it('cuts the floor down to the tables the waiter sent KOTs to, sections in order (ADR-0023)', () => {
+    const sections = [
+      { id: hall, name: 'Hall', tables: [live(1), live(2), live(3)] },
+      { id: terrace, name: 'Terrace', tables: [live(4, { sectionId: terrace })] },
     ];
-    expect([...myTableIds(ravi, overview, assignments)].sort()).toEqual([id(1), id(3), id(5)]);
-    expect([...myTableIds(asha, overview, assignments)].sort()).toEqual([id(2), id(4)]);
-  });
-
-  it('includes an open table the waiter is responsible for, even with no assignments', () => {
-    expect([...myTableIds(ravi, overview, [])]).toEqual([id(5)]);
-    expect(myTableIds(asha, overview, []).size).toBe(0);
+    const shown = onlyTables(sections, new Set([id(3), id(1)]));
+    expect(
+      shown.map((section) => [section.name, section.tables.map((table) => table.label)]),
+    ).toEqual([['Hall', ['T1', 'T3']]]);
+    expect(onlyTables(sections, new Set())).toEqual([]);
   });
 
   it('offers only free tables to move to', () => {

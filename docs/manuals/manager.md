@@ -6,8 +6,10 @@ below are in the dashboard (open from the main menu).
 
 ## Start of day
 
-Overview: check alerts, the printers and that waiters have signed in. Staff page: today's
-sections (which waiter has which tables). Floor page: tables and tablet locations.
+Overview: check alerts, the printers and that waiters have signed in. There are no sections to
+give out: any waiter serves any table, and everything they do is recorded under their name.
+Staff → Pagers: hand out the wrist pagers. Floor page: tables, floor areas and tablet
+locations.
 
 ## Menu
 

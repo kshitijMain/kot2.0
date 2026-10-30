@@ -210,7 +210,7 @@ describe('[TAB-009] [ORD-003] [ORD-005] a diner orders from the tablet', () => {
 });
 
 describe('[WTR-004] [ORD-003] approving and rejecting', () => {
-  it('lists the waiting orders: a waiter their own tables, the cashier all', async () => {
+  it('lists every waiting order to every waiter and manager (ADR-0023: any waiter, any table)', async () => {
     const mine = PendingApprovalsResponse.parse(
       (await server().get('/api/v1/orders/pending-approval').set(as(waiter))).body,
     );
@@ -220,25 +220,25 @@ describe('[WTR-004] [ORD-003] approving and rejecting', () => {
     const others = PendingApprovalsResponse.parse(
       (await server().get('/api/v1/orders/pending-approval').set(as(otherWaiter))).body,
     );
-    expect(others.orders).toEqual([]);
+    expect(others.orders.map((entry) => entry.order.id)).toEqual([id('first')]);
     const all = PendingApprovalsResponse.parse(
       (await server().get('/api/v1/orders/pending-approval').set(as(cashier))).body,
     );
     expect(all.orders).toHaveLength(1);
   });
 
-  it('changes an order only with the diner’s agreement, and only on the waiter’s own tables', async () => {
+  it('changes an order only with the diner’s agreement, whichever waiter approves', async () => {
     const [firstLine] = await itemsOf(id('first'));
     const unagreed = await server()
       .post(`/api/v1/orders/${id('first')}/approve`)
       .set(as(waiter))
       .send({ changes: [{ orderItemId: firstLine?.id, quantity: 0 }] });
     expect(unagreed.status).toBe(400);
-    const notMine = await server()
+    const byOther = await server()
       .post(`/api/v1/orders/${id('first')}/approve`)
       .set(as(otherWaiter))
-      .send({});
-    expect(notMine.status).toBe(403);
+      .send({ changes: [{ orderItemId: firstLine?.id, quantity: 0 }] });
+    expect(byOther.status).toBe(400);
   });
 
   it('[ORD-003] sends it to the kitchen with the agreed changes, and clears the alert', async () => {
@@ -332,12 +332,8 @@ describe('[ORD-004] approve at table', () => {
       pin: TEST_PINS.KITCHEN,
     });
     expect(kitchen.status).toBe(403);
-    const notTheirs = await atTable(id('third'), { staffId: otherWaiterId, pin: '5656' });
-    expect(notTheirs.status).toBe(403);
-    const response = await atTable(id('third'), {
-      staffId: kit.staff.WAITER,
-      pin: TEST_PINS.WAITER,
-    });
+    // Any waiter's PIN approves at any table (ADR-0023), recorded as theirs.
+    const response = await atTable(id('third'), { staffId: otherWaiterId, pin: '5656' });
     expect(response.status, JSON.stringify(response.body)).toBe(200);
     expect(OrderView.parse(response.body).items[0]?.state).toBe('SENT');
     // Stock was taken off at approval (MENU-006).

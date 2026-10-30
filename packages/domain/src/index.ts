@@ -37,7 +37,6 @@ export * from './menu-selection.js';
 export * from './kot.js';
 export * from './canonical-json.js';
 export * from './gstin.js';
-export * from './floor.js';
 export * from './menu-import.js';
 export * from './menu-file.js';
 export * from './menu-changes.js';

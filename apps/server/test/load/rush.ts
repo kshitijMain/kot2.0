@@ -586,7 +586,7 @@ export async function runRush(options: RushOptions): Promise<RushResult> {
       const session = await phone.call('openTable', () =>
         phone.api.openTable({
           params: { tableId: state.table.id },
-          body: { covers: 2 + Math.floor(random() * 4), waiterId: waiter.staffId },
+          body: { covers: 2 + Math.floor(random() * 4) },
         }),
       );
       state.sessionId = session.id;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TableRequest, UpdateWaiterAssignmentsRequest } from '../src/index.js';
+import { MyKotTablesResponse, TableRequest } from '../src/index.js';
 
 const id = (n: number) => `01926a3e-0000-7000-8000-${String(n).padStart(12, '0')}`;
 
@@ -13,20 +13,11 @@ describe('[TBL-001] tables', () => {
   });
 });
 
-describe('[TBL-002] waiter assignment request', () => {
-  it('lists each waiter once with at least one section or table', () => {
-    const one = { staffId: id(1), sectionIds: [id(2)], tableIds: [] };
-    expect(UpdateWaiterAssignmentsRequest.safeParse({ assignments: [one] }).success).toBe(true);
-    expect(UpdateWaiterAssignmentsRequest.safeParse({ assignments: [] }).success).toBe(true);
+describe('[WTR-002] the tables a waiter sent KOTs to (ADR-0023)', () => {
+  it('lists table ids for the business day; there are no waiter assignments', () => {
     expect(
-      UpdateWaiterAssignmentsRequest.safeParse({
-        assignments: [one, { ...one, sectionIds: [id(3)] }],
-      }).success,
-    ).toBe(false);
-    expect(
-      UpdateWaiterAssignmentsRequest.safeParse({
-        assignments: [{ staffId: id(1), sectionIds: [], tableIds: [] }],
-      }).success,
-    ).toBe(false);
+      MyKotTablesResponse.safeParse({ businessDate: '2026-10-30', tableIds: [id(1)] }).success,
+    ).toBe(true);
+    expect(MyKotTablesResponse.safeParse({ tableIds: [id(1)] }).success).toBe(false);
   });
 });

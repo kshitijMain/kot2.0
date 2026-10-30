@@ -66,7 +66,9 @@ afterEach(() => {
 
 describe('[AUTH-012] what a custom role may add', () => {
   it('offers only what the base role lacks, never staff or Owner-only powers', () => {
-    expect(addable('WAITER')).toContain('ORDER_APPROVE_CUSTOMER');
+    // A waiter approves diners' orders already (ADR-0023); discounts are theirs to be given.
+    expect(addable('WAITER')).not.toContain('ORDER_APPROVE_CUSTOMER');
+    expect(addable('WAITER')).toContain('DISCOUNT_WITHIN_LIMIT');
     expect(addable('WAITER')).not.toContain('ORDER_CREATE');
     expect(addable('WAITER')).not.toContain('STAFF_MANAGE');
     expect(included('WAITER')).toContain('ORDER_CREATE');

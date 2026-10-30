@@ -138,7 +138,7 @@ async function requestBill(label: string): Promise<string> {
       await server()
         .post(`/api/v1/tables/${tables[label] ?? ''}/open`)
         .set(as(waiter))
-        .send({ covers: 2, waiterId: kit.staff.WAITER })
+        .send({ covers: 2 })
     ).body,
   );
   // Asked by the manager: the waiter who asks for a bill is not alerted about it (P2-06d).

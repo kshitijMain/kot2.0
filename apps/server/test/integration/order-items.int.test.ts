@@ -266,7 +266,7 @@ describe('[ORD-011] [ORD-012] cancel, void and modify', () => {
     ).toMatchObject({ reason: 'Guest changed mind', actorId: kit.staff.WAITER });
   });
 
-  it('refuses a cancel once cooking started, and a waiter cancelling another waiter’s table', async () => {
+  it('refuses a cancel once cooking started, and lets any waiter cancel on any table (ADR-0023)', async () => {
     const placed = await order([{ itemId: id('Roti') }]);
     const roti = placed.items[0]?.id ?? '';
     await step(kitchen, roti, 'START_PREPARING');
@@ -281,11 +281,17 @@ describe('[ORD-011] [ORD-012] cancel, void and modify', () => {
       where: { id: session.id },
       data: { waiterId: kit.staff.BILLER },
     });
-    const notTheirs = await server()
+    const otherTable = await server()
       .post(`/api/v1/order-items/${other.items[0]?.id ?? ''}/cancel`)
       .set(as(waiter))
       .send({ reason: 'Wrong item' });
-    expect([notTheirs.status, codeOf(notTheirs)]).toEqual([403, 'FORBIDDEN']);
+    expect(otherTable.status, JSON.stringify(otherTable.body)).toBe(200);
+    // Who did it is still recorded.
+    expect(
+      await prisma.auditLog.findFirstOrThrow({
+        where: { action: 'ORDER_ITEM_CANCELLED', entityId: other.items[0]?.id ?? '' },
+      }),
+    ).toMatchObject({ actorId: kit.staff.WAITER, reason: 'Wrong item' });
     await prisma.tableSession.update({
       where: { id: session.id },
       data: { waiterId: kit.staff.WAITER },

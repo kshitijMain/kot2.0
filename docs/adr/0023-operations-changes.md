@@ -58,6 +58,28 @@ needed a business choice, the safest behaviour was built and the choice is in
   started (D-16). Each line gets one `OUT_OF_STOCK` alert (new event) to the KOT's sender
   (`KOT_SENDER`, new recipient kind; for a waiting order, every waiter on duty).
 
+### Part 3: any waiter, any table (TBL-002, BRD §4.2 OWN grants)
+
+- No waiter assignment: the Today's sections page, `/api/v1/waiter-assignments`, the domain's
+  `floor.ts` (responsible waiters, day plans), "My tables" by assignment and the change-waiter
+  route are gone. Sections stay as floor areas. Pagers stay assigned to a person (Staff → Pagers).
+  Old `shift_assignments` rows stay as history; nothing writes them.
+- Waiters have ALLOW where §4.2 said OWN: approving diners' orders, cancelling before
+  preparation, moving and merging tables (with sending KOTs, firing held dishes and asking for
+  the bill, which they had). No built-in role has an OWN grant any more; OWN stays in the model.
+  A void after cooking started still needs a manager's PIN. Every action records who did it.
+- A table session's `waiterId` records who opened it (shown as "Opened by"); the open-table
+  request takes covers only. Any waiter may print a table's bill when `bills.waiterMayPrint` is
+  on.
+- Alerts: the recipient kinds `RESPONSIBLE_WAITER` and `SECTION_WAITERS` are gone; `ALL_WAITERS`
+  means every waiter on duty (D-17), not on break; the managers are called at once when none is
+  there or none has a pager or app connected (NTF-007), but not because the asker is the only
+  one. Approvals, water, waiter call and food ready go to all waiters on duty; a bill request to
+  all waiters and the managers on duty (D-19). Migration `20261030120000_any_waiter_any_table`
+  rewrites stored rules that named the old kinds.
+- The waiter app's home shows every table by floor area with a filter "Tables I sent KOTs to
+  today" (`GET /api/v1/tables/my-kots-today`, from `kots.sent_by_id` and the business day).
+
 ## Alternatives considered
 
 - Keep CASHIER in the database type and only stop offering it: rejected, the role would linger in

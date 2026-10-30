@@ -7,6 +7,12 @@ You use the waiter app on your phone, and sometimes a wrist pager.
 Open the app and enter your PIN. The phone must stay on the restaurant Wi-Fi. Keep
 notifications on and the phone charged; the manager has shown you the battery settings.
 
+## Your tables
+
+There are no sections: you may serve any table. Home shows every table by floor area; press
+**Tables I sent KOTs to today** to see only the tables you sent orders to. Everything you do is
+recorded under your name.
+
 ## Taking an order
 
 Tap the table, add items with their variants and modifiers, add notes, and send. If the phone
@@ -16,7 +22,7 @@ twice. The prices shown are the system's; you cannot change them.
 ## Customers ordering themselves
 
 A guest may order from the QR code or the table tablet. Orders that need your approval appear
-as an alert; approve or decline. Guest orders for your own tables are the ones you see.
+as an alert to every waiter on duty; approve or decline. Any waiter may approve any table's order.
 
 ## Alerts and pager
 
@@ -31,7 +37,7 @@ Mark an item picked up when you take it from the pass and served when it reaches
 ## Changes
 
 You may cancel an item before the kitchen starts it. After cooking has started you need a
-manager's PIN. You may move a table you own. You cannot give discounts or take payment: ask a
+manager's PIN. You may move or merge any table. You cannot give discounts or take payment: ask a
 manager or request the bill from the table screen.
 
 ## Lost phone

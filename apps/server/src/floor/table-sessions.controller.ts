@@ -1,9 +1,9 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Put, Req } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, Req } from '@nestjs/common';
 import {
-  AssignSessionWaiterRequest,
   CloseWithoutBillRequest,
   MergeTablesRequest,
   MoveTableRequest,
+  type MyKotTablesResponse,
   OpenTableRequest,
   type TableOverviewResponse,
   TableParams,
@@ -42,6 +42,13 @@ export class TableSessionsController {
       this.sessions.mayPrintBill(principal),
     ]);
     return { tables, mayPrintBill };
+  }
+
+  /** WTR-002, ADR-0023: the waiter app's "Tables I sent KOTs to today". */
+  @Get('tables/my-kots-today')
+  @RequireCapability('ORDER_CREATE')
+  myKotTables(@Req() request: AuthenticatedRequest): Promise<MyKotTablesResponse> {
+    return this.sessions.myKotTables(principalOf(request));
   }
 
   @Post('tables/:tableId/open')
@@ -133,20 +140,5 @@ export class TableSessionsController {
     @Param(new ZodValidationPipe(TableParams)) params: TableParams,
   ): Promise<TableStateView> {
     return this.sessions.markClean(principalOf(request), params.tableId);
-  }
-
-  @Put('table-sessions/:sessionId/waiter')
-  @RequireCapability('STAFF_MANAGE')
-  assignWaiter(
-    @Req() request: AuthenticatedRequest,
-    @Param(new ZodValidationPipe(TableSessionParams)) params: TableSessionParams,
-    @Body(new ZodValidationPipe(AssignSessionWaiterRequest)) body: AssignSessionWaiterRequest,
-  ): Promise<TableSessionView> {
-    return this.sessions.assignWaiter(
-      principalOf(request),
-      params.sessionId,
-      body.waiterId,
-      body.reason,
-    );
   }
 }

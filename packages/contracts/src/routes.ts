@@ -142,8 +142,7 @@ import {
   TableParams,
   TableRequest,
   TableView,
-  UpdateWaiterAssignmentsRequest,
-  WaiterAssignmentsResponse,
+  MyKotTablesResponse,
 } from './floor.js';
 import {
   RegenerateTableQrRequest,
@@ -250,7 +249,6 @@ import {
 } from './printing.js';
 import { LicenceView, ReactivateLicenceRequest } from './licence.js';
 import {
-  AssignSessionWaiterRequest,
   CloseWithoutBillRequest,
   MergeTablesRequest,
   MoveTableRequest,
@@ -2354,38 +2352,19 @@ export const ROUTES = [
     },
   },
   {
-    operationId: 'getWaiterAssignments',
+    operationId: 'getMyKotTables',
     method: 'GET',
-    path: '/api/v1/waiter-assignments',
-    summary: "Today's waiter assignments, and the previous set to apply again",
-    description: 'Waiters read it for "My tables" (WTR-002).',
-    tags: ['floor'],
-    requirements: ['TBL-002', 'WTR-002'],
-    capability: 'SESSION',
-    responses: {
-      200: { description: 'Assignments.', schema: WaiterAssignmentsResponse },
-      ...standardErrors,
-    },
-  },
-  {
-    operationId: 'updateWaiterAssignments',
-    method: 'PUT',
-    path: '/api/v1/waiter-assignments',
-    summary: "Replace today's waiter assignments (sections and single tables)",
+    path: '/api/v1/tables/my-kots-today',
+    summary: 'The tables the signed-in person sent a KOT to today',
     description:
-      'At shift start the manager assigns waiters to sections, and optionally to single tables ' +
-      '(TBL-002). Waiters given a table take it over from the section. Audited.',
-    tags: ['floor'],
-    requirements: ['TBL-002', 'AUD-001'],
-    capability: 'STAFF_MANAGE',
-    request: { body: UpdateWaiterAssignmentsRequest },
+      'For the waiter app\'s "Tables I sent KOTs to today" filter (ADR-0023): any waiter serves any ' +
+      'table, so there are no assignments. The business day decides "today" (04:00 cut-off).',
+    tags: ['tables'],
+    requirements: ['WTR-002'],
+    capability: 'ORDER_CREATE',
     responses: {
-      200: { description: 'Assignments as they are now.', schema: WaiterAssignmentsResponse },
+      200: { description: 'The tables.', schema: MyKotTablesResponse },
       ...standardErrors,
-      422: {
-        description: 'An unknown or inactive person, section or table.',
-        schema: ApiError,
-      },
     },
   },
   {
@@ -2407,10 +2386,10 @@ export const ROUTES = [
     operationId: 'openTable',
     method: 'POST',
     path: '/api/v1/tables/:tableId/open',
-    summary: 'Seat guests: open a table session with covers and a responsible waiter',
+    summary: 'Seat guests: open a table session with covers',
     description:
-      'The waiter defaults to the one assigned to the table or its section (TBL-002), else the ' +
-      'person opening it. Two devices opening the same table at once: one wins, the other gets 409.',
+      'The person opening it is recorded; any waiter serves any table (ADR-0023). Two devices ' +
+      'opening the same table at once: one wins, the other gets 409.',
     tags: ['tables'],
     requirements: ['TBL-003', 'TBL-004', 'AUD-001'],
     capability: 'ORDER_CREATE',
@@ -2601,22 +2580,6 @@ export const ROUTES = [
       ...standardErrors,
       404: { description: 'No such active table.', schema: ApiError },
       409: { description: 'The table does not need cleaning.', schema: ApiError },
-    },
-  },
-  {
-    operationId: 'assignSessionWaiter',
-    method: 'PUT',
-    path: '/api/v1/table-sessions/:sessionId/waiter',
-    summary: 'Hand an open table to another waiter',
-    tags: ['tables'],
-    requirements: ['TBL-002', 'AUD-001'],
-    capability: 'STAFF_MANAGE',
-    request: { params: TableSessionParams, body: AssignSessionWaiterRequest },
-    responses: {
-      200: { description: 'The session as it is now.', schema: TableSessionView },
-      ...standardErrors,
-      404: { description: 'No such open session.', schema: ApiError },
-      422: { description: 'The waiter cannot take tables.', schema: ApiError },
     },
   },
   {

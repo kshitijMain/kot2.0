@@ -1,10 +1,4 @@
-import type {
-  FloorResponse,
-  TableOverviewEntry,
-  TableOverviewResponse,
-  WaiterAssignmentView,
-} from '@rp/contracts';
-import { tablesOf, toWaiterAssignments } from '@rp/domain';
+import type { FloorResponse, TableOverviewEntry, TableOverviewResponse } from '@rp/contracts';
 import type { Translator } from '@rp/i18n';
 
 /** One section of the POS floor, in the manager's display order, active tables only. */
@@ -88,25 +82,20 @@ export function affectsFloor(eventType: string): boolean {
 }
 
 /**
- * "My tables" (WTR-002): the tables a waiter looks after today, from the manager's assignments
- * (their sections, and tables given to them directly, which leave the section's other waiters,
- * TBL-002), plus any open table they are the responsible waiter of wherever it is.
+ * "Tables I sent KOTs to today" (WTR-002, ADR-0023): the floor's sections cut down to those
+ * tables, in the same order, leaving out sections with none of them. Any waiter serves any table,
+ * so this is a filter, not an assignment.
  */
-export function myTableIds(
-  staffId: string,
-  overview: Pick<TableOverviewResponse, 'tables'>,
-  assignments: readonly WaiterAssignmentView[],
-): Set<string> {
-  const floorTables = overview.tables.map((table) => ({
-    id: table.tableId,
-    sectionId: table.sectionId,
-  }));
-  const flat = toWaiterAssignments(assignments, floorTables);
-  const mine = new Set(tablesOf(staffId, floorTables, flat));
-  for (const table of overview.tables) {
-    if (table.session?.waiterId === staffId) mine.add(table.tableId);
-  }
-  return mine;
+export function onlyTables(
+  sections: readonly FloorSection[],
+  tableIds: ReadonlySet<string>,
+): FloorSection[] {
+  return sections
+    .map((section) => ({
+      ...section,
+      tables: section.tables.filter((table) => tableIds.has(table.tableId)),
+    }))
+    .filter((section) => section.tables.length > 0);
 }
 
 /** Where guests can move to (TBL-005): the free tables, in the overview's order. */

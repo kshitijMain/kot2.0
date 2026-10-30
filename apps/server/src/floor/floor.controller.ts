@@ -9,15 +9,12 @@ import {
   TableParams,
   TableRequest,
   type TableView,
-  UpdateWaiterAssignmentsRequest,
-  type WaiterAssignmentsResponse,
 } from '@rp/contracts';
 import { authErrors } from '../auth/auth-errors.js';
 import { RequireCapability, RequireSession } from '../auth/decorators.js';
 import type { AuthenticatedRequest, Principal } from '../auth/principal.js';
 import { ZodValidationPipe } from '../validation/zod-validation.pipe.js';
 import { FloorService } from './floor.service.js';
-import { WaiterAssignmentsService } from './waiter-assignments.service.js';
 
 function principalOf(request: AuthenticatedRequest): Principal {
   if (request.principal === undefined) throw authErrors.unauthenticated();
@@ -134,27 +131,5 @@ export class TablesController {
     @Param(new ZodValidationPipe(TableParams)) params: TableParams,
   ): Promise<TableView> {
     return this.floor.restoreTable(principalOf(request), params.tableId);
-  }
-}
-
-/** The day's waiter assignment (TBL-002); waiters read it for "My tables" (WTR-002). */
-@Controller('waiter-assignments')
-export class WaiterAssignmentsController {
-  constructor(private readonly assignments: WaiterAssignmentsService) {}
-
-  @Get()
-  @RequireSession()
-  get(@Req() request: AuthenticatedRequest): Promise<WaiterAssignmentsResponse> {
-    return this.assignments.get(principalOf(request).restaurantId);
-  }
-
-  @Put()
-  @RequireCapability('STAFF_MANAGE')
-  update(
-    @Req() request: AuthenticatedRequest,
-    @Body(new ZodValidationPipe(UpdateWaiterAssignmentsRequest))
-    body: UpdateWaiterAssignmentsRequest,
-  ): Promise<WaiterAssignmentsResponse> {
-    return this.assignments.update(principalOf(request), body);
   }
 }

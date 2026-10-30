@@ -199,9 +199,10 @@ describe('[WTR-007] [WTR-009] [ORD-011] what can be done with a sent line', () =
     });
   });
 
-  it('lets waiters cancel on their own tables before cooking, and managers anywhere', () => {
+  it('lets any waiter cancel on any table before cooking (ADR-0023), and managers too', () => {
     expect(lineActions(line('SENT'), 'WAITER', true).cancel).toBe(true);
-    expect(lineActions(line('SENT'), 'WAITER', false).cancel).toBe(false);
+    expect(lineActions(line('SENT'), 'WAITER', false).cancel).toBe(true);
+    expect(lineActions(line('SENT'), 'KITCHEN', false).cancel).toBe(false);
     expect(lineActions(line('SENT'), 'MANAGER', false).cancel).toBe(true);
     expect(lineActions(line('PREPARING'), 'WAITER', true).cancel).toBe(false);
     expect(lineActions(line('SENT'), 'WAITER', true).void).toBeNull();

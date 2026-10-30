@@ -1,16 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import type {
   DomainEvent,
+  MyKotTablesResponse,
   OpenTableRequest,
   TableOverviewEntry,
   TableSessionView,
 } from '@rp/contracts';
 import {
-  grantFor,
   isBillable,
   OPEN_SERVICE_REQUEST_STATES,
   ORDER_ITEM_STATES,
-  responsibleWaiters,
   tableAfterGuestsLeft,
   tableMachine,
   type TableEvent,
@@ -29,7 +28,6 @@ import { appendEvent, type EventAudience } from '../events/outbox.js';
 import type { DiningTable, TableSession } from '../generated/prisma/client.js';
 import { LicenceAgentService } from '../licensing/licence-agent.service.js';
 import { SettingsService } from '../settings/settings.service.js';
-import { WaiterAssignmentsService } from './waiter-assignments.service.js';
 
 /** Items that keep a table from being closed without a bill: billable or awaiting approval. */
 const OPEN_ITEM_STATES = ORDER_ITEM_STATES.filter(
@@ -56,7 +54,6 @@ export class TableSessionsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-    private readonly assignments: WaiterAssignmentsService,
     private readonly settings: SettingsService,
     private readonly licence: LicenceAgentService,
   ) {}
@@ -164,9 +161,8 @@ export class TableSessionsService {
       }
       const to = transition(tableMachine, table.state, 'OPEN').to;
       const businessDate = await currentBusinessDate(tx, principal.restaurantId);
-      const waiterId =
-        request.waiterId ?? (await this.defaultWaiter(tx, principal, table, businessDate));
-      await this.assertWaiter(tx, principal.restaurantId, waiterId);
+      // Any waiter serves any table (ADR-0023): the session records who opened it.
+      const waiterId = principal.staffId;
 
       const session = await tx.tableSession.create({
         data: {
@@ -389,78 +385,35 @@ export class TableSessionsService {
     return mayPrintBill(principal, await this.settings.snapshot(principal.restaurantId));
   }
 
+  /**
+   * The tables the person sent a KOT to on the current business day (ADR-0023, WTR-002): tickets
+   * they sent for a dine-in order, newest first. Takeaway has no table.
+   */
+  async myKotTables(principal: Principal): Promise<MyKotTablesResponse> {
+    const businessDate = await currentBusinessDate(this.prisma, principal.restaurantId);
+    const kots = await this.prisma.kot.findMany({
+      where: {
+        restaurantId: principal.restaurantId,
+        sentById: principal.staffId,
+        businessDate: dbDate(businessDate),
+        kind: 'NEW',
+        order: { tableId: { not: null } },
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { order: { select: { tableId: true } } },
+    });
+    const tableIds = [...new Set(kots.flatMap((kot) => kot.order.tableId ?? []))];
+    return { businessDate, tableIds };
+  }
+
   /** The state of a table its guests have just left: free, or "Needs cleaning" (TBL-004). */
   async stateAfterGuestsLeft(restaurantId: string): Promise<TableState> {
     const settings = await this.settings.snapshot(restaurantId);
     return tableAfterGuestsLeft(settings.get('tables.needsCleaning'));
   }
 
-  assignWaiter(
-    principal: Principal,
-    sessionId: string,
-    waiterId: string,
-    reason: string | undefined,
-  ): Promise<TableSessionView> {
-    return this.prisma.transaction(async (tx) => {
-      const session = await this.lockSession(tx, principal.restaurantId, sessionId);
-      await this.assertWaiter(tx, principal.restaurantId, waiterId);
-      if (session.waiterId === waiterId) return this.view(tx, session);
-      const updated = await tx.tableSession.update({
-        where: { id: sessionId },
-        data: { waiterId },
-        include: { table: true },
-      });
-      await this.record(tx, principal, 'TABLE_WAITER_CHANGED', sessionId, {
-        before: { waiterId: session.waiterId },
-        after: { waiterId },
-        reason: reason ?? null,
-      });
-      await this.emit(tx, principal.restaurantId, isoDateOf(session.businessDate), sessionId, [
-        {
-          type: 'TableWaiterChanged',
-          payload: { tableId: session.tableId, tableSessionId: sessionId, waiterId },
-        },
-      ]);
-      return this.view(tx, updated);
-    });
-  }
-
   private next(state: TableState, event: TableEvent): TableState {
     return transition(tableMachine, state, event).to;
-  }
-
-  /** The table's first responsible waiter today (TBL-002), else the person opening it. */
-  private async defaultWaiter(
-    tx: TransactionClient,
-    principal: Principal,
-    table: DiningTable,
-    businessDate: string,
-  ): Promise<string> {
-    const assignments = await this.assignments.assignmentsFor(
-      tx,
-      principal.restaurantId,
-      businessDate,
-    );
-    return responsibleWaiters(table, assignments)[0] ?? principal.staffId;
-  }
-
-  private async assertWaiter(
-    tx: TransactionClient,
-    restaurantId: string,
-    staffId: string,
-  ): Promise<void> {
-    const person = await tx.staff.findFirst({
-      where: { id: staffId, restaurantId, active: true, archivedAt: null },
-      select: { role: { select: { baseRole: true } } },
-    });
-    if (person === null || grantFor(person.role.baseRole, 'ORDER_CREATE') === 'DENY') {
-      throw new AppError(
-        422,
-        'STAFF_NOT_ASSIGNABLE',
-        'Only active staff who take orders can look after a table.',
-        { staffId },
-      );
-    }
   }
 
   /** Locks an active table row; null when there is no such active table. */

@@ -1,7 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { INestApplication } from '@nestjs/common';
 import { DeviceListResponse, REALTIME_CONNECT_ERRORS, type DomainEvent } from '@rp/contracts';
-import { businessDateOf } from '@rp/domain';
 import request from 'supertest';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { SessionService } from '../../src/auth/session.service.js';
@@ -298,18 +297,10 @@ describe('[ORD-010] [SEC-003] [AUTH-009] events reach exactly the rooms allowed 
     }
   });
 
-  it('adds today’s section rooms for a signed-in person', async () => {
+  it('joins no section rooms: waiters are not assigned to sections (ADR-0023)', async () => {
     const phone = await addDevice(app, kit, 'WAITER_PHONE');
     const otherPhone = await addDevice(app, kit, 'WAITER_PHONE');
     const otherWaiter = await addStaff(app, kit, 'WAITER', '4545');
-    await prisma.shiftAssignment.create({
-      data: {
-        restaurantId: rid,
-        staffId: kit.staff.WAITER,
-        sectionId: section,
-        businessDate: new Date(`${businessDateOf(new Date())}T00:00:00.000Z`),
-      },
-    });
     const assigned = await connect(
       auth(phone, (await signIn(app, kit, 'WAITER', phone)).accessToken),
     );
@@ -321,7 +312,7 @@ describe('[ORD-010] [SEC-003] [AUTH-009] events reach exactly the rooms allowed 
       auth(otherPhone, (login.body as { accessToken: string }).accessToken),
     );
 
-    // Device events are for managers; the section hint adds the people working that section.
+    // Device events are for managers; a section hint no longer reaches any waiter.
     const event = domainEvent('DeviceStatusChanged', rid, {
       deviceId: phone,
       deviceType: 'WAITER_PHONE',
@@ -331,7 +322,7 @@ describe('[ORD-010] [SEC-003] [AUTH-009] events reach exactly the rooms allowed 
     await produce(app, [event], { sectionIds: [section] });
     await produce(app, [marker]);
     await Promise.all([assigned, unassigned].map((client) => client.waitForEvent(marker.eventId)));
-    expect(ids(assigned.received)).toEqual(ids([event, marker]));
+    expect(ids(assigned.received)).toEqual(ids([marker]));
     expect(ids(unassigned.received)).toEqual(ids([marker]));
   });
 });

@@ -280,9 +280,7 @@ describe('[QR-009] [QR-010] a diner’s order for a table that is not open', () 
       include: { sessions: { where: { status: 'OPEN' } } },
     });
     expect(table.state).toBe('OCCUPIED');
-    expect(table.sessions).toEqual([
-      expect.objectContaining({ covers: 1, waiterId: kit.staff.WAITER }),
-    ]);
+    expect(table.sessions).toEqual([expect.objectContaining({ covers: 1 })]);
     expect((await localOrder(id('first')))?.tableSessionId).toBe(table.sessions[0]?.id);
     expect(await prisma.kot.count({ where: { orderId: order?.id } })).toBe(1);
   });

@@ -9,9 +9,9 @@ server by scanning the manager's QR code, or with the address and code typed (th
 Keystore, and over TLS only the restaurant's CA is trusted from then on), lists the waiters (only
 waiters sign in on a waiter phone, and the server refuses anyone else, 2026-10-25) and signs one
 in with their PIN. A phone opens on the PIN pad of the waiter it alerts (who last signed in on
-it), with "Not you?" for the list. Home is "My tables" (the waiter's sections and tables for
-today, and any table they are responsible for) or all tables, grouped by section two to a row
-with state, guests, time seated, waiter and anything waiting. Above them only what asks for the
+it), with "Not you?" for the list. Home shows all tables (any waiter serves any table,
+ADR-0023), grouped by floor area two to a row with state, guests, time seated, who opened it and
+anything waiting, with a filter "Tables I sent KOTs to today". Above them only what asks for the
 waiter: orders on the phone not yet sent, orders to approve, requests from the tables, the pager
 when it is offline or low (WTR-014) and the break while it lasts. The header has the alerts' bell
 and Menu: who is signed in, the pager with its connection and battery, On break, New takeaway and
@@ -21,7 +21,7 @@ Tapping an open table opens its table screen; a free table is opened with its gu
 (TBL-003) and then lands there. The table screen has the new items and the menu (categories,
 search, the item sheet for sizes, add-ons and combos, quantity and instructions), what was sent
 with each KOT's delivery (on the kitchen screen, printed, printing, or a printer problem) and each
-item's state, "Again" on a sent item, and Move table (TBL-005, own tables only for waiters) and
+item's state, "Again" on a sent item, and Move table (TBL-005, any table) and
 Request bill (WTR-008). Send KOT keeps the order on the phone first and sends it with its own
 idempotency key; without an answer it stays, shown on its table and on home, and goes again with
 the same key when the phone reconnects, while the waiter who took it is signed in (WTR-012,
@@ -29,7 +29,7 @@ ORD-013). Sold-out dishes are marked live in the menu and the new items, and blo
 they are removed (WTR-010).
 
 Each sent item shows its live state (WTR-007, WTR-009, ORD-011) with "Again"; behind "More" it
-can be cancelled with a reason while the kitchen has not started it (waiters on their own tables),
+can be cancelled with a reason while the kitchen has not started it (any waiter, any table),
 or voided with a reason after, which a manager approves by entering their PIN on the phone
 (AUTH-011). The waiter marks nothing picked up or served: the kitchen's "Picked up" serves the
 dish (`kds.pickupMarksServed`, 2026-10-25). Home shows how many dishes are ready at the pass for
@@ -69,8 +69,9 @@ Where things are:
 - `src/SignedIn.tsx`: the tables and one table's screen, the new items of every table kept while
   the waiter is signed in (`src/carts.tsx`), a note when a kept order reaches the kitchen later,
   and the table a tapped notification asks for (`AlertTableOpener` from `@rp/mobile-native`).
-- `src/TablesScreen.tsx`: "My tables" and all tables, read again after table, order, bill and
-  service-request events (`@rp/ordering` `myTableIds`, `floorSections`); `src/OpenTableSheet.tsx`
+- `src/TablesScreen.tsx`: all tables and "Tables I sent KOTs to today" (`getMyKotTables`), read
+  again after table, order, bill, ticket and service-request events (`@rp/ordering`
+  `onlyTables`, `floorSections`); `src/OpenTableSheet.tsx`
   opens a free table; `src/HomeMenu.tsx` is the Menu (pager, break from `src/BreakCard.tsx`,
   takeaway, signing out).
 - `src/TableScreen.tsx`: one table session: new items (`src/CartList.tsx`), the menu

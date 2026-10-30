@@ -13,7 +13,6 @@ import request from 'supertest';
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { AuthSettingsService } from '../../src/auth/auth-settings.js';
 import { base32Decode, hotp, totpStep } from '@rp/totp';
-import { currentBusinessDate, dbDate } from '../../src/common/business-dates.js';
 import { PrismaService } from '../../src/database/prisma.service.js';
 import { DEFAULT_REALTIME_OPTIONS, REALTIME_OPTIONS } from '../../src/realtime/realtime.gateway.js';
 import {
@@ -274,17 +273,6 @@ describe('[MGR-004] changing people', () => {
     expect(textOf(entry)).not.toContain('meena@example.in');
   });
 
-  it('takes someone who no longer takes orders off today’s sections', async () => {
-    const arjun = await addPerson('WAITER', 'Arjun');
-    await assignToday(arjun.id);
-    const response = await server()
-      .patch(`/api/v1/staff/${arjun.id}`)
-      .set(as(manager))
-      .send({ role: 'KITCHEN' });
-    expect(response.status).toBe(200);
-    expect(await prisma.shiftAssignment.count({ where: { staffId: arjun.id } })).toBe(0);
-  });
-
   it('sets a PIN, lifting a lockout and ending the person’s other sessions', async () => {
     const kiran = await addPerson('KITCHEN', 'Kiran');
     const session = LoginResponse.parse((await pinLogin(kiran.id, '5938')).body);
@@ -324,7 +312,7 @@ describe('[MGR-004] changing people', () => {
 });
 
 describe('[AUTH-008] [MGR-004] deactivating', () => {
-  it('signs the person out everywhere within 5 s, takes back their devices and sections', async () => {
+  it('signs the person out everywhere within 5 s and takes back their devices', async () => {
     const sunil = await addPerson('WAITER', 'Sunil');
     const phone = await addDevice(app, kit, 'WAITER_PHONE');
     const session = LoginResponse.parse((await pinLogin(sunil.id, '5938', phone)).body);
@@ -335,7 +323,6 @@ describe('[AUTH-008] [MGR-004] deactivating', () => {
     clients.push(socket);
     const pager = await addDevice(app, kit, 'PAGER', { staffId: sunil.id });
     await prisma.device.update({ where: { id: phone }, data: { staffId: sunil.id } });
-    await assignToday(sunil.id);
 
     const started = performance.now();
     const response = await server()
@@ -356,7 +343,6 @@ describe('[AUTH-008] [MGR-004] deactivating', () => {
     expect(await prisma.device.findUniqueOrThrow({ where: { id: phone } })).toMatchObject({
       staffId: null,
     });
-    expect(await prisma.shiftAssignment.count({ where: { staffId: sunil.id } })).toBe(0);
     const tiles = StaffTilesResponse.parse(
       (await server().get('/api/v1/auth/staff-tiles').set(authHeaders(kit.deviceId))).body,
     );
@@ -370,7 +356,6 @@ describe('[AUTH-008] [MGR-004] deactivating', () => {
       sessionsEnded: 1,
       pagersTakenBack: [pager],
       devicesReleased: 2,
-      leftSections: 1,
     });
     // Never deleted: the record stays, and can be brought back with the same PIN.
     const again = await server()
@@ -557,17 +542,3 @@ describe('[SEC-003] [AUTH-010] only managers and the Owner manage staff', () => 
 });
 
 /** Gives the person a section of the kit's restaurant today. */
-async function assignToday(staffId: string): Promise<void> {
-  const section = await prisma.section.create({
-    data: { restaurantId: kit.restaurantId, name: `Section ${staffId.slice(-4)}`, displayOrder: 0 },
-  });
-  const today = await currentBusinessDate(prisma, kit.restaurantId);
-  await prisma.shiftAssignment.create({
-    data: {
-      restaurantId: kit.restaurantId,
-      staffId,
-      sectionId: section.id,
-      businessDate: dbDate(today),
-    },
-  });
-}

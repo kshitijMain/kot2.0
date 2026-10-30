@@ -247,7 +247,7 @@ async function openTable(label: string): Promise<TableSessionView> {
   const response = await server()
     .post(`/api/v1/tables/${id(label)}/open`)
     .set(as(waiter))
-    .send({ covers: 2, waiterId: kit.staff.WAITER });
+    .send({ covers: 2 });
   expect(response.status, JSON.stringify(response.body)).toBe(201);
   return TableSessionView.parse(response.body);
 }

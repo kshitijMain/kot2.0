@@ -279,3 +279,25 @@ shows "Not accepted" with the reason. The bill never charges cancelled units.
 line. C: hide the cancelled line entirely.
 
 **Recommendation:** A, with B worth testing in the pilot.
+
+## D-19: who hears a bill request now that no waiter owns the table
+
+**Situation.** There is no responsible waiter. A bill request from a guest (tablet, QR) or from a
+waiter's phone has to reach someone who prints the bill and someone who brings it.
+
+**Today.** It goes to every waiter on duty and the managers on duty, except whoever asked. The
+first to acknowledge takes it (Part 4) and it disappears for the others.
+
+**Options.** A: keep it. B: a waiter's own bill request goes to the managers only; a guest's to
+everyone. C: only to the managers (they print), and the waiters see it on the table tile.
+
+**Recommendation:** B, once the pilot shows whether waiters find the extra alerts noisy.
+
+## D-20: the table's "waiter" on screens
+
+**Today.** A table session still records one person: whoever opened it. Tiles, the POS and the
+order feed's waiter filter show "Opened by" that person. Reports by waiter use who sent each KOT.
+
+**Options.** A: keep it. B: show everyone who sent a KOT to the table. C: show nobody.
+
+**Recommendation:** A (short on a tile), with B on the table screen later.

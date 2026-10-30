@@ -23,7 +23,6 @@ let waiter: LoginResponse;
 let cashier: LoginResponse;
 let kitchen: LoginResponse;
 const tables: Record<string, string> = {};
-let hallId: string;
 let menu: { itemId: string; stationId: string; taxGroupId: string };
 
 beforeAll(async () => {
@@ -37,7 +36,7 @@ beforeAll(async () => {
   kitchen = await signIn(app, kit, 'KITCHEN');
   const base = { restaurantId: kit.restaurantId };
   const hall = await prisma.section.create({ data: { ...base, name: 'Hall' } });
-  hallId = hall.id;
+
   for (const [index, label] of ['T1', 'T2', 'T3', 'T4', 'T7'].entries()) {
     tables[label] = (
       await prisma.diningTable.create({
@@ -130,18 +129,12 @@ async function order(session: TableSessionView, state: 'SENT' | 'PENDING_APPROVA
 describe('[TBL-003] [TBL-004] table sessions', () => {
   let session: TableSessionView;
 
-  it('opens a table with covers and the assigned waiter, audited and announced', async () => {
+  it('opens a table with covers, recording who opened it, audited and announced', async () => {
     const today = (await prisma.restaurant.findUniqueOrThrow({ where: { id: kit.restaurantId } }))
       .businessDayCutoff;
     expect(today).toBe('04:00');
-    // The hall is the waiter's today, so the cashier opening T1 gives it to the waiter.
-    const put = await server()
-      .put('/api/v1/waiter-assignments')
-      .set(as(manager))
-      .send({ assignments: [{ staffId: kit.staff.WAITER, sectionIds: [hallId], tableIds: [] }] });
-    expect(put.status, JSON.stringify(put.body)).toBe(200);
-
-    const response = await open(cashier, 'T1', { covers: 4 });
+    // No waiter is assigned (ADR-0023): the session records whoever opened it.
+    const response = await open(waiter, 'T1', { covers: 4 });
     expect(response.status, JSON.stringify(response.body)).toBe(201);
     session = TableSessionView.parse(response.body);
     expect(session).toMatchObject({
@@ -155,7 +148,7 @@ describe('[TBL-003] [TBL-004] table sessions', () => {
     expect(await stateOf('T1')).toBe('OCCUPIED');
     expect(
       await prisma.auditLog.findFirstOrThrow({ where: { action: 'TABLE_OPENED' } }),
-    ).toMatchObject({ actorId: kit.staff.BILLER, entityId: session.id });
+    ).toMatchObject({ actorId: kit.staff.WAITER, entityId: session.id });
     const events = await prisma.outboxEvent.findMany({
       where: { aggregateId: session.id },
       orderBy: { writeOrder: 'asc' },
@@ -172,8 +165,9 @@ describe('[TBL-003] [TBL-004] table sessions', () => {
       .set(as(manager))
       .send({ covers: 2 });
     expect([unknown.status, codeOf(unknown)]).toEqual([404, 'TABLE_NOT_FOUND']);
-    const badWaiter = await open(manager, 'T2', { covers: 2, waiterId: kit.staff.KITCHEN });
-    expect([badWaiter.status, codeOf(badWaiter)]).toEqual([422, 'STAFF_NOT_ASSIGNABLE']);
+    // There is no waiter to choose (ADR-0023).
+    const withWaiter = await open(manager, 'T2', { covers: 2, waiterId: kit.staff.WAITER });
+    expect([withWaiter.status, codeOf(withWaiter)]).toEqual([400, 'VALIDATION_FAILED']);
   });
 
   it('lets exactly one of two devices open the same table at once', async () => {
@@ -239,23 +233,12 @@ describe('[TBL-003] [TBL-004] table sessions', () => {
     expect([after.status, codeOf(after)]).toEqual([404, 'TABLE_SESSION_NOT_FOUND']);
   });
 
-  it('hands an open table to another waiter (managers only), audited', async () => {
-    const byWaiter = await server()
+  it('has no route to hand a table to another waiter: any waiter serves it (ADR-0023)', async () => {
+    const gone = await server()
       .put(`/api/v1/table-sessions/${session.id}/waiter`)
-      .set(as(waiter))
+      .set(as(manager))
       .send({ waiterId: kit.staff.BILLER });
-    expect(byWaiter.status).toBe(403);
-    const changed = await server()
-      .put(`/api/v1/table-sessions/${session.id}/waiter`)
-      .set(as(manager))
-      .send({ waiterId: kit.staff.BILLER, reason: 'Shift change' });
-    expect(changed.status, JSON.stringify(changed.body)).toBe(200);
-    expect(TableSessionView.parse(changed.body).waiterId).toBe(kit.staff.BILLER);
-    expect(await prisma.outboxEvent.count({ where: { eventType: 'TableWaiterChanged' } })).toBe(1);
-    await server()
-      .put(`/api/v1/table-sessions/${session.id}/waiter`)
-      .set(as(manager))
-      .send({ waiterId: kit.staff.WAITER });
+    expect(gone.status).toBe(404);
   });
 });
 
@@ -301,20 +284,24 @@ describe('[TBL-005] [WTR-008] move table (scenario S7)', () => {
     });
   });
 
-  it('lets a waiter move only their own tables', async () => {
-    const theirs = TableSessionView.parse(
-      (await open(manager, 'T4', { covers: 2, waiterId: kit.staff.BILLER })).body,
-    );
-    const refused = await server()
+  it('lets any waiter move a table someone else opened (ADR-0023), and not the kitchen', async () => {
+    const theirs = TableSessionView.parse((await open(manager, 'T4', { covers: 2 })).body);
+    const byKitchen = await server()
+      .post(`/api/v1/table-sessions/${theirs.id}/move`)
+      .set(as(kitchen))
+      .send({ toTableId: tables.T2 });
+    expect(byKitchen.status).toBe(403);
+    const byWaiter = await server()
       .post(`/api/v1/table-sessions/${theirs.id}/move`)
       .set(as(waiter))
       .send({ toTableId: tables.T2 });
-    expect([refused.status, codeOf(refused)]).toEqual([403, 'FORBIDDEN']);
-    const byCashier = await server()
-      .post(`/api/v1/table-sessions/${theirs.id}/move`)
-      .set(as(cashier))
-      .send({ toTableId: tables.T2 });
-    expect(byCashier.status).toBe(200);
+    expect(byWaiter.status, JSON.stringify(byWaiter.body)).toBe(200);
+    expect(
+      await prisma.auditLog.findFirstOrThrow({
+        where: { entityId: theirs.id, actorId: kit.staff.WAITER },
+        orderBy: { chainSeq: 'desc' },
+      }),
+    ).toBeTruthy();
   });
 });
 

@@ -4,51 +4,40 @@ import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-
 import { BackHandler } from 'react-native';
 import { PAGER_REFRESH_MS } from '../src/PagerCard';
 import { mayMove } from '../src/MoveSheet';
-import { IDS, KIRAN, PAGER_ID, RAVI, Restaurant, signedInApp } from './restaurant';
+import { IDS, PAGER_ID, RAVI, Restaurant, signedInApp } from './restaurant';
 
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 
 const tile = (name: RegExp | string) => screen.findByRole('button', { name });
 
-describe('[WTR-002] my tables', () => {
-  it('shows the waiter’s section with state, guests, time seated, waiter and requests', async () => {
+describe('[WTR-002] every table, and the tables I sent KOTs to (ADR-0023)', () => {
+  it('shows all tables by floor area with state, guests, time seated, who opened and requests', async () => {
     await signedInApp();
     expect(await tile('T1, Free')).toBeOnTheScreen();
     expect(
       screen.getByRole('button', { name: 'T2, Occupied, 3 guests, 25 min, Ravi, 1 request' }),
     ).toBeOnTheScreen();
     expect(screen.getByRole('button', { name: /^T3, Bill asked/ })).toBeOnTheScreen();
-    expect(screen.getByRole('header', { name: 'Hall' })).toBeOnTheScreen();
-    // Terrace is someone else's today.
-    expect(screen.queryByRole('button', { name: /^T4/ })).toBeNull();
-    expect(screen.getByRole('tab', { name: 'My tables' })).toBeSelected();
-
-    await fireEvent.press(screen.getByRole('tab', { name: 'All tables' }));
+    // Any waiter serves any table: Kiran's T5 and the terrace are shown too.
     expect(await tile(/^T5, Occupied, 4 guests, 25 min, Kiran/)).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Hall' })).toBeOnTheScreen();
     expect(screen.getByRole('header', { name: 'Terrace' })).toBeOnTheScreen();
+    expect(screen.getByRole('tab', { name: 'All tables' })).toBeSelected();
   });
 
-  it('adds a table given to the waiter directly, and says when nothing is theirs', async () => {
-    const restaurant = new Restaurant();
-    restaurant.assignments = [
-      { staffId: RAVI, staffName: 'Ravi', sectionIds: [], tableIds: [restaurant.table('T4').id] },
-    ];
-    await signedInApp(restaurant);
-    // T4 is given to Ravi; T2 and T3 are still his because he is their responsible waiter.
-    expect(await tile('T4, Free')).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: /^T2/ })).toBeOnTheScreen();
+  it('filters to the tables the waiter sent a KOT to today, and says when there are none', async () => {
+    await signedInApp();
+    await fireEvent.press(await screen.findByRole('tab', { name: 'Tables I sent KOTs to today' }));
+    expect(await tile(/^T2, Occupied/)).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: /^T1/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /^T5/ })).toBeNull();
 
-    const empty = new Restaurant();
-    empty.assignments = [];
-    for (const table of empty.tables) {
-      if (table.session?.waiterId === RAVI) table.session = { ...table.session, waiterId: KIRAN };
-    }
-    await signedInApp(empty);
+    const none = new Restaurant();
+    none.sentTo = ['0199a0e0-0000-7000-8000-00000000dead'];
+    await signedInApp(none);
+    await fireEvent.press(await screen.findByRole('tab', { name: 'Tables I sent KOTs to today' }));
     expect(
-      await screen.findByText(
-        'No tables are assigned to you today. Show all tables, or ask a manager.',
-      ),
+      await screen.findByText('You have not sent a KOT to any table today. Show all tables.'),
     ).toBeOnTheScreen();
   });
 });
@@ -207,7 +196,7 @@ describe('[TBL-005] [WTR-008] moving a table and asking for the bill', () => {
     expect(screen.queryByRole('button', { name: 'Request bill' })).toBeNull();
   });
 
-  it('offers Move only on the waiter’s own tables; managers move any', async () => {
+  it('offers Move on any table to any waiter (ADR-0023), never to the kitchen', async () => {
     const restaurant = new Restaurant();
     const entry = (label: string) => {
       const table = restaurant.overview().tables.find((candidate) => candidate.label === label);
@@ -215,7 +204,7 @@ describe('[TBL-005] [WTR-008] moving a table and asking for the bill', () => {
       return table;
     };
     expect(mayMove(entry('T2'), { id: RAVI, role: 'WAITER' })).toBe(true);
-    expect(mayMove(entry('T5'), { id: RAVI, role: 'WAITER' })).toBe(false);
+    expect(mayMove(entry('T5'), { id: RAVI, role: 'WAITER' })).toBe(true);
     expect(mayMove(entry('T5'), { id: RAVI, role: 'MANAGER' })).toBe(true);
     expect(mayMove(entry('T5'), { id: RAVI, role: 'KITCHEN' })).toBe(false);
 
@@ -223,7 +212,7 @@ describe('[TBL-005] [WTR-008] moving a table and asking for the bill', () => {
     await fireEvent.press(await screen.findByRole('tab', { name: 'All tables' }));
     await fireEvent.press(await tile(/^T5, Occupied/));
     expect(await screen.findByRole('header', { name: 'Table T5' })).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Move table' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Move table' })).toBeOnTheScreen();
   });
 
   it('shows why a bill request was refused, and goes back with the phone’s back button', async () => {

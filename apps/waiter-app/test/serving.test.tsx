@@ -127,7 +127,7 @@ describe('[WTR-009] [ORD-011] cancellations and voids', () => {
     });
   });
 
-  it("offers no cancel on another waiter's table, and shows a refusal when the kitchen started", async () => {
+  it("offers cancel on another waiter's table too (ADR-0023), and shows a refusal when the kitchen started", async () => {
     const restaurant = new Restaurant();
     sent(restaurant, 'SENT', 'SENT', T5_SESSION);
     sent(restaurant, 'SENT', 'READY');
@@ -135,7 +135,7 @@ describe('[WTR-009] [ORD-011] cancellations and voids', () => {
     await fireEvent.press(await screen.findByRole('tab', { name: 'All tables' }));
     await openTable('T5');
     await screen.findByText('1 × Dal Makhani');
-    expect(screen.queryByRole('button', { name: 'More for Dal Makhani' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'More for Dal Makhani' })).toBeOnTheScreen();
     await fireEvent.press(button('Back to tables'));
 
     await openTable('T2');

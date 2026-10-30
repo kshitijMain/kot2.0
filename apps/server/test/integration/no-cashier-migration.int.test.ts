@@ -162,7 +162,8 @@ describe('[AUTH-010] [AUD-001] removing the cashier role (ADR-0023)', () => {
       {
         key: 'notifications.rules',
         value: {
-          BILL_REQUEST: { recipients: ['MANAGERS_ON_DUTY', 'RESPONSIBLE_WAITER'] },
+          // The table's waiter is every waiter on duty since the next migration (Part 3).
+          BILL_REQUEST: { recipients: ['ALL_WAITERS', 'MANAGERS_ON_DUTY'] },
           WATER_REQUEST: { escalate: false },
           PRINTER_OFFLINE: { recipients: ['MANAGERS_ON_DUTY'] },
         },

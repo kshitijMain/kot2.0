@@ -12,6 +12,7 @@ import {
   grantFor,
   OVERRIDE_RECORD_TYPES,
   OWNER_SECOND_FACTOR_CAPABILITIES,
+  type PermissionMatrix,
   ROLES,
   maySignInOn,
 } from '../src/index.js';
@@ -27,7 +28,7 @@ describe('[AUTH-010] role permission matrix (BRD §4.2)', () => {
   });
 
   it('matches key rows of the BRD table', () => {
-    expect(grantFor('WAITER', 'ORDER_APPROVE_CUSTOMER')).toBe('OWN');
+    expect(grantFor('WAITER', 'ORDER_APPROVE_CUSTOMER')).toBe('ALLOW');
     expect(grantFor('KITCHEN', 'ORDER_CREATE')).toBe('DENY');
     expect(grantFor('WAITER', 'ITEM_VOID_AFTER_PREP')).toBe('OVERRIDE');
     expect(grantFor('KITCHEN', 'ITEM_MARK_PREPARING_READY')).toBe('ALLOW');
@@ -41,6 +42,23 @@ describe('[AUTH-010] role permission matrix (BRD §4.2)', () => {
     expect(grantFor('MANAGER', 'DATA_ADMIN')).toBe('DENY');
     expect(grantFor('MANAGER', 'LICENSE_VIEW')).toBe('ALLOW');
     expect(grantFor('MANAGER', 'LICENSE_MANAGE')).toBe('DENY');
+  });
+
+  it('[AUTH-010] lets any waiter work any table: no grant is limited to own tables (ADR-0023)', () => {
+    for (const capability of [
+      'ORDER_CREATE',
+      'ORDER_APPROVE_CUSTOMER',
+      'ITEM_CANCEL_BEFORE_PREP',
+      'TABLE_MOVE_MERGE',
+      'BILL_REQUEST',
+    ] as const) {
+      expect(grantFor('WAITER', capability)).toBe('ALLOW');
+    }
+    for (const capability of CAPABILITIES) {
+      for (const role of ROLES) expect(grantFor(role, capability)).not.toBe('OWN');
+    }
+    // A void after cooking started still needs a manager's PIN.
+    expect(grantFor('WAITER', 'ITEM_VOID_AFTER_PREP')).toBe('OVERRIDE');
   });
 
   it('[AUTH-010] has no cashier: managers and the Owner bill, take payments and run shifts (ADR-0023)', () => {
@@ -75,14 +93,21 @@ describe('[AUTH-011] permission evaluation', () => {
       allowed: false,
       reason: 'DENIED',
     });
-    expect(evaluatePermission('WAITER', 'ORDER_APPROVE_CUSTOMER')).toEqual({
+    // OWN still works for a matrix that uses it, though the default one no longer does.
+    const ownTables: PermissionMatrix = {
+      ...DEFAULT_PERMISSION_MATRIX,
+      ORDER_APPROVE_CUSTOMER: {
+        ...DEFAULT_PERMISSION_MATRIX.ORDER_APPROVE_CUSTOMER,
+        WAITER: 'OWN',
+      },
+    };
+    expect(evaluatePermission('WAITER', 'ORDER_APPROVE_CUSTOMER', {}, ownTables)).toEqual({
       allowed: false,
       reason: 'NOT_OWN',
     });
-    expect(evaluatePermission('WAITER', 'ORDER_APPROVE_CUSTOMER', { isOwn: true })).toEqual({
-      allowed: true,
-      viaOverride: false,
-    });
+    expect(
+      evaluatePermission('WAITER', 'ORDER_APPROVE_CUSTOMER', { isOwn: true }, ownTables),
+    ).toEqual({ allowed: true, viaOverride: false });
   });
 
   it('requires a manager or owner PIN for override actions', () => {
@@ -138,15 +163,15 @@ describe('[AUTH-012] custom roles', () => {
   it('adds grants on top of the base role, and nothing else', () => {
     const captain = {
       role: 'WAITER' as const,
-      extraCapabilities: ['ORDER_APPROVE_CUSTOMER' as const, 'DISCOUNT_WITHIN_LIMIT' as const],
+      extraCapabilities: ['REPORTS_VIEW_EXPORT' as const, 'DISCOUNT_WITHIN_LIMIT' as const],
     };
-    expect(actorGrant(captain, 'ORDER_APPROVE_CUSTOMER')).toBe('ALLOW');
+    expect(actorGrant(captain, 'REPORTS_VIEW_EXPORT')).toBe('ALLOW');
     expect(actorGrant(captain, 'DISCOUNT_WITHIN_LIMIT')).toBe('ALLOW');
     expect(actorGrant(captain, 'BILL_PRINT_AND_PAYMENT')).toBe('DENY');
     // [BILL-005] More than the limit with a manager's PIN, as the cashier had it (ADR-0023).
     expect(actorGrant(captain, 'DISCOUNT_ABOVE_LIMIT')).toBe('OVERRIDE');
     expect(actorGrant({ role: 'WAITER' }, 'DISCOUNT_ABOVE_LIMIT')).toBe('DENY');
-    expect(actorGrant({ role: 'WAITER' }, 'ORDER_APPROVE_CUSTOMER')).toBe('OWN');
+    expect(actorGrant({ role: 'WAITER' }, 'REPORTS_VIEW_EXPORT')).toBe('DENY');
     // A stored capability that may not be granted is ignored.
     expect(
       actorGrant({ role: 'WAITER', extraCapabilities: ['STAFF_MANAGE'] }, 'STAFF_MANAGE'),
@@ -171,8 +196,10 @@ describe('[AUTH-012] custom roles', () => {
         'NOT_A_CAPABILITY',
         'REPORTS_VIEW_EXPORT',
         'ORDER_APPROVE_CUSTOMER',
+        'DISCOUNT_WITHIN_LIMIT',
       ]),
-    ).toEqual(['ORDER_APPROVE_CUSTOMER', 'REPORTS_VIEW_EXPORT']);
+      // A waiter approves diners' orders already (ADR-0023): nothing added there.
+    ).toEqual(['DISCOUNT_WITHIN_LIMIT', 'REPORTS_VIEW_EXPORT']);
   });
 
   it('checks the name, base role and capabilities', () => {

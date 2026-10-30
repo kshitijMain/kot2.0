@@ -9,10 +9,8 @@ import { Id, IsoDate, Paise, TableState, Timestamp } from './common.js';
  */
 
 export const OpenTableRequest = z.strictObject({
-  /** Guests seated (TBL-003). */
+  /** Guests seated (TBL-003). The person opening it is recorded; any waiter serves it (ADR-0023). */
   covers: z.int().min(1).max(99),
-  /** The responsible waiter; defaults to the table's assigned waiter, else the person opening. */
-  waiterId: Id.optional(),
 });
 export type OpenTableRequest = z.infer<typeof OpenTableRequest>;
 
@@ -86,13 +84,6 @@ export type PrintTableBillResponse = z.infer<typeof PrintTableBillResponse>;
 /** A table's state after it was marked clean (TBL-004). */
 export const TableStateView = z.object({ tableId: Id, state: TableState });
 export type TableStateView = z.infer<typeof TableStateView>;
-
-/** TBL-002: another waiter looks after this session. */
-export const AssignSessionWaiterRequest = z.strictObject({
-  waiterId: Id,
-  reason: z.string().trim().min(3).max(200).optional(),
-});
-export type AssignSessionWaiterRequest = z.infer<typeof AssignSessionWaiterRequest>;
 
 /** One table on the live overview (TBL-007). */
 export const TableOverviewEntry = z.object({

@@ -126,12 +126,8 @@ describe('[NTF-009] on break', () => {
     const read = await server().get('/api/v1/staff/me/break').set(as(waiter));
     expect(BreakView.parse(read.body)).toEqual(BreakView.parse(started.body));
     const session = TableSessionView.parse(
-      (
-        await server()
-          .post(`/api/v1/tables/${tableId}/open`)
-          .set(as(waiter))
-          .send({ covers: 2, waiterId: kit.staff.WAITER })
-      ).body,
+      (await server().post(`/api/v1/tables/${tableId}/open`).set(as(waiter)).send({ covers: 2 }))
+        .body,
     );
     await server().post(`/api/v1/table-sessions/${session.id}/request-bill`).set(as(manager));
     const alert = await openAlert({ type: 'BILL_REQUEST', tableSessionId: session.id });

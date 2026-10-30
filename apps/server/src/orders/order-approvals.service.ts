@@ -14,14 +14,13 @@ import {
   type OrderItemState,
   orderItemMachine,
   tableMachine,
-  tablesOf,
   transition,
 } from '@rp/domain';
 import { AuditService } from '../audit/audit.service.js';
 import { authErrors } from '../auth/auth-errors.js';
 import { AuthService } from '../auth/auth.service.js';
 import type { AuthenticatedDevice } from '../auth/device.js';
-import { currentBusinessDate, dbDate, isoDateOf } from '../common/business-dates.js';
+import { currentBusinessDate, isoDateOf } from '../common/business-dates.js';
 import { newId } from '../common/ids.js';
 import { PrismaService, type TransactionClient } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
@@ -477,24 +476,19 @@ export class OrderApprovalsService {
     return order;
   }
 
-  /** The tables a waiter looks after today, by the day's sections (TBL-002, QR-010). */
+  /**
+   * The tables a person limited to their own (an OWN grant) looks after: those they opened. No
+   * built-in role has such a grant since any waiter serves any table (ADR-0023).
+   */
   private async tablesLookedAfter(
     approver: Approver,
     client: TransactionClient | PrismaService = this.prisma,
   ): Promise<string[]> {
-    const businessDate = await currentBusinessDate(client, approver.restaurantId);
-    const [tables, assignments] = await Promise.all([
-      client.diningTable.findMany({
-        where: { restaurantId: approver.restaurantId, archivedAt: null },
-        select: { id: true, sectionId: true },
-      }),
-      client.shiftAssignment.findMany({
-        where: { restaurantId: approver.restaurantId, businessDate: dbDate(businessDate) },
-        orderBy: { id: 'asc' },
-        select: { staffId: true, sectionId: true, tableId: true },
-      }),
-    ]);
-    return tablesOf(approver.staffId, tables, assignments);
+    const sessions = await client.tableSession.findMany({
+      where: { restaurantId: approver.restaurantId, status: 'OPEN', waiterId: approver.staffId },
+      select: { tableId: true },
+    });
+    return sessions.map((session) => session.tableId);
   }
 
   /** The order's whole lines waiting for approval; none means nothing to do. */

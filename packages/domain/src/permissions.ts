@@ -57,21 +57,24 @@ function row(owner: Grant, manager: Grant, waiter: Grant, kitchen: Grant): Row {
 }
 
 const A = 'ALLOW';
-const O = 'OWN';
 const P = 'OVERRIDE';
 const D = 'DENY';
 
-/** The default permission matrix, transcribed from BRD §4.2 without its cashier column (ADR-0023). */
+/**
+ * The default permission matrix, transcribed from BRD §4.2 without its cashier column, and with
+ * any waiter allowed on any table where §4.2 said "own tables" (ADR-0023). OWN stays a grant a
+ * matrix may use, but this one does not.
+ */
 export const DEFAULT_PERMISSION_MATRIX: Readonly<Record<Capability, Row>> = {
   ORDER_CREATE: row(A, A, A, D),
-  ORDER_APPROVE_CUSTOMER: row(A, A, O, D),
-  ITEM_CANCEL_BEFORE_PREP: row(A, A, O, D),
+  ORDER_APPROVE_CUSTOMER: row(A, A, A, D),
+  ITEM_CANCEL_BEFORE_PREP: row(A, A, A, D),
   ITEM_VOID_AFTER_PREP: row(A, A, P, D),
   ITEM_MARK_PREPARING_READY: row(A, A, D, A),
   ITEM_MARK_PICKED_UP: row(A, A, A, A),
   ITEM_MARK_SERVED: row(A, A, A, D),
   STOCK_MANAGE: row(A, A, D, A),
-  TABLE_MOVE_MERGE: row(A, A, O, D),
+  TABLE_MOVE_MERGE: row(A, A, A, D),
   BILL_REQUEST: row(A, A, A, D),
   BILL_PRINT_AND_PAYMENT: row(A, A, D, D),
   DISCOUNT_WITHIN_LIMIT: row(A, A, D, D),

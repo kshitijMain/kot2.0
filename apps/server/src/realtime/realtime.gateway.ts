@@ -22,7 +22,7 @@ import {
   RealtimeResyncRequest,
   type RealtimeSync,
 } from '@rp/contracts';
-import { businessDateOf, clientCompatibility, parseClientIdentity } from '@rp/domain';
+import { clientCompatibility, parseClientIdentity } from '@rp/domain';
 import { type Namespace, Server, type Socket } from 'socket.io';
 import { authErrors } from '../auth/auth-errors.js';
 import type { AuthenticatedDevice } from '../auth/device.js';
@@ -324,7 +324,6 @@ export class RealtimeGateway implements OnApplicationBootstrap, OnModuleDestroy 
           device,
           ...(principal !== undefined && {
             person: { staffId: principal.staffId, role: principal.role },
-            sectionIds: await this.sectionsOf(principal),
           }),
         }),
         resume: { lastSequence: handshake.data.lastSequence, streamId: handshake.data.streamId },
@@ -371,28 +370,6 @@ export class RealtimeGateway implements OnApplicationBootstrap, OnModuleDestroy 
       REALTIME_CONNECT_ERRORS.internalError,
       'The server could not accept the connection right now. The app will retry.',
     );
-  }
-
-  /** Sections the person is assigned to today (waiter sections, TBL / NTF routing). */
-  private async sectionsOf(principal: Principal): Promise<string[]> {
-    const restaurant = await this.prisma.restaurant.findUnique({
-      where: { id: principal.restaurantId },
-      select: { timeZone: true, businessDayCutoff: true },
-    });
-    if (restaurant === null) return [];
-    const businessDate = businessDateOf(new Date(), {
-      timeZone: restaurant.timeZone,
-      cutoff: restaurant.businessDayCutoff,
-    });
-    const assignments = await this.prisma.shiftAssignment.findMany({
-      where: {
-        restaurantId: principal.restaurantId,
-        staffId: principal.staffId,
-        businessDate: new Date(`${businessDate}T00:00:00.000Z`),
-      },
-      select: { sectionId: true },
-    });
-    return [...new Set(assignments.map((assignment) => assignment.sectionId))];
   }
 
   /**

@@ -79,7 +79,7 @@ async function stepUp(): Promise<void> {
 const captain = () => ({
   name: 'Senior captain',
   baseRole: 'WAITER',
-  capabilities: ['ORDER_APPROVE_CUSTOMER', 'REPORTS_VIEW_EXPORT'],
+  capabilities: ['DISCOUNT_WITHIN_LIMIT', 'REPORTS_VIEW_EXPORT'],
 });
 
 const salesReport = (session: LoginResponse) =>
@@ -106,7 +106,7 @@ describe('[AUTH-012] [AUTH-006] custom roles are the Owner’s', () => {
       name: 'Senior captain',
       baseRole: 'WAITER',
       builtIn: false,
-      capabilities: ['ORDER_APPROVE_CUSTOMER', 'REPORTS_VIEW_EXPORT'],
+      capabilities: ['DISCOUNT_WITHIN_LIMIT', 'REPORTS_VIEW_EXPORT'],
       staffCount: 0,
     });
     const audit = await prisma.auditLog.findFirstOrThrow({
@@ -177,7 +177,7 @@ describe('[AUTH-012] [AUTH-010] a person with a custom role', () => {
     // The app hears what the role adds, to show the right screens (AUTH-012).
     expect(session.staff).toMatchObject({
       role: 'WAITER',
-      capabilities: ['ORDER_APPROVE_CUSTOMER', 'REPORTS_VIEW_EXPORT'],
+      capabilities: ['DISCOUNT_WITHIN_LIMIT', 'REPORTS_VIEW_EXPORT'],
     });
     // A plain waiter may not read reports; the captain may.
     expect((await salesReport(waiter)).status).toBe(403);
@@ -188,8 +188,8 @@ describe('[AUTH-012] [AUTH-010] a person with a custom role', () => {
     const changed = await server()
       .put(`/api/v1/roles/${captainRoleId}`)
       .set(as(owner))
-      .send({ ...captain(), capabilities: ['ORDER_APPROVE_CUSTOMER'] });
-    expect(RoleView.parse(changed.body).capabilities).toEqual(['ORDER_APPROVE_CUSTOMER']);
+      .send({ ...captain(), capabilities: ['DISCOUNT_WITHIN_LIMIT'] });
+    expect(RoleView.parse(changed.body).capabilities).toEqual(['DISCOUNT_WITHIN_LIMIT']);
     expect(
       await prisma.auditLog.count({ where: { action: 'ROLE_CHANGED', entityId: captainRoleId } }),
     ).toBe(1);
@@ -200,7 +200,7 @@ describe('[AUTH-012] [AUTH-010] a person with a custom role', () => {
     // Even if the row were edited by hand, staff management is never honoured.
     await prisma.role.update({
       where: { id: captainRoleId },
-      data: { capabilities: ['ORDER_APPROVE_CUSTOMER', 'STAFF_MANAGE', 'DATA_ADMIN'] },
+      data: { capabilities: ['DISCOUNT_WITHIN_LIMIT', 'STAFF_MANAGE', 'DATA_ADMIN'] },
     });
     const session = LoginResponse.parse(
       (
@@ -213,7 +213,7 @@ describe('[AUTH-012] [AUTH-010] a person with a custom role', () => {
     expect((await server().get('/api/v1/staff').set(as(session))).status).toBe(403);
     await prisma.role.update({
       where: { id: captainRoleId },
-      data: { capabilities: ['ORDER_APPROVE_CUSTOMER'] },
+      data: { capabilities: ['DISCOUNT_WITHIN_LIMIT'] },
     });
   });
 });
@@ -224,7 +224,7 @@ describe('[AUTH-012] [MENU-010] archiving and changing custom roles', () => {
     const rebase = await server()
       .put(`/api/v1/roles/${captainRoleId}`)
       .set(as(owner))
-      .send({ ...captain(), baseRole: 'KITCHEN', capabilities: ['ORDER_APPROVE_CUSTOMER'] });
+      .send({ ...captain(), baseRole: 'KITCHEN', capabilities: ['DISCOUNT_WITHIN_LIMIT'] });
     expect([rebase.status, codeOf(rebase)]).toEqual([409, 'ROLE_IN_USE']);
     const inUse = await server()
       .post(`/api/v1/roles/${captainRoleId}/archive`)

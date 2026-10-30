@@ -9,7 +9,6 @@ import {
   ASSIGNABLE_ROLES,
   type AssignableRole,
   decideStaffChange,
-  grantFor,
   isEasilyGuessedPin,
   isValidPin,
   type Role,
@@ -22,10 +21,9 @@ import { CredentialHasher } from '../auth/credential-hasher.js';
 import type { Principal } from '../auth/principal.js';
 import { SignInLockouts } from '../auth/sign-in-lockouts.js';
 import { hasFreshStepUp } from '../auth/step-up.js';
-import { currentBusinessDate, dbDate } from '../common/business-dates.js';
 import { PrismaService, type TransactionClient } from '../database/prisma.service.js';
 import { PagerBroker } from '../pagers/pager-broker.js';
-import { announceSetupChange, lockSetup } from '../restaurant/setup-changes.js';
+import { announceSetupChange } from '../restaurant/setup-changes.js';
 import { staffErrors } from './staff-errors.js';
 
 const STAFF_INCLUDE = {
@@ -198,10 +196,6 @@ export class StaffService {
         },
         include: STAFF_INCLUDE,
       });
-      const leftSections =
-        newRole !== undefined && grantFor(newRole, 'ORDER_CREATE') === 'DENY'
-          ? await this.takeOffSections(tx, restaurantId, target.id)
-          : 0;
       // Contact details are personal data: the audit says they changed, not what they are.
       await this.record(
         tx,
@@ -222,7 +216,6 @@ export class StaffService {
             ...(updated.role.builtIn ? {} : { customRole: updated.role.name }),
           }),
           changed: [...details, ...(newRole === undefined ? [] : ['role'])],
-          ...(leftSections > 0 && { leftSections }),
         },
       );
       await announceSetupChange(tx, restaurantId, 'STAFF', { type: 'staff', id: target.id });
@@ -260,7 +253,6 @@ export class StaffService {
         where: { restaurantId, staffId: target.id, type: { in: ['PAGER', 'WAITER_PHONE'] } },
         data: { staffId: null },
       });
-      const leftSections = await this.takeOffSections(tx, restaurantId, target.id);
       await this.record(
         tx,
         principal,
@@ -272,7 +264,6 @@ export class StaffService {
           sessionsEnded: sessions.count,
           pagersTakenBack: pagers.map((pager) => pager.id),
           devicesReleased: devices.count,
-          leftSections,
         },
         reason,
       );
@@ -436,26 +427,6 @@ export class StaffService {
       update: {},
       select: { id: true },
     });
-  }
-
-  /** Takes the person off today's (and later) waiter assignments; returns how many went. */
-  private async takeOffSections(
-    tx: TransactionClient,
-    restaurantId: string,
-    staffId: string,
-  ): Promise<number> {
-    await lockSetup(tx);
-    const today = await currentBusinessDate(tx, restaurantId);
-    const removed = await tx.shiftAssignment.deleteMany({
-      where: { restaurantId, staffId, businessDate: { gte: dbDate(today) } },
-    });
-    if (removed.count > 0) {
-      await announceSetupChange(tx, restaurantId, 'WAITER_ASSIGNMENTS', {
-        type: 'waiter_assignments',
-        id: restaurantId,
-      });
-    }
-    return removed.count;
   }
 
   private record(

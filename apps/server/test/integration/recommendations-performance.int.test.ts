@@ -196,7 +196,7 @@ beforeAll(async () => {
   const opened = await request(httpServer(app))
     .post(`/api/v1/tables/${table.id}/open`)
     .set(authHeaders(kit.deviceId, waiter.accessToken))
-    .send({ covers: 4, waiterId: kit.staff.WAITER });
+    .send({ covers: 4 });
   expect(opened.status, JSON.stringify(opened.body)).toBe(201);
   session = TableSessionView.parse(opened.body);
   // A table with a first round sent: the rules have something to match.

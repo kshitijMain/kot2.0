@@ -75,8 +75,6 @@ const NotificationRuleOverrides = z.partialRecord(
     recipients: z
       .array(
         z.enum([
-          'RESPONSIBLE_WAITER',
-          'SECTION_WAITERS',
           'ALL_WAITERS',
           'MANAGERS_ON_DUTY',
           'STATION',

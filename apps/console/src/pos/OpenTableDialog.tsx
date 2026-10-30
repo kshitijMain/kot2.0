@@ -1,13 +1,13 @@
-import type { StaffTile, TableOverviewEntry } from '@rp/contracts';
-import { Button, Dialog, NumberPad, Select, TextField, useToast } from '@rp/ui-web';
-import { useEffect, useId, useState } from 'react';
+import type { TableOverviewEntry } from '@rp/contracts';
+import { Button, Dialog, NumberPad, TextField, useToast } from '@rp/ui-web';
+import { useId, useState } from 'react';
 import { useConsole } from '../app/console-context.js';
 import { useT } from '../app/i18n.js';
 import { messageOf } from '../app/messages.js';
 
 /**
- * Seat guests at a free table (TBL-003): the number of guests and, optionally, a waiter other than
- * the one assigned to the table (TBL-002; the server applies the assignment when none is chosen).
+ * Seat guests at a free table (TBL-003): the number of guests. Any waiter serves any table, so none
+ * is chosen; the server records who opened it (ADR-0023).
  */
 export function OpenTableDialog({
   table,
@@ -22,26 +22,9 @@ export function OpenTableDialog({
   const controller = useConsole();
   const toast = useToast();
   const [guests, setGuests] = useState('');
-  const [waiterId, setWaiterId] = useState('');
-  const [waiters, setWaiters] = useState<StaffTile[]>([]);
   const [error, setError] = useState<string | undefined>();
   const [working, setWorking] = useState(false);
   const formId = useId();
-
-  useEffect(() => {
-    let active = true;
-    controller.staffTiles().then(
-      (staff) => {
-        if (active) setWaiters(staff.filter((person) => person.role === 'WAITER'));
-      },
-      () => {
-        // The waiter list is optional: without it the table goes to its assigned waiter.
-      },
-    );
-    return () => {
-      active = false;
-    };
-  }, [controller]);
 
   const submit = async () => {
     const covers = Number(guests);
@@ -54,7 +37,7 @@ export function OpenTableDialog({
     try {
       await controller.api.openTable({
         params: { tableId: table.tableId },
-        body: { covers, ...(waiterId !== '' && { waiterId }) },
+        body: { covers },
       });
       toast.show({ title: t('pos.open.opened', { table: table.label }), tone: 'success' });
       onOpened();
@@ -101,19 +84,6 @@ export function OpenTableDialog({
           onChange={setGuests}
           disabled={working}
         />
-        {waiters.length > 0 ? (
-          <Select
-            label={t('pos.open.waiter')}
-            value={waiterId}
-            onChange={(event) => {
-              setWaiterId(event.target.value);
-            }}
-            options={[
-              { value: '', label: t('pos.open.assignedWaiter') },
-              ...waiters.map((waiter) => ({ value: waiter.staffId, label: waiter.displayName })),
-            ]}
-          />
-        ) : null}
       </form>
     </Dialog>
   );
