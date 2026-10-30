@@ -38,7 +38,7 @@ function page(query: URLSearchParams): AuditListResponse {
     entry(129, {
       action: 'INVOICE_VOIDED',
       entityType: 'invoice',
-      actor: { id: STAFF.CASHIER.staffId, name: STAFF.CASHIER.displayName },
+      actor: { id: STAFF.WAITER.staffId, name: STAFF.WAITER.displayName },
       approver: { id: STAFF.MANAGER.staffId, name: STAFF.MANAGER.displayName },
       reason: 'Wrong table',
       before: { status: 'ISSUED' },
@@ -58,7 +58,7 @@ function page(query: URLSearchParams): AuditListResponse {
     entries,
     actions: ['INVOICE_VOIDED', 'LOGIN', 'SETTING_CHANGED'],
     people: [
-      { id: STAFF.CASHIER.staffId, name: STAFF.CASHIER.displayName },
+      { id: STAFF.WAITER.staffId, name: STAFF.WAITER.displayName },
       { id: STAFF.MANAGER.staffId, name: STAFF.MANAGER.displayName },
     ],
   };
@@ -119,7 +119,7 @@ describe('[AUD-005] the audit trail', () => {
     );
     const table = within(await screen.findByRole('table', { name: t('auditPage.table') }));
     const voided = table.getByText('Invoice voided').closest('tr') as HTMLElement;
-    expect(within(voided).getByText(STAFF.CASHIER.displayName)).toBeVisible();
+    expect(within(voided).getByText(STAFF.WAITER.displayName)).toBeVisible();
     expect(within(voided).getByText(STAFF.MANAGER.displayName)).toBeVisible();
     expect(within(voided).getByText('Wrong table')).toBeVisible();
     expect(within(voided).getByText('Counter POS')).toBeVisible();

@@ -4,7 +4,7 @@ import { Id, ServiceRequestState, ServiceRequestType, Timestamp } from './common
 /**
  * Service requests (P2-06d, TAB-004, WTR-005): a diner's call for water, a waiter or the bill.
  * Like a flight-cabin call light it stays on until it is cancelled or resolved; its alert calls
- * the responsible waiter (and the cashier for the bill), repeats every R and escalates after N.
+ * the responsible waiter (and the managers on duty for the bill), repeats every R and escalates after N.
  */
 
 /** Where a diner raised it: the table tablet, or the QR page later (QR-011). */

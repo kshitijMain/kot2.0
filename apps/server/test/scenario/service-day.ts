@@ -11,13 +11,12 @@ import type {
   StaffTile,
   AuditVerifyResponse,
 } from '@rp/contracts';
-import type { Capability } from '@rp/domain';
 
 /**
  * The Phase 1 exit scenario (P1-14): a simulated service day through the same client the POS
- * uses. Two paired terminals: one for the manager (kitchen steps, approvals, day-end), one for the
- * cashier. About 100 orders across tables and takeaway, with variants, modifiers and combos,
- * cancellations, voids with a manager's approval, discounts within and above the cashier's limit,
+ * uses. Two paired terminals: one for the manager (kitchen steps, day-end), one for a second
+ * manager who bills at the POS (there is no cashier, ADR-0023). About 100 orders across tables and
+ * takeaway, with variants, modifiers and combos, cancellations, voids, small and large discounts,
  * split bills, reprints, a cancelled and re-issued invoice and table moves; then the shift and the
  * day are closed and the results are returned for checking.
  *
@@ -37,7 +36,8 @@ export interface ServiceDayOptions {
   readonly pairingCodes:
     readonly [string, string] | ((manager: ApiClient | null) => Promise<string>);
   readonly manager: ServiceDayPerson;
-  readonly cashier: ServiceDayPerson;
+  /** A second manager, who takes orders and bills at the other POS. */
+  readonly biller: ServiceDayPerson;
   readonly orders?: number;
   readonly seed?: number;
   readonly log?: (line: string) => void;
@@ -54,7 +54,7 @@ export interface ServiceDayCounts {
   cancelledItems: number;
   voidedItems: number;
   discounts: number;
-  approvedDiscounts: number;
+  largeDiscounts: number;
   splitBills: number;
   reprints: number;
   voidedInvoices: number;
@@ -109,7 +109,7 @@ export async function runServiceDay(options: ServiceDayOptions): Promise<Service
     cancelledItems: 0,
     voidedItems: 0,
     discounts: 0,
-    approvedDiscounts: 0,
+    largeDiscounts: 0,
     splitBills: 0,
     reprints: 0,
     voidedInvoices: 0,
@@ -136,9 +136,9 @@ export async function runServiceDay(options: ServiceDayOptions): Promise<Service
     return tile;
   };
   const manager = await terminal(await codeFor(0, null), 'manager');
-  const managerTile = await signIn(manager, options.manager);
-  const cashier = await terminal(await codeFor(1, manager), 'cashier');
-  await signIn(cashier, options.cashier);
+  await signIn(manager, options.manager);
+  const biller = await terminal(await codeFor(1, manager), 'biller');
+  await signIn(biller, options.biller);
 
   // A real counter asks for a manager's PIN a few times an hour; this day runs in seconds, so the
   // per-device attempt limit is raised for the run and put back afterwards (both audited).
@@ -150,22 +150,8 @@ export async function runServiceDay(options: ServiceDayOptions): Promise<Service
     body: { value: 100, reason: 'Phase 1 exit scenario' },
   });
 
-  /** A manager's PIN at the cashier's terminal (AUTH-011). */
-  const approval = async (capability: Capability, entityType: string, entityId: string) =>
-    (
-      await cashier.api.grantOverride({
-        body: {
-          approverStaffId: managerTile.staffId,
-          pin: options.manager.pin,
-          capability,
-          entityType,
-          entityId,
-        },
-      })
-    ).overrideToken;
-
   // ------------------------------------------------------------ the menu and the floor
-  const menu: MenuSnapshot = await cashier.api.getMenu();
+  const menu: MenuSnapshot = await biller.api.getMenu();
   const groups = new Map(menu.modifierGroups.map((group) => [group.id, group]));
   const combos = new Map(menu.combos.map((combo) => [combo.itemId, combo]));
   const sellable = menu.items.filter(
@@ -224,24 +210,24 @@ export async function runServiceDay(options: ServiceDayOptions): Promise<Service
         : { orderType: 'TAKEAWAY' as const, customerName: target.takeaway }),
       lines,
     };
-    const result = await cashier.api.submitOrder({ body });
+    const result = await biller.api.submitOrder({ body });
     if (result.status !== 'ACCEPTED') {
       throw new Error(`Order refused: ${JSON.stringify(result.rejectedLines)}`);
     }
     // A retry with the same key never creates a second order (ORD-013).
     if (chance(0.1)) {
-      const again = await cashier.api.submitOrder({ body });
+      const again = await biller.api.submitOrder({ body });
       if (again.status !== 'ACCEPTED' || !again.replayed || again.orderId !== result.orderId) {
         throw new Error('A retried order was not replayed');
       }
     }
     counts.orders += 1;
-    return cashier.api.getOrder({ params: { orderId: result.orderId } });
+    return biller.api.getOrder({ params: { orderId: result.orderId } });
   };
 
-  /** Cancels a line before the kitchen starts, or voids one after with a manager's approval. */
+  /** Cancels a line before the kitchen starts, or voids one after (a manager: no approval). */
   const endSomething = async (orderId: string) => {
-    const order = await cashier.api.getOrder({ params: { orderId } });
+    const order = await biller.api.getOrder({ params: { orderId } });
     const lines = order.items.filter(
       (item) => item.parentOrderItemId === null && item.state === 'SENT',
     );
@@ -249,7 +235,7 @@ export async function runServiceDay(options: ServiceDayOptions): Promise<Service
     if (lines.length < 2) return;
     const target = pick(lines);
     if (chance(0.5)) {
-      await cashier.api.cancelOrderItem({
+      await biller.api.cancelOrderItem({
         params: { orderItemId: target.id },
         body: { reason: 'Guest changed their mind' },
       });
@@ -259,11 +245,9 @@ export async function runServiceDay(options: ServiceDayOptions): Promise<Service
         params: { orderItemId: target.id },
         body: { event: 'START_PREPARING' },
       });
-      const overrideToken = await approval('ITEM_VOID_AFTER_PREP', 'order_item', target.id);
-      await cashier.api.voidOrderItem({
+      await biller.api.voidOrderItem({
         params: { orderItemId: target.id },
         body: { reason: 'Dropped in the kitchen' },
-        overrideToken,
       });
       counts.voidedItems += 1;
     }
@@ -274,7 +258,7 @@ export async function runServiceDay(options: ServiceDayOptions): Promise<Service
   let cashPaid = 0;
 
   const pay = async (invoice: InvoiceView) => {
-    const status = await cashier.api.getInvoicePayments({ params: { id: invoice.id } });
+    const status = await biller.api.getInvoicePayments({ params: { id: invoice.id } });
     if (status.remaining === 0) return;
     const payments = chance(0.3)
       ? [
@@ -296,9 +280,9 @@ export async function runServiceDay(options: ServiceDayOptions): Promise<Service
         ...(payment.mode === 'CASH' && { tendered: Math.ceil(payment.amount / 10_000) * 10_000 }),
       })),
     };
-    const result = await cashier.api.recordPayments({ params: { id: invoice.id }, body });
+    const result = await biller.api.recordPayments({ params: { id: invoice.id }, body });
     // A retried payment set is recorded once (BILL-008).
-    if (chance(0.1)) await cashier.api.recordPayments({ params: { id: invoice.id }, body });
+    if (chance(0.1)) await biller.api.recordPayments({ params: { id: invoice.id }, body });
     if (result.remaining !== 0) throw new Error(`Invoice ${invoice.invoiceNumber} is not settled`);
     for (const payment of payments) {
       paid += payment.amount;
@@ -311,15 +295,15 @@ export async function runServiceDay(options: ServiceDayOptions): Promise<Service
   const printers = (await manager.api.listPrinters()).printers;
   const printTo = { printerId: printers[0]?.id ?? null };
   const print = async (invoice: InvoiceView) => {
-    const printed = await cashier.api
+    const printed = await biller.api
       .printInvoice({ params: { id: invoice.id }, body: {} })
       .catch(async (error: unknown) => {
         if (!(error instanceof ApiRequestError) || error.status !== 422) throw error;
-        return cashier.api.printInvoice({ params: { id: invoice.id }, body: printTo });
+        return biller.api.printInvoice({ params: { id: invoice.id }, body: printTo });
       });
     if (printed.duplicate) throw new Error('A first print was marked DUPLICATE');
     if (chance(0.15)) {
-      const again = await cashier.api.printInvoice({ params: { id: invoice.id }, body: printTo });
+      const again = await biller.api.printInvoice({ params: { id: invoice.id }, body: printTo });
       // Once a copy has come out, every later copy says DUPLICATE (BILL-009).
       if (printed.printed && !again.duplicate) {
         throw new Error('A reprint was not marked DUPLICATE');
@@ -331,7 +315,7 @@ export async function runServiceDay(options: ServiceDayOptions): Promise<Service
   const settle = async (bill: BillView) => {
     let current = bill;
     if (chance(0.2)) {
-      await cashier.api.addBillDiscount({
+      await biller.api.addBillDiscount({
         params: { id: current.id },
         body: {
           orderItemId: null,
@@ -343,63 +327,52 @@ export async function runServiceDay(options: ServiceDayOptions): Promise<Service
       });
       counts.discounts += 1;
     } else if (chance(0.1)) {
-      // Above the cashier's limit: a manager approves (AUTH-011).
-      const discount = {
-        orderItemId: null,
-        kind: 'PERCENT' as const,
-        rateBp: 2_000,
-        amount: null,
-        reason: 'Birthday',
-      };
-      try {
-        await cashier.api.addBillDiscount({ params: { id: current.id }, body: discount });
-        throw new Error('A 20 % discount went through without approval');
-      } catch (error) {
-        if (!(error instanceof ApiRequestError) || error.code !== 'OVERRIDE_REQUIRED') throw error;
-      }
-      const overrideToken = await approval('DISCOUNT_ABOVE_LIMIT', 'bill', current.id);
-      await cashier.api.addBillDiscount({
+      // Above the limit: a manager gives it without anyone's approval (BILL-005).
+      await biller.api.addBillDiscount({
         params: { id: current.id },
-        body: discount,
-        overrideToken,
+        body: {
+          orderItemId: null,
+          kind: 'PERCENT',
+          rateBp: 2_000,
+          amount: null,
+          reason: 'Birthday',
+        },
       });
-      counts.approvedDiscounts += 1;
+      counts.largeDiscounts += 1;
     }
-    current = await cashier.api.getBill({ params: { id: current.id } });
+    current = await biller.api.getBill({ params: { id: current.id } });
     let issued: InvoiceView[];
     if (chance(0.15) && current.lines.length > 0) {
-      const result = await cashier.api.splitBill({
+      const result = await biller.api.splitBill({
         params: { id: current.id },
         body: { mode: 'EQUAL', parts: 2, seriesId: null },
       });
       issued = result.invoices;
       counts.splitBills += 1;
     } else {
-      issued = [await cashier.api.issueInvoice({ params: { id: current.id }, body: {} })];
+      issued = [await biller.api.issueInvoice({ params: { id: current.id }, body: {} })];
     }
     const first = issued[0];
     if (issued.length === 1 && first !== undefined && chance(0.08)) {
-      // Printed with a mistake: cancelled with a manager's approval and issued again (BILL-010).
+      // Printed with a mistake: cancelled by the manager and issued again (BILL-010).
       await print(first);
-      const overrideToken = await approval('INVOICE_VOID', 'invoice', first.id);
-      const voided = await cashier.api.voidInvoice({
+      const voided = await biller.api.voidInvoice({
         params: { id: first.id },
         body: { reason: 'Wrong table on the bill' },
-        overrideToken,
       });
       invoices.set(voided.id, voided);
       counts.voidedInvoices += 1;
-      issued = [await cashier.api.issueInvoice({ params: { id: current.id }, body: {} })];
+      issued = [await biller.api.issueInvoice({ params: { id: current.id }, body: {} })];
     }
     for (const invoice of issued) {
       await print(invoice);
       await pay(invoice);
-      invoices.set(invoice.id, await cashier.api.getInvoice({ params: { id: invoice.id } }));
+      invoices.set(invoice.id, await biller.api.getInvoice({ params: { id: invoice.id } }));
     }
   };
 
   // ------------------------------------------------------------ the day
-  const shift = await cashier.api.openShift({ body: { openingFloat: 200_000 } });
+  const shift = await biller.api.openShift({ body: { openingFloat: 200_000 } });
   const target = options.orders ?? 100;
   let takeawayNumber = 0;
   while (counts.orders < target) {
@@ -408,15 +381,15 @@ export async function runServiceDay(options: ServiceDayOptions): Promise<Service
       const order = await submit({ takeaway: `Guest ${String(takeawayNumber)}` });
       counts.takeawayOrders += 1;
       if (chance(0.2)) await endSomething(order.id);
-      const bill = await cashier.api.openBill({ body: { orderId: order.id } });
+      const bill = await biller.api.openBill({ body: { orderId: order.id } });
       await settle(bill);
       continue;
     }
-    const overview = await cashier.api.getTableOverview();
+    const overview = await biller.api.getTableOverview();
     const free = overview.tables.filter((table) => table.state === 'FREE');
     if (free.length === 0) throw new Error('No free table');
     const table = pick(free);
-    const session = await cashier.api.openTable({
+    const session = await biller.api.openTable({
       params: { tableId: table.tableId },
       body: { covers: 1 + Math.floor(random() * 6) },
     });
@@ -428,11 +401,11 @@ export async function runServiceDay(options: ServiceDayOptions): Promise<Service
       if (chance(0.25)) await endSomething(order.id);
     }
     if (chance(0.1)) {
-      const others = (await cashier.api.getTableOverview()).tables.filter(
+      const others = (await biller.api.getTableOverview()).tables.filter(
         (entry) => entry.state === 'FREE',
       );
       if (others.length > 0) {
-        const moved = await cashier.api.moveTable({
+        const moved = await biller.api.moveTable({
           params: { sessionId },
           body: { toTableId: pick(others).tableId },
         });
@@ -440,15 +413,15 @@ export async function runServiceDay(options: ServiceDayOptions): Promise<Service
         counts.moves += 1;
       }
     }
-    const bill = await cashier.api.openBill({ body: { tableSessionId: sessionId } });
+    const bill = await biller.api.openBill({ body: { tableSessionId: sessionId } });
     await settle(bill);
   }
   log(`Service done: ${JSON.stringify(counts)}`);
 
   // ------------------------------------------------------------ closing
-  const current = await cashier.api.getCurrentShift();
+  const current = await biller.api.getCurrentShift();
   if (current.shift === null) throw new Error('The shift disappeared');
-  const closedShift = await cashier.api.closeShift({
+  const closedShift = await biller.api.closeShift({
     params: { id: shift.id },
     body: { countedCash: current.shift.expectedCash },
   });
@@ -481,7 +454,7 @@ export async function runServiceDay(options: ServiceDayOptions): Promise<Service
     params: { key: ATTEMPTS },
     body: { value: attemptsBefore, reason: 'Phase 1 exit scenario finished' },
   });
-  await Promise.all([cashier.signOut(), manager.signOut()]);
+  await Promise.all([biller.signOut(), manager.signOut()]);
   return {
     businessDate: preview.businessDate,
     counts,

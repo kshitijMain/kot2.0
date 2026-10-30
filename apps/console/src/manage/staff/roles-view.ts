@@ -64,7 +64,7 @@ export function sortRoles(roles: readonly RoleView[]): {
   readonly builtIn: readonly RoleView[];
   readonly custom: readonly RoleView[];
 } {
-  const order = ['OWNER', 'MANAGER', 'CASHIER', 'WAITER', 'KITCHEN'];
+  const order = ['OWNER', 'MANAGER', 'WAITER', 'KITCHEN'];
   return {
     builtIn: roles
       .filter((role) => role.builtIn)

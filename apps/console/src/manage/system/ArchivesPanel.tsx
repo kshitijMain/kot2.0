@@ -173,8 +173,8 @@ export function ArchivesPanel() {
   const { person } = useConsoleState();
   const toast = useToast();
   const owner = person !== undefined && grantOf(person, 'DATA_ADMIN') !== 'DENY';
-  // DATA-009: those who read the restaurant's reports open archives (a cashier's are their own
-  // shifts'); only the Owner archives.
+  // DATA-009: those who read the restaurant's reports open archives (reports limited to one's own
+  // shifts do not); only the Owner archives.
   const reads = person !== undefined && grantOf(person, 'REPORTS_VIEW_EXPORT') === 'ALLOW';
   const [view, setView] = useState<ArchivesResponse | undefined>();
   const [failed, setFailed] = useState<string | undefined>();

@@ -38,8 +38,8 @@ describe('[MGR-007] [UPD-010] settings catalogue', () => {
     const probes: [string, unknown][] = [
       ['auth.pinLength', 5],
       ['auth.accessTokenMinutes', 16],
-      ['billing.cashierDiscountLimitBp', 10_001],
-      ['billing.cashierDiscountLimitBp', 12.5],
+      ['billing.discountLimitBp', 10_001],
+      ['billing.discountLimitBp', 12.5],
       ['billing.priceMode', 'SOMETIMES'],
       ['payments.otherModes', []],
       ['updates.maintenanceWindow', { start: '3am', end: '06:00' }],
@@ -63,7 +63,7 @@ describe('[MGR-007] [UPD-010] settings catalogue', () => {
       'auth.kitchenIndividualLogins': false, // AUTH-005
       'auth.pairingCodeMinutes': 10, // AUTH-007
       'stock.kitchenMayManage': true, // OI-11
-      'billing.cashierDiscountLimitBp': 1_000, // BILL-005: cashier ≤ 10 %
+      'billing.discountLimitBp': 1_000, // BILL-005: within-limit discounts ≤ 10 %
       'billing.serviceChargeEnabled': false, // BILL-006, OI-12
       'bills.hostedCopyDays': 30, // BILL-012
       'orders.specialInstructionsMaxLength': 140, // ORD-015

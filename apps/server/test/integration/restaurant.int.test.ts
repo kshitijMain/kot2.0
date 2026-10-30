@@ -436,7 +436,7 @@ describe('[BILL-003] invoice series', () => {
         subtotal: 10_000,
         taxTotal: 500,
         grandTotal: 10_500,
-        issuedById: kit.staff.CASHIER,
+        issuedById: kit.staff.BILLER,
       },
     });
     const update = (body: Record<string, unknown>) =>

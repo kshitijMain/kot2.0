@@ -214,7 +214,7 @@ describe('[NTF-003] device, printer and disk alerts', () => {
     expect(await prisma.alert.count({ where: { dedupeKey: `device:${pager.id}:low` } })).toBe(0);
   });
 
-  it('alerts the managers and cashier while a printer is offline', async () => {
+  it('alerts the managers while a printer is offline', async () => {
     const printerId = randomUUID();
     const printer = (online: boolean) =>
       produce(app, [
@@ -229,9 +229,7 @@ describe('[NTF-003] device, printer and disk alerts', () => {
     await printer(false);
     const alert = await openAlert({ dedupeKey: `printer:${printerId}` });
     expect(alert).toMatchObject({ type: 'PRINTER_OFFLINE' });
-    expect(alert.recipientIds).toEqual(
-      expect.arrayContaining([kit.staff.MANAGER, kit.staff.CASHIER]),
-    );
+    expect(alert.recipientIds).toEqual(expect.arrayContaining([kit.staff.MANAGER]));
     await printer(true);
     await until(
       async () =>

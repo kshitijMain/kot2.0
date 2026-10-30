@@ -130,30 +130,24 @@ describe('[MGR-007] [UPD-010] the Settings page', () => {
     ).toBeVisible();
   });
 
-  it('[BILL-005] sets the cashier discount limit as a percent', async () => {
-    const fake = settingsServer().on(
-      'PUT',
-      '/api/v1/settings/billing.cashierDiscountLimitBp',
-      () => ({
-        status: 200,
-        body: settingView('billing.cashierDiscountLimitBp', { value: 1500, isDefault: false }),
-      }),
-    );
+  it('[BILL-005] sets the discount limit as a percent', async () => {
+    const fake = settingsServer().on('PUT', '/api/v1/settings/billing.discountLimitBp', () => ({
+      status: 200,
+      body: settingView('billing.discountLimitBp', { value: 1500, isDefault: false }),
+    }));
     const { user } = await renderConsole({ fake, path: PATH, signedIn: 'MANAGER' });
-    const row = await rowOf('settingLabels.billing.cashierDiscountLimitBp');
+    const row = await rowOf('settingLabels.billing.discountLimitBp');
     expect(within(row).getByText(t('settingsPage.unit.bp', { value: '10' }))).toBeVisible();
     await user.click(within(row).getByRole('button', { name: t('settingsPage.edit') }));
     const dialog = within(await screen.findByRole('dialog'));
     const field = dialog.getByRole('textbox', {
-      name: t('settingLabels.billing.cashierDiscountLimitBp'),
+      name: t('settingLabels.billing.discountLimitBp'),
     });
     await user.clear(field);
     await user.type(field, '15');
     await user.click(dialog.getByRole('button', { name: t('settingsPage.dialog.save') }));
     await waitFor(() => {
-      expect(
-        fake.callsTo('PUT', '/api/v1/settings/billing.cashierDiscountLimitBp')[0]?.body,
-      ).toEqual({
+      expect(fake.callsTo('PUT', '/api/v1/settings/billing.discountLimitBp')[0]?.body).toEqual({
         value: 1500,
       });
     });
@@ -243,9 +237,9 @@ describe('[MGR-007] [UPD-010] the Settings page', () => {
     expect(parseSettingsFile('not json')).toBeUndefined();
   });
 
-  it('is not linked for a cashier', async () => {
-    const fake = signsInAs(server(), 'CASHIER');
-    await renderConsole({ fake, path: PATH, signedIn: 'CASHIER' });
+  it('is not linked for a waiter', async () => {
+    const fake = signsInAs(server(), 'WAITER');
+    await renderConsole({ fake, path: PATH, signedIn: 'WAITER' });
     await waitFor(() => {
       expect(screen.queryByRole('link', { name: t('dashboard.section.settings') })).toBeNull();
     });

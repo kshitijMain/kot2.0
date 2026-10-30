@@ -21,7 +21,7 @@ const REQUEST_EVENTS = new Set([
 
 /**
  * The cabin-call buttons (TAB-004, BILL-015): Water, Waiter and Bill call the table's waiter (and
- * the cashier for the bill) and stay lit, "Requested, waiter notified" with the time, until the
+ * the managers on duty for the bill) and stay lit, "Requested, waiter notified" with the time, until the
  * waiter acknowledges ("on the way") and the request is cancelled or resolved. Cancel clears the
  * only open request, or asks which one. The server refuses a second request of the same kind.
  */

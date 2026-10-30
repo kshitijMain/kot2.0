@@ -107,7 +107,7 @@ function Shifts({ range }: { range: ReportRange }) {
               textColumn('date', t('reportsPage.columns.date'), (row) =>
                 formatDisplayDate(row.businessDate),
               ),
-              textColumn('cashier', t('reportsPage.columns.person'), (row) => row.staffName),
+              textColumn('person', t('reportsPage.columns.person'), (row) => row.staffName),
               textColumn('opened', t('reportsPage.shifts.opened'), (row) => time(row.openedAt)),
               textColumn('closed', t('reportsPage.shifts.closed'), (row) => time(row.closedAt)),
               moneyColumn('float', t('reportsPage.shifts.float'), (row) => row.openingFloat),

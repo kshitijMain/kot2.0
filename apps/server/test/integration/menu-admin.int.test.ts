@@ -19,6 +19,7 @@ let app: INestApplication;
 let prisma: PrismaService;
 let kit: AuthKit;
 let manager: LoginResponse;
+/** Someone who may not edit the menu (a waiter; there is no cashier, ADR-0023). */
 let cashier: LoginResponse;
 let stationId: string;
 let taxGroupId: string;
@@ -29,7 +30,7 @@ beforeAll(async () => {
   prisma = app.get(PrismaService);
   kit = await createAuthKit(app);
   manager = await signIn(app, kit, 'MANAGER');
-  cashier = await signIn(app, kit, 'CASHIER');
+  cashier = await signIn(app, kit, 'WAITER');
   const base = { restaurantId: kit.restaurantId };
   stationId = (await prisma.station.create({ data: { ...base, name: 'Kitchen' } })).id;
   taxGroupId = (await prisma.taxGroup.create({ data: { ...base, name: 'GST 5 %' } })).id;

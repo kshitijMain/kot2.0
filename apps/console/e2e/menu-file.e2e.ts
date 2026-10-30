@@ -218,7 +218,7 @@ test('[ONB-005] [ONB-007] [MENU-008] the menu file: fill, load, publish, export,
 
     // 4. The POS shows the new dishes with their photos.
     await page.getByRole('button', { name: t('login.signOut') }).click();
-    await signIn(page, 'Neha (Cashier)', '3333');
+    await signIn(page, 'Neha (Manager)', '3333');
     await page.getByRole('button', { name: t('pos.takeaway') }).click();
     await page.getByLabel(t('pos.menu.search')).fill('Kadhai Mushroom');
     const card = page.getByRole('button', { name: /^Kadhai Mushroom, / });

@@ -289,7 +289,7 @@ const REPORTS: readonly (readonly [
 
 /**
  * The simulated rush (P8-01a). Connects every device and pager, seats the warm-up's tables, then
- * plays the schedule for `shape.minutes` while the kitchen, waiters and cashiers react; then
+ * plays the schedule for `shape.minutes` while the kitchen, waiters and billers react; then
  * (with `restart`) kills the server and waits for every client to come back, and checks that
  * every order, ticket, print and alert happened exactly once.
  */
@@ -782,7 +782,7 @@ export async function runRush(options: RushOptions): Promise<RushResult> {
     await settle(till, { orderId: sent.orderId });
   };
 
-  /** The cashier opens the bill, issues the invoice, prints it and takes the payment. */
+  /** The biller opens the bill, issues the invoice, prints it and takes the payment. */
   const settle = async (
     till: SimulatedDevice,
     of: { tableSessionId: string } | { orderId: string },
@@ -835,7 +835,7 @@ export async function runRush(options: RushOptions): Promise<RushResult> {
     ready.billing = true;
     try {
       await phone.call('requestBill', () => phone.api.requestBill({ params: { sessionId } }));
-      await sleep(within(random, shape.pace.cashier));
+      await sleep(within(random, shape.pace.biller));
       await settle(till, { tableSessionId: sessionId });
       ready.sessionId = null;
       ready.openRequests.clear();
@@ -989,7 +989,7 @@ export async function runRush(options: RushOptions): Promise<RushResult> {
               await Promise.all(items.map((line) => step(line.orderItemId, 'MARK_READY')));
               count('tickets cooked');
               if (tableId === undefined) {
-                // Takeaway: the cashier hands it over when the token is called.
+                // Takeaway: the biller hands it over when the token is called.
                 react(counter, shape.pace.pickUp, () =>
                   inTurn(ticket.orderId, () => serve(counter, ticket.orderId)),
                 );

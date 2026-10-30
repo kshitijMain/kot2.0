@@ -42,7 +42,7 @@ export interface OnboardingFacts {
   readonly stationsWithoutWorkingPrinter: number;
   readonly menuItems: number;
   readonly menuPublished: boolean;
-  /** Waiters, cashiers and kitchen staff with a PIN. */
+  /** Waiters and kitchen staff with a PIN. */
   readonly staffWithPins: number;
   /** Phones, tablets, kitchen screens and pagers paired (not this console). */
   readonly pairedDevices: number;

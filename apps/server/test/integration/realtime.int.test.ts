@@ -128,7 +128,7 @@ describe('[AUTH-007] [SEC-003] who may connect', () => {
 
   it('refuses a person’s token presented from another device (AUTH-005)', async () => {
     const other = await addDevice(app, kit, 'POS');
-    const cashier = await signIn(app, kit, 'CASHIER');
+    const cashier = await signIn(app, kit, 'BILLER');
     expect((await RealtimeTestClient.refused(url, auth(other, cashier.accessToken))).code).toBe(
       'DEVICE_MISMATCH',
     );
@@ -207,7 +207,7 @@ describe('[ORD-010] [SEC-003] [AUTH-009] events reach exactly the rooms allowed 
     const lockedPos = await addDevice(app, kit, 'POS');
 
     const cashier = await connect(
-      auth(kit.deviceId, (await signIn(app, kit, 'CASHIER')).accessToken),
+      auth(kit.deviceId, (await signIn(app, kit, 'BILLER')).accessToken),
     );
     const waiter = await connect(
       auth(waiterPhone, (await signIn(app, kit, 'WAITER', waiterPhone)).accessToken),
@@ -277,7 +277,10 @@ describe('[ORD-010] [SEC-003] [AUTH-009] events reach exactly the rooms allowed 
     );
     const ours = <T extends { eventId: string }>(events: readonly T[]) =>
       events.filter((event) => produced.has(event.eventId));
-    expect(ids(ours(cashier.received))).toEqual(ids([opened, kot, preparing, settled, menu]));
+    // The second manager at the POS hears what a manager does (no cashier, ADR-0023).
+    expect(ids(ours(cashier.received))).toEqual(
+      ids([opened, kot, preparing, deviceDown, settled, escalated, menu]),
+    );
     expect(ids(ours(waiter.received))).toEqual(
       ids([opened, kot, preparing, settled, escalated, menu]),
     );
@@ -475,7 +478,7 @@ describe('[AUTH-008] [AUTH-005] live connections end when their credentials do',
 
   it('ends the connection when the person signs out', async () => {
     const pos = await addDevice(app, kit, 'POS');
-    const cashier = await signIn(app, kit, 'CASHIER', pos);
+    const cashier = await signIn(app, kit, 'BILLER', pos);
     const client = await connect(auth(pos, cashier.accessToken));
     const deviceOnly = await connect(auth(pos));
 
@@ -536,7 +539,7 @@ describe('[AUTH-008] [AUTH-005] live connections end when their credentials do',
 
   it('ends the connection when the person’s role changes', async () => {
     const pos = await addDevice(app, kit, 'POS');
-    const cashierId = await addStaff(app, kit, 'CASHIER', '3434');
+    const cashierId = await addStaff(app, kit, 'WAITER', '3434');
     const login = await request(httpServer(app))
       .post('/api/v1/auth/pin-login')
       .set(authHeaders(pos))

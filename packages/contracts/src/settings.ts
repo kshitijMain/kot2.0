@@ -79,7 +79,6 @@ const NotificationRuleOverrides = z.partialRecord(
           'SECTION_WAITERS',
           'ALL_WAITERS',
           'MANAGERS_ON_DUTY',
-          'CASHIER',
           'STATION',
           'OWNER',
           'WEARER',
@@ -368,12 +367,13 @@ export const SETTINGS = [
     unit: 'paise',
   }),
   setting({
-    key: 'billing.cashierDiscountLimitBp',
+    key: 'billing.discountLimitBp',
     schema: int(0, 10_000),
     defaultValue: 1_000,
     scope: 'RESTAURANT',
     capability: 'OPERATIONS_CONFIGURE',
-    description: 'Largest discount a cashier may give without a manager PIN.',
+    description:
+      'Largest discount staff allowed to discount within a limit (a custom role) may give without a manager PIN.',
     requirements: ['BILL-005'],
     unit: 'basis points',
   }),

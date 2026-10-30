@@ -11,6 +11,7 @@ import {
   pagerTextFor,
   reachesConsole,
   reachesPagerAndApp,
+  RECIPIENT_KINDS,
   type RecipientContext,
   recipientChoices,
   resolveRecipients,
@@ -22,7 +23,6 @@ const context = (overrides: Partial<RecipientContext> = {}): RecipientContext =>
   sectionWaiterIds: ['ravi', 'sunita'],
   allWaiterIds: ['ravi', 'sunita', 'arjun'],
   managersOnDuty: ['vikram'],
-  cashiersOnDuty: ['neha'],
   ownerIds: ['asha'],
   selectedIds: ['sunita'],
   wearerId: 'arjun',
@@ -43,13 +43,13 @@ describe('[NTF-002] [NTF-003] the Appendix C matrix', () => {
     ['ITEM_READY', ['ravi'], 'T7 READY', false, 'NONE'],
     ['WATER_REQUEST', ['ravi'], 'T7 WATER', true, 'NONE'],
     ['WAITER_REQUEST', ['ravi'], 'T7 WAITER', true, 'NONE'],
-    ['BILL_REQUEST', ['ravi', 'neha'], 'T7 BILL', true, 'NONE'],
+    ['BILL_REQUEST', ['ravi', 'vikram'], 'T7 BILL', true, 'NONE'],
     ['READY_NOT_COLLECTED', ['vikram'], 'T7 FOOD WAITING', false, 'UNTIL_ACKED'],
     ['MANAGER_NUDGE', ['sunita'], 'MGR: Check T7', false, 'AUTO_CLOSE'],
     ['ORDER_CHANGED', [], null, false, 'NONE'],
     ['WAITER_UNREACHABLE', ['vikram'], null, false, 'NONE'],
     ['DEVICE_LOW_BATTERY_OR_OFFLINE', ['vikram', 'arjun'], 'LOW BATTERY', false, 'ONCE_PER_STATE'],
-    ['PRINTER_OFFLINE', ['vikram', 'neha'], null, false, 'UNTIL_RESOLVED'],
+    ['PRINTER_OFFLINE', ['vikram'], null, false, 'UNTIL_RESOLVED'],
     ['DISK_OR_BACKUP', ['asha', 'vikram'], null, false, 'DAILY'],
     ['LICENSE_STATE', ['asha', 'vikram'], null, false, 'DAILY'],
     ['SUSPICIOUS_ACTIVITY', ['asha'], null, false, 'NONE'],
@@ -102,35 +102,37 @@ describe('[NTF-005] [NTF-007] [NTF-009] recipients', () => {
     ]);
   });
 
-  it('[BILL-015] does not alert the waiter who asked for the bill; the cashier still hears', () => {
+  it('[BILL-015] does not alert the waiter who asked for the bill; the managers on duty still hear', () => {
     const bill = DEFAULT_NOTIFICATION_RULES.BILL_REQUEST;
+    // The cashier's alerts go to the managers on duty (ADR-0023).
+    expect(bill.recipients).toEqual(['RESPONSIBLE_WAITER', 'MANAGERS_ON_DUTY']);
     // Ravi asked on his phone: not alerted, and not "missing", even with his pager off.
     expect(
       resolveRecipients(bill, context({ askedById: 'ravi', reachable: (id) => id !== 'ravi' })),
-    ).toEqual({ staffIds: ['neha'], stations: false, escalateNow: false });
-    // Neha asked at the POS: Ravi is told, Neha is not.
-    expect(resolveRecipients(bill, context({ askedById: 'neha' })).staffIds).toEqual(['ravi']);
+    ).toEqual({ staffIds: ['vikram'], stations: false, escalateNow: false });
+    // Vikram asked at the POS: Ravi is told, Vikram is not.
+    expect(resolveRecipients(bill, context({ askedById: 'vikram' })).staffIds).toEqual(['ravi']);
     // Someone else's request changes nothing.
     expect(resolveRecipients(bill, context({ askedById: null })).staffIds).toEqual([
       'ravi',
-      'neha',
+      'vikram',
     ]);
     // A manager who asked while nobody looks after the table is still called with the others.
     expect(
       resolveRecipients(bill, context({ askedById: 'vikram', responsibleWaiterId: null })),
-    ).toEqual({ staffIds: ['neha', 'vikram'], stations: false, escalateNow: true });
+    ).toEqual({ staffIds: ['vikram'], stations: false, escalateNow: true });
   });
 
-  it('lets a manager send an event to all waiters or a cashier instead (NTF-002)', () => {
+  it('lets a manager send an event to all waiters or the managers instead (NTF-002)', () => {
     const rule = effectiveRule('WATER_REQUEST', {
-      WATER_REQUEST: { recipients: ['ALL_WAITERS', 'CASHIER'], escalate: false },
+      WATER_REQUEST: { recipients: ['ALL_WAITERS', 'MANAGERS_ON_DUTY'], escalate: false },
     });
     expect(rule.channels).toEqual(['PAGER', 'WAITER_APP']);
     expect(resolveRecipients(rule, context()).staffIds).toEqual([
       'ravi',
       'sunita',
       'arjun',
-      'neha',
+      'vikram',
     ]);
     expect(effectiveRule('ITEM_READY')).toEqual(DEFAULT_NOTIFICATION_RULES.ITEM_READY);
   });
@@ -248,9 +250,10 @@ describe('[NTF-002] a manager’s rules', () => {
       'SECTION_WAITERS',
       'ALL_WAITERS',
       'MANAGERS_ON_DUTY',
-      'CASHIER',
       'OWNER',
     ]);
+    // No cashier to send anything to (ADR-0023).
+    expect(RECIPIENT_KINDS).not.toContain('CASHIER');
     expect(recipientChoices('ORDER_CHANGED')).toContain('STATION');
     expect(recipientChoices('MANAGER_NUDGE')).toContain('SELECTED');
     expect(channelChoices('ITEM_READY')).toEqual([
@@ -271,7 +274,7 @@ describe('[NTF-002] a manager’s rules', () => {
     expect(
       ruleOverride('BILL_REQUEST', {
         ...DEFAULT_NOTIFICATION_RULES.BILL_REQUEST,
-        recipients: ['CASHIER', 'RESPONSIBLE_WAITER'],
+        recipients: ['MANAGERS_ON_DUTY', 'RESPONSIBLE_WAITER'],
       }),
     ).toBeUndefined();
     expect(

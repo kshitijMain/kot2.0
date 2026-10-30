@@ -10,7 +10,7 @@ import { grantFor, type Role } from './permissions.js';
  * Roles a person can be given (MGR-004). The restaurant has one Owner, set up at installation
  * (ONB-004), who is never created, demoted or deactivated here.
  */
-export const ASSIGNABLE_ROLES = ['MANAGER', 'CASHIER', 'WAITER', 'KITCHEN'] as const;
+export const ASSIGNABLE_ROLES = ['MANAGER', 'WAITER', 'KITCHEN'] as const;
 export type AssignableRole = (typeof ASSIGNABLE_ROLES)[number];
 
 export function isAssignableRole(role: string): role is AssignableRole {
@@ -91,8 +91,8 @@ function changesManagers(change: StaffChange, target: StaffTarget | null): boole
 }
 
 /**
- * May `actor` make `change` to `target` (null when creating)? Managers look after cashiers,
- * waiters and kitchen staff. Anything that creates or removes a manager needs the Owner with a
+ * May `actor` make `change` to `target` (null when creating)? Managers look after waiters and
+ * kitchen staff. Anything that creates or removes a manager needs the Owner with a
  * fresh second factor (AUTH-006); a manager's other details, PIN and lock are changed by the Owner
  * or by that manager, and the Owner's own record only by the Owner. Permission comes before state, so a
  * refused person learns nothing about the record.

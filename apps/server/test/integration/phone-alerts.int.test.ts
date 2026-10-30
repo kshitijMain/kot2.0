@@ -172,7 +172,7 @@ describe('[WTR-006] [AUTH-005] a waiter phone alerts its holder, signed in or no
     const nudge = await server()
       .post('/api/v1/alerts/nudge')
       .set(authHeaders(kit.deviceId, manager.accessToken))
-      .send({ staffIds: [kit.staff.CASHIER], message: 'Count the float' });
+      .send({ staffIds: [kit.staff.BILLER], message: 'Count the float' });
     expect(nudge.status).toBe(201);
     const [cashiers] = (nudge.body as { alertIds: string[] }).alertIds;
     const refused = await server()

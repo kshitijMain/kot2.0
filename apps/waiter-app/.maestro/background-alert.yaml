@@ -61,7 +61,7 @@ env:
     timeout: 300000
 - assertVisible: Alerts, none open
 - tapOn: Request bill
-- assertVisible: The cashier has been asked for the bill for ${TABLE2}.
+- assertVisible: The managers have been asked for the bill for ${TABLE2}.
 - tapOn: Back to tables
 - tapOn:
     id: home-menu

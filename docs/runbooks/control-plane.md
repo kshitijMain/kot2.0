@@ -261,7 +261,7 @@ On the restaurant PC (P7-09b):
 - **Turning it on.** A manager sets Settings, then Bills, "Digital bills" to WhatsApp. It is off by
   default.
 - **Sending.** A bill is queued by itself when it is settled, if the diner's mobile number is in
-  the customer details with the consent box ticked (BILL-011). The cashier can send it again from
+  the customer details with the consent box ticked (BILL-011). A manager can send it again from
   the bill.
 - **Waiting and giving up.** The PC sends within seconds. While the vendor or WhatsApp cannot be
   reached, it tries again after 1, 5, 15 and 60 minutes, then every 3 hours. A day after the bill

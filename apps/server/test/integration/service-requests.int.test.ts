@@ -67,7 +67,7 @@ beforeAll(async () => {
   waiter = await signIn(app, kit, 'WAITER');
   manager = await signIn(app, kit, 'MANAGER');
   kitchen = await signIn(app, kit, 'KITCHEN');
-  await signIn(app, kit, 'CASHIER');
+  await signIn(app, kit, 'BILLER');
   const hall = await prisma.section.create({
     data: { restaurantId: kit.restaurantId, name: 'Hall' },
   });
@@ -379,7 +379,7 @@ describe('[WTR-005] the waiter resolves from the inbox', () => {
 });
 
 describe('[BILL-015] the bill', () => {
-  it('from the tablet sets Bill requested and alerts the waiter and the cashier, once', async () => {
+  it('from the tablet sets Bill requested and alerts the waiter and the managers, once', async () => {
     const session = await openTable('6');
     const bill = await press('6', 'BILL');
     expect((await prisma.diningTable.findUniqueOrThrow({ where: { id: idOf('6') } })).state).toBe(
@@ -394,7 +394,10 @@ describe('[BILL-015] the bill', () => {
     expect(await outbox(bill.id, 'TableStateChanged')).toHaveLength(1);
     const alert = await alertOf(bill.id);
     expect(alert).toMatchObject({ type: 'BILL_REQUEST', pagerText: 'T6 BILL' });
-    expect([...alert.recipientIds].sort()).toEqual([kit.staff.WAITER, kit.staff.CASHIER].sort());
+    expect(alert.recipientIds).toEqual(
+      expect.arrayContaining([kit.staff.WAITER, kit.staff.BILLER]),
+    );
+    expect(alert.recipientIds).not.toContain(kit.staff.KITCHEN);
     // The notification triggers see BillRequested too, but raise no second bill alert.
     await settled('notifications.triggers');
     expect(
@@ -402,7 +405,7 @@ describe('[BILL-015] the bill', () => {
     ).toBe(1);
   });
 
-  it('asked for on the waiter’s phone does not alert that waiter; the cashier still hears', async () => {
+  it('asked for on the waiter’s phone does not alert that waiter; the managers still hear', async () => {
     const phone = await addDevice(app, kit, 'WAITER_PHONE');
     const onPhone = await signIn(app, kit, 'WAITER', phone);
     const session = await openTable('7');
@@ -420,10 +423,11 @@ describe('[BILL-015] the bill', () => {
       5_000,
       'the bill alert',
     );
-    expect(alert.recipientIds).toEqual([kit.staff.CASHIER]);
+    expect(alert.recipientIds).toEqual(expect.arrayContaining([kit.staff.BILLER]));
+    expect(alert.recipientIds).not.toContain(kit.staff.WAITER);
     expect(alert.escalatedAt).toBeNull();
     expect(alert.payload).toEqual({ requestedFrom: 'WAITER_APP' });
-    const cashier = await signIn(app, kit, 'CASHIER');
+    const cashier = await signIn(app, kit, 'BILLER');
     const cashierAlerts = AlertListResponse.parse(
       (await server().get('/api/v1/alerts').set(as(cashier))).body,
     );

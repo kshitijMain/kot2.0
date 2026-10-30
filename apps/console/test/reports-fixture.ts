@@ -54,7 +54,7 @@ export function discountReport(from: string, to: string): DiscountReportResponse
         rateBp: 10_000,
         amount: 8_000,
         reason: 'Birthday',
-        appliedBy: { id: STAFF.CASHIER.staffId, name: STAFF.CASHIER.displayName },
+        appliedBy: { id: STAFF.MANAGER.staffId, name: STAFF.MANAGER.displayName },
         approvedBy: { id: STAFF.MANAGER.staffId, name: STAFF.MANAGER.displayName },
       },
     ],
@@ -104,11 +104,11 @@ export function orderDrillDown(): OrderDrillDownResponse {
         status: 'SETTLED',
         grandTotal: 0,
         issuedAt: '2026-10-01T08:30:00.000Z',
-        issuedBy: { id: STAFF.CASHIER.staffId, name: STAFF.CASHIER.displayName },
+        issuedBy: { id: STAFF.MANAGER.staffId, name: STAFF.MANAGER.displayName },
         printCount: 1,
-        printedBy: { id: STAFF.CASHIER.staffId, name: STAFF.CASHIER.displayName },
+        printedBy: { id: STAFF.MANAGER.staffId, name: STAFF.MANAGER.displayName },
         settledAt: '2026-10-01T08:31:00.000Z',
-        settledBy: { id: STAFF.CASHIER.staffId, name: STAFF.CASHIER.displayName },
+        settledBy: { id: STAFF.MANAGER.staffId, name: STAFF.MANAGER.displayName },
         voidedAt: null,
         voidedBy: null,
         voidApprovedBy: null,
@@ -223,7 +223,7 @@ export function suggestionReport(from: string, to: string): RecommendationReport
   };
 }
 
-const person = (role: 'CASHIER' | 'MANAGER' | 'WAITER') => ({
+const person = (role: 'MANAGER' | 'WAITER') => ({
   id: STAFF[role].staffId,
   name: STAFF[role].displayName,
 });
@@ -255,7 +255,7 @@ export function suspiciousReport(from: string, to: string): SuspiciousActivityRe
         kind: 'EDIT_AFTER_PRINT',
         at: '2026-10-01T09:00:00.000Z',
         businessDate: from,
-        by: person('CASHIER'),
+        by: person('MANAGER'),
         approvedBy: person('MANAGER'),
         reason: 'Guest sent the water back',
         orderId: ORDER_ID,
@@ -282,7 +282,7 @@ export function suspiciousReport(from: string, to: string): SuspiciousActivityRe
         kind: 'NO_SALE_DRAWER',
         at: '2026-10-01T10:00:00.000Z',
         businessDate: from,
-        by: person('CASHIER'),
+        by: person('MANAGER'),
         reason: 'Change for a 500 note',
       },
     ],
@@ -297,7 +297,7 @@ export function suspiciousReport(from: string, to: string): SuspiciousActivityRe
       { kind: 'NO_SALE_DRAWER', count: 1 },
     ],
     people: [
-      { ...person('CASHIER'), count: 2 },
+      { ...person('MANAGER'), count: 2 },
       { ...person('WAITER'), count: 1 },
     ],
   };

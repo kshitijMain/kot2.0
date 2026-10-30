@@ -98,7 +98,7 @@ const errors = {
 /**
  * Diners' orders and their approval (P3-03a, ORD-003 to ORD-005, TAB-008 to TAB-010, WTR-004).
  * A table tablet orders for its own open table; the order waits (PENDING_APPROVAL) and its
- * waiter is alerted. A waiter (own tables), the cashier or a manager approves it, changing
+ * waiter is alerted. A waiter (own tables) or a manager approves it, changing
  * quantities or removing lines first with the diner's agreement, and it then goes to the kitchen
  * exactly as a staff order does (tickets, stock); or rejects it with a reason the diner sees. The
  * waiter can also approve on the tablet with their PIN ("Approve at table").

@@ -32,8 +32,8 @@ const decide = (actor: StaffActor, target: StaffTarget | null, change: StaffChan
 };
 
 describe('[MGR-004] staff management rules', () => {
-  it('lets managers and the Owner add and look after cashiers, waiters and kitchen staff', () => {
-    for (const role of ['CASHIER', 'WAITER', 'KITCHEN'] as const) {
+  it('lets managers and the Owner add and look after waiters and kitchen staff', () => {
+    for (const role of ['WAITER', 'KITCHEN'] as const) {
       expect(decide(manager, null, { kind: 'CREATE', role })).toBe('ALLOWED');
       expect(decide(owner, null, { kind: 'CREATE', role })).toBe('ALLOWED');
     }
@@ -51,7 +51,7 @@ describe('[MGR-004] staff management rules', () => {
   });
 
   it('refuses everyone who does not manage staff (deny by default)', () => {
-    for (const role of ['CASHIER', 'WAITER', 'KITCHEN'] as const) {
+    for (const role of ['WAITER', 'KITCHEN'] as const) {
       const actor: StaffActor = { staffId: 'x', role, secondFactorFresh: true };
       expect(decide(actor, waiter, { kind: 'EDIT' })).toBe('DENIED');
       expect(decide(actor, null, { kind: 'CREATE', role: 'WAITER' })).toBe('DENIED');
@@ -72,7 +72,7 @@ describe('[MGR-004] staff management rules', () => {
 
   it('lets nobody deactivate themselves or change their own role', () => {
     expect(decide(manager, managerSelf, { kind: 'DEACTIVATE' })).toBe('OWN_RECORD');
-    expect(decide(manager, managerSelf, { kind: 'CHANGE_ROLE', role: 'CASHIER' })).toBe(
+    expect(decide(manager, managerSelf, { kind: 'CHANGE_ROLE', role: 'WAITER' })).toBe(
       'OWN_RECORD',
     );
     // Their own name, contact and PIN are theirs to change.
@@ -106,9 +106,11 @@ describe('[MGR-004] staff management rules', () => {
   });
 
   it('offers the roles each person can give', () => {
-    expect(rolesOffered(manager)).toEqual(['CASHIER', 'WAITER', 'KITCHEN']);
+    // No cashier any more (ADR-0023): managers do the billing.
+    expect(ASSIGNABLE_ROLES).toEqual(['MANAGER', 'WAITER', 'KITCHEN']);
+    expect(rolesOffered(manager)).toEqual(['WAITER', 'KITCHEN']);
     expect(rolesOffered(owner)).toEqual(ASSIGNABLE_ROLES);
-    expect(rolesOffered(manager, waiter)).toEqual(['CASHIER', 'WAITER', 'KITCHEN']);
+    expect(rolesOffered(manager, waiter)).toEqual(['WAITER', 'KITCHEN']);
     expect(rolesOffered(owner, waiter)).toEqual(ASSIGNABLE_ROLES);
     // Only their current role: a manager cannot change another manager's, or their own.
     expect(rolesOffered(manager, otherManager)).toEqual(['MANAGER']);

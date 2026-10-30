@@ -24,7 +24,7 @@ type Open =
 const AGREED = 'agreed';
 
 /**
- * Diners' orders waiting for approval at the POS (ORD-004, WTR-004): the cashier or a manager
+ * Diners' orders waiting for approval at the POS (ORD-004, WTR-004): a manager
  * approves one in one press, changes quantities or removes lines with the diner's agreement, or
  * rejects it with the reason the diner sees. Shown above the floor only while something waits.
  */

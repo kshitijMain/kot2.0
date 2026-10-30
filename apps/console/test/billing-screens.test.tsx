@@ -6,7 +6,7 @@ import type { FakeServer } from './fake-server.js';
 import { STAFF } from './fakes.js';
 import { expectNoAxeViolations, renderConsole, server, signsInAs, t } from './harness.js';
 
-const cashier = () => signsInAs(server(), 'CASHIER');
+const manager = () => signsInAs(server(), 'MANAGER');
 
 beforeEach(() => {
   vi.stubGlobal('isSecureContext', true);
@@ -27,14 +27,14 @@ describe('[BILL-001] [BILL-005] [AUTH-011] the bill', () => {
           rateBp: 2_000,
           amount: 12_800,
           reason: 'Regular guest',
-          appliedById: STAFF.CASHIER.staffId,
+          appliedById: STAFF.MANAGER.staffId,
           approvedById: STAFF.MANAGER.staffId,
         },
       ],
       discountTotal: 12_800,
       grandTotal: 56_960,
     });
-    const fake: FakeServer = cashier()
+    const fake: FakeServer = manager()
       .on(
         'GET',
         `/api/v1/bills/${B.bill}`,
@@ -64,7 +64,7 @@ describe('[BILL-001] [BILL-005] [AUTH-011] the bill', () => {
       }));
     const { user, container } = await renderConsole({
       fake,
-      signedIn: 'CASHIER',
+      signedIn: 'MANAGER',
       path: `/pos/bill/${B.bill}`,
     });
     expect(
@@ -112,7 +112,7 @@ describe('[BILL-001] [BILL-005] [AUTH-011] the bill', () => {
   });
 
   it('prints the bill, which issues the invoice, and offers payment', async () => {
-    const fake = cashier()
+    const fake = manager()
       .on(
         'GET',
         `/api/v1/bills/${B.bill}`,
@@ -136,7 +136,7 @@ describe('[BILL-001] [BILL-005] [AUTH-011] the bill', () => {
       }));
     const { user } = await renderConsole({
       fake,
-      signedIn: 'CASHIER',
+      signedIn: 'MANAGER',
       path: `/pos/bill/${B.bill}`,
     });
     await user.click(await screen.findByRole('button', { name: t('billing.printBill') }));
@@ -154,7 +154,7 @@ describe('[BILL-001] [BILL-005] [AUTH-011] the bill', () => {
   });
 
   it('removes the service charge with a reason', async () => {
-    const fake = cashier()
+    const fake = manager()
       .on('GET', `/api/v1/bills/${B.bill}`, () => ({ status: 200, body: billView() }))
       .on('POST', `/api/v1/bills/${B.bill}/service-charge`, () => ({
         status: 200,
@@ -162,7 +162,7 @@ describe('[BILL-001] [BILL-005] [AUTH-011] the bill', () => {
       }));
     const { user } = await renderConsole({
       fake,
-      signedIn: 'CASHIER',
+      signedIn: 'MANAGER',
       path: `/pos/bill/${B.bill}`,
     });
     await user.click(await screen.findByRole('button', { name: t('billing.removeServiceCharge') }));
@@ -180,7 +180,7 @@ describe('[BILL-001] [BILL-005] [AUTH-011] the bill', () => {
 
 describe('[BILL-008] taking payment', () => {
   it('splits across UPI and cash with change, and retries with the same key', async () => {
-    const fake = cashier()
+    const fake = manager()
       .on('GET', `/api/v1/invoices/${B.invoice}/payments`, () => ({
         status: 200,
         body: paymentsView(),
@@ -202,7 +202,7 @@ describe('[BILL-008] taking payment', () => {
       }));
     const { user } = await renderConsole({
       fake,
-      signedIn: 'CASHIER',
+      signedIn: 'MANAGER',
       path: `/pos/pay/${B.invoice}?bill=${B.bill}`,
     });
     const amount = await screen.findByLabelText(t('payment.amount'));
@@ -245,7 +245,7 @@ describe('[BILL-008] taking payment', () => {
   });
 
   it('points to the shift when cash needs one', async () => {
-    const fake = cashier()
+    const fake = manager()
       .on('GET', `/api/v1/invoices/${B.invoice}/payments`, () => ({
         status: 200,
         body: paymentsView(),
@@ -257,7 +257,7 @@ describe('[BILL-008] taking payment', () => {
       .on('GET', '/api/v1/shifts/current', () => ({ status: 200, body: { shift: null } }));
     const { user } = await renderConsole({
       fake,
-      signedIn: 'CASHIER',
+      signedIn: 'MANAGER',
       path: `/pos/pay/${B.invoice}`,
     });
     await user.click(await screen.findByRole('button', { name: t('payment.record') }));
@@ -266,13 +266,13 @@ describe('[BILL-008] taking payment', () => {
   });
 
   it('refuses an amount above what is still to pay', async () => {
-    const fake = cashier().on('GET', `/api/v1/invoices/${B.invoice}/payments`, () => ({
+    const fake = manager().on('GET', `/api/v1/invoices/${B.invoice}/payments`, () => ({
       status: 200,
       body: paymentsView({ paid: 40_400, remaining: 30_000 }),
     }));
     const { user } = await renderConsole({
       fake,
-      signedIn: 'CASHIER',
+      signedIn: 'MANAGER',
       path: `/pos/pay/${B.invoice}`,
     });
     const amount = await screen.findByLabelText(t('payment.amount'));
@@ -284,9 +284,9 @@ describe('[BILL-008] taking payment', () => {
   });
 });
 
-describe('[BILL-013] the cashier’s shift', () => {
+describe('[BILL-013] the manager’s cash shift', () => {
   it('opens a shift with the float', async () => {
-    const fake = cashier()
+    const fake = manager()
       .on(
         'GET',
         '/api/v1/shifts/current',
@@ -294,7 +294,7 @@ describe('[BILL-013] the cashier’s shift', () => {
         () => ({ status: 200, body: { shift: shiftView() } }),
       )
       .on('POST', '/api/v1/shifts', () => ({ status: 201, body: shiftView() }));
-    const { user } = await renderConsole({ fake, signedIn: 'CASHIER', path: '/pos/shift' });
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/shift' });
     await user.type(await screen.findByLabelText(t('shift.openingFloat')), '1000');
     await user.click(screen.getByRole('button', { name: t('shift.open') }));
     expect(await screen.findByText(t('shift.expected'))).toBeInTheDocument();
@@ -302,7 +302,7 @@ describe('[BILL-013] the cashier’s shift', () => {
   });
 
   it('records cash out and closes with the counted cash', async () => {
-    const fake = cashier()
+    const fake = manager()
       .on('GET', '/api/v1/shifts/current', () => ({ status: 200, body: { shift: shiftView() } }))
       .on('POST', `/api/v1/shifts/${B.shift}/cash-movements`, () => ({
         status: 200,
@@ -317,7 +317,7 @@ describe('[BILL-013] the cashier’s shift', () => {
           closedAt: '2026-09-26T20:00:00.000Z',
         }),
       }));
-    const { user } = await renderConsole({ fake, signedIn: 'CASHIER', path: '/pos/shift' });
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/shift' });
     expect(await screen.findByText('₹1,400.00')).toBeInTheDocument();
     await user.type(screen.getByLabelText(t('shift.movementAmount')), '250');
     await user.type(screen.getByLabelText(t('shift.movementReason')), 'Milk from the shop');
@@ -334,7 +334,7 @@ describe('[BILL-013] the cashier’s shift', () => {
     expect(await screen.findByText(t('shift.closed', { variance: '-₹4.00' }))).toBeInTheDocument();
   });
   it('[BILL-013] closes by counting the notes and coins, totalled as they are typed', async () => {
-    const fake = cashier()
+    const fake = manager()
       .on('GET', '/api/v1/shifts/current', () => ({ status: 200, body: { shift: shiftView() } }))
       .on('POST', `/api/v1/shifts/${B.shift}/close`, () => ({
         status: 200,
@@ -345,7 +345,7 @@ describe('[BILL-013] the cashier’s shift', () => {
           closedAt: '2026-09-26T20:00:00.000Z',
         }),
       }));
-    const { user } = await renderConsole({ fake, signedIn: 'CASHIER', path: '/pos/shift' });
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/shift' });
     await user.click(await screen.findByLabelText(t('shift.byNotes')));
     await user.type(screen.getByLabelText(t('shift.noteCount', { note: '500' })), '2');
     await user.type(screen.getByLabelText(t('shift.noteCount', { note: '100' })), '3');
@@ -362,7 +362,7 @@ describe('[BILL-013] the cashier’s shift', () => {
   });
 
   it('[BILL-016] [AUD-006] opens the drawer without a sale, with a reason', async () => {
-    const fake = cashier()
+    const fake = manager()
       .on('GET', '/api/v1/shifts/current', () => ({ status: 200, body: { shift: shiftView() } }))
       .on(
         'POST',
@@ -381,7 +381,7 @@ describe('[BILL-013] the cashier’s shift', () => {
           body: { opened: true, error: null, printerId: B.printer, shiftId: B.shift },
         }),
       );
-    const { user } = await renderConsole({ fake, signedIn: 'CASHIER', path: '/pos/shift' });
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/shift' });
     expect(await screen.findByText(t('shift.noSaleNote'))).toBeVisible();
     await user.type(screen.getByLabelText(t('shift.noSaleReason')), 'Change for a 500 note');
     await user.click(screen.getByRole('button', { name: t('shift.noSaleOpen') }));
@@ -415,7 +415,7 @@ describe('[BILL-012] [BILL-011] digital bills on the POS', () => {
   };
 
   it('shows that the settled bill went on WhatsApp, and sends it again', async () => {
-    const fake = cashier()
+    const fake = manager()
       .on('GET', `/api/v1/bills/${B.bill}`, () => ({
         status: 200,
         body: billView({ status: 'INVOICED', invoiceIds: [B.invoice] }),
@@ -454,7 +454,7 @@ describe('[BILL-012] [BILL-011] digital bills on the POS', () => {
       }));
     const { user, container } = await renderConsole({
       fake,
-      signedIn: 'CASHIER',
+      signedIn: 'MANAGER',
       path: `/pos/bill/${B.bill}`,
     });
     expect(
@@ -484,7 +484,7 @@ describe('[BILL-012] [BILL-011] digital bills on the POS', () => {
   });
 
   it('shows nothing while the restaurant has digital bills off', async () => {
-    const fake = cashier()
+    const fake = manager()
       .on('GET', `/api/v1/bills/${B.bill}`, () => ({
         status: 200,
         body: billView({ status: 'INVOICED', invoiceIds: [B.invoice] }),
@@ -497,7 +497,7 @@ describe('[BILL-012] [BILL-011] digital bills on the POS', () => {
         status: 200,
         body: { channel: 'OFF', phone: '+91 ******3210', bills: [] },
       }));
-    await renderConsole({ fake, signedIn: 'CASHIER', path: `/pos/bill/${B.bill}` });
+    await renderConsole({ fake, signedIn: 'MANAGER', path: `/pos/bill/${B.bill}` });
     expect(await screen.findByText(t('billing.settled'))).toBeInTheDocument();
     await waitFor(() => {
       expect(fake.callsTo('GET', `/api/v1/invoices/${B.invoice}/digital-bills`)).toHaveLength(1);
@@ -506,7 +506,7 @@ describe('[BILL-012] [BILL-011] digital bills on the POS', () => {
   });
 
   it('says on settling that the bill goes to the diner', async () => {
-    const fake = cashier()
+    const fake = manager()
       .on('GET', `/api/v1/invoices/${B.invoice}/payments`, () => ({
         status: 200,
         body: paymentsView(),
@@ -525,7 +525,7 @@ describe('[BILL-012] [BILL-011] digital bills on the POS', () => {
       }));
     const { user } = await renderConsole({
       fake,
-      signedIn: 'CASHIER',
+      signedIn: 'MANAGER',
       path: `/pos/pay/${B.invoice}?bill=${B.bill}`,
     });
     await screen.findByLabelText(t('payment.amount'));

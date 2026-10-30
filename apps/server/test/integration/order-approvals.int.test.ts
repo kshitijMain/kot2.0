@@ -87,7 +87,7 @@ beforeAll(async () => {
   prisma = app.get(PrismaService);
   kit = await createAuthKit(app);
   waiter = await signIn(app, kit, 'WAITER');
-  cashier = await signIn(app, kit, 'CASHIER');
+  cashier = await signIn(app, kit, 'BILLER');
   otherWaiterId = await addStaff(app, kit, 'WAITER', '5656');
   otherWaiter = LoginResponseOf(
     await server()

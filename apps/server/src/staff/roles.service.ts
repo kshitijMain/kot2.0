@@ -15,13 +15,13 @@ import { announceSetupChange, lockSetup } from '../restaurant/setup-changes.js';
 const PROBLEM_MESSAGES: Readonly<Record<CustomRoleProblem, string>> = {
   NAME_REQUIRED: 'Give the role a name.',
   NAME_TAKEN: 'Another role has this name. Choose another name.',
-  BASE_ROLE_INVALID: 'A custom role is built on the cashier, waiter or kitchen role.',
+  BASE_ROLE_INVALID: 'A custom role is built on the waiter or kitchen role.',
   CAPABILITY_NOT_GRANTABLE:
     'Managing staff and the Owner’s own actions cannot be given to a custom role.',
   NOTHING_ADDED: 'Choose at least one thing the base role cannot already do.',
 };
 
-const BUILT_IN_NAMES = ['Owner', 'Manager', 'Cashier', 'Waiter', 'Kitchen'];
+const BUILT_IN_NAMES = ['Owner', 'Manager', 'Waiter', 'Kitchen'];
 
 const roleErrors = {
   invalid: (problem: CustomRoleProblem) =>
@@ -59,7 +59,7 @@ const COUNT_ACTIVE_STAFF = {
 
 /**
  * Custom roles (P4-02e, AUTH-012): the Owner combines capabilities into a named role on top of
- * the cashier, waiter or kitchen role. The permission guard and the services apply them through
+ * the waiter or kitchen role. The permission guard and the services apply them through
  * `@rp/domain` `actorGrant`, which only ever honours what `extraCapabilitiesOf` accepts. Only the
  * Owner, with a fresh second factor (AUTH-006), creates, changes or archives one; every change is
  * audited and announced as `RestaurantChanged` `STAFF`. A role people have keeps its base role
@@ -75,7 +75,11 @@ export class RolesService {
 
   async list(principal: Principal): Promise<RoleListResponse> {
     const roles = await this.prisma.role.findMany({
-      where: { restaurantId: principal.restaurantId },
+      // The built-in Cashier role, archived when the role was removed (ADR-0023), is not shown.
+      where: {
+        restaurantId: principal.restaurantId,
+        NOT: { builtIn: true, archivedAt: { not: null } },
+      },
       include: COUNT_ACTIVE_STAFF,
       orderBy: [{ builtIn: 'desc' }, { name: 'asc' }],
     });

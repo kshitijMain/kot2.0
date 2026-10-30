@@ -23,8 +23,8 @@ function principalOf(request: AuthenticatedRequest): Principal {
 }
 
 /**
- * Archives hold the whole restaurant's years: a cashier's reports on their own shifts (OWN, §4.2)
- * do not reach them.
+ * Archives hold the whole restaurant's years: reports limited to one's own shifts (OWN, §4.2) do
+ * not reach them.
  */
 function wholeRestaurant(request: AuthenticatedRequest): void {
   if (request.ownershipRequired === true) throw authErrors.forbidden();

@@ -9,7 +9,7 @@ procedure in `manual-tasks/` is named.
 with the waiter app; one Android tablet with the table-tablet app in kiosk mode; one network
 receipt printer (and a USB one if you use them); a second PC or laptop for the browser; the staff
 Wi-Fi; a test menu with at least one dish in Hindi, one with an add-on group and one with Half/Full
-sizes; staff with PINs for Owner, Manager, Cashier, two Waiters and Kitchen.
+sizes; staff with PINs for Owner, two Managers, two Waiters and Kitchen.
 
 | Mark | Meaning                                  |
 | ---- | ---------------------------------------- |
@@ -81,15 +81,15 @@ Detailed procedure: `manual-tasks/12-tablet-kiosk.md`.
 | 5.3 | Leave the KDS running for a full service day (8+ hours).                                         | No slowdown or blank screen; ticket ages keep counting.                 | ☐         |       |
 | 5.4 | Order a dish with a very long name and note, and one in Hindi.                                   | Tickets show the full text without spilling over other tickets.         | ☐         |       |
 
-## 6. POS and cashier
+## 6. POS and billing (managers)
 
 | #   | Steps                                                                                             | Expected                                                                                              | Pass/Fail | Notes |
 | --- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------- | ----- |
 | 6.1 | Give a flat ₹50 discount on a bill (with reason).                                                 | The bill total goes down by ₹50 plus its tax (QA-001).                                                | ☐         |       |
 | 6.2 | Reopen a printed, unpaid bill with Edit bill; try to take payment before printing it again.       | Payment refused: "This bill is open for changes. Print it again before taking payment." (QA-005).     | ☐         |       |
 | 6.3 | Take part payment on a bill, then try Edit bill.                                                  | Refused: "Part of this bill is paid…" (QA-005, decision 84).                                          | ☐         |       |
-| 6.4 | Two cashiers on two tills open the same table's bill at the same moment.                          | Both see the same bill; no error (QA-012).                                                            | ☐         |       |
-| 6.5 | Cashier starts closing their shift on one till while the same cashier takes cash on another till. | The cash is refused ("Open a shift…") or lands before the close; the shift's count is right (QA-013). | ☐         |       |
+| 6.4 | Two managers on two tills open the same table's bill at the same moment.                          | Both see the same bill; no error (QA-012).                                                            | ☐         |       |
+| 6.5 | Manager starts closing their shift on one till while the same manager takes cash on another till. | The cash is refused ("Open a shift…") or lands before the close; the shift's count is right (QA-013). | ☐         |       |
 | 6.6 | Run day-end while a payment is being taken on another till.                                       | The payment shows on one day's report only; no money missing from both (QA-010).                      | ☐         |       |
 | 6.7 | Unplug the POS PC's network cable (if the POS is a separate PC) and take an order.                | A clear "cannot reach the server" message; no white screen; it recovers when plugged back.            | ☐         |       |
 

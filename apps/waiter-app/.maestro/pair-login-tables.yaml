@@ -70,7 +70,7 @@ env:
 - assertVisible: Alerts, none open
 - assertNotVisible: Mark ${DISH} served
 - tapOn: Request bill
-- assertVisible: The cashier has been asked for the bill for ${TABLE}.
+- assertVisible: The managers have been asked for the bill for ${TABLE}.
 - tapOn: Back to tables
 - tapOn:
     id: home-menu

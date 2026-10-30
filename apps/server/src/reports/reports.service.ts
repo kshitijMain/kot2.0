@@ -211,7 +211,7 @@ export class ReportsService {
   }
 
   /**
-   * RPT-005: shifts with cash and variance; `staffId` limits a cashier to their own. Cash taken
+   * RPT-005: shifts with cash and variance; `staffId` limits it to that person's own (OWN). Cash taken
    * and moved in or out is summed for all the shifts at once, so a year of shifts is three queries.
    */
   async shiftReport(

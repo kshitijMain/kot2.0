@@ -3,20 +3,20 @@
 Each video is under five minutes, filmed on the real screens with the demo restaurant seed, in
 English. Voice-over lines are in quotes. Business Owner approval is needed before filming.
 
-| #   | Title                                 | For                | Shows                                                |
-| --- | ------------------------------------- | ------------------ | ---------------------------------------------------- |
-| 1   | First sign-in and your PIN            | all staff          | Sign in, change a PIN, sign out                      |
-| 2   | Taking an order on the phone          | waiters            | Table, items, modifiers, notes, send, offline resend |
-| 3   | Alerts, pager and guest requests      | waiters            | Acknowledge, approve guest order, service requests   |
-| 4   | The kitchen display                   | kitchen            | Preparing, ready, out of stock, late tickets         |
-| 5   | Billing and payment                   | cashiers           | Request bill, discount, split, pay, print, reprint   |
-| 6   | Mistakes and approvals                | cashiers, managers | Void, manager PIN, reason, audit                     |
-| 7   | Shift and cash                        | cashiers           | Open, cash in/out, close, difference                 |
-| 8   | The menu and stock                    | managers           | Add dish, Half and Full, Excel, photos, publish      |
-| 9   | Staff, devices, pagers                | managers           | Add person, pair a phone, revoke, issue a pager      |
-| 10  | The day-end                           | managers           | Close tables, day-end, Z-report                      |
-| 11  | Reports and the audit log             | owner, managers    | Reports, CSV export, audit filters                   |
-| 12  | Backups, updates and the recovery key | owner              | System page, recovery key, licence                   |
+| #   | Title                                 | For               | Shows                                                |
+| --- | ------------------------------------- | ----------------- | ---------------------------------------------------- |
+| 1   | First sign-in and your PIN            | all staff         | Sign in, change a PIN, sign out                      |
+| 2   | Taking an order on the phone          | waiters           | Table, items, modifiers, notes, send, offline resend |
+| 3   | Alerts, pager and guest requests      | waiters           | Acknowledge, approve guest order, service requests   |
+| 4   | The kitchen display                   | kitchen           | Preparing, ready, out of stock, late tickets         |
+| 5   | Billing and payment                   | managers          | Request bill, discount, split, pay, print, reprint   |
+| 6   | Mistakes and approvals                | managers, waiters | Void, manager PIN, reason, audit                     |
+| 7   | Shift and cash                        | managers          | Open, cash in/out, close, difference                 |
+| 8   | The menu and stock                    | managers          | Add dish, Half and Full, Excel, photos, publish      |
+| 9   | Staff, devices, pagers                | managers          | Add person, pair a phone, revoke, issue a pager      |
+| 10  | The day-end                           | managers          | Close tables, day-end, Z-report                      |
+| 11  | Reports and the audit log             | owner, managers   | Reports, CSV export, audit filters                   |
+| 12  | Backups, updates and the recovery key | owner             | System page, recovery key, licence                   |
 
 ## Script outline for each video
 

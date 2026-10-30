@@ -55,7 +55,7 @@ line.
 
 - [ ] The Owner: name, and a smartphone for an authenticator app (Google Authenticator or
       similar).
-- [ ] Managers, cashiers, waiters and kitchen staff: names and roles. Each person chooses their
+- [ ] Managers (who also bill), waiters and kitchen staff: names and roles. Each person chooses their
       own PIN on the day.
 
 **Devices**

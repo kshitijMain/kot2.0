@@ -4,6 +4,7 @@ import {
   CAPABILITIES,
   canApproveOverride,
   checkCustomRole,
+  CUSTOM_ROLE_BASES,
   CUSTOM_ROLE_GRANTABLE,
   DEFAULT_PERMISSION_MATRIX,
   evaluatePermission,
@@ -28,7 +29,6 @@ describe('[AUTH-010] role permission matrix (BRD §4.2)', () => {
   it('matches key rows of the BRD table', () => {
     expect(grantFor('WAITER', 'ORDER_APPROVE_CUSTOMER')).toBe('OWN');
     expect(grantFor('KITCHEN', 'ORDER_CREATE')).toBe('DENY');
-    expect(grantFor('CASHIER', 'ITEM_VOID_AFTER_PREP')).toBe('OVERRIDE');
     expect(grantFor('WAITER', 'ITEM_VOID_AFTER_PREP')).toBe('OVERRIDE');
     expect(grantFor('KITCHEN', 'ITEM_MARK_PREPARING_READY')).toBe('ALLOW');
     expect(grantFor('KITCHEN', 'ITEM_MARK_PICKED_UP')).toBe('ALLOW');
@@ -39,9 +39,24 @@ describe('[AUTH-010] role permission matrix (BRD §4.2)', () => {
     expect(grantFor('MANAGER', 'TAX_AND_INVOICE_SETTINGS')).toBe('DENY');
     expect(grantFor('OWNER', 'DATA_ADMIN')).toBe('ALLOW');
     expect(grantFor('MANAGER', 'DATA_ADMIN')).toBe('DENY');
-    expect(grantFor('CASHIER', 'REPORTS_VIEW_EXPORT')).toBe('OWN');
     expect(grantFor('MANAGER', 'LICENSE_VIEW')).toBe('ALLOW');
     expect(grantFor('MANAGER', 'LICENSE_MANAGE')).toBe('DENY');
+  });
+
+  it('[AUTH-010] has no cashier: managers and the Owner bill, take payments and run shifts (ADR-0023)', () => {
+    expect(ROLES).toEqual(['OWNER', 'MANAGER', 'WAITER', 'KITCHEN']);
+    for (const capability of [
+      'BILL_PRINT_AND_PAYMENT',
+      'CASH_MOVEMENT_AND_SHIFT_CLOSE',
+      'DISCOUNT_WITHIN_LIMIT',
+      'BILL_REPRINT',
+      'INVOICE_VOID',
+      'REPORTS_VIEW_EXPORT',
+    ] as const) {
+      expect(grantFor('MANAGER', capability)).toBe('ALLOW');
+      expect(grantFor('OWNER', capability)).toBe('ALLOW');
+      expect(Object.keys(DEFAULT_PERMISSION_MATRIX[capability]).sort()).toEqual([...ROLES].sort());
+    }
   });
 
   it('[AUTH-006] marks owner second-factor capabilities', () => {
@@ -71,18 +86,18 @@ describe('[AUTH-011] permission evaluation', () => {
   });
 
   it('requires a manager or owner PIN for override actions', () => {
-    expect(evaluatePermission('CASHIER', 'INVOICE_VOID')).toEqual({
+    expect(evaluatePermission('WAITER', 'ITEM_VOID_AFTER_PREP')).toEqual({
       allowed: false,
       reason: 'NEEDS_OVERRIDE',
     });
     expect(
-      evaluatePermission('CASHIER', 'INVOICE_VOID', { overrideApproverRole: 'CASHIER' }),
+      evaluatePermission('WAITER', 'ITEM_VOID_AFTER_PREP', { overrideApproverRole: 'WAITER' }),
     ).toEqual({
       allowed: false,
       reason: 'NEEDS_OVERRIDE',
     });
     expect(
-      evaluatePermission('CASHIER', 'INVOICE_VOID', { overrideApproverRole: 'MANAGER' }),
+      evaluatePermission('WAITER', 'ITEM_VOID_AFTER_PREP', { overrideApproverRole: 'MANAGER' }),
     ).toEqual({
       allowed: true,
       viaOverride: true,
@@ -95,7 +110,11 @@ describe('[AUTH-011] permission evaluation', () => {
     const approvable = CAPABILITIES.filter((capability) =>
       ROLES.some((role) => grantFor(role, capability) === 'OVERRIDE'),
     );
-    expect(Object.keys(OVERRIDE_RECORD_TYPES).sort()).toEqual([...approvable].sort());
+    // With no cashier (ADR-0023) only a waiter's void needs a PIN by role; a discount above the
+    // limit still does for a custom role allowed discounts within it (BILL-005).
+    expect(Object.keys(OVERRIDE_RECORD_TYPES)).toEqual(expect.arrayContaining(approvable));
+    expect(approvable).toEqual(['ITEM_VOID_AFTER_PREP']);
+    expect(OVERRIDE_RECORD_TYPES.DISCOUNT_ABOVE_LIMIT).toBe('bill');
     expect(OVERRIDE_RECORD_TYPES.ITEM_VOID_AFTER_PREP).toBe('order_item');
     expect(OVERRIDE_RECORD_TYPES.INVOICE_VOID).toBe('invoice');
   });
@@ -124,17 +143,20 @@ describe('[AUTH-012] custom roles', () => {
     expect(actorGrant(captain, 'ORDER_APPROVE_CUSTOMER')).toBe('ALLOW');
     expect(actorGrant(captain, 'DISCOUNT_WITHIN_LIMIT')).toBe('ALLOW');
     expect(actorGrant(captain, 'BILL_PRINT_AND_PAYMENT')).toBe('DENY');
+    // [BILL-005] More than the limit with a manager's PIN, as the cashier had it (ADR-0023).
+    expect(actorGrant(captain, 'DISCOUNT_ABOVE_LIMIT')).toBe('OVERRIDE');
+    expect(actorGrant({ role: 'WAITER' }, 'DISCOUNT_ABOVE_LIMIT')).toBe('DENY');
     expect(actorGrant({ role: 'WAITER' }, 'ORDER_APPROVE_CUSTOMER')).toBe('OWN');
     // A stored capability that may not be granted is ignored.
     expect(
       actorGrant({ role: 'WAITER', extraCapabilities: ['STAFF_MANAGE'] }, 'STAFF_MANAGE'),
     ).toBe('DENY');
     expect(
-      evaluatePermission('CASHIER', 'ITEM_VOID_AFTER_PREP', {
+      evaluatePermission('WAITER', 'ITEM_VOID_AFTER_PREP', {
         extraCapabilities: ['ITEM_VOID_AFTER_PREP'],
       }),
     ).toEqual({ allowed: true, viaOverride: false });
-    expect(evaluatePermission('CASHIER', 'ITEM_VOID_AFTER_PREP')).toEqual({
+    expect(evaluatePermission('WAITER', 'ITEM_VOID_AFTER_PREP')).toEqual({
       allowed: false,
       reason: 'NEEDS_OVERRIDE',
     });
@@ -165,6 +187,11 @@ describe('[AUTH-012] custom roles', () => {
     ]);
     expect(checkCustomRole({ ...draft, name: ' ' }, [])).toEqual(['NAME_REQUIRED']);
     expect(checkCustomRole({ ...draft, baseRole: 'MANAGER' }, [])).toEqual(['BASE_ROLE_INVALID']);
+    // There is no cashier role to build on any more (ADR-0023).
+    expect(CUSTOM_ROLE_BASES).toEqual(['WAITER', 'KITCHEN']);
+    expect(checkCustomRole({ ...draft, baseRole: 'CASHIER' as unknown as 'WAITER' }, [])).toEqual([
+      'BASE_ROLE_INVALID',
+    ]);
     expect(checkCustomRole({ ...draft, capabilities: ['DATA_ADMIN'] }, [])).toEqual([
       'CAPABILITY_NOT_GRANTABLE',
     ]);
@@ -177,7 +204,7 @@ describe('[AUTH-012] custom roles', () => {
 describe('[AUTH-001] [AUTH-010] who signs in on which device', () => {
   it('keeps a waiter phone for waiters (2026-10-25), and every other device for everyone', () => {
     expect(maySignInOn('WAITER_PHONE', 'WAITER')).toBe(true);
-    for (const role of ['OWNER', 'MANAGER', 'CASHIER', 'KITCHEN'] as const) {
+    for (const role of ['OWNER', 'MANAGER', 'KITCHEN'] as const) {
       expect(maySignInOn('WAITER_PHONE', role)).toBe(false);
       expect(maySignInOn('POS', role)).toBe(true);
     }

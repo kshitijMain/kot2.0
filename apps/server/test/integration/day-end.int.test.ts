@@ -36,7 +36,7 @@ beforeAll(async () => {
   prisma = app.get(PrismaService);
   kit = await createAuthKit(app);
   manager = await signIn(app, kit, 'MANAGER');
-  cashier = await signIn(app, kit, 'CASHIER');
+  cashier = await signIn(app, kit, 'BILLER');
   waiter = await signIn(app, kit, 'WAITER');
   const base = { restaurantId: kit.restaurantId };
   await prisma.invoiceSeries.create({
@@ -172,14 +172,14 @@ describe('[BILL-013] [RPT-005] day-end', () => {
       ).status,
     ).toBe(200);
 
-    expect((await server().get('/api/v1/day-end').set(as(cashier))).status).toBe(403);
+    expect((await server().get('/api/v1/day-end').set(as(waiter))).status).toBe(403);
     const preview = DayEndPreview.parse(
       (await server().get('/api/v1/day-end').set(as(manager))).body,
     );
     today = preview.businessDate;
     expect(preview.status).toBe('OPEN');
     expect(preview.blockers).toEqual({
-      openShifts: [{ shiftId: shift.id, staffId: kit.staff.CASHIER }],
+      openShifts: [{ shiftId: shift.id, staffId: kit.staff.BILLER }],
       openTables: [{ tableSessionId: id('session:T2'), tableLabel: 'T2' }],
       unsettledInvoices: [
         {

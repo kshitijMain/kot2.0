@@ -237,7 +237,7 @@ A waiter says the alert was acknowledged by someone else.
 - Tests: `apps/server/test/integration/pagers.int.test.ts` "delivers an alert within 2 s, and the
   button acknowledges it everywhere", "stops the pager repeats when the phone acknowledges, and
   tells the pager"; `apps/server/test/integration/notifications.int.test.ts` "alerts the
-  responsible waiter and the cashier; acknowledging stops it everywhere";
+  responsible waiter and the managers on duty; acknowledging stops it everywhere";
   `apps/server/test/integration/service-requests.int.test.ts` "escalates after N without
   repeating, and stops when acknowledged".
 - Risk: likelihood Low, impact Low: Low.

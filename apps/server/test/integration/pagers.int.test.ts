@@ -341,7 +341,7 @@ describe('[WTR-006] [NTF-004] the waiter phone and the pager share one acknowled
     await server()
       .put(`/api/v1/pagers/${pagerB.deviceId}/wearer`)
       .set(as(manager))
-      .send({ staffId: kit.staff.CASHIER });
+      .send({ staffId: kit.staff.BILLER });
     const b = await connect(pagerB);
     await app.get(PrismaService).transaction((tx) =>
       app.get(NotificationsService).raise(tx, {
@@ -354,7 +354,7 @@ describe('[WTR-006] [NTF-004] the waiter phone and the pager share one acknowled
     const nudge = await server()
       .post('/api/v1/alerts/nudge')
       .set(as(manager))
-      .send({ staffIds: [kit.staff.CASHIER], message: 'Printer check' });
+      .send({ staffIds: [kit.staff.BILLER], message: 'Printer check' });
     const [nudgeId] = (nudge.body as { alertIds: string[] }).alertIds;
     // The nudge arrives after the printer alert, so by then the printer alert would have too.
     await until(
@@ -575,7 +575,7 @@ describe('[NTF-004] [SEC-012] what a pager may acknowledge (PAGER-T1, PAGER-R2)'
 
 describe('[PGR-008] [NTF-007] which pagers count as connected (PAGER-D6)', () => {
   it('keeps the pager connected when its old session closes after the new one signed in', async () => {
-    const credential = await register('WP-0012', kit.staff.CASHIER);
+    const credential = await register('WP-0012', kit.staff.BILLER);
     const broker = app.get(PagerBroker);
     const first = await connect(credential);
     const firstClosed = new Promise<void>((resolve) => {
@@ -586,14 +586,14 @@ describe('[PGR-008] [NTF-007] which pagers count as connected (PAGER-D6)', () =>
     // The pager comes back on a new connection before the broker noticed the old one dropped.
     const second = await connect(credential);
     await firstClosed;
-    expect(broker.isStaffConnected(kit.restaurantId, kit.staff.CASHIER)).toBe(true);
+    expect(broker.isStaffConnected(kit.restaurantId, kit.staff.BILLER)).toBe(true);
     expect(
       broker.connectedPagers().filter((pager) => pager.deviceId === credential.deviceId),
     ).toHaveLength(1);
     const nudge = await server()
       .post('/api/v1/alerts/nudge')
       .set(as(manager))
-      .send({ staffIds: [kit.staff.CASHIER], message: 'Till check' });
+      .send({ staffIds: [kit.staff.BILLER], message: 'Till check' });
     const [nudgeId] = (nudge.body as { alertIds: string[] }).alertIds;
     await until(
       () => second.messages.find((entry) => entry.alertId === nudgeId),
@@ -606,7 +606,7 @@ describe('[PGR-008] [NTF-007] which pagers count as connected (PAGER-D6)', () =>
     ).toBeNull();
     await second.client.endAsync();
     await until(
-      () => !broker.isStaffConnected(kit.restaurantId, kit.staff.CASHIER),
+      () => !broker.isStaffConnected(kit.restaurantId, kit.staff.BILLER),
       5_000,
       'the pager gone',
     );

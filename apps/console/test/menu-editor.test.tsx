@@ -636,9 +636,9 @@ describe('[MENU-001] [MENU-004] categories and option groups', () => {
 });
 
 describe('[SEC-003] who sees the menu editor', () => {
-  it('is linked for managers and not for cashiers', async () => {
-    const fake = signsInAs(server(), 'CASHIER');
-    await renderConsole({ fake, path: PATH, signedIn: 'CASHIER' });
+  it('is linked for managers and not for waiters', async () => {
+    const fake = signsInAs(server(), 'WAITER');
+    await renderConsole({ fake, path: PATH, signedIn: 'WAITER' });
     await waitFor(() => {
       expect(screen.queryByRole('link', { name: t('dashboard.section.menu') })).toBeNull();
     });

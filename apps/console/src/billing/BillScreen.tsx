@@ -26,7 +26,7 @@ const affectsBill = (type: string) => /^(Order|ItemStatusChanged$|Bill|TableMove
 
 /**
  * The bill on the POS (BILL-001, BILL-005 to BILL-007, BILL-011, BILL-014): the preview priced by
- * the server, discounts with a reason (a manager approves above the cashier's limit, AUTH-011),
+ * the server, discounts with a reason (a manager approves above a custom role's limit, AUTH-011),
  * the service charge, customer details, and printing, which issues the invoice with its number.
  * Printed invoices are listed with their payment.
  */

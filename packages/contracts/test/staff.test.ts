@@ -27,7 +27,9 @@ describe('[MGR-004] staff administration requests', () => {
   });
 
   it('changes only what is given, at least one thing', () => {
-    expect(UpdateStaffRequest.safeParse({ role: 'CASHIER' }).success).toBe(true);
+    expect(UpdateStaffRequest.safeParse({ role: 'KITCHEN' }).success).toBe(true);
+    // There is no cashier role any more (ADR-0023).
+    expect(UpdateStaffRequest.safeParse({ role: 'CASHIER' }).success).toBe(false);
     expect(UpdateStaffRequest.safeParse({ phone: null }).success).toBe(true);
     expect(UpdateStaffRequest.safeParse({}).success).toBe(false);
     expect(UpdateStaffRequest.safeParse({ pin: '1234' }).success).toBe(false);

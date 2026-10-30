@@ -1,7 +1,7 @@
 import { parseRupees, sum } from '@rp/domain';
 
 /**
- * Paise from what a cashier types ("1500", "1,500.50"), or undefined when it is not an amount
+ * Paise from what a manager types ("1500", "1,500.50"), or undefined when it is not an amount
  * above zero. Money is always integer paise (BRD §9.4): `parseRupees` refuses a third decimal.
  */
 export function paiseFromInput(text: string): number | undefined {
@@ -14,12 +14,12 @@ export function paiseFromInput(text: string): number | undefined {
   }
 }
 
-/** Rupees as a cashier types them back: "1500.50", "0.40" (for prefilling a field). */
+/** Rupees as they are typed back: "1500.50", "0.40" (for prefilling a field). */
 export function inputFromPaise(paise: number): string {
   return `${String(Math.trunc(paise / 100))}.${String(paise % 100).padStart(2, '0')}`;
 }
 
-/** A payment the cashier has lined up but not yet recorded (BILL-008: several across modes). */
+/** A payment the manager has lined up but not yet recorded (BILL-008: several across modes). */
 export interface PlannedPayment {
   readonly key: string;
   readonly mode: 'CASH' | 'CARD' | 'UPI' | 'OTHER';

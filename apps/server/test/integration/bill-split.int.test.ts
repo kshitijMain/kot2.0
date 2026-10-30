@@ -35,7 +35,7 @@ beforeAll(async () => {
   prisma = app.get(PrismaService);
   kit = await createAuthKit(app);
   manager = await signIn(app, kit, 'MANAGER');
-  cashier = await signIn(app, kit, 'CASHIER');
+  cashier = await signIn(app, kit, 'BILLER');
   waiter = await signIn(app, kit, 'WAITER');
   const base = { restaurantId: kit.restaurantId };
   await prisma.invoiceSeries.create({

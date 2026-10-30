@@ -530,10 +530,10 @@ describe('[MGR-006] the device list', () => {
   });
 
   it('is only for people who pair devices', async () => {
-    const cashier = await signIn(app, kit, 'CASHIER');
+    const waiter = await signIn(app, kit, 'WAITER');
     const response = await server()
       .get('/api/v1/devices')
-      .set(authHeaders(kit.deviceId, cashier.accessToken));
+      .set(authHeaders(kit.deviceId, waiter.accessToken));
     expect(response.status).toBe(403);
   });
 });

@@ -94,7 +94,7 @@ export class NotificationTriggers implements OnModuleInit {
         return;
       }
       case 'BillPrinted': {
-        // The cashier did what was asked; nobody needs to be told any more.
+        // The bill was printed as asked; nobody needs to be told any more.
         const invoice = await tx.invoice.findUnique({
           where: { id: event.payload.invoiceId },
           select: { tableSessionId: true },

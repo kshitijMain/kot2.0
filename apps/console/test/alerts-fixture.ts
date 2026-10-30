@@ -87,13 +87,13 @@ export const diskForOwner = alertView(5, {
   createdAt: minutesAgo(30),
 });
 
-/** A bill asked for at table 7: for the cashier on the POS. */
-export const billForCashier = alertView(6, {
+/** A bill asked for at table 7: for the managers on duty at the POS (ADR-0023). */
+export const billForManagers = alertView(6, {
   type: 'BILL_REQUEST',
   tableLabel: '7',
   pagerText: 'T7 BILL',
   payload: { requestedFrom: 'TABLE_TABLET' },
-  recipientIds: [STAFF.WAITER.staffId, STAFF.CASHIER.staffId],
+  recipientIds: [STAFF.WAITER.staffId, STAFF.MANAGER.staffId],
   channels: ['PAGER', 'WAITER_APP', 'POS'],
   createdAt: minutesAgo(0),
 });

@@ -270,10 +270,10 @@ describe('[DATA-008] [AUD-004] archive-then-purge of a financial year', () => {
       .get(`/api/v1/archives/${id}/days`)
       .set(authHeaders(kit.deviceId, waiter.accessToken));
     expect(refused.status).toBe(403);
-    // A cashier's reports are their own shifts' (§4.2), not the restaurant's old years.
-    const cashier = await signIn(app, kit, 'CASHIER');
+    // The kitchen does not read the restaurant's old years either.
+    const kitchen = await signIn(app, kit, 'KITCHEN');
     for (const path of ['/api/v1/archives', `/api/v1/archives/${id}/days`]) {
-      const own = await api().get(path).set(authHeaders(kit.deviceId, cashier.accessToken));
+      const own = await api().get(path).set(authHeaders(kit.deviceId, kitchen.accessToken));
       expect(own.status, path).toBe(403);
     }
   }, 120_000);

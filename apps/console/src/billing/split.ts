@@ -2,7 +2,7 @@ import type { BillView, SplitBillRequest } from '@rp/contracts';
 
 /**
  * A split by items (BILL-007): each bill line goes to one part, whole. Parts are numbered as the
- * cashier chose them and sent in order, empty numbers skipped. Returns why it cannot be sent, or
+ * manager chose them and sent in order, empty numbers skipped. Returns why it cannot be sent, or
  * the request.
  */
 export function itemsSplit(

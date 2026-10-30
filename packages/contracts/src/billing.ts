@@ -29,7 +29,8 @@ export type BillDiscountParams = z.infer<typeof BillDiscountParams>;
 /**
  * An item discount (with `orderItemId`) or a bill discount, as a percentage or a flat amount, with
  * the mandatory reason (BILL-005). A complimentary item is a 100 % item discount. Above the
- * cashier's limit, or complimentary, a manager's override token goes in `x-override-token`.
+ * discount limit of a custom role, or complimentary, a manager's override token goes in
+ * `x-override-token`.
  */
 export const DiscountRequest = z
   .strictObject({
@@ -243,14 +244,14 @@ export type PrintInvoiceResponse = z.infer<typeof PrintInvoiceResponse>;
 
 /**
  * Void an invoice with a reason (BILL-010). It keeps its number with status VOIDED; the bill opens
- * again so it can be corrected and issued with a new number. Cashiers need a manager's PIN.
+ * again so it can be corrected and issued with a new number. Managers and the Owner only.
  */
 export const VoidInvoiceRequest = z.strictObject({ reason: Reason });
 export type VoidInvoiceRequest = z.infer<typeof VoidInvoiceRequest>;
 
 /**
- * Reopen a printed, unsettled invoice to change its items or discounts (BILL-010). Cashiers need a
- * manager's override token; the reason and the values before and after are audited when the
+ * Reopen a printed, unsettled invoice to change its items or discounts (BILL-010). Managers and the
+ * Owner only; the reason and the values before and after are audited when the
  * edited bill is printed again under the same number.
  */
 export const ReopenInvoiceRequest = z.strictObject({ reason: Reason });

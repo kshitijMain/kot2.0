@@ -312,7 +312,7 @@ export class OnboardingService {
       this.prisma.staff.count({
         where: {
           ...activeStaff,
-          role: { baseRole: { in: ['CASHIER', 'WAITER', 'KITCHEN'] } },
+          role: { baseRole: { in: ['WAITER', 'KITCHEN'] } },
           credentials: { some: { kind: 'PIN' } },
         },
       }),

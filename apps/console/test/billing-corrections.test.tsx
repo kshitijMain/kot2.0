@@ -6,7 +6,7 @@ import { STAFF } from './fakes.js';
 import { expectNoAxeViolations, renderConsole, server, signsInAs, t } from './harness.js';
 
 const SECOND_INVOICE = '0199a0e0-0000-7000-8000-000000000720';
-const cashier = () => signsInAs(server(), 'CASHIER');
+const manager = () => signsInAs(server(), 'MANAGER');
 
 const OVERRIDE_REQUIRED = (capability: string) => ({
   status: 403,
@@ -39,7 +39,7 @@ afterEach(() => {
 describe('[BILL-007] splitting a bill', () => {
   it('splits equally and prints each part as its own invoice', async () => {
     const second = invoiceView({ id: SECOND_INVOICE, invoiceNumber: 'INV/26-27/000013' });
-    const fake = cashier()
+    const fake = manager()
       .on('GET', `/api/v1/bills/${B.bill}`, () => ({ status: 200, body: billView() }))
       .on('POST', `/api/v1/bills/${B.bill}/split`, () => ({
         status: 201,
@@ -52,7 +52,7 @@ describe('[BILL-007] splitting a bill', () => {
       }));
     const { user } = await renderConsole({
       fake,
-      signedIn: 'CASHIER',
+      signedIn: 'MANAGER',
       path: `/pos/bill/${B.bill}`,
     });
     await user.click(await screen.findByRole('button', { name: t('billing.split.open') }));
@@ -71,7 +71,7 @@ describe('[BILL-007] splitting a bill', () => {
   });
 
   it('splits by items once every item has a part', async () => {
-    const fake = cashier()
+    const fake = manager()
       .on('GET', `/api/v1/bills/${B.bill}`, () => ({ status: 200, body: billView() }))
       .on('POST', `/api/v1/bills/${B.bill}/split`, () => ({
         status: 201,
@@ -79,7 +79,7 @@ describe('[BILL-007] splitting a bill', () => {
       }));
     const { user } = await renderConsole({
       fake,
-      signedIn: 'CASHIER',
+      signedIn: 'MANAGER',
       path: `/pos/bill/${B.bill}`,
     });
     await user.click(await screen.findByRole('button', { name: t('billing.split.open') }));
@@ -108,7 +108,7 @@ describe('[BILL-010] [AUTH-011] correcting a printed bill', () => {
   const invoiced = () => billView({ status: 'INVOICED', invoiceIds: [B.invoice] });
 
   it('cancels an invoice with a reason and a manager’s approval', async () => {
-    const fake = cashier()
+    const fake = manager()
       .on('GET', `/api/v1/bills/${B.bill}`, () => ({ status: 200, body: invoiced() }))
       .on('GET', `/api/v1/invoices/${B.invoice}`, () => ({ status: 200, body: invoiceView() }))
       .on(
@@ -127,7 +127,7 @@ describe('[BILL-010] [AUTH-011] correcting a printed bill', () => {
       .on('POST', '/api/v1/auth/override', () => GRANTED);
     const { user } = await renderConsole({
       fake,
-      signedIn: 'CASHIER',
+      signedIn: 'MANAGER',
       path: `/pos/bill/${B.bill}`,
     });
     const voidFor = t('billing.voidFor', { number: 'INV/26-27/000012' });
@@ -154,7 +154,7 @@ describe('[BILL-010] [AUTH-011] correcting a printed bill', () => {
 
   it('reopens a printed bill for editing, which keeps its number', async () => {
     const editing = billView({ invoiceIds: [B.invoice], editingInvoiceId: B.invoice });
-    const fake = cashier()
+    const fake = manager()
       .on(
         'GET',
         `/api/v1/bills/${B.bill}`,
@@ -171,7 +171,7 @@ describe('[BILL-010] [AUTH-011] correcting a printed bill', () => {
       .on('POST', '/api/v1/auth/override', () => GRANTED);
     const { user } = await renderConsole({
       fake,
-      signedIn: 'CASHIER',
+      signedIn: 'MANAGER',
       path: `/pos/bill/${B.bill}`,
     });
     const editFor = t('billing.editFor', { number: 'INV/26-27/000012' });
@@ -194,7 +194,7 @@ describe('[BILL-010] [AUTH-011] correcting a printed bill', () => {
   });
 
   it('says a reprint is marked DUPLICATE', async () => {
-    const fake = cashier()
+    const fake = manager()
       .on('GET', `/api/v1/bills/${B.bill}`, () => ({ status: 200, body: invoiced() }))
       .on('GET', `/api/v1/invoices/${B.invoice}`, () => ({
         status: 200,
@@ -206,7 +206,7 @@ describe('[BILL-010] [AUTH-011] correcting a printed bill', () => {
       }));
     const { user } = await renderConsole({
       fake,
-      signedIn: 'CASHIER',
+      signedIn: 'MANAGER',
       path: `/pos/bill/${B.bill}`,
     });
     await user.click(await screen.findByRole('button', { name: t('billing.reprint') }));

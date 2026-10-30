@@ -80,7 +80,7 @@ const pending = (orders: OrderView[]): PendingApprovalsResponse => ({
 });
 
 function posServer(): FakeServer {
-  return signsInAs(server(), 'CASHIER')
+  return signsInAs(server(), 'MANAGER')
     .on('GET', '/api/v1/floor', () => ({ status: 200, body: FLOOR }))
     .on('GET', '/api/v1/tables/overview', () => ({
       status: 200,
@@ -129,7 +129,7 @@ afterEach(() => {
 describe('[ORD-004] [WTR-004] approving diners’ orders at the POS', () => {
   it('shows the waiting order above the floor and approves it in one press', async () => {
     const fake = posServer();
-    const { user, container } = await renderConsole({ fake, path: '/pos', signedIn: 'CASHIER' });
+    const { user, container } = await renderConsole({ fake, path: '/pos', signedIn: 'MANAGER' });
     const approvals = await panel();
     expect(approvals.getByText(title)).toBeVisible();
     expect(approvals.getByText('3 min ago · ₹800.00')).toBeVisible();
@@ -148,7 +148,7 @@ describe('[ORD-004] [WTR-004] approving diners’ orders at the POS', () => {
 
   it('changes a quantity once the diner agreed', async () => {
     const fake = posServer();
-    const { user } = await renderConsole({ fake, path: '/pos', signedIn: 'CASHIER' });
+    const { user } = await renderConsole({ fake, path: '/pos', signedIn: 'MANAGER' });
     const approvals = await panel();
     await user.click(approvals.getByRole('button', { name: t('approvals.changeOf', { title }) }));
     const dialog = within(
@@ -172,7 +172,7 @@ describe('[ORD-004] [WTR-004] approving diners’ orders at the POS', () => {
 
   it('rejects with a reason', async () => {
     const fake = posServer();
-    const { user } = await renderConsole({ fake, path: '/pos', signedIn: 'CASHIER' });
+    const { user } = await renderConsole({ fake, path: '/pos', signedIn: 'MANAGER' });
     const approvals = await panel();
     await user.click(approvals.getByRole('button', { name: t('approvals.rejectOf', { title }) }));
     const dialog = within(

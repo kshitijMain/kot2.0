@@ -62,7 +62,7 @@ function plainError(error: unknown): string {
  * Digital bills on the restaurant PC (BILL-012, BILL-011, P7-09b):
  *
  * - a settled bill whose diner gave a mobile number with consent is queued by itself when the
- *   restaurant has turned digital bills on (`bills.digitalBillChannel`); the cashier can send it
+ *   restaurant has turned digital bills on (`bills.digitalBillChannel`); a manager can send it
  *   again;
  * - the queue is sent through the vendor's Control Plane, which holds the provider's account; it
  *   waits while the internet is down and is tried again with back-off for up to a day;
@@ -252,7 +252,7 @@ export class DigitalBillsService implements OnModuleInit, OnApplicationBootstrap
     };
   }
 
-  /** The cashier sends the bill (again). */
+  /** A manager sends the bill (again). */
   async send(principal: Principal, invoiceId: string): Promise<DigitalBillEntry> {
     const channel = (await this.settings.snapshot(principal.restaurantId)).get(
       'bills.digitalBillChannel',

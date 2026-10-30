@@ -271,7 +271,7 @@ const agreedMessage = {
 };
 
 /**
- * ORD-003, ORD-004, WTR-004: a waiter (their own tables), the cashier or a manager sends a diner's
+ * ORD-003, ORD-004, WTR-004: a waiter (their own tables) or a manager sends a diner's
  * order to the kitchen, with any quantities changed or lines removed with the diner's agreement.
  */
 export const ApproveOrderRequest = z.strictObject(approvalChanges).refine(agreed, agreedMessage);

@@ -35,7 +35,7 @@ type Open =
 
 /**
  * Roles (P4-02e, AUTH-012): the built-in roles of BRD §4.2 and the Owner's custom roles, each a
- * cashier, waiter or kitchen role that may do more. Managers see them; only the Owner adds,
+ * waiter or kitchen role that may do more. Managers see them; only the Owner adds,
  * changes or archives one, confirming password and authenticator (AUTH-006).
  */
 export function RolesScreen() {

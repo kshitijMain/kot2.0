@@ -57,7 +57,7 @@ describe('[ONB-001] [ONB-004] the first run', () => {
     expect(restaurant.displayName).toBe('Spice Route');
     expect(
       (await prisma.role.findMany({ where: { restaurantId } })).map((role) => role.key).sort(),
-    ).toEqual(['CASHIER', 'KITCHEN', 'MANAGER', 'OWNER', 'WAITER']);
+    ).toEqual(['KITCHEN', 'MANAGER', 'OWNER', 'WAITER']);
     expect(await prisma.invoiceSeries.count({ where: { restaurantId, isDefault: true } })).toBe(1);
     const owner = await prisma.staff.findUniqueOrThrow({
       where: { id: ownerId },

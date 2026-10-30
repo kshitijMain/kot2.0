@@ -23,7 +23,7 @@ Task: "Order a main course and a drink for the table." No help given.
 Pass: the order is placed inside 2 minutes without asking for help. Also note whether calling for
 water took one tap.
 
-## Cashier: split bill in 1 minute or less
+## Manager at the POS: split bill in 1 minute or less
 
 Setup: a table with six items and three guests.
 Task: split the bill three ways and settle each share (cash, UPI, card).

@@ -54,7 +54,6 @@ describe('[AUTH-001] [AUTH-004] staff tiles and PIN login', () => {
   it.each([
     ['MANAGER', 'Meera', '/manage', 'modes.manage'],
     ['OWNER', 'Kunal', '/manage', 'modes.manage'],
-    ['CASHIER', 'Asha', '/pos', 'modes.pos'],
     ['WAITER', 'Ravi', '/pos', 'modes.pos'],
     ['KITCHEN', 'Imran', '/kds', 'modes.kds'],
   ] as const)('lands a %s in their mode', async (role, name, _path, heading) => {
@@ -74,7 +73,7 @@ describe('[AUTH-001] [AUTH-004] staff tiles and PIN login', () => {
       body: { code: 'INVALID_CREDENTIALS', message: 'That did not match. 4 tries left.' },
     }));
     const { user } = await renderConsole({ fake });
-    await signIn(user, 'Asha', '9999');
+    await signIn(user, 'Ravi', '9999');
     expect(await screen.findByText('That did not match. 4 tries left.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: t('login.notYou') }));
     expect(screen.getByRole('heading', { name: t('login.title') })).toBeInTheDocument();
@@ -94,12 +93,12 @@ describe('[AUTH-001] [AUTH-004] staff tiles and PIN login', () => {
       'GET',
       '/api/v1/auth/staff-tiles',
       () => ({ status: 500, body: { code: 'INTERNAL_ERROR', message: 'Server problem.' } }),
-      () => ({ status: 200, body: { staff: [STAFF.CASHIER] } }),
+      () => ({ status: 200, body: { staff: [STAFF.MANAGER] } }),
     );
     const { user } = await renderConsole({ fake: flaky });
     expect(await screen.findByText('Server problem.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: t('states.retry') }));
-    expect(await screen.findByRole('button', { name: /Asha/ })).toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /Meera/ })).toBeInTheDocument();
   });
 });
 
@@ -134,10 +133,10 @@ describe('[MGR-001] [KDS-001] modes', () => {
     expect(await screen.findByRole('heading', { name: t('login.title') })).toBeInTheDocument();
   });
 
-  it('tells a cashier they cannot open Manage and takes them back', async () => {
+  it('tells a waiter they cannot open Manage and takes them back', async () => {
     const { user } = await renderConsole({
-      fake: signsInAs(server(), 'CASHIER'),
-      signedIn: 'CASHIER',
+      fake: signsInAs(server(), 'WAITER'),
+      signedIn: 'WAITER',
       path: '/manage',
     });
     expect(
@@ -192,8 +191,8 @@ describe('[AUTH-005] inactivity', () => {
     // moves with real time, which the fake server and the testing library's waits rely on.
     vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ['setTimeout', 'clearTimeout', 'Date'] });
     await renderConsole({
-      fake: signsInAs(server(), 'CASHIER', 60),
-      signedIn: 'CASHIER',
+      fake: signsInAs(server(), 'MANAGER', 60),
+      signedIn: 'MANAGER',
       path: '/pos',
     });
     await screen.findByRole('heading', { level: 1, name: t('modes.pos') });

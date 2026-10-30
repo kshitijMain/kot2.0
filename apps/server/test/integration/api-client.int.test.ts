@@ -99,7 +99,7 @@ describe('[AUTH-007] [ONB-001] pairing and signing in through the client', () =>
       credentials: { device: client.device },
     });
     const error = await other
-      .signInWithPin({ staffId: kit.staff.CASHIER, pin: '9999' })
+      .signInWithPin({ staffId: kit.staff.BILLER, pin: '9999' })
       .catch((caught: unknown) => caught);
     expect(error).toBeInstanceOf(ApiRequestError);
     expect(error).toMatchObject({ status: 401, code: 'INVALID_CREDENTIALS' });
@@ -114,8 +114,8 @@ describe('[AUTH-005] tokens renew themselves', () => {
       credentials: { device: client.device },
     });
     const session = await cashier.signInWithPin({
-      staffId: kit.staff.CASHIER,
-      pin: TEST_PINS.CASHIER,
+      staffId: kit.staff.BILLER,
+      pin: TEST_PINS.BILLER,
     });
     const expired = await app.get(TokenService).signAccessToken(
       {

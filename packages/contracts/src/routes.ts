@@ -447,7 +447,7 @@ export const ROUTES = [
     summary: "Diners' orders waiting for approval: the approvals inbox",
     description:
       'WTR-004, ORD-003: tablet and QR orders not yet approved, oldest first, with their table. ' +
-      'Waiters see their own tables; cashiers and managers see all.',
+      'Waiters see their own tables; managers see all.',
     tags: ['orders'],
     requirements: ['WTR-004', 'ORD-003'],
     capability: 'ORDER_APPROVE_CUSTOMER',
@@ -1529,7 +1529,7 @@ export const ROUTES = [
     operationId: 'createRole',
     method: 'POST',
     path: '/api/v1/roles',
-    summary: 'Create a custom role: a cashier, waiter or kitchen role with extra capabilities',
+    summary: 'Create a custom role: a waiter or kitchen role with extra capabilities',
     description:
       'Owner only, with a fresh second factor (AUTH-006). Staff management and the Owner-only ' +
       'actions can never be added. Audited.',
@@ -1603,7 +1603,7 @@ export const ROUTES = [
     path: '/api/v1/staff',
     summary: 'Add a person with a role and a PIN',
     description:
-      'MGR-004. Managers add cashiers, waiters and kitchen staff; adding a manager needs the Owner ' +
+      'MGR-004. Managers add waiters and kitchen staff; adding a manager needs the Owner ' +
       'with a fresh second factor (403 `SECOND_FACTOR_REQUIRED` until then, AUTH-006). The PIN ' +
       'has exactly `auth.pinLength` digits, is not easily guessed while `auth.refuseEasyPins` is ' +
       'on (422 `PIN_TOO_EASY`, PC-S5), is hashed with the pepper and never stored or logged ' +
@@ -2427,7 +2427,7 @@ export const ROUTES = [
     operationId: 'requestBill',
     method: 'POST',
     path: '/api/v1/table-sessions/:sessionId/request-bill',
-    summary: 'Ask for the bill; the cashier is notified',
+    summary: 'Ask for the bill; the managers on duty are notified',
     tags: ['tables'],
     requirements: ['TBL-004', 'WTR-008'],
     capability: 'BILL_REQUEST',
@@ -3600,7 +3600,7 @@ export const ROUTES = [
     path: '/api/v1/devices/current/service-requests',
     summary: 'Water, Waiter or Bill from the table tablet',
     description:
-      'TAB-004, BILL-015: alerts the responsible waiter (and the cashier for the bill, which also ' +
+      'TAB-004, BILL-015: alerts the responsible waiter (and the managers for the bill, which also ' +
       'sets the table to Bill requested), repeating every R until acknowledged and escalating to ' +
       'the managers after N. The same type cannot be raised again while one is open, and a tablet ' +
       'may raise only `tablet.serviceRequestsPerMinute` requests a minute (SEC-009).',
@@ -4062,7 +4062,7 @@ export const ROUTES = [
     path: '/api/v1/order-items/:orderItemId/void',
     summary: 'Void an item after preparation started, with a reason',
     description:
-      "Cashiers and waiters need a manager's PIN (override token, AUTH-011). A station still " +
+      "Waiters need a manager's PIN (override token, AUTH-011). A station still " +
       'working on it gets a CANCELLED slip (ORD-011, ORD-012). Audited with the approver.',
     tags: ['orders'],
     requirements: ['ORD-011', 'ORD-012', 'AUTH-011', 'AUD-001'],
@@ -4352,7 +4352,7 @@ export const ROUTES = [
     path: '/api/v1/bills/:id/discounts',
     summary: 'Give an item or bill discount, or make an item complimentary',
     description:
-      'BILL-005. A reason is required. Above the cashier’s limit, or complimentary, a manager’s ' +
+      'BILL-005. A reason is required. Above a custom role’s limit, or complimentary, a manager’s ' +
       'override token for DISCOUNT_ABOVE_LIMIT goes in `x-override-token`. Audited.',
     tags: ['billing'],
     requirements: ['BILL-005', 'AUTH-011', 'AUD-001'],
@@ -4482,8 +4482,8 @@ export const ROUTES = [
     summary: 'Void an invoice so the bill can be corrected and issued again',
     description:
       'BILL-010, BILL-003. The invoice keeps its number with status VOIDED; the bill opens again ' +
-      'and its next invoice gets a new number and points back at this one. Cashiers need a ' +
-      'manager’s override token. Audited with the approver.',
+      'and its next invoice gets a new number and points back at this one. Managers and the ' +
+      'Owner only. Audited.',
     tags: ['billing'],
     requirements: ['BILL-010', 'BILL-003', 'AUTH-011', 'AUD-001'],
     capability: 'INVOICE_VOID',
@@ -4503,7 +4503,7 @@ export const ROUTES = [
     description:
       'BILL-010. Only an issued, unsettled invoice. The bill opens again; issuing it updates the ' +
       'same invoice under the same number, audited with the reason, the approver and the values ' +
-      'before and after. Cashiers need a manager’s override token.',
+      'before and after. Managers and the Owner only.',
     tags: ['billing'],
     requirements: ['BILL-010', 'AUTH-011', 'AUD-001'],
     capability: 'BILL_EDIT_AFTER_PRINT',
@@ -4578,7 +4578,7 @@ export const ROUTES = [
     method: 'POST',
     path: '/api/v1/shifts/:id/cash-movements',
     summary: 'Record cash taken into or out of the drawer, with a reason',
-    description: 'BILL-013. Cashiers for their own shift; managers for any. Audited.',
+    description: 'BILL-013. Managers and the Owner, for any shift. Audited.',
     tags: ['payments'],
     requirements: ['BILL-013', 'AUD-001'],
     capability: 'CASH_MOVEMENT_AND_SHIFT_CLOSE',
@@ -4597,7 +4597,7 @@ export const ROUTES = [
     summary: 'Close a shift: counted cash against expected, and the variance',
     description:
       'BILL-013, AUD-006. The expected cash is the float plus cash payments plus cash in minus ' +
-      'cash out. Cashiers for their own shift; managers for any. Audited.',
+      'cash out. Managers and the Owner, for any shift. Audited.',
     tags: ['payments'],
     requirements: ['BILL-013', 'AUD-006', 'AUD-001'],
     capability: 'CASH_MOVEMENT_AND_SHIFT_CLOSE',
@@ -4804,7 +4804,7 @@ export const ROUTES = [
     operationId: 'getShiftReport',
     method: 'GET',
     path: '/api/v1/reports/shifts',
-    summary: 'Shifts with cash and variance (cashiers: their own)',
+    summary: 'Shifts with cash and variance',
     tags: ['reports'],
     requirements: ['RPT-005'],
     capability: 'REPORTS_VIEW_EXPORT',
@@ -5008,8 +5008,8 @@ export const ROUTES = [
     summary: 'Export a report as CSV, Excel or PDF, stamped and audited',
     description:
       'The file starts with the restaurant, the report, its filters, who generated it and when ' +
-      '(RPT-017); every export is audited as REPORT_EXPORTED. Cashiers may export their own shift ' +
-      'report only. CSV amounts are plain rupees with two decimals; Excel amounts are numbers in ' +
+      '(RPT-017); every export is audited as REPORT_EXPORTED. CSV amounts ' +
+      'are plain rupees with two decimals; Excel amounts are numbers in ' +
       'rupees; PDF shows ₹ with Indian grouping. Excel takes at most 200,000 rows and PDF 5,000.',
     tags: ['reports'],
     requirements: ['RPT-017', 'AUD-001'],

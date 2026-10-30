@@ -166,7 +166,7 @@ describe("[AUTH-011] [WTR-009] a manager's approval on the phone", () => {
       .on('POST', VOID, needsManager)
       .on('GET', '/api/v1/auth/staff-tiles', () => ({
         status: 200,
-        body: { staff: [STAFF.WAITER, STAFF.CASHIER] },
+        body: { staff: [STAFF.WAITER, STAFF.KITCHEN] },
       }));
     await signedIn(server);
     await fireEvent.press(screen.getByRole('button', { name: 'Void' }));

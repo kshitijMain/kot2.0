@@ -104,16 +104,26 @@ describe('[BILL-005] discounts', () => {
     expect(effectiveDiscountRateBp(5000, { kind: 'PERCENT', rateBp: 750 })).toBe(750);
   });
 
-  it('applies role limits and override rules', () => {
-    expect(decideDiscount('CASHIER', 1000)).toBe('ALLOWED');
-    expect(decideDiscount('CASHIER', 1001)).toBe('REQUIRES_MANAGER_OVERRIDE');
-    expect(decideDiscount('CASHIER', 10_000)).toBe('REQUIRES_MANAGER_OVERRIDE');
-    expect(decideDiscount('CASHIER', 500, { CASHIER: 0 })).toBe('REQUIRES_MANAGER_OVERRIDE');
-    expect(decideDiscount('CASHIER', 500, {})).toBe('REQUIRES_MANAGER_OVERRIDE');
-    expect(decideDiscount('MANAGER', 10_000)).toBe('ALLOWED');
-    expect(decideDiscount('OWNER', 5000)).toBe('ALLOWED');
-    expect(decideDiscount('WAITER', 100)).toBe('DENIED');
-    expect(decideDiscount('KITCHEN', 100)).toBe('DENIED');
+  it('[BILL-005] applies the limit to those allowed to discount within it, and override rules', () => {
+    // With no cashier (ADR-0023) the limit applies to a custom role that may discount within it.
+    const captain = {
+      role: 'WAITER' as const,
+      extraCapabilities: ['DISCOUNT_WITHIN_LIMIT' as const],
+    };
+    expect(decideDiscount(captain, 1000)).toBe('ALLOWED');
+    expect(decideDiscount(captain, 1001)).toBe('REQUIRES_MANAGER_OVERRIDE');
+    expect(decideDiscount(captain, 10_000)).toBe('REQUIRES_MANAGER_OVERRIDE');
+    expect(decideDiscount(captain, 500, 0)).toBe('REQUIRES_MANAGER_OVERRIDE');
+    expect(decideDiscount(captain, 500, 1500)).toBe('ALLOWED');
+    const generous = {
+      role: 'WAITER' as const,
+      extraCapabilities: ['DISCOUNT_ABOVE_LIMIT' as const],
+    };
+    expect(decideDiscount(generous, 10_000)).toBe('ALLOWED');
+    expect(decideDiscount({ role: 'MANAGER' }, 10_000)).toBe('ALLOWED');
+    expect(decideDiscount({ role: 'OWNER' }, 5000)).toBe('ALLOWED');
+    expect(decideDiscount({ role: 'WAITER' }, 100)).toBe('DENIED');
+    expect(decideDiscount({ role: 'KITCHEN' }, 100)).toBe('DENIED');
   });
 });
 

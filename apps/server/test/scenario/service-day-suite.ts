@@ -23,7 +23,7 @@ export function serviceDaySuite(options: () => ServiceDayOptions, skip = false):
           'cancelledItems',
           'voidedItems',
           'discounts',
-          'approvedDiscounts',
+          'largeDiscounts',
           'splitBills',
           'reprints',
           'voidedInvoices',

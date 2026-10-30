@@ -46,18 +46,18 @@ export class InvoiceActionsService {
   /**
    * WTR-008 (S): a table's bill printed from the waiter app. The invoice is issued as the POS
    * issues it, then printed on the bill printer; when it cannot print, it stays issued and the
-   * answer says why, so the cashier can print it. Waiters print only their own tables' bills, and
+   * answer says why, so a manager can print it. Waiters print only their own tables' bills, and
    * only when the restaurant allows it (the BRD matrix lets them only ask for the bill). A printed
-   * bill is never printed again from here: a copy is a reprint, the cashier's.
+   * bill is never printed again from here: a copy is a reprint, the manager's.
    */
   async printTableBill(principal: Principal, sessionId: string): Promise<PrintTableBillResponse> {
-    const cashier = printsBills(principal);
+    const byRole = printsBills(principal);
     const settings = await this.settings.snapshot(principal.restaurantId);
     if (!mayPrintBill(principal, settings)) {
       throw new AppError(
         403,
         'BILL_PRINT_NOT_ALLOWED',
-        'Only the cashier prints bills here. Ask for the bill instead.',
+        'Only a manager prints bills here. Ask for the bill instead.',
       );
     }
     const session = await this.prisma.tableSession.findFirst({
@@ -67,12 +67,12 @@ export class InvoiceActionsService {
     if (session === null) {
       throw new AppError(404, 'TABLE_SESSION_NOT_FOUND', 'There is no such open table.');
     }
-    if (!cashier && session.waiterId !== principal.staffId) throw authErrors.forbidden();
+    if (!byRole && session.waiterId !== principal.staffId) throw authErrors.forbidden();
     if (session.table.state === 'BILL_PRINTED') {
       throw new AppError(
         409,
         'BILL_ALREADY_PRINTED',
-        'The bill is already printed. Ask the cashier for a copy.',
+        'The bill is already printed. Ask a manager for a copy.',
       );
     }
     const bill = await this.bills.open(principal, { tableSessionId: sessionId });
@@ -81,7 +81,7 @@ export class InvoiceActionsService {
     try {
       outcome = await this.print(principal, invoice.id, null);
     } catch (error) {
-      // No bill printer set, or it was archived: the bill is issued, the cashier prints it.
+      // No bill printer set, or it was archived: the bill is issued, a manager prints it.
       if (!(error instanceof AppError) || error.status !== 422) throw error;
       outcome = { printed: false, error: error.message };
     }

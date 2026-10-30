@@ -88,8 +88,8 @@ describe('[AUTH-001] the add and edit form', () => {
     const ravi = lockedRavi();
     expect(updateRequestOf(ravi, personFormOf(ravi))).toBeUndefined();
     expect(
-      updateRequestOf(ravi, { ...personFormOf(ravi), displayName: 'Ravi K', role: 'CASHIER' }),
-    ).toEqual({ displayName: 'Ravi K', role: 'CASHIER' });
+      updateRequestOf(ravi, { ...personFormOf(ravi), displayName: 'Ravi K', role: 'MANAGER' }),
+    ).toEqual({ displayName: 'Ravi K', role: 'MANAGER' });
     expect(updateRequestOf(ravi, { ...personFormOf(ravi), phone: '' })).toEqual({ phone: null });
     expect(updateRequestOf(ravi, { ...personFormOf(ravi), email: 'ravi@example.in' })).toEqual({
       email: 'ravi@example.in',

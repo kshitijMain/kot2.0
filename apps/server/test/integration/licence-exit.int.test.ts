@@ -179,7 +179,7 @@ async function now(at: Date): Promise<void> {
     owner,
     manager: await signIn(pc, kit, 'MANAGER'),
     waiter: await signIn(pc, kit, 'WAITER'),
-    cashier: await signIn(pc, kit, 'CASHIER'),
+    cashier: await signIn(pc, kit, 'BILLER'),
   };
 }
 

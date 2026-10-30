@@ -35,7 +35,6 @@ export const RECIPIENT_KINDS = [
   'SECTION_WAITERS',
   'ALL_WAITERS',
   'MANAGERS_ON_DUTY',
-  'CASHIER',
   'STATION',
   'OWNER',
   /** The person wearing a pager, for its own battery (Appendix C). */
@@ -126,8 +125,9 @@ export const DEFAULT_NOTIFICATION_RULES: Readonly<Record<NotificationEvent, Noti
     true,
     'NONE',
   ),
+  // The cashier's part goes to the managers on duty, who bill now (ADR-0023).
   BILL_REQUEST: rule(
-    ['RESPONSIBLE_WAITER', 'CASHIER'],
+    ['RESPONSIBLE_WAITER', 'MANAGERS_ON_DUTY'],
     ['PAGER', 'WAITER_APP', 'POS'],
     '{table} BILL',
     true,
@@ -150,13 +150,7 @@ export const DEFAULT_NOTIFICATION_RULES: Readonly<Record<NotificationEvent, Noti
     false,
     'ONCE_PER_STATE',
   ),
-  PRINTER_OFFLINE: rule(
-    ['MANAGERS_ON_DUTY', 'CASHIER'],
-    ['POS', 'DASHBOARD'],
-    null,
-    false,
-    'UNTIL_RESOLVED',
-  ),
+  PRINTER_OFFLINE: rule(['MANAGERS_ON_DUTY'], ['POS', 'DASHBOARD'], null, false, 'UNTIL_RESOLVED'),
   DISK_OR_BACKUP: rule(
     ['OWNER', 'MANAGERS_ON_DUTY'],
     ['POS', 'DASHBOARD', 'CONTROL_PLANE'],
@@ -197,7 +191,6 @@ const GENERAL_RECIPIENTS: readonly RecipientKind[] = [
   'SECTION_WAITERS',
   'ALL_WAITERS',
   'MANAGERS_ON_DUTY',
-  'CASHIER',
   'OWNER',
 ];
 const GENERAL_CHANNELS: readonly NotificationChannel[] = [
@@ -328,7 +321,6 @@ export interface RecipientContext {
   readonly sectionWaiterIds: readonly string[];
   readonly allWaiterIds: readonly string[];
   readonly managersOnDuty: readonly string[];
-  readonly cashiersOnDuty: readonly string[];
   readonly ownerIds: readonly string[];
   readonly selectedIds: readonly string[];
   readonly wearerId: string | null;
@@ -407,9 +399,6 @@ export function resolveRecipients(
         break;
       case 'MANAGERS_ON_DUTY':
         for (const id of context.managersOnDuty) people.add(id);
-        break;
-      case 'CASHIER':
-        for (const id of context.cashiersOnDuty) people.add(id);
         break;
       case 'OWNER':
         for (const id of context.ownerIds) people.add(id);

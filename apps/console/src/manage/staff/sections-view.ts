@@ -52,9 +52,8 @@ function floorTables(floor: readonly ActiveSection[]): FloorTable[] {
 const ROLE_ORDER: Readonly<Record<Role, number>> = {
   WAITER: 0,
   MANAGER: 1,
-  CASHIER: 2,
-  OWNER: 3,
-  KITCHEN: 4,
+  OWNER: 2,
+  KITCHEN: 3,
 };
 
 /**

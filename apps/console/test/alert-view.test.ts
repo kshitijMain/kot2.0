@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { alertsForMe, arrivals, groupAlerts, groupOf } from '../src/alerts/alert-view.js';
 import {
   alertView,
-  billForCashier,
+  billForManagers,
   diskForOwner,
   escalatedFood,
   kitchenFlag,
@@ -13,7 +13,6 @@ import {
 import { STAFF } from './fakes.js';
 
 const MANAGER = STAFF.MANAGER.staffId;
-const CASHIER = STAFF.CASHIER.staffId;
 
 describe('[MGR-008] the alert centre’s groups', () => {
   it('puts what asks for the person first, then escalations, kitchen, tables, staff and system', () => {
@@ -38,20 +37,20 @@ describe('[MGR-008] the alert centre’s groups', () => {
   it('files the kitchen’s flag under the kitchen for someone it does not ask', () => {
     expect(groupOf(kitchenFlag, MANAGER)).toBe('mine');
     expect(groupOf(kitchenFlag, STAFF.OWNER.staffId)).toBe('kitchen');
-    expect(groupOf(billForCashier, CASHIER)).toBe('mine');
-    expect(groupOf(billForCashier, MANAGER)).toBe('tables');
+    expect(groupOf(billForManagers, MANAGER)).toBe('mine');
+    expect(groupOf(billForManagers, STAFF.OWNER.staffId)).toBe('tables');
   });
 
   it('[NTF-005] shows escalations first in a group, then the one that has waited longest', () => {
-    const forCashier = { recipientIds: [CASHIER], channels: ['POS'] };
-    const older = alertView(10, { ...forCashier, createdAt: minutesAgo(9) });
-    const newer = alertView(11, { ...forCashier, createdAt: minutesAgo(1) });
+    const forMe = { recipientIds: [MANAGER], channels: ['POS'] };
+    const older = alertView(10, { ...forMe, createdAt: minutesAgo(9) });
+    const newer = alertView(11, { ...forMe, createdAt: minutesAgo(1) });
     const escalated = alertView(12, {
-      ...forCashier,
+      ...forMe,
       createdAt: minutesAgo(0),
       escalatedAt: minutesAgo(0),
     });
-    const groups = groupAlerts([newer, escalated, older], CASHIER);
+    const groups = groupAlerts([newer, escalated, older], MANAGER);
     expect(groups.map(({ group }) => group)).toEqual(['mine']);
     expect(groups[0]?.alerts.map((alert) => alert.id)).toEqual([escalated.id, older.id, newer.id]);
   });
@@ -61,7 +60,7 @@ describe('[MGR-008] the alert centre’s groups', () => {
       kitchenFlag,
       escalatedFood,
     ]);
-    expect(alertsForMe([kitchenFlag, billForCashier], CASHIER)).toEqual([billForCashier]);
+    expect(alertsForMe([diskForOwner, billForManagers], MANAGER)).toEqual([billForManagers]);
   });
 });
 

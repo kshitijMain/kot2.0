@@ -266,7 +266,7 @@ describe('[DATA-004] [AUTH-006] the Owner restores this PC from the System page'
     expect(parseRecoveryKey(recoveryKey)?.equals(backupKey)).toBe(true);
 
     // A change after the backup, which the restore undoes.
-    const late = await addStaff(app, kit, 'CASHIER', '6666');
+    const late = await addStaff(app, kit, 'MANAGER', '6666');
     const asked = await server()
       .post('/api/v1/backups/restore')
       .set(authHeaders(kit.deviceId, owner.accessToken))

@@ -140,7 +140,7 @@ describe('[AUTH-005] access tokens', () => {
   const tokens = new TokenService(memoryStore());
   const claims = {
     staffId: '0199a000-0000-7000-8000-000000000001',
-    role: 'CASHIER' as const,
+    role: 'MANAGER' as const,
     restaurantId: '0199a000-0000-7000-8000-000000000002',
     deviceId: '0199a000-0000-7000-8000-000000000003',
     sessionId: '0199a000-0000-7000-8000-000000000004',

@@ -33,7 +33,7 @@ helps only when asked. Record: pass or fail, time taken, the observer's note.
 
 | ID   | Who          | Task                                                                                | Pass when                                         |
 | ---- | ------------ | ----------------------------------------------------------------------------------- | ------------------------------------------------- |
-| U-01 | Cashier      | Sign in, open the shift, take a dine-in order, print the bill, settle it            | Invoice numbers are gap-free, the Z-report ties   |
+| U-01 | Manager      | Sign in, open the shift, take a dine-in order, print the bill, settle it            | Invoice numbers are gap-free, the Z-report ties   |
 | U-02 | Waiter       | Sign in on the phone, open a table, order, send KOT, move the table                 | KOT reaches the right station once                |
 | U-03 | Kitchen      | Receive tickets on the KDS, bump, recall, Notify manager                            | Pager vibrates, waiter app shows Ready            |
 | U-04 | Manager      | Approve a tablet order, give a discount over the limit, void after print            | Each action is in the audit log with its approver |

@@ -124,7 +124,7 @@ async function onDuty(app: INestApplication): Promise<Shift> {
     owner,
     manager: await signIn(app, kit, 'MANAGER'),
     waiter: await signIn(app, kit, 'WAITER'),
-    cashier: await signIn(app, kit, 'CASHIER'),
+    cashier: await signIn(app, kit, 'BILLER'),
   };
 }
 

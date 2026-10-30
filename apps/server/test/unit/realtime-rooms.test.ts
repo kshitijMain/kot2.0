@@ -152,7 +152,6 @@ describe('[ORD-010] [SEC-003] rooms an event reaches', () => {
       expect.arrayContaining([
         rooms.role(rid, 'OWNER'),
         rooms.role(rid, 'MANAGER'),
-        rooms.role(rid, 'CASHIER'),
         rooms.role(rid, 'WAITER'),
         rooms.table(rid, table1),
       ]),
@@ -243,9 +242,7 @@ describe('[ORD-010] [SEC-003] rooms an event reaches', () => {
         queued: 3,
       }),
     );
-    expect(targets.sort()).toEqual(
-      [rooms.role(rid, 'OWNER'), rooms.role(rid, 'MANAGER'), rooms.role(rid, 'CASHIER')].sort(),
-    );
+    expect(targets.sort()).toEqual([rooms.role(rid, 'OWNER'), rooms.role(rid, 'MANAGER')].sort());
   });
 
   it('[KDS-005] sends a bump to its station and managers, not to other stations', () => {
@@ -274,12 +271,7 @@ describe('[ORD-010] [SEC-003] rooms an event reaches', () => {
       }),
     );
     expect(targets.sort()).toEqual(
-      [
-        rooms.role(rid, 'OWNER'),
-        rooms.role(rid, 'MANAGER'),
-        rooms.role(rid, 'CASHIER'),
-        rooms.role(rid, 'WAITER'),
-      ].sort(),
+      [rooms.role(rid, 'OWNER'), rooms.role(rid, 'MANAGER'), rooms.role(rid, 'WAITER')].sort(),
     );
   });
 
@@ -347,7 +339,7 @@ describe('[ORD-010] [SEC-003] rooms an event reaches', () => {
       matrix,
     );
     expect(targets).not.toContain(rooms.role(rid, 'WAITER'));
-    expect(targets).toContain(rooms.role(rid, 'CASHIER'));
+    expect(targets).toContain(rooms.role(rid, 'MANAGER'));
   });
 
   it('[MGR-006] sends "Locate" to the one device asked, and to managers', () => {

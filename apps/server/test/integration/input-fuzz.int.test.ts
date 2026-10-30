@@ -160,7 +160,7 @@ beforeAll(async () => {
   kit = await createAuthKit(app);
   const manager = await signIn(app, kit, 'MANAGER');
   const waiter = await signIn(app, kit, 'WAITER');
-  const cashier = await signIn(app, kit, 'CASHIER');
+  const cashier = await signIn(app, kit, 'BILLER');
   const restaurant = await setUpSmallRestaurant(app, kit, manager);
   const open = await seatAndOrder(app, kit, waiter, restaurant.tables.T1!, [
     [restaurant.items.Dal, 2],

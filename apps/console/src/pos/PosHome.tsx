@@ -8,7 +8,7 @@ import { TableOverview } from './TableOverview.js';
 
 /**
  * The POS mode (P1-08, P1-12): the live floor, order entry for a table and takeaway, bills,
- * payments and the cashier's shift. Paths are relative to `/pos`.
+ * payments and the manager's cash shift (there is no cashier, ADR-0023). Paths are relative to `/pos`.
  */
 export function PosHome() {
   return (

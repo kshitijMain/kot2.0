@@ -7,7 +7,7 @@ export type ServiceRequestType = (typeof SERVICE_REQUEST_TYPES)[number];
 
 /**
  * The alert each request raises (NTF-003, BRD Appendix C): the responsible waiter's pager and app,
- * and for the bill the cashier too (BILL-015). It repeats every R and escalates after N.
+ * and for the bill the managers on duty too (BILL-015). It repeats every R and escalates after N.
  */
 export const SERVICE_REQUEST_ALERTS: Readonly<Record<ServiceRequestType, NotificationEvent>> = {
   WATER: 'WATER_REQUEST',

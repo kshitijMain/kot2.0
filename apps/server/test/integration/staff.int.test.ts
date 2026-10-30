@@ -253,22 +253,22 @@ describe('[MGR-004] changing people', () => {
     const response = await server()
       .patch(`/api/v1/staff/${meena.id}`)
       .set(as(manager))
-      .send({ displayName: 'Meena K', role: 'CASHIER', email: 'meena@example.in' });
+      .send({ displayName: 'Meena K', role: 'KITCHEN', email: 'meena@example.in' });
     expect(response.status).toBe(200);
     expect(StaffView.parse(response.body)).toMatchObject({
       displayName: 'Meena K',
-      role: 'CASHIER',
+      role: 'KITCHEN',
       email: 'meena@example.in',
     });
     const now = await server().get('/api/v1/auth/session').set(as(session));
-    expect(CurrentSessionResponse.parse(now.body).staff.role).toBe('CASHIER');
+    expect(CurrentSessionResponse.parse(now.body).staff.role).toBe('KITCHEN');
     const entry = await prisma.auditLog.findFirstOrThrow({
       where: { action: 'STAFF_UPDATED', entityId: meena.id },
     });
     expect(entry.before).toEqual({ displayName: 'Meena', role: 'WAITER' });
     expect(entry.after).toEqual({
       displayName: 'Meena K',
-      role: 'CASHIER',
+      role: 'KITCHEN',
       changed: ['displayName', 'email', 'role'],
     });
     expect(textOf(entry)).not.toContain('meena@example.in');
@@ -286,7 +286,7 @@ describe('[MGR-004] changing people', () => {
   });
 
   it('sets a PIN, lifting a lockout and ending the person’s other sessions', async () => {
-    const kiran = await addPerson('CASHIER', 'Kiran');
+    const kiran = await addPerson('KITCHEN', 'Kiran');
     const session = LoginResponse.parse((await pinLogin(kiran.id, '5938')).body);
     await prisma.credential.update({
       where: { staffId_kind: { staffId: kiran.id, kind: 'PIN' } },
@@ -455,15 +455,15 @@ describe('[AUTH-006] creating or removing managers', () => {
     const demote = await server()
       .patch(`/api/v1/staff/${rohit.id}`)
       .set(as(owner))
-      .send({ role: 'CASHIER' });
+      .send({ role: 'WAITER' });
     expect(codeOf(demote)).toBe('SECOND_FACTOR_REQUIRED');
     await stepUp();
     const demoted = await server()
       .patch(`/api/v1/staff/${rohit.id}`)
       .set(as(owner))
-      .send({ role: 'CASHIER' });
+      .send({ role: 'WAITER' });
     expect(demoted.status).toBe(200);
-    expect(StaffView.parse(demoted.body).role).toBe('CASHIER');
+    expect(StaffView.parse(demoted.body).role).toBe('WAITER');
   });
 
   it('keeps the Owner’s record to the Owner', async () => {
@@ -514,8 +514,8 @@ describe('[AUTH-006] creating or removing managers', () => {
 });
 
 describe('[SEC-003] [AUTH-010] only managers and the Owner manage staff', () => {
-  it('refuses cashiers, waiters and kitchen staff on every staff route', async () => {
-    for (const role of ['CASHIER', 'WAITER', 'KITCHEN'] as const) {
+  it('refuses waiters and kitchen staff on every staff route', async () => {
+    for (const role of ['WAITER', 'KITCHEN'] as const) {
       const session = await signIn(app, kit, role);
       const target = kit.staff.WAITER;
       const calls: [string, () => request.Test][] = [

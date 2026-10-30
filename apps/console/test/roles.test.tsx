@@ -101,9 +101,9 @@ describe('[AUTH-012] what a custom role may add', () => {
   });
 
   it('offers custom roles under their base role when giving someone a role', () => {
-    const choices = roleChoices(['CASHIER', 'WAITER'], roles(), (r) => r);
+    const choices = roleChoices(['MANAGER', 'WAITER'], roles(), (r) => r);
     expect(choices.map((choice) => choice.value)).toEqual([
-      'CASHIER',
+      'MANAGER',
       'WAITER',
       `custom:${CAPTAIN}`,
     ]);
@@ -111,7 +111,7 @@ describe('[AUTH-012] what a custom role may add', () => {
       role: 'WAITER',
       customRoleId: CAPTAIN,
     });
-    expect(fromRoleChoice('CASHIER', roles())).toEqual({ role: 'CASHIER', customRoleId: '' });
+    expect(fromRoleChoice('KITCHEN', roles())).toEqual({ role: 'KITCHEN', customRoleId: '' });
     expect(roleChoiceOf({ role: 'WAITER', customRoleId: CAPTAIN })).toBe(`custom:${CAPTAIN}`);
     const ravi = staffView('WAITER');
     const form = {
@@ -129,8 +129,8 @@ describe('[AUTH-012] what a custom role may add', () => {
     ).toEqual({
       customRoleId: null,
     });
-    expect(updateRequestOf(ravi, { ...form, role: 'CASHIER', customRoleId: '' })).toEqual({
-      role: 'CASHIER',
+    expect(updateRequestOf(ravi, { ...form, role: 'KITCHEN', customRoleId: '' })).toEqual({
+      role: 'KITCHEN',
     });
   });
 });

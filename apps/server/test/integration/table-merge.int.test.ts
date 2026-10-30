@@ -34,7 +34,7 @@ beforeAll(async () => {
   prisma = app.get(PrismaService);
   kit = await createAuthKit(app);
   waiter = await signIn(app, kit, 'WAITER');
-  cashier = await signIn(app, kit, 'CASHIER');
+  cashier = await signIn(app, kit, 'BILLER');
   kitchen = await signIn(app, kit, 'KITCHEN');
   manager = await signIn(app, kit, 'MANAGER');
   const base = { restaurantId: kit.restaurantId };
@@ -216,7 +216,7 @@ describe('[TBL-006] merging tables into one bill', () => {
     const theirs = await open('T4', manager);
     await prisma.tableSession.update({
       where: { id: theirs.id },
-      data: { waiterId: kit.staff.CASHIER },
+      data: { waiterId: kit.staff.BILLER },
     });
     const refused = await merge(mine, theirs, waiter);
     expect([refused.status, codeOf(refused)]).toEqual([403, 'FORBIDDEN']);

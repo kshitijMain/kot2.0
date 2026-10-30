@@ -34,7 +34,7 @@ beforeAll(async () => {
   kit = await createAuthKit(app);
   manager = await signIn(app, kit, 'MANAGER');
   waiter = await signIn(app, kit, 'WAITER');
-  cashier = await signIn(app, kit, 'CASHIER');
+  cashier = await signIn(app, kit, 'BILLER');
   restaurant = await setUpSmallRestaurant(app, kit, manager);
   // A fresh table for each case.
   const hall = await prisma.section.findFirstOrThrow({ where: { restaurantId: kit.restaurantId } });

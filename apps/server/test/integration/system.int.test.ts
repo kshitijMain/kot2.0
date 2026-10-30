@@ -29,7 +29,6 @@ let app: INestApplication;
 let prisma: PrismaService;
 let kit: AuthKit;
 let manager: LoginResponse;
-let cashier: LoginResponse;
 let waiter: LoginResponse;
 const dataDir = mkdtempSync(join(tmpdir(), 'rp-system-'));
 
@@ -65,7 +64,6 @@ beforeAll(async () => {
   prisma = app.get(PrismaService);
   kit = await createAuthKit(app);
   manager = await signIn(app, kit, 'MANAGER');
-  cashier = await signIn(app, kit, 'CASHIER');
   waiter = await signIn(app, kit, 'WAITER');
 });
 
@@ -138,7 +136,7 @@ describe('[UPD-004] [AUD-001] "Install now"', () => {
     });
     const refused = await server()
       .post('/api/v1/system/update/approve')
-      .set(as(cashier))
+      .set(as(waiter))
       .send({ version: '1.2.0' });
     expect(refused.status).toBe(403);
 

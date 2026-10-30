@@ -105,7 +105,7 @@ const overview = (...tables: TableOverviewEntry[]): TableOverviewResponse => ({
 });
 
 function posServer(...overviews: TableOverviewResponse[]): FakeServer {
-  return signsInAs(server(), 'CASHIER')
+  return signsInAs(server(), 'MANAGER')
     .on('GET', '/api/v1/floor', () => ({ status: 200, body: FLOOR }))
     .on(
       'GET',
@@ -133,7 +133,7 @@ describe('[TBL-007] the POS floor', () => {
         entry(T3, 'T3', TERRACE),
       ),
     );
-    const { container } = await renderConsole({ fake, signedIn: 'CASHIER', path: '/pos' });
+    const { container } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
     const hall = await screen.findByRole('region', { name: 'Hall' });
     expect(
       within(hall).getByRole('button', {
@@ -152,7 +152,7 @@ describe('[TBL-007] the POS floor', () => {
       overview(entry(T1, 'T1', HALL), entry(T2, 'T2', HALL), entry(T3, 'T3', TERRACE)),
       overview(entry(T1, 'T1', HALL, {}), entry(T2, 'T2', HALL), entry(T3, 'T3', TERRACE)),
     );
-    const { sockets } = await renderConsole({ fake, signedIn: 'CASHIER', path: '/pos' });
+    const { sockets } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
     await tile(/^T1, Free$/);
     act(() => {
       sockets.sync(0);
@@ -177,7 +177,7 @@ describe('[TBL-007] the POS floor', () => {
 describe('[NFR-P11] the POS floor after a dropped connection', () => {
   it('reads the floor again when the connection comes back, not on the first connect', async () => {
     const fake = posServer(overview(entry(T1, 'T1', HALL)), overview(entry(T1, 'T1', HALL, {})));
-    const { sockets } = await renderConsole({ fake, signedIn: 'CASHIER', path: '/pos' });
+    const { sockets } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
     await tile(/^T1, Free$/);
     act(() => {
       sockets.sync(0);
@@ -203,7 +203,7 @@ describe('[TBL-003] opening a table', () => {
       status: 201,
       body: sessionView(T1, 'T1'),
     }));
-    const { user } = await renderConsole({ fake, signedIn: 'CASHIER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
     await user.click(await tile(/^T1, Free$/));
     const dialog = await screen.findByRole('dialog', {
       name: t('pos.open.title', { table: 'T1' }),
@@ -237,7 +237,7 @@ describe('[TBL-003] opening a table', () => {
         body: { code: 'TABLE_NOT_FREE', message: 'T1 was just opened on another device.' },
       }),
     );
-    const { user } = await renderConsole({ fake, signedIn: 'CASHIER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
     await user.click(await tile(/^T1, Free$/));
     const dialog = await screen.findByRole('dialog');
     await user.type(within(dialog).getByLabelText(t('pos.open.guests')), '2');
@@ -249,7 +249,7 @@ describe('[TBL-003] opening a table', () => {
 });
 
 describe('[TBL-005] moving a table', () => {
-  it('moves the guests to a free table the cashier picks', async () => {
+  it('moves the guests to a free table the manager picks', async () => {
     const fake = posServer(
       overview(entry(T1, 'T1', HALL, {}), entry(T2, 'T2', HALL), entry(T3, 'T3', TERRACE)),
       overview(entry(T1, 'T1', HALL), entry(T2, 'T2', HALL), entry(T3, 'T3', TERRACE, {})),
@@ -257,7 +257,7 @@ describe('[TBL-005] moving a table', () => {
       status: 200,
       body: sessionView(T3, 'T3'),
     }));
-    const { user } = await renderConsole({ fake, signedIn: 'CASHIER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
     await user.click(await tile(/^T1, Occupied/));
     const details = await screen.findByRole('dialog', {
       name: t('pos.table.title', { table: 'T1' }),
@@ -293,7 +293,7 @@ describe('[TBL-005] moving a table', () => {
           }
         : { status: 200, body: billView() },
     );
-    const { user } = await renderConsole({ fake, signedIn: 'CASHIER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
     await user.click(await tile(/^T1, Occupied/));
     const details = await screen.findByRole('dialog', {
       name: t('pos.table.title', { table: 'T1' }),
@@ -335,12 +335,12 @@ describe('[TBL-006] merging tables and moving dishes', () => {
       entry(T3, 'T3', TERRACE),
     );
 
-  it('merges a table into another open one the cashier picks', async () => {
+  it('merges a table into another open one the manager picks', async () => {
     const fake = posServer(twoOpen()).on('POST', `/api/v1/table-sessions/${SESSION}/merge`, () => ({
       status: 200,
       body: { ...sessionView(T2, 'T2'), id: SESSION_2, covers: 6 },
     }));
-    const { user } = await renderConsole({ fake, signedIn: 'CASHIER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
     await user.click(await tile(/^T1, Occupied/));
     const details = await screen.findByRole('dialog', {
       name: t('pos.table.title', { table: 'T1' }),
@@ -361,7 +361,7 @@ describe('[TBL-006] merging tables and moving dishes', () => {
     });
   });
 
-  it('moves the dishes the cashier picks to another table’s bill', async () => {
+  it('moves the dishes the manager picks to another table’s bill', async () => {
     const cancelled = sentOrder('CANCELLED').items.map((item) => ({
       ...item,
       id: '0199a0e0-0000-7000-8000-00000000d002',
@@ -384,7 +384,7 @@ describe('[TBL-006] merging tables and moving dishes', () => {
           orderItemIds: [IDS.orderItem],
         },
       }));
-    const { user, container } = await renderConsole({ fake, signedIn: 'CASHIER', path: '/pos' });
+    const { user, container } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
     await user.click(await tile(/^T1, Occupied/));
     await user.click(await screen.findByRole('button', { name: t('pos.table.transfer') }));
     const transfer = await screen.findByRole('dialog', {
@@ -421,13 +421,13 @@ describe('[ONB-004] [TBL-007] the floor plan on the POS', () => {
         ),
       })),
     };
-    const fake = signsInAs(server(), 'CASHIER')
+    const fake = signsInAs(server(), 'MANAGER')
       .on('GET', '/api/v1/floor', () => ({ status: 200, body: placed }))
       .on('GET', '/api/v1/tables/overview', () => ({
         status: 200,
         body: overview(entry(T1, 'T1', HALL, {}), entry(T2, 'T2', HALL), entry(T3, 'T3', TERRACE)),
       }));
-    const { user, container } = await renderConsole({ fake, signedIn: 'CASHIER', path: '/pos' });
+    const { user, container } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
     await user.click(await screen.findByRole('button', { name: t('floorPage.plan') }));
     const hall = screen.getByRole('group', { name: 'Hall' });
     const t1 = within(hall).getByRole('button', { name: /^T1, Occupied/ });
@@ -444,7 +444,7 @@ describe('[ONB-004] [TBL-007] the floor plan on the POS', () => {
   it('is not offered before any table is placed', async () => {
     await renderConsole({
       fake: posServer(overview(entry(T1, 'T1', HALL))),
-      signedIn: 'CASHIER',
+      signedIn: 'MANAGER',
       path: '/pos',
     });
     expect(await tile(/^T1, Free/)).toBeInTheDocument();
@@ -462,7 +462,7 @@ describe('[TBL-004] a table that needs cleaning', () => {
       status: 200,
       body: { tableId: T3, state: 'FREE' },
     }));
-    const { user } = await renderConsole({ fake, signedIn: 'CASHIER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
     await user.click(await tile(/^T3, Needs cleaning/));
     const details = await screen.findByRole('dialog', {
       name: t('pos.table.title', { table: 'T3' }),
@@ -494,7 +494,7 @@ describe('[TBL-004] freeing a table opened by mistake', () => {
     }));
     const { user, container } = await renderConsole({
       fake,
-      signedIn: 'CASHIER',
+      signedIn: 'MANAGER',
       path: '/pos',
     });
     await user.click(await tile(/^T1, Occupied/));
@@ -528,7 +528,7 @@ describe('[TBL-004] freeing a table opened by mistake', () => {
         entry(T2, 'T2', HALL, { amountSoFar: 0, pendingApprovals: 1 }),
       ),
     );
-    const { user } = await renderConsole({ fake, signedIn: 'CASHIER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
     for (const label of ['T1', 'T2']) {
       await user.click(await tile(new RegExp(`^${label}, Occupied`)));
       const details = await screen.findByRole('dialog', {
@@ -555,7 +555,7 @@ describe('[TBL-004] freeing a table opened by mistake', () => {
         },
       }),
     );
-    const { user } = await renderConsole({ fake, signedIn: 'CASHIER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
     await user.click(await tile(/^T1, Occupied/));
     const details = await screen.findByRole('dialog');
     await user.click(within(details).getByRole('button', { name: t('pos.table.free') }));
@@ -570,7 +570,7 @@ describe('[TBL-004] freeing a table opened by mistake', () => {
 
 describe('[TBL-007] when the floor cannot be read', () => {
   it('says what went wrong and retries', async () => {
-    const fake = signsInAs(server(), 'CASHIER')
+    const fake = signsInAs(server(), 'MANAGER')
       .on('GET', '/api/v1/floor', () => ({ status: 200, body: FLOOR }))
       .on(
         'GET',
@@ -578,7 +578,7 @@ describe('[TBL-007] when the floor cannot be read', () => {
         () => ({ status: 500, body: { code: 'INTERNAL', message: 'The server had a problem.' } }),
         () => ({ status: 200, body: overview(entry(T1, 'T1', HALL)) }),
       );
-    const { user } = await renderConsole({ fake, signedIn: 'CASHIER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
     expect(await screen.findByText('The server had a problem.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: t('states.retry') }));
     expect(await tile(/^T1, Free$/)).toBeInTheDocument();

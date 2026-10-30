@@ -71,7 +71,6 @@ describe('[PGR-013] [PGR-014] a pager’s row', () => {
 
   it('offers anyone active but the wearer, managers included, by name', () => {
     expect(wearersFor(crew(), pager()).map((person) => person.displayName)).toEqual([
-      'Asha',
       'Imran',
       'Kunal',
       'Meera',

@@ -283,7 +283,7 @@ export const RELAY_ROUTES = [
     summary: 'Call a waiter or ask for the bill from the QR page',
     description:
       'For tables without a tablet (QR-011), through the restaurant’s own service requests: the ' +
-      'waiter is alerted, and asking for the bill also tells the cashier. One open request of ' +
+      'waiter is alerted, and asking for the bill also tells the managers on duty. One open request of ' +
       'each kind per table: asking again finds the open one (`existing`). Limited per table and ' +
       'per browser (RELAY-D2). Needs `x-rp-browser`.',
     tags: ['qr'],

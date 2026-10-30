@@ -3,7 +3,7 @@ import { Id, IdempotencyKey, IsoDate, Paise, PaymentMode, Timestamp } from './co
 
 /**
  * Shifts, cash and payments (P1-11a, BILL-008, BILL-013). Payments are recorded by hand: no card
- * terminal or UPI integration. A cashier works in a shift that starts with a cash float; cash in
+ * terminal or UPI integration. A manager works in a shift that starts with a cash float; cash in
  * and out need a reason; closing the shift compares the counted cash with what the drawer should
  * hold.
  */

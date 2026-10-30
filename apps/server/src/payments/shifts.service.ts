@@ -24,9 +24,10 @@ function shiftClosed(): AppError {
 const paise = (value: bigint | null): number | null => (value === null ? null : Number(value));
 
 /**
- * Cash shifts (P1-11a, BILL-013): a cashier opens a shift with a float, records cash taken in or
+ * Cash shifts (P1-11a, BILL-013): a manager opens a shift with a float, records cash taken in or
  * out with a reason, and closes it by counting the drawer; the expected cash and the variance are
- * kept (AUD-006). Cashiers act on their own shift, managers and the Owner on any (§4.2 OWN).
+ * kept (AUD-006). Managers and the Owner act on any shift; a grant limited to one's own shift
+ * (OWN) acts on that one only. There is no cashier (ADR-0023).
  */
 @Injectable()
 export class ShiftsService {
@@ -227,7 +228,7 @@ export class ShiftsService {
       where: { id: shiftId, restaurantId: principal.restaurantId },
     });
     if (shift === null) throw shiftNotFound();
-    // §4.2 OWN: a cashier handles cash for their own shift only.
+    // §4.2 OWN: someone limited to their own shift handles cash for that shift only.
     if (ownOnly && shift.staffId !== principal.staffId) throw authErrors.forbidden();
     if (shift.status !== 'OPEN') throw shiftClosed();
     return shift;

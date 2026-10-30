@@ -145,7 +145,7 @@ describe('[AUTH-012] [AUTH-010] a person with a custom role', () => {
   it('is given it on its base role, and the server applies its extra grants', async () => {
     const mismatch = await server().post('/api/v1/staff').set(as(manager)).send({
       displayName: 'Sunil',
-      role: 'CASHIER',
+      role: 'KITCHEN',
       customRoleId: captainRoleId,
       pin: CAPTAIN_PIN,
     });
@@ -224,7 +224,7 @@ describe('[AUTH-012] [MENU-010] archiving and changing custom roles', () => {
     const rebase = await server()
       .put(`/api/v1/roles/${captainRoleId}`)
       .set(as(owner))
-      .send({ ...captain(), baseRole: 'CASHIER', capabilities: ['ORDER_APPROVE_CUSTOMER'] });
+      .send({ ...captain(), baseRole: 'KITCHEN', capabilities: ['ORDER_APPROVE_CUSTOMER'] });
     expect([rebase.status, codeOf(rebase)]).toEqual([409, 'ROLE_IN_USE']);
     const inUse = await server()
       .post(`/api/v1/roles/${captainRoleId}/archive`)

@@ -234,7 +234,7 @@ test.describe.serial('[NFR-P07] taps and screen changes at the design capacityâ€
     };
 
     // A cashier seats table 11 and sends ten dishes from five sections of the menu.
-    await signIn(/^Neha \(Cashier\)/, '3333', 'POS');
+    await signIn(/^Neha \(Manager\)/, '3333', 'POS');
     await speed.tap('a free table', page.getByRole('button', { name: '11, Free' }));
     const open = page.getByRole('dialog', { name: t('pos.open.title', { table: '11' }) });
     await open.getByLabel(t('pos.open.guests'), { exact: true }).fill('2');

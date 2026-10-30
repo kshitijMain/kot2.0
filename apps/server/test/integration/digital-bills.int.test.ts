@@ -145,7 +145,7 @@ async function setChannel(channel: 'OFF' | 'WHATSAPP'): Promise<void> {
 }
 
 async function listOf(invoiceId: string) {
-  const cashier = await signIn(app, kit, 'CASHIER');
+  const cashier = await signIn(app, kit, 'BILLER');
   const listed = await server()
     .get(`/api/v1/invoices/${invoiceId}/digital-bills`)
     .set(authHeaders(kit.deviceId, cashier.accessToken));
@@ -269,7 +269,7 @@ describe('[BILL-012] [BILL-011] [SEC-002] digital bills from the restaurant PC',
   });
 
   it('sends only to a mobile number given with consent, and only while digital bills are on', async () => {
-    const cashier = await signIn(app, kit, 'CASHIER');
+    const cashier = await signIn(app, kit, 'BILLER');
     const as = authHeaders(kit.deviceId, cashier.accessToken);
     const noConsent = await settledInvoice('9876543210', false);
     await announceSettled(noConsent);
@@ -305,7 +305,7 @@ describe('[BILL-012] [BILL-011] [SEC-002] digital bills from the restaurant PC',
   });
 
   it('waits while WhatsApp is down and tries again, then gives up after a day', async () => {
-    const cashier = await signIn(app, kit, 'CASHIER');
+    const cashier = await signIn(app, kit, 'BILLER');
     const invoiceId = await settledInvoice('9876543210', true);
     const queued = await server()
       .post(`/api/v1/invoices/${invoiceId}/digital-bills`)
@@ -352,7 +352,7 @@ describe('[BILL-012] [BILL-011] [SEC-002] digital bills from the restaurant PC',
   });
 
   it('does not try again a number WhatsApp cannot deliver to', async () => {
-    const cashier = await signIn(app, kit, 'CASHIER');
+    const cashier = await signIn(app, kit, 'BILLER');
     answer = () => ({ status: 400, body: { error: { code: 131026, message: 'Undeliverable' } } });
     const entry = DigitalBillEntry.parse(
       (
@@ -369,7 +369,7 @@ describe('[BILL-012] [BILL-011] [SEC-002] digital bills from the restaurant PC',
   });
 
   it('[DATA-011] does not send a waiting bill once the diner’s number is erased; a sent one stays as it was', async () => {
-    const cashier = await signIn(app, kit, 'CASHIER');
+    const cashier = await signIn(app, kit, 'BILLER');
     const entry = DigitalBillEntry.parse(
       (
         await server()
@@ -425,7 +425,7 @@ describe('[BILL-012] [BILL-011] [SEC-002] digital bills from the restaurant PC',
     const invoiceId = await settledInvoice('+91 9876543219', true);
     // A POS of its own: the kit's has used up its sign-ins for the minute.
     const pos = await addDevice(app, kit);
-    const cashier = await signIn(app, kit, 'CASHIER', pos);
+    const cashier = await signIn(app, kit, 'BILLER', pos);
     const phoneOf = async () => {
       const listed = await server()
         .get(`/api/v1/invoices/${invoiceId}/digital-bills`)

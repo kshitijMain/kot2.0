@@ -107,7 +107,7 @@ beforeAll(async () => {
   prisma = app.get(PrismaService);
   kit = await createAuthKit(app);
   manager = await signIn(app, kit, 'MANAGER');
-  cashier = await signIn(app, kit, 'CASHIER');
+  cashier = await signIn(app, kit, 'BILLER');
   waiter = await signIn(app, kit, 'WAITER');
   const base = { restaurantId: kit.restaurantId };
   await prisma.invoiceSeries.create({
@@ -307,12 +307,12 @@ describe('[RPT-005] payments and shifts', () => {
     expect(payments.total).toBe(94_800);
   });
 
-  it('reports shifts with expected cash; a cashier sees only their own and no other report', async () => {
+  it('reports shifts with expected cash, for those who see reports', async () => {
     const shifts = ShiftReportResponse.parse((await report('shifts')).body);
     expect(shifts.shifts).toEqual([
       expect.objectContaining({
         shiftId: id('shift'),
-        staffId: kit.staff.CASHIER,
+        staffId: kit.staff.BILLER,
         status: 'OPEN',
         cashPayments: 61_200,
         expectedCash: 161_200,
@@ -321,7 +321,7 @@ describe('[RPT-005] payments and shifts', () => {
     ]);
     const own = ShiftReportResponse.parse((await report('shifts', cashier)).body);
     expect(own.shifts.map((shift) => shift.shiftId)).toEqual([id('shift')]);
-    expect((await report('sales', cashier)).status).toBe(403);
+    expect((await report('sales', waiter)).status).toBe(403);
     expect((await report('gst', waiter)).status).toBe(403);
   });
 });
@@ -460,19 +460,19 @@ describe('[RPT-017] CSV export', () => {
     expect(await prisma.auditLog.count({ where: { action: 'REPORT_EXPORTED' } })).toBe(5);
   });
 
-  it('lets a cashier export their own shift report and nothing else', async () => {
+  it('lets a second manager export the whole shift report, and a waiter nothing', async () => {
     const own = await exportCsv({ report: 'SHIFTS', from: today, to: today }, cashier);
     expect(own.status, JSON.stringify(own.body)).toBe(200);
     const lines = ReportExportResponse.parse(own.body).content.split('\r\n');
-    expect(lines.some((row) => row.startsWith('Shifts of,'))).toBe(true);
+    // The whole restaurant's shifts, not one person's (no OWN grant since ADR-0023).
+    expect(lines.some((row) => row.startsWith('Shifts of,'))).toBe(false);
     expect(lines.find((row) => row.startsWith(today))).toContain(',OPEN,');
     expect(lines.find((row) => row.startsWith(today))).toContain(
       ',1000.00,612.00,0.00,0.00,1612.00,,',
     );
 
-    const sales = await exportCsv({ report: 'SALES', from: today, to: today }, cashier);
+    const sales = await exportCsv({ report: 'SALES', from: today, to: today }, waiter);
     expect([sales.status, ApiError.parse(sales.body).code]).toEqual([403, 'FORBIDDEN']);
-    expect((await exportCsv({ report: 'SALES', from: today, to: today }, waiter)).status).toBe(403);
     expect((await exportCsv({ report: 'SALES', from: today, to: addDays(today, -1) })).status).toBe(
       400,
     );
@@ -494,7 +494,7 @@ describe('[RPT-015] order drill-down', () => {
       orderType: 'TAKEAWAY',
       source: 'POS',
       tableLabel: null,
-      createdBy: { id: kit.staff.CASHIER },
+      createdBy: { id: kit.staff.BILLER },
       device: { id: kit.deviceId },
     });
     expect(order.takeawayToken).not.toBeNull();
@@ -502,14 +502,14 @@ describe('[RPT-015] order drill-down', () => {
     expect(order.items[0]).toMatchObject({
       name: 'Lassi',
       state: 'SENT',
-      createdBy: { id: kit.staff.CASHIER },
+      createdBy: { id: kit.staff.BILLER },
     });
     expect(order.items[0]?.sentAt).not.toBeNull();
     expect(order.kots.map((kot) => [kot.kind, kot.station])).toEqual([['NEW', 'Kitchen']]);
     expect(order.history[0]).toMatchObject({
       event: 'SUBMITTED',
       toState: 'SENT',
-      by: { id: kit.staff.CASHIER },
+      by: { id: kit.staff.BILLER },
       device: { id: kit.deviceId },
     });
     const [voided, reissued] = order.invoices;
@@ -517,7 +517,7 @@ describe('[RPT-015] order drill-down', () => {
     expect(voided).toMatchObject({
       invoiceNumber: invoices.voided?.invoiceNumber,
       status: 'VOIDED',
-      issuedBy: { id: kit.staff.CASHIER },
+      issuedBy: { id: kit.staff.BILLER },
       voidedBy: { id: kit.staff.MANAGER },
       voidReason: 'Wrong item',
       settledBy: null,
@@ -525,7 +525,7 @@ describe('[RPT-015] order drill-down', () => {
     expect(reissued).toMatchObject({
       invoiceNumber: invoices.reissued?.invoiceNumber,
       status: 'SETTLED',
-      settledBy: { id: kit.staff.CASHIER },
+      settledBy: { id: kit.staff.BILLER },
     });
     expect(reissued?.settledAt).not.toBeNull();
     const actions = new Set(order.audit.map((entry) => entry.action));
@@ -568,11 +568,11 @@ describe('[RPT-015] order drill-down', () => {
     expect(order.invoices[0]).toMatchObject({
       invoiceId: invoices.a?.id,
       printCount: 1,
-      printedBy: { id: kit.staff.CASHIER },
-      settledBy: { id: kit.staff.CASHIER },
+      printedBy: { id: kit.staff.BILLER },
+      settledBy: { id: kit.staff.BILLER },
     });
 
-    expect((await drillDown(dineIn.id, cashier)).status).toBe(403);
+    expect((await drillDown(dineIn.id, cashier)).status).toBe(200);
     expect((await drillDown(dineIn.id, waiter)).status).toBe(403);
     const missing = await drillDown(randomUUID());
     expect([missing.status, ApiError.parse(missing.body).code]).toEqual([404, 'ORDER_NOT_FOUND']);

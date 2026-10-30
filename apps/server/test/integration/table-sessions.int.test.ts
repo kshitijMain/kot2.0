@@ -33,7 +33,7 @@ beforeAll(async () => {
   kit = await createAuthKit(app);
   manager = await signIn(app, kit, 'MANAGER');
   waiter = await signIn(app, kit, 'WAITER');
-  cashier = await signIn(app, kit, 'CASHIER');
+  cashier = await signIn(app, kit, 'BILLER');
   kitchen = await signIn(app, kit, 'KITCHEN');
   const base = { restaurantId: kit.restaurantId };
   const hall = await prisma.section.create({ data: { ...base, name: 'Hall' } });
@@ -155,7 +155,7 @@ describe('[TBL-003] [TBL-004] table sessions', () => {
     expect(await stateOf('T1')).toBe('OCCUPIED');
     expect(
       await prisma.auditLog.findFirstOrThrow({ where: { action: 'TABLE_OPENED' } }),
-    ).toMatchObject({ actorId: kit.staff.CASHIER, entityId: session.id });
+    ).toMatchObject({ actorId: kit.staff.BILLER, entityId: session.id });
     const events = await prisma.outboxEvent.findMany({
       where: { aggregateId: session.id },
       orderBy: { writeOrder: 'asc' },
@@ -243,14 +243,14 @@ describe('[TBL-003] [TBL-004] table sessions', () => {
     const byWaiter = await server()
       .put(`/api/v1/table-sessions/${session.id}/waiter`)
       .set(as(waiter))
-      .send({ waiterId: kit.staff.CASHIER });
+      .send({ waiterId: kit.staff.BILLER });
     expect(byWaiter.status).toBe(403);
     const changed = await server()
       .put(`/api/v1/table-sessions/${session.id}/waiter`)
       .set(as(manager))
-      .send({ waiterId: kit.staff.CASHIER, reason: 'Shift change' });
+      .send({ waiterId: kit.staff.BILLER, reason: 'Shift change' });
     expect(changed.status, JSON.stringify(changed.body)).toBe(200);
-    expect(TableSessionView.parse(changed.body).waiterId).toBe(kit.staff.CASHIER);
+    expect(TableSessionView.parse(changed.body).waiterId).toBe(kit.staff.BILLER);
     expect(await prisma.outboxEvent.count({ where: { eventType: 'TableWaiterChanged' } })).toBe(1);
     await server()
       .put(`/api/v1/table-sessions/${session.id}/waiter`)
@@ -303,7 +303,7 @@ describe('[TBL-005] [WTR-008] move table (scenario S7)', () => {
 
   it('lets a waiter move only their own tables', async () => {
     const theirs = TableSessionView.parse(
-      (await open(manager, 'T4', { covers: 2, waiterId: kit.staff.CASHIER })).body,
+      (await open(manager, 'T4', { covers: 2, waiterId: kit.staff.BILLER })).body,
     );
     const refused = await server()
       .post(`/api/v1/table-sessions/${theirs.id}/move`)

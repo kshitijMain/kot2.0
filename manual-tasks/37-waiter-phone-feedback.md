@@ -19,7 +19,7 @@ A production build (`in.rp.waiter`, TLS only, the owner's signing key) comes fro
 
 ## Checks
 
-1. **Sign-in.** On a phone paired fresh, the list shows waiters only: no manager, owner, cashier
+1. **Sign-in.** On a phone paired fresh, the list shows waiters only: no manager, owner
    or kitchen. Sign in as a waiter, sign out from Menu → Sign out: the list again. Let the phone
    sign the waiter out for inactivity (10 minutes untouched): it opens on that waiter's PIN pad,
    with "Not you?" for the list.

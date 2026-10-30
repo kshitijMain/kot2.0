@@ -49,7 +49,7 @@ beforeAll(async () => {
         .code;
     },
     manager: { name: 'Vikram (Manager)', pin: DEV_PINS['Vikram (Manager)'] },
-    cashier: { name: 'Neha (Cashier)', pin: DEV_PINS['Neha (Cashier)'] },
+    biller: { name: 'Neha (Manager)', pin: DEV_PINS['Neha (Manager)'] },
     log: (line) => {
       process.stdout.write(`${line}\n`);
     },

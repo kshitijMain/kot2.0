@@ -52,7 +52,7 @@ A manager's override is single-use, for one capability, bound to the requester's
 2 minutes (AUTH-011). An override for an action about a record (a voided item, a reopened or voided
 invoice, a discount above the limit: `OVERRIDE_RECORD_TYPES`) names its record when it is given
 and works on that record only; on another it is refused and not spent (P8-03b2a, PC-T2). When the
-matrix says OWN (a waiter's own tables, a cashier's own shift), the
+matrix says OWN (a waiter's own tables), the
 guard lets the request through marked `ownershipRequired` and the service checks the object; see
 "Object-level checks".
 
@@ -107,7 +107,6 @@ its tests:
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | A tablet reads and acts on its own table only (AUTH-009)               | `devices.int` "can only act on their own table", `order-approvals.int` "keeps each tablet to its own table", `service-requests.int` "lets a tablet act only for its own table", `recommendations.int` "for its own table only" |
 | A waiter approves, moves, merges and cancels on their own tables       | `order-approvals.int`, `table-sessions.int` "lets a waiter move only their own tables", `table-merge.int`, `order-items.int`                                                                                                   |
-| A cashier's cash and shift close on their own shift; own reports       | `payments.int` "the cashier on their own shift only", `reports.int` "a cashier sees only their own", "export their own shift report and nothing else"                                                                          |
 | Alerts are acknowledged only by those they are for                     | `notifications.int` "does not let someone else acknowledge an alert that is not theirs"                                                                                                                                        |
 | Staff changes: nobody changes their own role; managers are the Owner's | `staff.int`                                                                                                                                                                                                                    |
 

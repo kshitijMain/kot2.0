@@ -28,7 +28,6 @@ let app: INestApplication;
 let prisma: PrismaService;
 let kit: AuthKit;
 let waiter: LoginResponse;
-let cashier: LoginResponse;
 let kitchen: LoginResponse;
 let manager: LoginResponse;
 let session: TableSessionView;
@@ -41,7 +40,6 @@ beforeAll(async () => {
   prisma = app.get(PrismaService);
   kit = await createAuthKit(app);
   waiter = await signIn(app, kit, 'WAITER');
-  cashier = await signIn(app, kit, 'CASHIER');
   kitchen = await signIn(app, kit, 'KITCHEN');
   manager = await signIn(app, kit, 'MANAGER');
   const base = { restaurantId: kit.restaurantId };
@@ -281,7 +279,7 @@ describe('[ORD-011] [ORD-012] cancel, void and modify', () => {
     const other = await order([{ itemId: id('Roti') }]);
     await prisma.tableSession.update({
       where: { id: session.id },
-      data: { waiterId: kit.staff.CASHIER },
+      data: { waiterId: kit.staff.BILLER },
     });
     const notTheirs = await server()
       .post(`/api/v1/order-items/${other.items[0]?.id ?? ''}/cancel`)
@@ -306,13 +304,13 @@ describe('[ORD-011] [ORD-012] cancel, void and modify', () => {
 
     const withoutPin = await server()
       .post(`/api/v1/order-items/${roti}/void`)
-      .set(as(cashier))
+      .set(as(waiter))
       .send({ reason: 'Burnt' });
     expect([withoutPin.status, codeOf(withoutPin)]).toEqual([403, 'OVERRIDE_REQUIRED']);
 
     const override = OverrideResponse.parse(
       (
-        await server().post('/api/v1/auth/override').set(as(cashier)).send({
+        await server().post('/api/v1/auth/override').set(as(waiter)).send({
           approverStaffId: kit.staff.MANAGER,
           pin: TEST_PINS.MANAGER,
           capability: 'ITEM_VOID_AFTER_PREP',
@@ -323,14 +321,14 @@ describe('[ORD-011] [ORD-012] cancel, void and modify', () => {
     );
     const voided = await server()
       .post(`/api/v1/order-items/${roti}/void`)
-      .set({ ...as(cashier), 'x-override-token': override.overrideToken })
+      .set({ ...as(waiter), 'x-override-token': override.overrideToken })
       .send({ reason: 'Burnt' });
     expect(voided.status, JSON.stringify(voided.body)).toBe(200);
     expect(OrderView.parse(voided.body).items[0]?.state).toBe('VOIDED');
     expect(await kotKinds(placed.id)).toEqual(['NEW', 'CANCELLED']);
     expect(
       await prisma.auditLog.findFirstOrThrow({ where: { action: 'ORDER_ITEM_VOIDED' } }),
-    ).toMatchObject({ actorId: kit.staff.CASHIER, approverId: kit.staff.MANAGER, reason: 'Burnt' });
+    ).toMatchObject({ actorId: kit.staff.WAITER, approverId: kit.staff.MANAGER, reason: 'Burnt' });
   });
 
   it('changes quantity and instructions before cooking with a MODIFIED ticket, and follows stock', async () => {

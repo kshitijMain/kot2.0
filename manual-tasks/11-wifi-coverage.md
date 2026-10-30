@@ -19,7 +19,7 @@ mode follows once the pager firmware exists (P0-H1, P2-05).
 1. In the app, select the restaurant's network name. Note which band it is on: the pagers use
    **2.4 GHz** (channel 1 to 13). If the router shows one name for both bands, pick the 2.4 GHz
    entry.
-2. Mark these spots on the floor plan and number them: the cashier counter, each kitchen station,
+2. Mark these spots on the floor plan and number them: the cash counter, each kitchen station,
    the pass (where dishes wait), every 3 to 4 tables on the floor, the terrace corners, the
    washroom corridor, the store room, and the entrance.
 3. Stand at each spot for 20 seconds holding the phone at waist height (where a pager is worn)
@@ -38,7 +38,7 @@ Network band used: 2.4 GHz channel <n>
 Idle or busy: <idle/busy>, date and time
 
 Spot | Where                 | Signal (dBm) | Dropped? | Note
-1    | Cashier counter       |              |          |
+1    | Cash counter          |              |          |
 2    | Kitchen – tandoor     |              |          |
 3    | Pass                  |              |          |
 ...

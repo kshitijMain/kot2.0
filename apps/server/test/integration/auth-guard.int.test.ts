@@ -102,7 +102,7 @@ describe('[AUTH-011] [AUTH-013] manager override', () => {
   const entityId = newId();
 
   it('turns a manager PIN into a single-use approval for one capability', async () => {
-    const response = await override('CASHIER', {
+    const response = await override('WAITER', {
       approverStaffId: kit.staff.MANAGER,
       pin: TEST_PINS.MANAGER,
       capability: 'ITEM_VOID_AFTER_PREP',
@@ -115,13 +115,14 @@ describe('[AUTH-011] [AUTH-013] manager override', () => {
 
     const wrongCapability = await server()
       .post(probe('DISCOUNT_ABOVE_LIMIT', entityId))
-      .set(as('CASHIER'))
+      .set(as('WAITER'))
       .set('x-override-token', grant.overrideToken);
-    expect(codeOf(wrongCapability)).toBe('OVERRIDE_INVALID');
+    // A waiter never discounts (ADR-0023: only waiters need approvals by role now).
+    expect(codeOf(wrongCapability)).toBe('FORBIDDEN');
 
     const used = await server()
       .post(probe('ITEM_VOID_AFTER_PREP', entityId))
-      .set(as('CASHIER'))
+      .set(as('WAITER'))
       .set('x-override-token', grant.overrideToken);
     expect(used.status).toBe(200);
     expect(used.body).toMatchObject({
@@ -130,13 +131,13 @@ describe('[AUTH-011] [AUTH-013] manager override', () => {
 
     const again = await server()
       .post(probe('ITEM_VOID_AFTER_PREP', entityId))
-      .set(as('CASHIER'))
+      .set(as('WAITER'))
       .set('x-override-token', grant.overrideToken);
     expect(codeOf(again)).toBe('OVERRIDE_INVALID');
 
     const audit = await prisma.auditLog.findFirstOrThrow({ where: { action: 'OVERRIDE_GRANTED' } });
     expect(audit).toMatchObject({
-      actorId: kit.staff.CASHIER,
+      actorId: kit.staff.WAITER,
       approverId: kit.staff.MANAGER,
       deviceId: kit.deviceId,
       entityType: 'order_item',
@@ -145,40 +146,40 @@ describe('[AUTH-011] [AUTH-013] manager override', () => {
   });
 
   it('[PC-T2] works only on the record it names, refused and not spent on another', async () => {
-    const asked = await override('CASHIER', {
+    const asked = await override('WAITER', {
       approverStaffId: kit.staff.MANAGER,
       pin: TEST_PINS.MANAGER,
-      capability: 'INVOICE_VOID',
-      entityType: 'invoice',
+      capability: 'ITEM_VOID_AFTER_PREP',
+      entityType: 'order_item',
       entityId,
     });
     const grant = OverrideResponse.parse(asked.body);
     const another = await server()
-      .post(probe('INVOICE_VOID', newId()))
-      .set(as('CASHIER'))
+      .post(probe('ITEM_VOID_AFTER_PREP', newId()))
+      .set(as('WAITER'))
       .set('x-override-token', grant.overrideToken);
     expect(codeOf(another)).toBe('OVERRIDE_INVALID');
     const asGiven = await server()
-      .post(probe('INVOICE_VOID', entityId))
-      .set(as('CASHIER'))
+      .post(probe('ITEM_VOID_AFTER_PREP', entityId))
+      .set(as('WAITER'))
       .set('x-override-token', grant.overrideToken);
     expect(asGiven.status).toBe(200);
-    expect(asGiven.body).toMatchObject({ override: { entityType: 'invoice', entityId } });
+    expect(asGiven.body).toMatchObject({ override: { entityType: 'order_item', entityId } });
   });
 
   it('[PC-T2] is refused without the record, or for another kind of record, before the PIN', async () => {
     const before = await prisma.auditLog.count({ where: { action: 'OVERRIDE_DENIED' } });
-    for (const record of [{}, { entityType: 'bill', entityId }, { entityType: 'invoice' }]) {
-      const response = await override('CASHIER', {
+    for (const record of [{}, { entityType: 'bill', entityId }, { entityType: 'order_item' }]) {
+      const response = await override('WAITER', {
         approverStaffId: kit.staff.MANAGER,
         pin: '0000',
-        capability: 'INVOICE_VOID',
+        capability: 'ITEM_VOID_AFTER_PREP',
         ...record,
       });
       expect(response.status).toBe(422);
       expect(ApiError.parse(response.body)).toMatchObject({
         code: 'OVERRIDE_RECORD_REQUIRED',
-        details: { entityType: 'invoice' },
+        details: { entityType: 'order_item' },
       });
     }
     expect(await prisma.auditLog.count({ where: { action: 'OVERRIDE_DENIED' } })).toBe(before);
@@ -212,16 +213,16 @@ describe('[AUTH-011] [AUTH-013] manager override', () => {
   });
 
   it('refuses approvers who are not managers, the requester themselves and wrong PINs', async () => {
-    const notManager = await override('CASHIER', {
-      approverStaffId: kit.staff.WAITER,
-      pin: TEST_PINS.WAITER,
+    const notManager = await override('WAITER', {
+      approverStaffId: kit.staff.KITCHEN,
+      pin: TEST_PINS.KITCHEN,
       capability: 'ITEM_VOID_AFTER_PREP',
       entityType: 'order_item',
       entityId,
     });
     expect(codeOf(notManager)).toBe('APPROVER_NOT_ALLOWED');
 
-    const wrongPin = await override('CASHIER', {
+    const wrongPin = await override('WAITER', {
       approverStaffId: kit.staff.MANAGER,
       pin: '0000',
       capability: 'ITEM_VOID_AFTER_PREP',
@@ -231,7 +232,7 @@ describe('[AUTH-011] [AUTH-013] manager override', () => {
     expect(codeOf(wrongPin)).toBe('INVALID_CREDENTIALS');
     expect(
       await prisma.auditLog.count({
-        where: { action: 'OVERRIDE_DENIED', actorId: kit.staff.CASHIER },
+        where: { action: 'OVERRIDE_DENIED', actorId: kit.staff.WAITER },
       }),
     ).toBeGreaterThanOrEqual(2);
   });
@@ -239,17 +240,17 @@ describe('[AUTH-011] [AUTH-013] manager override', () => {
   it('locks the approver PIN after repeated wrong attempts', async () => {
     const manager = await addStaff(app, kit, 'MANAGER', '2468');
     const deviceId = await addDevice(app, kit);
-    const cashier = await signIn(app, kit, 'CASHIER', deviceId);
+    const waiter = await signIn(app, kit, 'WAITER', deviceId);
     const statuses: number[] = [];
     for (let attempt = 1; attempt <= 6; attempt += 1) {
       const response = await server()
         .post('/api/v1/auth/override')
-        .set(authHeaders(deviceId, cashier.accessToken))
+        .set(authHeaders(deviceId, waiter.accessToken))
         .send({
           approverStaffId: manager,
           pin: '1357',
-          capability: 'INVOICE_VOID',
-          entityType: 'invoice',
+          capability: 'ITEM_VOID_AFTER_PREP',
+          entityType: 'order_item',
           entityId,
         });
       statuses.push(response.status);
@@ -277,27 +278,27 @@ describe('[AUTH-011] [AUTH-013] manager override', () => {
 
 describe('[SEC-015] [AUTH-002] logs', () => {
   it('never contain PINs, passwords or tokens', async () => {
-    const extra = await signIn(app, kit, 'CASHIER');
+    const extra = await signIn(app, kit, 'MANAGER');
     await server()
       .post('/api/v1/auth/pin-login')
       .set(authHeaders(kit.deviceId))
-      .send({ staffId: kit.staff.CASHIER, pin: '9999' });
+      .send({ staffId: kit.staff.MANAGER, pin: '9999' });
     const renewed = await server()
       .post('/api/v1/auth/refresh')
       .set(authHeaders(kit.deviceId))
       .send({ refreshToken: extra.refreshToken });
     const invoiceId = newId();
-    const grant = await override('CASHIER', {
+    const grant = await override('WAITER', {
       approverStaffId: kit.staff.MANAGER,
       pin: TEST_PINS.MANAGER,
-      capability: 'BILL_EDIT_AFTER_PRINT',
-      entityType: 'invoice',
+      capability: 'ITEM_VOID_AFTER_PREP',
+      entityType: 'order_item',
       entityId: invoiceId,
     });
     // The approval travels in a header, which the request log must not show either.
     await server()
-      .post(probe('BILL_EDIT_AFTER_PRINT', invoiceId))
-      .set(as('CASHIER'))
+      .post(probe('ITEM_VOID_AFTER_PREP', invoiceId))
+      .set(as('WAITER'))
       .set('x-override-token', (grant.body as { overrideToken: string }).overrideToken);
     const logs = logLines.join('');
     expect(logs.length).toBeGreaterThan(1_000);

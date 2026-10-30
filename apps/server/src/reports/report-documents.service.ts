@@ -90,7 +90,7 @@ export class ReportDocumentsService {
     private readonly feedback: FeedbackService,
   ) {}
 
-  /** `ownShiftsOf` limits a cashier's shift report to their own shifts. */
+  /** `ownShiftsOf` limits a shift report to that person's own shifts (OWN). */
   async tables(
     restaurantId: string,
     report: ReportKind,

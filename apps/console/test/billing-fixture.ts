@@ -87,7 +87,7 @@ export function invoiceView(overrides: Partial<InvoiceView> = {}): InvoiceView {
     financialYear: '2026-27',
     businessDate: '2026-09-26',
     issuedAt: '2026-09-26T10:00:00.000Z',
-    issuedById: STAFF.CASHIER.staffId,
+    issuedById: STAFF.MANAGER.staffId,
     tableLabel: 'T4',
     particulars: {
       displayName: 'Demo Dhaba',
@@ -137,7 +137,7 @@ export function paymentsView(overrides: Partial<InvoicePaymentsView> = {}): Invo
 export function shiftView(overrides: Partial<ShiftView> = {}): ShiftView {
   return {
     id: B.shift,
-    staffId: STAFF.CASHIER.staffId,
+    staffId: STAFF.MANAGER.staffId,
     status: 'OPEN',
     businessDate: '2026-09-26',
     openedAt: '2026-09-26T08:00:00.000Z',

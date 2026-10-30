@@ -97,7 +97,7 @@ export const PaymentModesResponse = z.object({
 });
 export type PaymentModesResponse = z.infer<typeof PaymentModesResponse>;
 
-/** RPT-005: shifts with their cash and variance. A cashier sees their own shifts only. */
+/** RPT-005: shifts with their cash and variance. */
 export const ShiftReportResponse = z.object({
   from: IsoDate,
   to: IsoDate,

@@ -32,8 +32,8 @@ its own PC, without depending on the internet.
 
 Primary user:
 
-- Who: the restaurant's staff during service: cashier (POS), waiters/captains (phone + pager),
-  kitchen (KDS), manager (dashboard); and the diner (table tablet, QR menu, no login).
+- Who: the restaurant's staff during service: managers (POS billing and the dashboard; there is
+  no cashier role, ADR-0023), waiters/captains (phone + pager), kitchen (KDS); and the diner (table tablet, QR menu, no login).
 - Trigger: a restaurant moving off paper KOTs, or off a POS that cannot route orders, page waiters
   or stop bill tampering.
 - Today they use: paper KOTs, a basic billing POS, verbal hand-offs.
@@ -75,7 +75,7 @@ Key user flow (BRD §5.3 F1 and F4):
 1. A waiter opens a table; its tablet unlocks. The diner orders on the tablet (or QR).
 2. The responsible waiter is paged and approves in ≤ 2 taps; the KOT splits per station to the
    KDS and printers; the kitchen marks it ready and the pager vibrates "T5 READY".
-3. The diner presses Bill; the cashier prints the GST invoice, records the payment mode and closes
+3. The diner presses Bill; a manager prints the GST invoice, records the payment mode and closes
    the table; the tablet wipes and resets.
 
 ## 06 Success metrics

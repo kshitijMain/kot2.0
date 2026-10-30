@@ -20,7 +20,6 @@ export const en = {
   roles: {
     OWNER: 'Owner',
     MANAGER: 'Manager',
-    CASHIER: 'Cashier',
     WAITER: 'Waiter',
     KITCHEN: 'Kitchen',
   },
@@ -345,7 +344,7 @@ export const en = {
       printBill: 'Print bill',
       billPrinted: 'Bill {number} printed: {total}',
       billNotPrinted: 'Bill {number} issued but not printed: {error}',
-      billRequested: 'The cashier has been asked for the bill for {table}.',
+      billRequested: 'The managers have been asked for the bill for {table}.',
       moveTo: 'Move {table} to',
       noFreeTables: 'There is no free table to move to.',
       moved: '{from} moved to {to}',
@@ -1617,7 +1616,7 @@ until you press Publish.
   customRoles: {
     title: 'Roles',
     intro:
-      'Each person has a built-in role. The Owner can add custom roles: a cashier, waiter or kitchen role that may do more.',
+      'Each person has a built-in role. The Owner can add custom roles: a waiter or kitchen role that may do more.',
     ownerOnly: 'Only the Owner can add or change custom roles.',
     add: 'Add a custom role',
     loadFailed: 'The roles could not be loaded.',
@@ -1826,7 +1825,6 @@ until you press Publish.
       SECTION_WAITERS: 'Waiters of the section',
       ALL_WAITERS: 'All waiters',
       MANAGERS_ON_DUTY: 'Managers on duty',
-      CASHIER: 'Cashier',
       STATION: 'The kitchen station',
       OWNER: 'Owner',
       WEARER: 'The pager’s wearer',
@@ -2601,7 +2599,7 @@ until you press Publish.
       },
       STAFF: {
         title: 'Staff and PINs',
-        hint: 'Waiters, cashiers and kitchen staff with their PINs, and their sections.',
+        hint: 'Managers, waiters and kitchen staff with their PINs, and their sections.',
         open: 'Open Staff',
       },
       DEVICES: {
@@ -3554,7 +3552,7 @@ until you press Publish.
     billing: {
       priceMode: 'Menu prices',
       roundingUnitPaise: 'Round bills to the nearest',
-      cashierDiscountLimitBp: 'Cashier discount limit',
+      discountLimitBp: 'Discount limit',
       serviceChargeEnabled: 'Service charge',
       serviceChargeRateBp: 'Service charge rate',
     },
@@ -3721,7 +3719,8 @@ until you press Publish.
       priceMode: 'Whether menu prices exclude or include GST (our default: exclusive).',
       roundingUnitPaise:
         'Grand totals round to the nearest multiple of this (0: no rounding; our default: ₹1).',
-      cashierDiscountLimitBp: 'Largest discount a cashier may give without a manager PIN.',
+      discountLimitBp:
+        'Largest discount staff allowed to discount within a limit (a custom role) may give without a manager PIN.',
       serviceChargeEnabled:
         'Add a voluntary service charge to bills (off by default; removable on request).',
       serviceChargeRateBp:
@@ -3734,7 +3733,7 @@ until you press Publish.
       amountInWords:
         'Bills also write the total in words, like “Rupees Six Hundred Seventy-Two Only”.',
       waiterMayPrint:
-        'Waiters may print the bill of their own tables at the bill printer from the app. Off: they ask for the bill and the cashier prints it.',
+        'Waiters may print the bill of their own tables at the bill printer from the app. Off: they ask for the bill and a manager prints it.',
       printerId:
         'The printer bills print on, usually the one at the cash counter (none: choose each time).',
       cashDrawerKick:

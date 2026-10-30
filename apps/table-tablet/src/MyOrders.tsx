@@ -12,7 +12,7 @@ const affectsOrders = (eventType: string) =>
   /^(Order(Submitted|Approved|Rejected)|ItemStatusChanged|KotCreated|KotBumped)$/.test(eventType);
 
 const NEVER = () => false;
-const APPROVERS = new Set(['WAITER', 'CASHIER', 'MANAGER', 'OWNER']);
+const APPROVERS = new Set(['WAITER', 'MANAGER', 'OWNER']);
 
 /**
  * What the table has ordered (TAB-009, TAB-010): each order with its dishes and their status,

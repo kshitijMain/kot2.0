@@ -69,7 +69,7 @@ describe('[NTF-008] a manager nudges waiters', () => {
     const { user, dialog, container } = await openNudge(fake);
 
     const waiters = within(dialog).getByRole('group', { name: t('alerts.nudge.waiters') });
-    // Only waiters: the cashier, kitchen and managers are not offered.
+    // Only waiters: the kitchen and managers are not offered.
     expect(within(waiters).getAllByRole('checkbox')).toHaveLength(2);
     expect(within(waiters).queryByRole('checkbox', { name: 'Asha' })).toBeNull();
     const send = within(dialog).getByRole('button', { name: t('alerts.nudge.send') });

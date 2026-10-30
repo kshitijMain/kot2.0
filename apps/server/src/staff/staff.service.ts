@@ -61,7 +61,6 @@ function assignableOf(role: Role): AssignableRole | undefined {
 /** Names of the built-in roles, created with the first person given each role. */
 const BUILT_IN_ROLE_NAMES: Readonly<Record<AssignableRole, string>> = {
   MANAGER: 'Manager',
-  CASHIER: 'Cashier',
   WAITER: 'Waiter',
   KITCHEN: 'Kitchen',
 };

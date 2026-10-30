@@ -18,7 +18,7 @@ Anything that looks like theft, a breach or tampering is an incident: stop and u
 ## Paper fallback while the PC is down
 
 Waiters write orders with table and time on numbered paper slips; the kitchen cooks from the
-slips; the cashier bills on a manual bill book. After recovery a manager enters them as orders
+slips; the manager bills on a manual bill book. After recovery a manager enters them as orders
 and marks the paper bills in the notes, so invoice numbers stay gap-free. Never reuse a paper
 number for a system invoice.
 

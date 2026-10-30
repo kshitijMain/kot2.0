@@ -101,7 +101,7 @@ Without it, the Owner sees "This PC has no purge login yet" and no year can be a
 
 The archive viewer opens an archived year read-only, straight from its file, without putting
 anything back into the live database (DATA-009): System, then "Old years", then "Open" beside a
-finished archive. The Owner and managers may open it; a cashier's reports are their own shifts'.
+finished archive. The Owner and managers may open it.
 
 - **Day by day**: invoices, voided invoices, sales and tax for each business date, and the year's
   totals. Read once per server start, then kept.

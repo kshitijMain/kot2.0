@@ -928,6 +928,28 @@ Decided 2026-09-26 (P1-08a):
 Standing instruction (2026-09-26, the Business Owner): build everything without stopping; Claude
 decides, records decisions here and moves straight to the next WP. Recorded in CLAUDE.md.
 
+Decided 2026-10-30 (operations changes at the Business Owner's request, ADR-0023, branch
+`feature/ops-changes`). Each changes a BRD rule; open business choices are D-13 onwards in
+`docs/testing/DECISIONS_NEEDED.md`:
+
+822. There is no cashier role (BRD §4.2): `ROLES` are Owner, Manager, Waiter and Kitchen. Managers
+     and the Owner bill, take payments and run cash shifts from the POS. Custom roles build on the
+     waiter or kitchen role only.
+823. A discount within the limit is a capability, not a role: a custom role allowed
+     `DISCOUNT_WITHIN_LIMIT` gives up to `billing.discountLimitBp` (renamed from
+     `billing.cashierDiscountLimitBp`, 10 %), above it with a manager's PIN (`decideDiscount` takes
+     the actor).
+824. The cashier's alerts go to the managers on duty (Appendix C): bill request to the responsible
+     waiter and the managers on duty; printer offline to the managers on duty. No `CASHIER`
+     recipient.
+825. Migration `20261030100000_no_cashier_role`: cashiers become managers and sign in again
+     (sessions revoked, `ROLE_CHANGED`); custom roles on the cashier move to the waiter base (D-13);
+     the built-in Cashier role is archived and hidden from the Roles page; stored notification
+     rules naming the cashier name the managers on duty. Audit entries are queued in
+     `pending_audit_entries` and written into the chain by `PendingAuditService` at start-up.
+826. Development seed and tests: PIN 3333 is a second manager ("Neha (Manager)"); server tests sign
+     in a second manager as `BILLER` where they had a cashier.
+
 Decided 2026-10-25 (the menu, at the Business Owner's request: a guided editor, by hand or Excel):
 
 808. The AI menu reading (ONB-006, P6-04a/b) is switched off for good: menus are entered by hand

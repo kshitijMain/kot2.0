@@ -77,7 +77,7 @@ Critical and High ones fixed), **n/a** (does not apply to this part).
 | E   | `realtime.int`, `flood.int`                         | Socket drop and resync; server restart                                           | todo   |
 | F   | Vitest                                              | Coverage of `kds/`                                                               | todo   |
 
-## Area 4: cashier / POS (console, POS mode)
+## Area 4: billing / POS (console, POS mode; managers, ADR-0023)
 
 | Cat | Already tested                                                              | Added or still missing                                                                                     | Status |
 | --- | --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ------ |
@@ -93,7 +93,7 @@ Critical and High ones fixed), **n/a** (does not apply to this part).
 | Cat | Already tested                                                                                                                           | Added or still missing                                                                            | Status |
 | --- | ---------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------- | ------ |
 | A   | `menu-editor.test`, `menu-file.test`, `bulk-photos.test`, `staff.test`, `devices.test`, `settings.test`, `reports.test`, `menu-file.e2e` | Error boundary; odd text in dish names shown back; menu file attacks (Area 1 A); export injection | todo   |
-| B   | `staff.int`, `roles.int`, `settings.int`, `menu-admin.int`                                                                               | Cashier changing prices; manager doing Owner-only things; settings out of range                   | todo   |
+| B   | `staff.int`, `roles.int`, `settings.int`, `menu-admin.int`                                                                               | Waiter changing prices; manager doing Owner-only things; settings out of range                    | todo   |
 | C   | `menu-publish.int`                                                                                                                       | Menu published while carts are open; two managers editing one dish                                | todo   |
 | D   | `reports.int`, `report-suite.int`                                                                                                        | Report totals equal invoices and payments (property test in Area 1 D)                             | todo   |
 | E   | `backups.int`, `restore.int`                                                                                                             | Disk full during export or backup                                                                 | todo   |

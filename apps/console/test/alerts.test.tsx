@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   alertEvent,
   alertView,
-  billForCashier,
+  billForManagers,
   diskForOwner,
   escalatedFood,
   kitchenFlag,
@@ -153,14 +153,14 @@ describe('[MGR-008] the alert centre on the manager dashboard', () => {
 });
 
 describe('[MGR-008] [NTF-006] alerts on the POS, live', () => {
-  it('pops up a new alert for the cashier, counts it and opens the alert centre', async () => {
-    const fake = alertsServer('CASHIER', [], [billForCashier]);
-    const { user, sockets } = await renderConsole({ fake, path: '/pos', signedIn: 'CASHIER' });
+  it('pops up a new alert for the manager at the POS, counts it and opens the alert centre', async () => {
+    const fake = alertsServer('MANAGER', [], [billForManagers]);
+    const { user, sockets } = await renderConsole({ fake, path: '/pos', signedIn: 'MANAGER' });
     expect(await alertsButton(0)).toBeInTheDocument();
 
     act(() => {
       sockets.sync(0);
-      sockets.last.fire('event', alertEvent(1, 'AlertRaised', billForCashier));
+      sockets.last.fire('event', alertEvent(1, 'AlertRaised', billForManagers));
     });
     const toast = await within(toasts()).findByRole('status');
     expect(toast).toHaveTextContent('Table 7 · Bill requested');
@@ -174,8 +174,8 @@ describe('[MGR-008] [NTF-006] alerts on the POS, live', () => {
         name: t('alerts.acknowledgeOf', { title: 'Table 7 · Bill requested' }),
       }),
     ).toBeInTheDocument();
-    // A cashier cannot nudge waiters (NTF-008 is for managers).
-    expect(within(sheet).queryByRole('button', { name: t('alerts.nudge.open') })).toBeNull();
+    // A manager at the POS may nudge waiters (NTF-008); there is no cashier (ADR-0023).
+    expect(within(sheet).getByRole('button', { name: t('alerts.nudge.open') })).toBeVisible();
   });
 
   it('[NTF-005] pops up an escalation to the manager on the POS and keeps it up', async () => {
@@ -202,8 +202,8 @@ describe('[MGR-008] [NTF-006] alerts on the POS, live', () => {
   });
 
   it('opens the alert centre from the header on any POS screen', async () => {
-    const fake = alertsServer('CASHIER', [billForCashier]);
-    const { user } = await renderConsole({ fake, path: '/pos', signedIn: 'CASHIER' });
+    const fake = alertsServer('MANAGER', [billForManagers]);
+    const { user } = await renderConsole({ fake, path: '/pos', signedIn: 'MANAGER' });
     await user.click(await alertsButton(1));
     const sheet = await screen.findByRole('dialog', { name: t('alerts.title') });
     expect(within(sheet).getByText('Table 7 · Bill requested')).toBeInTheDocument();

@@ -37,7 +37,7 @@ beforeAll(async () => {
   kit = await createAuthKit(app);
   manager = await signIn(app, kit, 'MANAGER');
   waiter = await signIn(app, kit, 'WAITER');
-  cashier = await signIn(app, kit, 'CASHIER');
+  cashier = await signIn(app, kit, 'BILLER');
 });
 
 afterAll(async () => {
@@ -284,7 +284,7 @@ describe('[TBL-002] waiter assignment', () => {
     const response = await put(manager, {
       assignments: [
         { staffId: kit.staff.WAITER, sectionIds: [hall.id], tableIds: [] },
-        { staffId: kit.staff.CASHIER, sectionIds: [], tableIds: [t7.id] },
+        { staffId: kit.staff.BILLER, sectionIds: [], tableIds: [t7.id] },
       ],
       reason: 'Lunch shift',
     });
@@ -293,7 +293,7 @@ describe('[TBL-002] waiter assignment', () => {
     expect(previous).toBeNull();
     expect(current.assignments).toEqual([
       { staffId: kit.staff.WAITER, staffName: 'Test waiter', sectionIds: [hall.id], tableIds: [] },
-      { staffId: kit.staff.CASHIER, staffName: 'Test cashier', sectionIds: [], tableIds: [t7.id] },
+      { staffId: kit.staff.BILLER, staffName: 'Test biller', sectionIds: [], tableIds: [t7.id] },
     ]);
     expect(
       await prisma.auditLog.findFirstOrThrow({ where: { action: 'WAITER_ASSIGNMENTS_CHANGED' } }),
@@ -309,7 +309,7 @@ describe('[TBL-002] waiter assignment', () => {
       .assignmentsFor(prisma, kit.restaurantId, current.businessDate);
     expect(domain).toEqual([
       { staffId: kit.staff.WAITER, sectionId: hall.id, tableId: null },
-      { staffId: kit.staff.CASHIER, sectionId: terrace.id, tableId: t7.id },
+      { staffId: kit.staff.BILLER, sectionId: terrace.id, tableId: t7.id },
     ]);
 
     // The same set again records nothing.
@@ -317,7 +317,7 @@ describe('[TBL-002] waiter assignment', () => {
     await put(manager, {
       assignments: [
         { staffId: kit.staff.WAITER, sectionIds: [hall.id], tableIds: [] },
-        { staffId: kit.staff.CASHIER, sectionIds: [], tableIds: [t7.id] },
+        { staffId: kit.staff.BILLER, sectionIds: [], tableIds: [t7.id] },
       ],
     });
     expect(await prisma.auditLog.count({ where: { action: 'WAITER_ASSIGNMENTS_CHANGED' } })).toBe(

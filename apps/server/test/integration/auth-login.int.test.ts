@@ -54,7 +54,7 @@ describe('[AUTH-007] only paired devices reach the login screen', () => {
     const tiles = await server().get('/api/v1/auth/staff-tiles');
     expect(tiles.status).toBe(401);
     expect(ApiError.parse(tiles.body).code).toBe('DEVICE_NOT_RECOGNISED');
-    const login = await pinLogin(newId(), kit.staff.CASHIER, TEST_PINS.CASHIER);
+    const login = await pinLogin(newId(), kit.staff.MANAGER, TEST_PINS.MANAGER);
     expect(login.status).toBe(401);
     expect(ApiError.parse(login.body).code).toBe('DEVICE_NOT_RECOGNISED');
   });
@@ -62,7 +62,7 @@ describe('[AUTH-007] only paired devices reach the login screen', () => {
   it('refuses a revoked device', async () => {
     const deviceId = await addDevice(app, kit);
     await prisma.device.update({ where: { id: deviceId }, data: { status: 'REVOKED' } });
-    expect((await pinLogin(deviceId, kit.staff.CASHIER, TEST_PINS.CASHIER)).status).toBe(401);
+    expect((await pinLogin(deviceId, kit.staff.MANAGER, TEST_PINS.MANAGER)).status).toBe(401);
   });
 });
 
@@ -71,9 +71,10 @@ describe('[AUTH-001] staff tiles', () => {
     const response = await server().get('/api/v1/auth/staff-tiles').set(authHeaders(kit.deviceId));
     expect(response.status).toBe(200);
     const body = StaffTilesResponse.parse(response.body);
+    // No cashier tile: the role is gone (ADR-0023).
     expect(body.staff.map((tile) => tile.role).sort()).toEqual([
-      'CASHIER',
       'KITCHEN',
+      'MANAGER',
       'MANAGER',
       'OWNER',
       'WAITER',
@@ -85,7 +86,7 @@ describe('[AUTH-001] staff tiles', () => {
     const phone = await addDevice(app, kit, 'WAITER_PHONE');
     const tiles = await server().get('/api/v1/auth/staff-tiles').set(authHeaders(phone));
     expect(StaffTilesResponse.parse(tiles.body).staff.map((tile) => tile.role)).toEqual(['WAITER']);
-    for (const role of ['MANAGER', 'OWNER', 'CASHIER'] as const) {
+    for (const role of ['MANAGER', 'OWNER', 'KITCHEN'] as const) {
       const refused = await pinLogin(phone, kit.staff[role], TEST_PINS[role]);
       expect([refused.status, ApiError.parse(refused.body).code]).toEqual([
         403,
@@ -98,10 +99,10 @@ describe('[AUTH-001] staff tiles', () => {
 
 describe('[AUTH-001] [AUTH-002] [AUTH-005] PIN login', () => {
   it('signs in and returns tokens bound to the person, role, restaurant and device', async () => {
-    const response = await pinLogin(kit.deviceId, kit.staff.CASHIER, TEST_PINS.CASHIER);
+    const response = await pinLogin(kit.deviceId, kit.staff.MANAGER, TEST_PINS.MANAGER);
     expect(response.status).toBe(200);
     const body = LoginResponse.parse(response.body);
-    expect(body.staff).toMatchObject({ id: kit.staff.CASHIER, role: 'CASHIER' });
+    expect(body.staff).toMatchObject({ id: kit.staff.MANAGER, role: 'MANAGER' });
     expect(body.session.inactivityTimeoutSeconds).toBe(600);
     const expiresIn = Date.parse(body.accessTokenExpiresAt) - Date.now();
     expect(expiresIn).toBeGreaterThan(14 * 60_000);
@@ -114,8 +115,8 @@ describe('[AUTH-001] [AUTH-002] [AUTH-005] PIN login', () => {
     expect(me.status).toBe(200);
     expect(me.body).toMatchObject({
       principal: {
-        staffId: kit.staff.CASHIER,
-        role: 'CASHIER',
+        staffId: kit.staff.MANAGER,
+        role: 'MANAGER',
         restaurantId: kit.restaurantId,
         deviceId: kit.deviceId,
         sessionId: body.session.id,
@@ -188,7 +189,7 @@ describe('[AUTH-001] [AUTH-002] [AUTH-005] PIN login', () => {
     const response = await server()
       .post('/api/v1/auth/pin-login')
       .set(authHeaders(kit.deviceId))
-      .send({ staffId: kit.staff.CASHIER, pin: '12a4', extra: true });
+      .send({ staffId: kit.staff.MANAGER, pin: '12a4', extra: true });
     expect(response.status).toBe(400);
   });
 });
@@ -197,7 +198,7 @@ describe('[AUTH-003] [AUTH-013] lockout', () => {
   it('locks after 5 failures in 10 minutes, for 15 minutes, and audits it', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     const deviceId = await addDevice(app, kit);
-    const staffId = await addStaff(app, kit, 'CASHIER');
+    const staffId = await addStaff(app, kit, 'MANAGER');
     const codes: string[] = [];
     for (let attempt = 1; attempt <= 5; attempt += 1) {
       const response = await pinLogin(deviceId, staffId, '9999');
@@ -211,13 +212,13 @@ describe('[AUTH-003] [AUTH-013] lockout', () => {
       'INVALID_CREDENTIALS',
       'ACCOUNT_LOCKED',
     ]);
-    const locked = await pinLogin(deviceId, staffId, TEST_PINS.CASHIER);
+    const locked = await pinLogin(deviceId, staffId, TEST_PINS.MANAGER);
     expect(locked.status).toBe(423);
     expect(ApiError.parse(locked.body).details).toHaveProperty('lockedUntil');
     expect(await auditCount('LOGIN_LOCKED', staffId)).toBe(1);
 
     vi.setSystemTime(Date.now() + 15 * 60_000);
-    expect((await pinLogin(deviceId, staffId, TEST_PINS.CASHIER)).status).toBe(200);
+    expect((await pinLogin(deviceId, staffId, TEST_PINS.MANAGER)).status).toBe(200);
   });
 
   it('starts a new window when failures are more than 10 minutes apart', async () => {
@@ -261,7 +262,7 @@ describe('[AUTH-003] [AUTH-013] lockout', () => {
 describe('[PC-S5] [PC-D2] lockouts reach the managers', () => {
   it('alerts the managers and the Owner when a login locks, and clears it when it is unlocked', async () => {
     const deviceId = await addDevice(app, kit);
-    const staffId = await addStaff(app, kit, 'CASHIER');
+    const staffId = await addStaff(app, kit, 'WAITER');
     for (let attempt = 1; attempt <= 5; attempt += 1) await pinLogin(deviceId, staffId, '9999');
     const alert = await prisma.alert.findFirstOrThrow({
       where: { type: 'SIGN_IN_LOCKED', dedupeKey: `lockout:staff:${staffId}` },
@@ -271,7 +272,7 @@ describe('[PC-S5] [PC-D2] lockouts reach the managers', () => {
     expect(alert.payload).toMatchObject({
       scope: 'PERSON',
       staffId,
-      staffName: 'Extra cashier',
+      staffName: 'Extra waiter',
       deviceId,
       method: 'PIN',
     });

@@ -163,7 +163,7 @@ export class ServiceRequestsService {
   /**
    * Raises a request at a table and its alert, in one transaction with the table row locked, so two
    * presses at once cannot both get through the anti-spam check. A Bill also sets the table to
-   * Bill requested (BILL-015) and tells the cashier through its alert.
+   * Bill requested (BILL-015) and tells the managers on duty through its alert.
    */
   private raise(input: {
     restaurantId: string;

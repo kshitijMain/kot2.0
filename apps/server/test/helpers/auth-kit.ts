@@ -13,10 +13,17 @@ import { CredentialHasher } from '../../src/auth/credential-hasher.js';
 import { PrismaService } from '../../src/database/prisma.service.js';
 import { api } from './test-app.js';
 
-export const TEST_PINS: Readonly<Record<Role, string>> = {
+/**
+ * Who a test signs in as: a built-in role, or `BILLER`, a second manager who bills at the POS.
+ * There is no cashier role (ADR-0023); the biller stands where the cashier stood, so a test can
+ * still have two different people at the counter.
+ */
+export type TestPerson = Role | 'BILLER';
+
+export const TEST_PINS: Readonly<Record<TestPerson, string>> = {
   OWNER: '1111',
   MANAGER: '2222',
-  CASHIER: '3333',
+  BILLER: '3333',
   WAITER: '4444',
   KITCHEN: '6666',
 };
@@ -109,8 +116,8 @@ export interface AuthKit {
   readonly restaurantId: string;
   /** A paired POS terminal. */
   readonly deviceId: string;
-  /** One person per role, each with the PIN in TEST_PINS. */
-  readonly staff: Readonly<Record<Role, string>>;
+  /** One person per role and the biller (a second manager), each with the PIN in TEST_PINS. */
+  readonly staff: Readonly<Record<TestPerson, string>>;
 }
 
 /**
@@ -127,25 +134,26 @@ export async function createAuthKit(
   const restaurantId =
     options.restaurantId ??
     (await prisma.restaurant.create({ data: { displayName: 'Auth Dhaba' } })).id;
-  const staff: Partial<Record<Role, string>> = {};
-  for (const role of ROLES) {
+  const staff: Partial<Record<TestPerson, string>> = {};
+  for (const person of [...ROLES, 'BILLER'] as const) {
+    const role: Role = person === 'BILLER' ? 'MANAGER' : person;
     const roleRow = await prisma.role.upsert({
       where: { restaurantId_key: { restaurantId, key: role } },
       create: { restaurantId, key: role, name: role, baseRole: role },
       update: {},
     });
-    const person = await prisma.staff.create({
-      data: { restaurantId, roleId: roleRow.id, displayName: `Test ${role.toLowerCase()}` },
+    const record = await prisma.staff.create({
+      data: { restaurantId, roleId: roleRow.id, displayName: `Test ${person.toLowerCase()}` },
     });
     await prisma.credential.create({
       data: {
         restaurantId,
-        staffId: person.id,
+        staffId: record.id,
         kind: 'PIN',
-        secretHash: await hasher.hash(TEST_PINS[role]),
+        secretHash: await hasher.hash(TEST_PINS[person]),
       },
     });
-    staff[role] = person.id;
+    staff[person] = record.id;
   }
   const settings: [string, unknown][] = [
     // Tests move the clock by hours; device tokens should not be the thing that expires.
@@ -163,7 +171,7 @@ export async function createAuthKit(
   }
   app.get(AuthSettingsService).invalidate();
   const deviceId = await registerDevice(app, restaurantId);
-  return { restaurantId, deviceId, staff: staff as Record<Role, string> };
+  return { restaurantId, deviceId, staff: staff as Record<TestPerson, string> };
 }
 
 /** Another paired device of the kit's restaurant. */
@@ -176,11 +184,11 @@ export function addDevice(
   return registerDevice(app, kit.restaurantId, type, binding);
 }
 
-/** Signs in with the role's PIN on the kit's device (or another one) and returns the tokens. */
+/** Signs in with the person's PIN on the kit's device (or another one) and returns the tokens. */
 export async function signIn(
   app: INestApplication,
   kit: AuthKit,
-  role: Role,
+  role: TestPerson,
   deviceId: string = kit.deviceId,
 ): Promise<LoginResponse> {
   const response = await api(app)
@@ -254,4 +262,47 @@ export async function addStaff(
     },
   });
   return person.id;
+}
+
+/**
+ * A person on a custom role (AUTH-012) built on `baseRole` with `capabilities`, signed in on the
+ * kit's device: e.g. a captain who may discount within the limit, as a cashier could (ADR-0023).
+ */
+export async function signInCustom(
+  app: INestApplication,
+  kit: AuthKit,
+  baseRole: Role,
+  capabilities: readonly string[],
+  pin = '7531',
+): Promise<LoginResponse> {
+  const prisma = app.get(PrismaService);
+  const role = await prisma.role.create({
+    data: {
+      restaurantId: kit.restaurantId,
+      key: `custom:${capabilities.join('+')}:${pin}`,
+      name: `Custom ${pin}`,
+      baseRole,
+      builtIn: false,
+      capabilities: [...capabilities],
+    },
+  });
+  const person = await prisma.staff.create({
+    data: { restaurantId: kit.restaurantId, roleId: role.id, displayName: `Custom ${pin}` },
+  });
+  await prisma.credential.create({
+    data: {
+      restaurantId: kit.restaurantId,
+      staffId: person.id,
+      kind: 'PIN',
+      secretHash: await app.get(CredentialHasher).hash(pin),
+    },
+  });
+  const response = await api(app)
+    .post('/api/v1/auth/pin-login')
+    .set(authHeaders(kit.deviceId))
+    .send({ staffId: person.id, pin });
+  if (response.status !== 200) {
+    throw new Error(`Custom sign-in failed: ${String(response.status)}`);
+  }
+  return LoginResponse.parse(response.body);
 }

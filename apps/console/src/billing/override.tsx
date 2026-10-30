@@ -7,7 +7,7 @@ import { useConsole } from '../app/console-context.js';
 import { useT } from '../app/i18n.js';
 import { messageOf } from '../app/messages.js';
 
-/** The cashier closed the approval without a manager: the action is not taken. */
+/** The approval was closed without a manager: the action is not taken. */
 export class OverrideCancelled extends Error {
   constructor() {
     super('The manager approval was cancelled');
@@ -24,7 +24,7 @@ interface Pending {
 }
 
 /**
- * Manager approval in place (AUTH-011): an action is tried as the cashier; when the server answers
+ * Manager approval in place (AUTH-011): an action is tried as the person signed in; when the server answers
  * OVERRIDE_REQUIRED, a manager chooses their name and enters their PIN on this screen, and the
  * action is sent again with the single-use approval. The approval is for this capability and
  * record only.

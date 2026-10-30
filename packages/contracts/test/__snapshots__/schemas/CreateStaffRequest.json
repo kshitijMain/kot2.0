@@ -3,7 +3,7 @@
     "type": "object",
     "properties": {
       "displayName": { "type": "string", "minLength": 1, "maxLength": 60 },
-      "role": { "type": "string", "enum": ["MANAGER", "CASHIER", "WAITER", "KITCHEN"] },
+      "role": { "type": "string", "enum": ["MANAGER", "WAITER", "KITCHEN"] },
       "customRoleId": {
         "anyOf": [
           {
@@ -37,7 +37,7 @@
     "type": "object",
     "properties": {
       "displayName": { "type": "string", "minLength": 1, "maxLength": 60 },
-      "role": { "type": "string", "enum": ["MANAGER", "CASHIER", "WAITER", "KITCHEN"] },
+      "role": { "type": "string", "enum": ["MANAGER", "WAITER", "KITCHEN"] },
       "customRoleId": {
         "anyOf": [
           {

@@ -121,8 +121,8 @@ describe('[MGR-006] the device list', () => {
   });
 
   it('is linked only for people who pair devices', async () => {
-    const fake = signsInAs(server(), 'CASHIER');
-    await renderConsole({ fake, path: PATH, signedIn: 'CASHIER' });
+    const fake = signsInAs(server(), 'WAITER');
+    await renderConsole({ fake, path: PATH, signedIn: 'WAITER' });
     await waitFor(() => {
       expect(screen.queryByRole('link', { name: t('dashboard.section.devices') })).toBeNull();
     });

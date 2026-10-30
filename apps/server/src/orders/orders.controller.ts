@@ -233,7 +233,7 @@ export class OrderItemsController {
     );
   }
 
-  // Cashiers and waiters: the guard has consumed a manager's override token (AUTH-011).
+  // Waiters: the guard has consumed a manager's override token (AUTH-011).
   @Post(':orderItemId/void')
   @HttpCode(200)
   @RequireCapability('ITEM_VOID_AFTER_PREP', { record: 'orderItemId' })

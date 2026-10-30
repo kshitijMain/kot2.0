@@ -378,7 +378,7 @@ describe('[AUD-003] [AUTH-010] [SEC-003] audit HTTP API and permission guard', (
     expect(ApiError.parse(response.body).code).toBe('UNAUTHENTICATED');
   });
 
-  it.each(['CASHIER', 'WAITER', 'KITCHEN'] as const)('refuses %s (403)', async (role) => {
+  it.each(['WAITER', 'KITCHEN'] as const)('refuses %s (403)', async (role) => {
     const response = await request(httpServer(app)).get('/api/v1/audit/verify').set(as(role));
     expect(response.status).toBe(403);
     expect(ApiError.parse(response.body).code).toBe('FORBIDDEN');
@@ -407,7 +407,7 @@ describe('[AUD-003] [AUTH-010] [SEC-003] audit HTTP API and permission guard', (
   it('asks for a manager override instead of allowing an OVERRIDE grant', async () => {
     const response = await request(httpServer(app))
       .post('/api/v1/probe-audit/void')
-      .set(as('CASHIER'));
+      .set(as('WAITER'));
     expect(response.status).toBe(403);
     expect(ApiError.parse(response.body).code).toBe('OVERRIDE_REQUIRED');
     const manager = await request(httpServer(app))

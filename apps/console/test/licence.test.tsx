@@ -16,7 +16,7 @@ function enforced(overrides: Record<string, unknown>) {
   return quietLicence({ enforced: true, ...overrides });
 }
 
-function withLicence(role: 'CASHIER' | 'OWNER' | 'MANAGER', ...bodies: object[]) {
+function withLicence(role: 'MANAGER' | 'OWNER', ...bodies: object[]) {
   return signsInAs(server(), role)
     .on('GET', '/api/v1/tables/overview', () => ({ status: 200, body: { tables: [] } }))
     .on('GET', '/api/v1/floor', () => ({ status: 200, body: { sections: [] } }))
@@ -35,8 +35,8 @@ afterEach(() => {
 describe('[LIC-005] [LIC-008] the licence on staff screens', () => {
   it('shows the days left in grace on the POS', async () => {
     await renderConsole({
-      fake: withLicence('CASHIER', enforced({ state: 'GRACE', recorded: 'GRACE', daysLeft: 3 })),
-      signedIn: 'CASHIER',
+      fake: withLicence('MANAGER', enforced({ state: 'GRACE', recorded: 'GRACE', daysLeft: 3 })),
+      signedIn: 'MANAGER',
       path: '/pos',
     });
     expect(await screen.findByText(t('licence.banner.grace', { count: 3 }))).toBeInTheDocument();
@@ -45,7 +45,7 @@ describe('[LIC-005] [LIC-008] the licence on staff screens', () => {
   it('says when a restriction will start, and then that new orders are paused', async () => {
     const { container } = await renderConsole({
       fake: withLicence(
-        'CASHIER',
+        'MANAGER',
         enforced({
           state: 'GRACE',
           recorded: 'RESTRICTED',
@@ -54,7 +54,7 @@ describe('[LIC-005] [LIC-008] the licence on staff screens', () => {
           daysLeft: 1,
         }),
       ),
-      signedIn: 'CASHIER',
+      signedIn: 'MANAGER',
       path: '/pos',
     });
     expect(
@@ -67,8 +67,8 @@ describe('[LIC-005] [LIC-008] the licence on staff screens', () => {
 
   it('puts the payment reminder off until tomorrow with one tap', async () => {
     const { user } = await renderConsole({
-      fake: withLicence('CASHIER', enforced({ state: 'PAYMENT_DUE', recorded: 'PAYMENT_DUE' })),
-      signedIn: 'CASHIER',
+      fake: withLicence('MANAGER', enforced({ state: 'PAYMENT_DUE', recorded: 'PAYMENT_DUE' })),
+      signedIn: 'MANAGER',
       path: '/pos',
     });
     const reminder = await screen.findByText(t('licence.banner.paymentDue'));
@@ -78,8 +78,8 @@ describe('[LIC-005] [LIC-008] the licence on staff screens', () => {
 
   it('shows nothing where the licence does not apply (development)', async () => {
     await renderConsole({
-      fake: withLicence('CASHIER', quietLicence({ state: 'RESTRICTED', recorded: 'RESTRICTED' })),
-      signedIn: 'CASHIER',
+      fake: withLicence('MANAGER', quietLicence({ state: 'RESTRICTED', recorded: 'RESTRICTED' })),
+      signedIn: 'MANAGER',
       path: '/pos',
     });
     await waitFor(() => {

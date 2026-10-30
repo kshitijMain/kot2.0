@@ -22,11 +22,10 @@ datasource db {
 
 // ---------------------------------------------------------------- enums (mirror @rp/domain)
 
-/// Built-in roles (@rp/domain ROLES).
+/// Built-in roles (@rp/domain ROLES). There is no cashier (ADR-0023).
 enum StaffRole {
   OWNER
   MANAGER
-  CASHIER
   WAITER
   KITCHEN
 }
@@ -1792,6 +1791,26 @@ model EventConsumerCursor {
   updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 
   @@map("event_consumer_cursors")
+}
+
+/// Audit entries a migration could not write itself, because the chain's hashes are computed by
+/// the server (ADR-0023): `PendingAuditService` writes each into `audit_log` at start-up and sets
+/// `recordedAt`. Never deleted.
+model PendingAuditEntry {
+  id           String    @id @default(uuid(7)) @db.Uuid
+  restaurantId String    @map("restaurant_id") @db.Uuid
+  action       String
+  entityType   String    @map("entity_type")
+  entityId     String?   @map("entity_id") @db.Uuid
+  before       Json?
+  after        Json?
+  reason       String?
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz(3)
+  recordedAt   DateTime? @map("recorded_at") @db.Timestamptz(3)
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@index([recordedAt])
+  @@map("pending_audit_entries")
 }
 
 model AuditLog {

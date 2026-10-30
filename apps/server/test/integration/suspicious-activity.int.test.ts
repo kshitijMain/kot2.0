@@ -123,7 +123,7 @@ async function pay(invoice: InvoiceView, mode: 'CASH' | 'UPI'): Promise<InvoiceP
 async function overrideToken(capability: Capability, entityId: string): Promise<string> {
   return OverrideResponse.parse(
     (
-      await server().post('/api/v1/auth/override').set(as(cashier)).send({
+      await server().post('/api/v1/auth/override').set(as(waiter)).send({
         approverStaffId: kit.staff.MANAGER,
         pin: TEST_PINS.MANAGER,
         capability,
@@ -174,7 +174,7 @@ beforeAll(async () => {
   prisma = app.get(PrismaService);
   kit = await createAuthKit(app);
   manager = await signIn(app, kit, 'MANAGER');
-  cashier = await signIn(app, kit, 'CASHIER');
+  cashier = await signIn(app, kit, 'BILLER');
   waiter = await signIn(app, kit, 'WAITER');
   kitchen = await signIn(app, kit, 'KITCHEN');
   const base = { restaurantId: kit.restaurantId };
@@ -266,16 +266,17 @@ beforeAll(async () => {
   const t1Bill = await bill({ tableSessionId: t1 });
   invoices.t1 = await issue(t1Bill.id);
   await print(invoices.t1.id);
-  const editToken = await overrideToken('BILL_EDIT_AFTER_PRINT', invoices.t1.id);
+  // A manager edits a printed bill without anyone's approval (no cashier, ADR-0023).
   const reopened = await server()
     .post(`/api/v1/invoices/${invoices.t1.id}/reopen`)
-    .set({ ...as(cashier), 'x-override-token': editToken })
+    .set(as(cashier))
     .send({ reason: 'Guest sent the water back' });
   expect(reopened.status, JSON.stringify(reopened.body)).toBe(200);
+  // A waiter voids a dish the kitchen started, with a manager's PIN.
   const voidToken = await overrideToken('ITEM_VOID_AFTER_PREP', water);
   const voided = await server()
     .post(`/api/v1/order-items/${water}/void`)
-    .set({ ...as(cashier), 'x-override-token': voidToken })
+    .set({ ...as(waiter), 'x-override-token': voidToken })
     .send({ reason: 'Spilled' });
   expect(voided.status, JSON.stringify(voided.body)).toBe(200);
   invoices.t1Edited = await issue(t1Bill.id);
@@ -307,10 +308,9 @@ beforeAll(async () => {
     lines: [line('Lassi', 2)],
   });
   const t2Bill = await bill({ tableSessionId: t2 });
-  const discountToken = await overrideToken('DISCOUNT_ABOVE_LIMIT', t2Bill.id);
   const discounted = await server()
     .post(`/api/v1/bills/${t2Bill.id}/discounts`)
-    .set({ ...as(cashier), 'x-override-token': discountToken })
+    .set(as(cashier))
     .send({ kind: 'PERCENT', rateBp: 3_000, reason: 'Friend of the owner' });
   expect(discounted.status, JSON.stringify(discounted.body)).toBe(200);
   invoices.t2 = await issue(t2Bill.id);
@@ -373,7 +373,7 @@ describe('[BILL-016] [AUD-006] the cash drawer', () => {
       where: { action: 'CASH_DRAWER_OPENED' },
     });
     expect(entry).toMatchObject({
-      actorId: kit.staff.CASHIER,
+      actorId: kit.staff.BILLER,
       deviceId: kit.deviceId,
       reason: 'Change for a 500 note',
     });
@@ -427,7 +427,7 @@ describe('[RPT-014] [AUD-006] the suspicious-activity report (S12)', () => {
     expect(flags).toHaveLength(2);
     const item = flags.find((flag) => flag.item === 'Water');
     expect(item).toMatchObject({
-      by: { id: kit.staff.CASHIER },
+      by: { id: kit.staff.WAITER },
       approvedBy: { id: kit.staff.MANAGER },
       reason: 'Spilled',
       invoiceId: invoices.t1?.id,
@@ -448,8 +448,8 @@ describe('[RPT-014] [AUD-006] the suspicious-activity report (S12)', () => {
   it('[AUD-006] flags a printed bill edited under its number, with the change in the total', async () => {
     const [edit] = flagsOf(await report(), 'EDIT_AFTER_PRINT');
     expect(edit).toMatchObject({
-      by: { id: kit.staff.CASHIER },
-      approvedBy: { id: kit.staff.MANAGER },
+      by: { id: kit.staff.BILLER },
+      approvedBy: null,
       reason: 'Guest sent the water back',
       invoiceNumber: invoices.t1?.invoiceNumber,
       amount: (invoices.t1Edited?.grandTotal ?? 0) - (invoices.t1?.grandTotal ?? 0),
@@ -462,8 +462,8 @@ describe('[RPT-014] [AUD-006] the suspicious-activity report (S12)', () => {
     expect(result.thresholds.discountFlagBp).toBe(2_000);
     expect(flagsOf(result, 'DISCOUNT_OVER_LIMIT')).toEqual([
       expect.objectContaining({
-        by: { id: kit.staff.CASHIER, name: expect.any(String) as string },
-        approvedBy: expect.objectContaining({ id: kit.staff.MANAGER }) as object,
+        by: { id: kit.staff.BILLER, name: expect.any(String) as string },
+        approvedBy: null,
         rateBp: 3_000,
         reason: 'Friend of the owner',
         invoiceId: invoices.t2?.id,
@@ -486,7 +486,7 @@ describe('[RPT-014] [AUD-006] the suspicious-activity report (S12)', () => {
     });
     const billFlag = flags.find((flag) => flag.invoiceId !== null);
     expect(billFlag).toMatchObject({
-      by: { id: kit.staff.CASHIER },
+      by: { id: kit.staff.BILLER },
       alsoBy: [],
       count: 2,
       invoiceNumber: invoices.t1?.invoiceNumber,
@@ -500,7 +500,7 @@ describe('[RPT-014] [AUD-006] the suspicious-activity report (S12)', () => {
     expect(flagsOf(await report(), 'CANCELLED_AFTER_PREP')).toEqual([
       expect.objectContaining({
         item: 'Water',
-        by: expect.objectContaining({ id: kit.staff.CASHIER }) as object,
+        by: expect.objectContaining({ id: kit.staff.WAITER }) as object,
         approvedBy: expect.objectContaining({ id: kit.staff.MANAGER }) as object,
         amount: 2_000,
       }),
@@ -510,7 +510,7 @@ describe('[RPT-014] [AUD-006] the suspicious-activity report (S12)', () => {
   it('[AUD-006] lists no-sale drawer openings with who and why', async () => {
     expect(flagsOf(await report(), 'NO_SALE_DRAWER')).toEqual([
       expect.objectContaining({
-        by: expect.objectContaining({ id: kit.staff.CASHIER }) as object,
+        by: expect.objectContaining({ id: kit.staff.BILLER }) as object,
         reason: 'Change for a 500 note',
       }),
     ]);
@@ -539,7 +539,7 @@ describe('[RPT-014] [AUD-006] the suspicious-activity report (S12)', () => {
     const result = await report();
     expect(flagsOf(result, 'CASH_VARIANCE')).toEqual([
       expect.objectContaining({
-        by: expect.objectContaining({ id: kit.staff.CASHIER }) as object,
+        by: expect.objectContaining({ id: kit.staff.BILLER }) as object,
         amount: -50_000,
       }),
     ]);
@@ -549,7 +549,7 @@ describe('[RPT-014] [AUD-006] the suspicious-activity report (S12)', () => {
         quantity: 3,
         amount: 6_000,
         orderId: id('unbilled'),
-        by: expect.objectContaining({ id: kit.staff.CASHIER }) as object,
+        by: expect.objectContaining({ id: kit.staff.BILLER }) as object,
         kotNumber: expect.any(Number) as number,
       }),
     ]);
@@ -568,12 +568,13 @@ describe('[RPT-014] [AUD-006] the suspicious-activity report (S12)', () => {
       NO_SALE_DRAWER: 1,
     });
     const [first, ...others] = result.people.map((person) => [person.id, person.count]);
-    expect(first).toEqual([kit.staff.CASHIER, 8]);
+    // The waiter voided the Water with a manager's PIN: two of the flags are theirs.
+    expect(first).toEqual([kit.staff.BILLER, 6]);
     expect(others).toHaveLength(2);
     expect(others).toEqual(
       expect.arrayContaining([
         [kit.staff.MANAGER, 1],
-        [kit.staff.WAITER, 1],
+        [kit.staff.WAITER, 3],
       ]),
     );
   });
@@ -590,8 +591,8 @@ describe('[RPT-014] [AUD-006] the suspicious-activity report (S12)', () => {
     expect(file.content).toContain('Change for a 500 note');
   });
 
-  it('[RPT-014] is a manager report: cashiers and waiters cannot read it', async () => {
-    for (const login of [cashier, waiter]) {
+  it('[RPT-014] is a manager report: waiters cannot read it', async () => {
+    for (const login of [waiter]) {
       const response = await server()
         .get('/api/v1/reports/suspicious')
         .query({ from: today, to: today })

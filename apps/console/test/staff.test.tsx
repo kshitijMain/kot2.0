@@ -137,7 +137,7 @@ describe('[MGR-004] the Staff page', () => {
       within(role)
         .getAllByRole('option')
         .map((option) => option.textContent),
-    ).toEqual([t('roles.CASHIER'), t('roles.WAITER'), t('roles.KITCHEN')]);
+    ).toEqual([t('roles.WAITER'), t('roles.KITCHEN')]);
     expect(role).toHaveValue('WAITER');
 
     await user.click(within(add).getByRole('button', { name: t('staff.form.add') }));
@@ -178,7 +178,7 @@ describe('[MGR-004] the Staff page', () => {
       }),
       () => ({
         status: 200,
-        body: staffView('WAITER', { displayName: 'Ravi K', role: 'CASHIER' }),
+        body: staffView('WAITER', { displayName: 'Ravi K', role: 'MANAGER' }),
       }),
     );
     const { user } = await renderConsole({ fake, path: '/manage/staff', signedIn: 'MANAGER' });
@@ -190,7 +190,7 @@ describe('[MGR-004] the Staff page', () => {
     await fillPerson(user, edit, { name: 'Ravi K' });
     await user.selectOptions(
       within(edit).getByRole('combobox', { name: t('staff.form.role') }),
-      'CASHIER',
+      'MANAGER',
     );
     await user.click(within(edit).getByRole('button', { name: t('staff.form.save') }));
     expect(await within(edit).findByRole('alert')).toHaveTextContent(
@@ -199,8 +199,8 @@ describe('[MGR-004] the Staff page', () => {
     await user.click(within(edit).getByRole('button', { name: t('staff.form.save') }));
     expect(await toastSays(t('staff.saved', { name: 'Ravi K' }))).toBeVisible();
     expect(fake.callsTo('PATCH', `/api/v1/staff/${RAVI}`).map((call) => call.body)).toEqual([
-      { displayName: 'Ravi K', role: 'CASHIER' },
-      { displayName: 'Ravi K', role: 'CASHIER' },
+      { displayName: 'Ravi K', role: 'MANAGER' },
+      { displayName: 'Ravi K', role: 'MANAGER' },
     ]);
   });
 
@@ -436,10 +436,10 @@ describe('[AUTH-006] the Owner’s second factor', () => {
 });
 
 describe('[SEC-003] [AUTH-010] who opens the Staff and Security pages', () => {
-  it('does not open Staff for a cashier', async () => {
+  it('does not open Staff for a waiter', async () => {
     await renderConsole({
-      fake: signsInAs(server(), 'CASHIER'),
-      signedIn: 'CASHIER',
+      fake: signsInAs(server(), 'WAITER'),
+      signedIn: 'WAITER',
       path: '/manage/staff',
     });
     expect(
@@ -460,8 +460,8 @@ describe('[AUTH-001] the sign-in screen', () => {
     const fake = server().on(
       'GET',
       '/api/v1/auth/staff-tiles',
-      () => ({ status: 200, body: { staff: [STAFF.CASHIER] } }),
-      () => ({ status: 200, body: { staff: [STAFF.CASHIER, STAFF.WAITER] } }),
+      () => ({ status: 200, body: { staff: [STAFF.MANAGER] } }),
+      () => ({ status: 200, body: { staff: [STAFF.MANAGER, STAFF.WAITER] } }),
     );
     const { sockets } = await renderConsole({ fake });
     expect(await screen.findByRole('button', { name: /Asha/ })).toBeVisible();

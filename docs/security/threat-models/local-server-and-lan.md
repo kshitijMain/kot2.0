@@ -258,7 +258,7 @@ A modified app sends its own prices, discounts, a staff id or a role, hoping the
 
 #### PC-T2 A manager's approval used on another record
 
-A cashier asks a manager to approve voiding a ₹200 dish, then uses the approval to void a ₹2,000
+A waiter asks a manager to approve voiding a ₹200 dish, then uses the approval to void a ₹2,000
 one or another bill; the audit names the manager as the approver.
 
 - Mitigation: an approval is for one capability and one record, used once, within 2 minutes, by
@@ -415,7 +415,7 @@ that is something else.
 
 #### PC-R1 Staff deny a void, discount, edit or payment
 
-A cashier or manager says they never voided, discounted, edited or took a payment.
+A manager says they never voided, discounted, edited or took a payment.
 
 - Mitigation: every money and security action writes an audit entry with the actor, the approver,
   the device, before and after, the reason and the correlation id, in the same transaction as the
@@ -902,7 +902,7 @@ A manager, or someone with the Owner's PIN, changes tax groups, invoice series o
 
 #### PC-E5 Approving one's own override
 
-A manager approves their own void, or a cashier approves with another cashier's PIN.
+A manager approves their own void, or a waiter approves with another waiter's PIN.
 
 - Mitigation: the approver must be a manager and not the person asking.
 - Code: `apps/server/src/auth/auth.service.ts` (`grantOverride`).

@@ -1,9 +1,11 @@
 /**
  * Role-based permissions from BRD §4.2. The server enforces these on every REST call,
  * socket event and MQTT topic (AUTH-010, SEC-003); clients use them only to decide what to show.
+ * There is no cashier role (ADR-0023): managers and the Owner bill, take payments and run the cash
+ * drawer from the POS.
  */
 
-export const ROLES = ['OWNER', 'MANAGER', 'CASHIER', 'WAITER', 'KITCHEN'] as const;
+export const ROLES = ['OWNER', 'MANAGER', 'WAITER', 'KITCHEN'] as const;
 export type Role = (typeof ROLES)[number];
 
 /**
@@ -50,8 +52,8 @@ export type Capability = (typeof CAPABILITIES)[number];
 
 type Row = Readonly<Record<Role, Grant>>;
 
-function row(owner: Grant, manager: Grant, cashier: Grant, waiter: Grant, kitchen: Grant): Row {
-  return { OWNER: owner, MANAGER: manager, CASHIER: cashier, WAITER: waiter, KITCHEN: kitchen };
+function row(owner: Grant, manager: Grant, waiter: Grant, kitchen: Grant): Row {
+  return { OWNER: owner, MANAGER: manager, WAITER: waiter, KITCHEN: kitchen };
 }
 
 const A = 'ALLOW';
@@ -59,38 +61,38 @@ const O = 'OWN';
 const P = 'OVERRIDE';
 const D = 'DENY';
 
-/** The default permission matrix, transcribed from BRD §4.2. */
+/** The default permission matrix, transcribed from BRD §4.2 without its cashier column (ADR-0023). */
 export const DEFAULT_PERMISSION_MATRIX: Readonly<Record<Capability, Row>> = {
-  ORDER_CREATE: row(A, A, A, A, D),
-  ORDER_APPROVE_CUSTOMER: row(A, A, A, O, D),
-  ITEM_CANCEL_BEFORE_PREP: row(A, A, A, O, D),
-  ITEM_VOID_AFTER_PREP: row(A, A, P, P, D),
-  ITEM_MARK_PREPARING_READY: row(A, A, D, D, A),
-  ITEM_MARK_PICKED_UP: row(A, A, A, A, A),
-  ITEM_MARK_SERVED: row(A, A, A, A, D),
-  STOCK_MANAGE: row(A, A, A, D, A),
-  TABLE_MOVE_MERGE: row(A, A, A, O, D),
-  BILL_REQUEST: row(A, A, A, A, D),
-  BILL_PRINT_AND_PAYMENT: row(A, A, A, D, D),
-  DISCOUNT_WITHIN_LIMIT: row(A, A, A, D, D),
-  DISCOUNT_ABOVE_LIMIT: row(A, A, P, D, D),
-  SERVICE_CHARGE_REMOVE: row(A, A, A, D, D),
-  BILL_REPRINT: row(A, A, A, D, D),
-  BILL_EDIT_AFTER_PRINT: row(A, A, P, D, D),
-  INVOICE_VOID: row(A, A, P, D, D),
-  CASH_MOVEMENT_AND_SHIFT_CLOSE: row(A, A, O, D, D),
-  DAY_END_CLOSE: row(A, A, D, D, D),
-  MENU_MANAGE: row(A, A, D, D, D),
-  STAFF_MANAGE: row(A, A, D, D, D),
-  DEVICE_PAIR: row(A, A, D, D, D),
-  OPERATIONS_CONFIGURE: row(A, A, D, D, D),
-  TAX_AND_INVOICE_SETTINGS: row(A, D, D, D, D),
-  REPORTS_VIEW_EXPORT: row(A, A, O, D, D),
-  AUDIT_VIEW: row(A, A, D, D, D),
-  DATA_ADMIN: row(A, D, D, D, D),
-  LICENSE_VIEW: row(A, A, D, D, D),
-  LICENSE_MANAGE: row(A, D, D, D, D),
-  UPDATE_INSTALL_NOW: row(A, A, D, D, D),
+  ORDER_CREATE: row(A, A, A, D),
+  ORDER_APPROVE_CUSTOMER: row(A, A, O, D),
+  ITEM_CANCEL_BEFORE_PREP: row(A, A, O, D),
+  ITEM_VOID_AFTER_PREP: row(A, A, P, D),
+  ITEM_MARK_PREPARING_READY: row(A, A, D, A),
+  ITEM_MARK_PICKED_UP: row(A, A, A, A),
+  ITEM_MARK_SERVED: row(A, A, A, D),
+  STOCK_MANAGE: row(A, A, D, A),
+  TABLE_MOVE_MERGE: row(A, A, O, D),
+  BILL_REQUEST: row(A, A, A, D),
+  BILL_PRINT_AND_PAYMENT: row(A, A, D, D),
+  DISCOUNT_WITHIN_LIMIT: row(A, A, D, D),
+  DISCOUNT_ABOVE_LIMIT: row(A, A, D, D),
+  SERVICE_CHARGE_REMOVE: row(A, A, D, D),
+  BILL_REPRINT: row(A, A, D, D),
+  BILL_EDIT_AFTER_PRINT: row(A, A, D, D),
+  INVOICE_VOID: row(A, A, D, D),
+  CASH_MOVEMENT_AND_SHIFT_CLOSE: row(A, A, D, D),
+  DAY_END_CLOSE: row(A, A, D, D),
+  MENU_MANAGE: row(A, A, D, D),
+  STAFF_MANAGE: row(A, A, D, D),
+  DEVICE_PAIR: row(A, A, D, D),
+  OPERATIONS_CONFIGURE: row(A, A, D, D),
+  TAX_AND_INVOICE_SETTINGS: row(A, D, D, D),
+  REPORTS_VIEW_EXPORT: row(A, A, D, D),
+  AUDIT_VIEW: row(A, A, D, D),
+  DATA_ADMIN: row(A, D, D, D),
+  LICENSE_VIEW: row(A, A, D, D),
+  LICENSE_MANAGE: row(A, D, D, D),
+  UPDATE_INSTALL_NOW: row(A, A, D, D),
 };
 
 /**
@@ -120,9 +122,9 @@ export const OVERRIDE_RECORD_TYPES: Readonly<Partial<Record<Capability, string>>
 
 /**
  * Built-in roles a custom role can build on (AUTH-012). The Owner and managers already have every
- * grantable capability, so a custom role starts from a cashier, waiter or kitchen role.
+ * grantable capability, so a custom role starts from a waiter or kitchen role.
  */
-export const CUSTOM_ROLE_BASES = ['CASHIER', 'WAITER', 'KITCHEN'] as const;
+export const CUSTOM_ROLE_BASES = ['WAITER', 'KITCHEN'] as const;
 export type CustomRoleBase = (typeof CUSTOM_ROLE_BASES)[number];
 
 /**
@@ -165,7 +167,17 @@ export function actorGrant(
   if (GRANTABLE.has(capability) && actor.extraCapabilities?.includes(capability) === true) {
     return 'ALLOW';
   }
-  return grantFor(actor.role, capability, matrix);
+  const grant = grantFor(actor.role, capability, matrix);
+  // BILL-005: whoever may discount within the limit gives more with a manager's PIN. With no
+  // cashier (ADR-0023) that is a custom role allowed discounts within the limit.
+  if (
+    capability === 'DISCOUNT_ABOVE_LIMIT' &&
+    grant === 'DENY' &&
+    actorGrant(actor, 'DISCOUNT_WITHIN_LIMIT', matrix) === 'ALLOW'
+  ) {
+    return 'OVERRIDE';
+  }
+  return grant;
 }
 
 export interface CustomRoleDraft {
@@ -182,7 +194,7 @@ export type CustomRoleProblem =
   | 'NOTHING_ADDED';
 
 /**
- * Checks a custom role (AUTH-012): a name no other role uses, a cashier, waiter or kitchen base,
+ * Checks a custom role (AUTH-012): a name no other role uses, a waiter or kitchen base,
  * only grantable capabilities, and at least one the base role does not already have.
  */
 export function checkCustomRole(

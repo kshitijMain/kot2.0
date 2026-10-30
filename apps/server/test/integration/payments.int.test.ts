@@ -35,9 +35,9 @@ beforeAll(async () => {
   prisma = app.get(PrismaService);
   kit = await createAuthKit(app);
   manager = await signIn(app, kit, 'MANAGER');
-  cashier = await signIn(app, kit, 'CASHIER');
+  cashier = await signIn(app, kit, 'BILLER');
   waiter = await signIn(app, kit, 'WAITER');
-  const otherId = await addStaff(app, kit, 'CASHIER', '3939');
+  const otherId = await addStaff(app, kit, 'MANAGER', '3939');
   otherCashier = LoginResponse.parse(
     (
       await server()
@@ -289,15 +289,16 @@ describe('[BILL-008] recording payments', () => {
 });
 
 describe('[BILL-013] [AUD-006] cash in the drawer and closing the shift', () => {
-  it('records cash in and out with a reason, the cashier on their own shift only', async () => {
+  it('records cash in and out with a reason, by any manager on any shift', async () => {
     const move = (login: LoginResponse, body: object) =>
       server().post(`/api/v1/shifts/${shift.id}/cash-movements`).set(as(login)).send(body);
     expect((await move(waiter, { direction: 'IN', amount: 100, reason: 'Change' })).status).toBe(
       403,
     );
+    // Another manager may record cash on this shift (no cashier's own shift, ADR-0023).
     expect(
       (await move(otherCashier, { direction: 'IN', amount: 100, reason: 'Change' })).status,
-    ).toBe(403);
+    ).toBe(200);
     expect((await move(cashier, { direction: 'IN', amount: 10_000 })).status).toBe(400);
 
     const cashIn = await move(cashier, {
@@ -311,17 +312,18 @@ describe('[BILL-013] [AUD-006] cash in the drawer and closing the shift', () => 
     );
     expect(byManager).toMatchObject({
       cashPayments: 27_200,
-      cashIn: 10_000,
+      cashIn: 10_100,
       cashOut: 5_000,
-      expectedCash: 232_200,
+      expectedCash: 232_300,
     });
     expect(byManager.movements.map((movement) => movement.reason)).toEqual([
+      'Change',
       'Change from the bank',
       'Milk delivery',
     ]);
     expect(
       await prisma.auditLog.count({ where: { action: { in: ['CASH_IN', 'CASH_OUT'] } } }),
-    ).toBe(2);
+    ).toBe(3);
   });
 
   it('closes against a denomination count and records the variance', async () => {
@@ -332,16 +334,16 @@ describe('[BILL-013] [AUD-006] cash in the drawer and closing the shift', () => 
     expect(closed.status, JSON.stringify(closed.body)).toBe(200);
     expect(ShiftView.parse(closed.body)).toMatchObject({
       status: 'CLOSED',
-      expectedCash: 232_200,
+      expectedCash: 232_300,
       countedCash: 232_000,
-      variance: -200,
+      variance: -300,
       denominations: { '500': 4, '100': 3, '10': 2 },
     });
     const audit = await prisma.auditLog.findFirstOrThrow({ where: { action: 'SHIFT_CLOSED' } });
     expect(audit.after).toMatchObject({
-      expectedCash: 232_200,
+      expectedCash: 232_300,
       countedCash: 232_000,
-      variance: -200,
+      variance: -300,
     });
 
     const late = await server()

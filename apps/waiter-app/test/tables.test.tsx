@@ -195,7 +195,7 @@ describe('[TBL-005] [WTR-008] moving a table and asking for the bill', () => {
     await fireEvent.press(await tile(/^T2, Occupied/));
     await fireEvent.press(await screen.findByRole('button', { name: 'Request bill' }));
     expect(
-      await screen.findByText('The cashier has been asked for the bill for T2.'),
+      await screen.findByText('The managers have been asked for the bill for T2.'),
     ).toBeOnTheScreen();
     expect(
       server.callsTo(

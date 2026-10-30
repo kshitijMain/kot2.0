@@ -111,7 +111,7 @@ of truth for the restaurant.
 - Audit (AUTH-013): LOGIN, LOGIN_FAILED, LOGIN_LOCKED, LOGOUT, STAFF_UNLOCKED, STEP_UP,
   OVERRIDE_GRANTED, OVERRIDE_DENIED, REFRESH_TOKEN_REUSED, OWNER_PASSWORD_SET/CHANGED,
   TOTP_ENROLMENT_STARTED, TOTP_ENROLLED. PINs, passwords, codes and tokens are redacted from logs.
-- Development PINs from `db:seed`: Owner 1111, Manager 2222, Cashier 3333, waiters 4444 and 5555,
+- Development PINs from `db:seed`: Owner 1111, managers 2222 and 3333, waiters 4444 and 5555,
   kitchen 6666 (development only).
 
 Each area is one Nest module registered in `src/app.module.ts`. Still to come: sync, licensing,
@@ -621,7 +621,7 @@ clock, which the scenarios move from day to day:
 connections (tablets, waiter phones, kitchen screens, POS, dashboards and console screens, each
 re-reading its screen after events as the apps do), 30 pagers on MQTTS and 8 printers on raw TCP.
 Orders arrive open-loop at the peak rate; the kitchen cooks, waiters approve, pick up and serve,
-diners call, cashiers bill and print, managers change availability and run reports. Diners at the
+diners call, managers bill and print, managers change availability and run reports. Diners at the
 tables without a tablet order on their QR page through the QR relay, which runs in the harness
 (`@rp/relay/testing`, with its Realtime stand-in) behind simulated internet lines; the server syncs
 with it as on the restaurant PC (NFR-P05, NFR-P06). At the end the server is killed and every

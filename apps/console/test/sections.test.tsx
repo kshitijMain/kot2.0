@@ -197,15 +197,15 @@ describe('[TBL-002] [MGR-004] today’s sections', () => {
   });
 
   it('keeps the Staff area to those who manage staff, and unknown pages to its first', async () => {
-    const cashier = await renderConsole({
-      fake: signsInAs(server(), 'CASHIER'),
+    const waiter = await renderConsole({
+      fake: signsInAs(server(), 'WAITER'),
       path: PATH,
-      signedIn: 'CASHIER',
+      signedIn: 'WAITER',
     });
     expect(
       await screen.findByText(t('modes.notAllowed', { mode: t('modes.manage') })),
     ).toBeInTheDocument();
-    cashier.unmount();
+    waiter.unmount();
 
     await renderConsole({
       fake: sectionsServer(),

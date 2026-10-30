@@ -18,7 +18,6 @@ export interface RecipientSubject {
  * - the responsible waiter of the table session (TBL-002);
  * - the waiters assigned to the table's section today (shift assignments);
  * - managers on duty: Owner and managers signed in on a device now, else every active manager;
- * - cashiers on duty: those with an open cash shift, else those signed in;
  * - the Owner.
  */
 export async function recipientContext(
@@ -28,7 +27,7 @@ export async function recipientContext(
   reachable: (staffId: string) => boolean,
 ): Promise<RecipientContext> {
   const { restaurantId } = subject;
-  const [session, table, staff, signedIn, shifts] = await Promise.all([
+  const [session, table, staff, signedIn] = await Promise.all([
     subject.tableSessionId === null
       ? Promise.resolve(null)
       : tx.tableSession.findUnique({
@@ -49,13 +48,11 @@ export async function recipientContext(
       where: { restaurantId, revokedAt: null, expiresAt: { gt: now } },
       select: { staffId: true },
     }),
-    tx.shift.findMany({ where: { restaurantId, status: 'OPEN' }, select: { staffId: true } }),
   ]);
   const byRole = (roles: readonly string[]) =>
     staff.filter((person) => roles.includes(person.role.baseRole)).map((person) => person.id);
   const online = new Set(signedIn.map((entry) => entry.staffId));
   const managers = byRole(['OWNER', 'MANAGER']);
-  const cashiers = byRole(['CASHIER']);
   const onDuty = (ids: readonly string[], preferred: ReadonlySet<string>) => {
     const present = ids.filter((id) => preferred.has(id));
     return present.length > 0 ? present : [...ids];
@@ -82,7 +79,6 @@ export async function recipientContext(
     sectionWaiterIds: [...new Set(sectionWaiterIds)],
     allWaiterIds: byRole(['WAITER']),
     managersOnDuty: onDuty(managers, online),
-    cashiersOnDuty: onDuty(cashiers, new Set(shifts.map((shift) => shift.staffId))),
     ownerIds: byRole(['OWNER']),
     selectedIds: subject.selectedIds ?? [],
     wearerId: subject.wearerId ?? null,

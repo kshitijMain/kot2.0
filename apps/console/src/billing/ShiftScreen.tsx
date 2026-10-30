@@ -50,7 +50,7 @@ export function denominationCounts(
 const never = () => false;
 
 /**
- * The cashier's shift (BILL-013, BILL-008): open it with the float counted into the drawer, record
+ * The manager's cash shift (BILL-013, BILL-008): open it with the float counted into the drawer, record
  * cash taken in or out with a reason, and close it with the counted cash; the server says what the
  * drawer should hold and the difference.
  */

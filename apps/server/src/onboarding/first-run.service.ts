@@ -16,7 +16,6 @@ import { AppError } from '../errors/app-error.js';
 const BUILT_IN_ROLES = [
   ['OWNER', 'Owner'],
   ['MANAGER', 'Manager'],
-  ['CASHIER', 'Cashier'],
   ['WAITER', 'Waiter'],
   ['KITCHEN', 'Kitchen'],
 ] as const;

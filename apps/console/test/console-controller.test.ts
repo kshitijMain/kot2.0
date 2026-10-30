@@ -325,8 +325,8 @@ describe('[SEC-006] the device key stays a key object in IndexedDB', () => {
     );
     expect(signature.byteLength).toBe(64);
 
-    storage.saveSession(login('CASHIER'));
-    expect(storage.loadSession()?.staff.role).toBe('CASHIER');
+    storage.saveSession(login('MANAGER'));
+    expect(storage.loadSession()?.staff.role).toBe('MANAGER');
     storage.saveResume({ lastSequence: 5, streamId: '0199a0e0-0000-4000-8000-00000000f001' });
     expect(storage.loadResume()?.lastSequence).toBe(5);
 

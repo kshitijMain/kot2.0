@@ -136,7 +136,7 @@ describe('[WTR-006] [NTF-006] the alerts of the person the phone alerts', () => 
   });
 
   it('stops listening when nobody holds the phone, and starts for the next person', async () => {
-    const asha = { staffId: STAFF.CASHIER.staffId, displayName: STAFF.CASHIER.displayName };
+    const asha = { staffId: STAFF.MANAGER.staffId, displayName: STAFF.MANAGER.displayName };
     const hers = { ...bill, recipientIds: [asha.staffId] };
     const fake = serverListing(
       held(ready),

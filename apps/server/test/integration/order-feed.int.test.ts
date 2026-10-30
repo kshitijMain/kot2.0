@@ -33,7 +33,7 @@ beforeAll(async () => {
   kit = await createAuthKit(app);
   manager = await signIn(app, kit, 'MANAGER');
   waiter = await signIn(app, kit, 'WAITER');
-  cashier = await signIn(app, kit, 'CASHIER');
+  cashier = await signIn(app, kit, 'BILLER');
   kitchen = await signIn(app, kit, 'KITCHEN');
   const base = { restaurantId: kit.restaurantId };
   const category = await prisma.category.create({ data: { ...base, name: 'Menu' } });
@@ -224,14 +224,14 @@ describe('[MGR-003] the live order feed', () => {
       source: 'POS',
       tableId: null,
       tableLabel: null,
-      waiterId: kit.staff.CASHIER,
-      waiterName: 'Test cashier',
+      waiterId: kit.staff.BILLER,
+      waiterName: 'Test biller',
     });
     expect(entry(response, id('takeaway')).takeawayToken).toBeGreaterThan(0);
 
     // The filters offer the stations in use (not archived ones) and the people serving.
     expect(response.stations.map((station) => station.name)).toEqual(['Bar', 'Kitchen']);
-    expect(response.waiters.map((person) => person.name)).toEqual(['Test cashier', 'Test waiter']);
+    expect(response.waiters.map((person) => person.name)).toEqual(['Test biller', 'Test waiter']);
     expect(response.settings).toEqual({ ageRedMinutes: 20, readyNotCollectedMinutes: 3 });
     const serverTime = Date.parse(response.serverTime);
     expect(serverTime).toBeGreaterThanOrEqual(before - 1000);
@@ -333,7 +333,7 @@ describe('[MGR-003] the live order feed', () => {
   });
 
   it('[MGR-001] is for managers and owners: other roles are refused', async () => {
-    for (const login of [waiter, cashier, kitchen]) {
+    for (const login of [waiter, kitchen]) {
       const response = await server().get('/api/v1/order-feed').set(as(login));
       expect(response.status).toBe(403);
       expect(codeOf(response)).toBe('FORBIDDEN');

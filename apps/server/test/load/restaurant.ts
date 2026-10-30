@@ -60,7 +60,7 @@ export interface LoadRestaurant {
     readonly waiters: readonly LoadPerson[];
     readonly runners: readonly LoadPerson[];
     readonly managers: readonly LoadPerson[];
-    readonly cashiers: readonly LoadPerson[];
+    readonly billers: readonly LoadPerson[];
   };
   readonly devices: readonly DeviceIdentity[];
   readonly pagers: readonly LoadPager[];
@@ -138,7 +138,7 @@ export async function setUpLoadRestaurant(
     waiters: await many(shape.waiters, 'WAITER', 'Waiter'),
     runners: await many(shape.runners, 'WAITER', 'Runner'),
     managers: await many(shape.managers, 'MANAGER', 'Manager'),
-    cashiers: await many(shape.posTerminals, 'CASHIER', 'Cashier'),
+    billers: await many(shape.posTerminals, 'MANAGER', 'Biller'),
   };
 
   // ------------------------------------------------------------ tax, invoices, kitchen
@@ -340,7 +340,7 @@ export async function setUpLoadRestaurant(
     await pair('WAITER_PHONE', { staffId: waiter.staffId }, waiter);
   }
   for (const station of stations) await pair('KDS', { stationId: station.id });
-  for (const cashier of people.cashiers) await pair('POS', {}, cashier);
+  for (const biller of people.billers) await pair('POS', {}, biller);
   const managerAt = (index: number): LoadPerson => {
     const found = people.managers[index % people.managers.length];
     if (found === undefined) throw new Error('No manager');
@@ -387,7 +387,7 @@ export async function setUpLoadRestaurant(
         restaurantId,
         deviceId: kit.deviceId,
         waiterId: people.waiters[0]?.staffId ?? kit.staff.WAITER,
-        cashierId: people.cashiers[0]?.staffId ?? kit.staff.CASHIER,
+        billerId: people.billers[0]?.staffId ?? kit.staff.BILLER,
         managerId: managerAt(0).staffId,
         taxGroupId: tax.id,
         stationId: stations[0]?.id ?? '',

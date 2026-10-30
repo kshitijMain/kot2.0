@@ -18,7 +18,6 @@ function tile(staffId: string, displayName: string, role: Role): StaffTile {
 export const STAFF: Readonly<Record<Role, StaffTile>> = {
   OWNER: tile('0199a0e0-0000-7000-8000-000000000101', 'Kunal', 'OWNER'),
   MANAGER: tile('0199a0e0-0000-7000-8000-000000000102', 'Meera', 'MANAGER'),
-  CASHIER: tile('0199a0e0-0000-7000-8000-000000000103', 'Asha', 'CASHIER'),
   WAITER: tile('0199a0e0-0000-7000-8000-000000000104', 'Ravi', 'WAITER'),
   KITCHEN: tile('0199a0e0-0000-7000-8000-000000000105', 'Imran', 'KITCHEN'),
 };

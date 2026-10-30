@@ -85,7 +85,7 @@ beforeAll(async () => {
   queue = app.get(PrintQueueService);
   kit = await createAuthKit(app);
   manager = await signIn(app, kit, 'MANAGER');
-  cashier = await signIn(app, kit, 'CASHIER');
+  cashier = await signIn(app, kit, 'BILLER');
   waiter = await signIn(app, kit, 'WAITER');
   const base = { restaurantId: kit.restaurantId };
 
@@ -324,7 +324,7 @@ describe('[KDS-008] [NFR-P02] the print queue', () => {
         .set(as(login))
         .send({ toPrinterId: to === null ? null : id(to), reason: 'Kitchen printer jammed' });
 
-    expect((await redirect('kitchenPrinter', 'sparePrinter', cashier)).status).toBe(403);
+    expect((await redirect('kitchenPrinter', 'sparePrinter', waiter)).status).toBe(403);
     const self = await redirect('kitchenPrinter', 'kitchenPrinter');
     expect(self.status).toBe(422);
     expect(codeOf(self)).toBe('REDIRECT_TARGET_INVALID');

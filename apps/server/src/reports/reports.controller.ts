@@ -41,8 +41,8 @@ function principalOf(request: AuthenticatedRequest): Principal {
 }
 
 /**
- * Reports (P1-13a). §4.2 gives cashiers reports on their own shift only (OWN): they get the shift
- * report of their own shifts, and no other report.
+ * Reports (P1-13a). A grant limited to one's own shifts (OWN, §4.2) gets the shift report of those
+ * shifts, and no other report. No built-in role has it since the cashier went (ADR-0023).
  */
 function restaurantOf(request: AuthenticatedRequest): string {
   if (request.ownershipRequired === true) throw authErrors.forbidden();
@@ -216,7 +216,7 @@ export class ReportsController {
     return this.reports.register(restaurantOf(request), { from, to }, { offset, limit });
   }
 
-  /** RPT-017: a stamped, audited CSV. Cashiers may export their own shift report only. */
+  /** RPT-017: a stamped, audited CSV. An OWN grant exports its own shift report only. */
   @Post('exports')
   @HttpCode(200)
   @RequireCapability('REPORTS_VIEW_EXPORT')

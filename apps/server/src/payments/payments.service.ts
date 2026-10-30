@@ -33,7 +33,7 @@ function invoiceNotFound(): AppError {
 /**
  * Payments (P1-11a, BILL-008). Payments are recorded by hand against an issued invoice, split
  * across modes and in as many steps as needed, never beyond the total (`@rp/domain`
- * `applyPayments`). Cash goes into the cashier's open shift. When the payments equal the total the
+ * `applyPayments`). Cash goes into the open shift of the person taking it. When the payments equal the total the
  * invoice is SETTLED (`BillSettled`), and when the last bill of a table is settled the session
  * closes and the table is free again (TBL-004). A retried request with the same key records
  * nothing twice (ORD-013's rule, applied to money).

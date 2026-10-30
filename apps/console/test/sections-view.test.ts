@@ -45,7 +45,6 @@ describe('[TBL-002] today’s sections', () => {
       'Ravi',
       'Sunil',
       'Meera',
-      'Asha',
       'Kunal',
     ]);
   });

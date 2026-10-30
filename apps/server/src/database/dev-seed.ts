@@ -18,7 +18,8 @@ export interface SeedOptions {
 export const DEV_PINS = {
   'Asha (Owner)': '1111',
   'Vikram (Manager)': '2222',
-  'Neha (Cashier)': '3333',
+  // A second manager, who works at the POS (there is no cashier, ADR-0023).
+  'Neha (Manager)': '3333',
   Ravi: '4444',
   Sunita: '5555',
   'Chef Imran': '6666',
@@ -326,12 +327,11 @@ export async function seedDevelopmentData(
         })),
       });
 
-      // Built-in roles and one person per role (two waiters).
+      // Built-in roles and one person per role (two managers, two waiters).
       const roleIds = new Map<string, string>();
       for (const [key, name] of [
         ['OWNER', 'Owner'],
         ['MANAGER', 'Manager'],
-        ['CASHIER', 'Cashier'],
         ['WAITER', 'Waiter'],
         ['KITCHEN', 'Kitchen'],
       ] as const) {
@@ -341,7 +341,7 @@ export async function seedDevelopmentData(
       const people = [
         ['OWNER', 'Asha (Owner)'],
         ['MANAGER', 'Vikram (Manager)'],
-        ['CASHIER', 'Neha (Cashier)'],
+        ['MANAGER', 'Neha (Manager)'],
         ['WAITER', 'Ravi'],
         ['WAITER', 'Sunita'],
         ['KITCHEN', 'Chef Imran'],

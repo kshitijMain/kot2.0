@@ -188,7 +188,7 @@ describe.skipIf(!ENABLED)('[DATA-012] five years at design capacity within 100 G
           : (await manager.api.createPairingCode({ body: { type: 'POS', name: 'Counter 2' } }))
               .code,
       manager: { name: 'Vikram (Manager)', pin: DEV_PINS['Vikram (Manager)'] },
-      cashier: { name: 'Neha (Cashier)', pin: DEV_PINS['Neha (Cashier)'] },
+      biller: { name: 'Neha (Manager)', pin: DEV_PINS['Neha (Manager)'] },
     });
     const flowTables: FlowTable[] = growth(flowBefore, await tableStats(flowDatabase.url)).map(
       ({ table, stats }) => ({ table, rows: stats.rows, averageRowBytes: stats.averageRowBytes }),

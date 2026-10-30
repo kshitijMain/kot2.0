@@ -28,7 +28,7 @@ export class ReportExportService {
     private readonly audit: AuditService,
   ) {}
 
-  /** `ownShiftsOf` is set for a cashier (OWN): only their own shift report may be exported. */
+  /** `ownShiftsOf` is set for someone limited to their own shifts (OWN): only that report. */
   async export(
     principal: Principal,
     request: ReportExportRequest,

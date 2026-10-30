@@ -52,7 +52,7 @@ beforeAll(async () => {
   prisma = app.get(PrismaService);
   kit = await createAuthKit(app);
   waiter = await signIn(app, kit, 'WAITER');
-  cashier = await signIn(app, kit, 'CASHIER');
+  cashier = await signIn(app, kit, 'BILLER');
   manager = await signIn(app, kit, 'MANAGER');
   const hall = await prisma.section.create({
     data: { restaurantId: kit.restaurantId, name: 'Hall' },
@@ -123,7 +123,7 @@ describe('[NTF-001] [NTF-003] [NTF-004] a bill request', () => {
       channels: ['PAGER', 'WAITER_APP', 'POS'],
       escalatedAt: null,
     });
-    expect([...alert.recipientIds].sort()).toEqual([kit.staff.WAITER, kit.staff.CASHIER].sort());
+    expect([...alert.recipientIds].sort()).toEqual([kit.staff.WAITER, kit.staff.BILLER].sort());
     expect(alert.escalateAt).toEqual(new Date(now.getTime() + 60_000));
     // A waiter's alert rings once (2026-10-25); escalating is what follows it up.
     expect(alert.nextRepeatAt).toBeNull();
@@ -143,7 +143,7 @@ describe('[NTF-001] [NTF-003] [NTF-004] a bill request', () => {
     expect(acknowledged.status, JSON.stringify(acknowledged.body)).toBe(200);
     expect(AlertView.parse(acknowledged.body)).toMatchObject({
       status: 'ACKNOWLEDGED',
-      acknowledgedById: kit.staff.CASHIER,
+      acknowledgedById: kit.staff.BILLER,
       acknowledgedAt: now.toISOString(),
     });
     // PAGER-R2: the device it came from is recorded with the person.
@@ -157,7 +157,7 @@ describe('[NTF-001] [NTF-003] [NTF-004] a bill request', () => {
     expect(await events(alert.id, 'AlertRaised')).toHaveLength(1);
     // Acknowledging again changes nothing.
     const again = await server().post(`/api/v1/alerts/${alert.id}/acknowledge`).set(as(waiter));
-    expect(AlertView.parse(again.body).acknowledgedById).toBe(kit.staff.CASHIER);
+    expect(AlertView.parse(again.body).acknowledgedById).toBe(kit.staff.BILLER);
   });
 
   it('does not let someone else acknowledge an alert that is not theirs', async () => {

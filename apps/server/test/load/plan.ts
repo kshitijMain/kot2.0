@@ -1,7 +1,7 @@
 /**
  * What the load run simulates (P8-01a): the restaurant of BRD §7.2 and its busiest hour, as an
  * open-loop schedule. Orders arrive at the peak rate whether or not the server keeps up, as
- * guests do; the people who react (the kitchen, waiters, cashiers) do so at their own pace.
+ * guests do; the people who react (the kitchen, waiters, managers at the POS) do so at their own pace.
  * Everything random comes from the seed, so a run can be repeated.
  */
 
@@ -24,8 +24,8 @@ export interface Pace {
   readonly resolve: Range;
   /** A diner's order on the tablet until the waiter approves it. */
   readonly approve: Range;
-  /** A bill asked for until the cashier prints it. */
-  readonly cashier: Range;
+  /** A bill asked for until the biller prints it. */
+  readonly biller: Range;
 }
 
 export interface LoadShape {
@@ -47,7 +47,7 @@ export interface LoadShape {
   readonly runners: number;
   /** Managers with a pager; they also run the dashboards. */
   readonly managers: number;
-  /** POS terminals, each with its cashier. */
+  /** POS terminals, each with a manager who bills (no cashier, ADR-0023). */
   readonly posTerminals: number;
   /** Managers' dashboards with the live floor, the order feed and the alerts. */
   readonly dashboards: number;
@@ -113,7 +113,7 @@ export const DESIGN_CAPACITY: LoadShape = {
     pickUp: [5, 25],
     resolve: [15, 45],
     approve: [5, 20],
-    cashier: [5, 20],
+    biller: [5, 20],
   },
   historyDays: 365,
   historyOrdersPerDay: 2_000,
@@ -152,7 +152,7 @@ export const SMOKE_SHAPE: LoadShape = {
     pickUp: [0.5, 2],
     resolve: [1, 3],
     approve: [0.5, 2],
-    cashier: [0.5, 2],
+    biller: [0.5, 2],
   },
   historyDays: 0,
   historyOrdersPerDay: 0,

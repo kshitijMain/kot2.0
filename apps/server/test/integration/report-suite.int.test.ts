@@ -99,7 +99,7 @@ async function issue(billId: string): Promise<InvoiceView> {
 async function overrideToken(capability: Capability, entityId: string): Promise<string> {
   return OverrideResponse.parse(
     (
-      await server().post('/api/v1/auth/override').set(as(cashier)).send({
+      await server().post('/api/v1/auth/override').set(as(waiter)).send({
         approverStaffId: kit.staff.MANAGER,
         pin: TEST_PINS.MANAGER,
         capability,
@@ -127,7 +127,7 @@ beforeAll(async () => {
   prisma = app.get(PrismaService);
   kit = await createAuthKit(app);
   manager = await signIn(app, kit, 'MANAGER');
-  cashier = await signIn(app, kit, 'CASHIER');
+  cashier = await signIn(app, kit, 'BILLER');
   waiter = await signIn(app, kit, 'WAITER');
   kitchen = await signIn(app, kit, 'KITCHEN');
   const base = { restaurantId: kit.restaurantId };
@@ -225,9 +225,10 @@ beforeAll(async () => {
     .set(as(kitchen))
     .send({ event: 'START_PREPARING' });
   const voidToken = await overrideToken('ITEM_VOID_AFTER_PREP', water);
+  // A waiter voids with a manager's PIN (only waiters need one now, ADR-0023).
   const voided = await server()
     .post(`/api/v1/order-items/${water}/void`)
-    .set({ ...as(cashier), 'x-override-token': voidToken })
+    .set({ ...as(waiter), 'x-override-token': voidToken })
     .send({ reason: 'Dropped' });
   expect(voided.status, JSON.stringify(voided.body)).toBe(200);
   const t1Bill = await bill({ tableSessionId: t1 });
@@ -258,10 +259,9 @@ beforeAll(async () => {
     tableSessionId: t1,
     lines: [line('Water')],
   });
-  const editToken = await overrideToken('BILL_EDIT_AFTER_PRINT', invoices.t1.id);
   const reopened = await server()
     .post(`/api/v1/invoices/${invoices.t1.id}/reopen`)
-    .set({ ...as(cashier), 'x-override-token': editToken })
+    .set(as(cashier))
     .send({ reason: 'Another water' });
   expect(reopened.status, JSON.stringify(reopened.body)).toBe(200);
   invoices.t1Edited = await issue(t1Bill.id);
@@ -276,18 +276,14 @@ beforeAll(async () => {
     lines: [line('Lassi', 2)],
   });
   const t2Bill = await bill({ tableSessionId: t2 });
-  const freeToken = await overrideToken('DISCOUNT_ABOVE_LIMIT', t2Bill.id);
   const freeLassi = await itemOf(second, 'Lassi');
   ids.freeLassi = freeLassi;
-  const free = await server()
-    .post(`/api/v1/bills/${t2Bill.id}/discounts`)
-    .set({ ...as(cashier), 'x-override-token': freeToken })
-    .send({
-      orderItemId: freeLassi,
-      kind: 'PERCENT',
-      rateBp: 10_000,
-      reason: 'Birthday',
-    });
+  const free = await server().post(`/api/v1/bills/${t2Bill.id}/discounts`).set(as(cashier)).send({
+    orderItemId: freeLassi,
+    kind: 'PERCENT',
+    rateBp: 10_000,
+    reason: 'Birthday',
+  });
   expect(free.status, JSON.stringify(free.body)).toBe(200);
   invoices.t2 = await issue(t2Bill.id);
 
@@ -461,8 +457,8 @@ describe('[RPT-004] sales by source and order type', () => {
     expect(sources.totals).toEqual({ orders: 4, gross: 76_000, discounts: 21_800, net: 54_200 });
   });
 
-  it('is for people who see reports, not a cashier', async () => {
-    expect((await report('sources', cashier)).status).toBe(403);
+  it('is for people who see reports, not a waiter', async () => {
+    expect((await report('sources', waiter)).status).toBe(403);
     expect((await report('staff', waiter)).status).toBe(403);
   });
 });
@@ -480,17 +476,17 @@ describe('[RPT-003] each person’s work', () => {
       averageAckSeconds: 60,
       escalations: 1,
       cancellations: 1,
-      voids: 0,
+      voids: 1,
     });
-    expect(of(kit.staff.CASHIER)).toMatchObject({
-      role: 'CASHIER',
+    expect(of(kit.staff.BILLER)).toMatchObject({
+      role: 'MANAGER',
       ordersCreated: 1,
       net: 2_000,
       acknowledgements: 0,
       averageAckSeconds: null,
       escalations: 0,
       cancellations: 0,
-      voids: 1,
+      voids: 0,
     });
     // The manager only approved and was escalated to: nothing of their own here.
     expect(of(kit.staff.MANAGER)).toBeUndefined();
@@ -511,7 +507,7 @@ describe('[RPT-007] discounts and complimentary items', () => {
         rateBp: 1_000,
         amount: 5_800,
         reason: 'Regular guest',
-        appliedBy: { id: kit.staff.CASHIER, name: nameOf(kit.staff.CASHIER) },
+        appliedBy: { id: kit.staff.BILLER, name: nameOf(kit.staff.BILLER) },
         approvedBy: null,
       }),
       expect.objectContaining({
@@ -520,8 +516,9 @@ describe('[RPT-007] discounts and complimentary items', () => {
         complimentary: true,
         amount: 16_000,
         reason: 'Birthday',
-        appliedBy: { id: kit.staff.CASHIER, name: nameOf(kit.staff.CASHIER) },
-        approvedBy: { id: kit.staff.MANAGER, name: nameOf(kit.staff.MANAGER) },
+        // A manager gives it with no approval (no cashier, ADR-0023).
+        appliedBy: { id: kit.staff.BILLER, name: nameOf(kit.staff.BILLER) },
+        approvedBy: null,
       }),
     ]);
     expect(report7.totals).toEqual({
@@ -555,7 +552,7 @@ describe('[RPT-008] cancellations and voids', () => {
         stage: 'PREPARING',
         value: 2_000,
         wastage: true,
-        by: { id: kit.staff.CASHIER, name: nameOf(kit.staff.CASHIER) },
+        by: { id: kit.staff.WAITER, name: nameOf(kit.staff.WAITER) },
         approvedBy: { id: kit.staff.MANAGER, name: nameOf(kit.staff.MANAGER) },
         reason: 'Dropped',
       }),
@@ -594,7 +591,7 @@ describe('[RPT-009] reprints and bill edits', () => {
       reference: invoices.t1?.invoiceNumber,
       invoiceId: invoices.t1?.id,
       orderId: id('t1Order'),
-      by: { id: kit.staff.CASHIER },
+      by: { id: kit.staff.BILLER },
     });
     expect(report9.events[1]).toMatchObject({
       reference: `KOT ${String(kot.kotNumber)}`,
@@ -605,8 +602,8 @@ describe('[RPT-009] reprints and bill edits', () => {
     });
     expect(report9.events[2]).toMatchObject({
       reference: invoices.t1?.invoiceNumber,
-      by: { id: kit.staff.CASHIER },
-      approvedBy: { id: kit.staff.MANAGER },
+      by: { id: kit.staff.BILLER },
+      approvedBy: null,
       reason: 'Another water',
       before: invoices.t1?.grandTotal,
       after: invoices.t1Edited?.grandTotal,
@@ -703,7 +700,7 @@ describe('[ORD-004] how long customer orders wait for approval (pilot risk R-04)
     ]);
     const empty = ApprovalTimeReportResponse.parse((await report('approvals')).body);
     expect(empty).toMatchObject({ meetsTarget: null, totals: { orders: 0, medianSeconds: null } });
-    expect((await report('approvals', cashier)).status).toBe(403);
+    expect((await report('approvals', waiter)).status).toBe(403);
   });
 });
 

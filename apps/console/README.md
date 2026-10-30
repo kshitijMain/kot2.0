@@ -20,7 +20,7 @@ screens come with P1-08, P1-09, P1-12 and P4-01 to P4-07.
   until P0-15 a browser can only be paired on the server PC itself.
 - Login (`/login`, AUTH-001, AUTH-004): staff tiles, then the `@rp/ui-web` PIN pad (touch or
   keyboard). A KDS device skips login and shows its station (station mode, AUTH-005).
-- Modes: people land in their home mode (Owner and Manager: Manage; Cashier and Waiter: POS;
+- Modes: people land in their home mode (Owner and Manager: Manage; Waiter: POS;
   Kitchen: KDS) and may open the modes their role allows (`src/app/modes.ts`, BRD §4.2 matrix).
 - Connection banner (NFR-P11) from the live connection's status; inactivity warning and sign-out
   (AUTH-005) with a keep-alive while the person is using the screen.
@@ -42,9 +42,9 @@ screens come with P1-08, P1-09, P1-12 and P4-01 to P4-07.
   (`sounds.ts`, on after the first touch), an all-day summary and a full-screen notice while
   disconnected. The rules are in `kds-view.ts`.
 - Billing (`/pos/bill/:billId`, `/pos/pay/:invoiceId`, `/pos/shift`, P1-12a): `src/billing/`
-  shows the bill preview, discounts (with a manager's PIN in place when above the cashier's
+  shows the bill preview, discounts (with a manager's PIN in place when above a custom role's
   limit, `override.tsx`), service charge, customer, print (issue and print), payments across
-  modes with change and one idempotency key per set, and the cashier's shift. P1-12b adds split
+  modes with change and one idempotency key per set, and the manager's cash shift (there is no cashier, ADR-0023). P1-12b adds split
   bills (`SplitDialog`), void and edit after print with approval, and `/pos/day-end`.
 - Alerts (P2-06c, MGR-008, NTF-004, NTF-008): `src/alerts/` reads the signed-in person's open
   alerts in the POS and manage modes (managers and the Owner see every open alert) and reads them
@@ -151,7 +151,7 @@ the alert centre, a manager adding a waiter who signs in on a second tab and is 
 within 5 s of being deactivated, the Owner setting up password and authenticator (the test
 computes the authenticator's code from the key shown) and adding a manager with a recovery code,
 a manager giving waiters their sections and a pager at shift start (registered, its credential
-shown once, then handed to another waiter well within 30 s), and a cashier refused the Staff
+shown once, then handed to another waiter well within 30 s), and a waiter refused the Staff
 page. The tabs share one browser context, so they share the
 device key, as screens of one terminal would. axe runs through the browser's debugging protocol,
 since the server's Content Security Policy refuses inline scripts, after entrance animations end

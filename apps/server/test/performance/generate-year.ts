@@ -13,7 +13,7 @@ export interface YearRefs {
   readonly restaurantId: string;
   readonly deviceId: string;
   readonly waiterId: string;
-  readonly cashierId: string;
+  readonly billerId: string;
   readonly managerId: string;
   readonly taxGroupId: string;
   readonly stationId: string;
@@ -72,7 +72,7 @@ export async function generateYear(
               'CLOSED',
               CASE WHEN n % 5 = 0 THEN NULL ELSE ${id("'s:' || d.i || ':' || n")} END,
               CASE WHEN n % 5 = 0 THEN NULL ELSE t.id END,
-              CASE n % 4 WHEN 0 THEN '${refs.cashierId}'::uuid
+              CASE n % 4 WHEN 0 THEN '${refs.billerId}'::uuid
                          WHEN 1 THEN '${refs.waiterId}'::uuid END,
               '${refs.deviceId}'::uuid, ${at("interval '0 s'")}
        FROM ${days} d CROSS JOIN generate_series(1, ${ORDERS}) AS n
@@ -89,7 +89,7 @@ export async function generateYear(
               '${refs.taxGroupId}'::uuid,
               '[{"code":"CGST","rateBp":250},{"code":"SGST","rateBp":250}]'::jsonb,
               '${refs.stationId}'::uuid, st.state::"OrderItemState",
-              CASE n % 4 WHEN 0 THEN '${refs.cashierId}'::uuid
+              CASE n % 4 WHEN 0 THEN '${refs.billerId}'::uuid
                          WHEN 1 THEN '${refs.waiterId}'::uuid END,
               CASE WHEN n % 4 IN (2, 3) THEN '${refs.waiterId}'::uuid END,
               ${at("interval '30 s'")},
@@ -145,7 +145,7 @@ export async function generateYear(
               'INV/' || row_number() OVER (ORDER BY o.business_date, o.order_number),
               'ISSUED', o.id, o.table_session_id, 'TAX_EXCLUSIVE',
               b.subtotal, b.discount, b.tax, b.subtotal - b.discount + b.tax,
-              '${refs.cashierId}'::uuid, o.created_at + interval '40 minutes', 1
+              '${refs.billerId}'::uuid, o.created_at + interval '40 minutes', 1
        FROM orders o JOIN billed b ON b.order_id = o.id
        WHERE o.restaurant_id = ${R} AND o.business_date >= '${firstDay}'`,
     ],
@@ -190,7 +190,7 @@ export async function generateYear(
                              received_by_id, created_at)
        SELECT ${id("'p:' || i.id")}, ${R}, i.business_date, i.id,
               ((ARRAY['CASH', 'UPI', 'CARD'])[1 + i.sequence % 3])::"PaymentMode", i.grand_total,
-              '${refs.cashierId}'::uuid, i.issued_at + interval '5 minutes'
+              '${refs.billerId}'::uuid, i.issued_at + interval '5 minutes'
        FROM invoices i
        WHERE i.restaurant_id = ${R} AND i.business_date >= '${firstDay}' AND i.status <> 'VOIDED'`,
     ],
@@ -205,7 +205,7 @@ export async function generateYear(
       `INSERT INTO discounts (id, restaurant_id, business_date, invoice_id, kind, rate_bp, amount,
                               reason, applied_by_id)
        SELECT ${id("'d:' || i.id")}, ${R}, i.business_date, i.id, 'PERCENT', 1000,
-              i.discount_total, 'Regular guest', '${refs.cashierId}'::uuid
+              i.discount_total, 'Regular guest', '${refs.billerId}'::uuid
        FROM invoices i
        WHERE i.restaurant_id = ${R} AND i.business_date >= '${firstDay}' AND i.discount_total > 0`,
     ],
@@ -324,7 +324,7 @@ export async function generateYear(
       `INSERT INTO shifts (id, restaurant_id, business_date, staff_id, device_id, status,
                            opened_at, closed_at, opening_float, expected_cash, counted_cash,
                            variance)
-       SELECT ${id("'sh:' || d.i || ':' || h")}, ${R}, d.day, '${refs.cashierId}'::uuid,
+       SELECT ${id("'sh:' || d.i || ':' || h")}, ${R}, d.day, '${refs.billerId}'::uuid,
               '${refs.deviceId}'::uuid, 'CLOSED',
               (d.day::timestamp + time '05:00' + h * interval '8 hours') AT TIME ZONE 'UTC',
               (d.day::timestamp + time '13:00' + h * interval '8 hours') AT TIME ZONE 'UTC',

@@ -56,7 +56,7 @@ describe('[AUTH-005] access tokens', () => {
     expect(codeOf(await server().get('/api/v1/probe-auth/me').set(authHeaders(kit.deviceId)))).toBe(
       'UNAUTHENTICATED',
     );
-    const session = await signIn(app, kit, 'CASHIER');
+    const session = await signIn(app, kit, 'MANAGER');
     const otherDevice = await addDevice(app, kit);
     expect(codeOf(await me(otherDevice, session.accessToken))).toBe('DEVICE_MISMATCH');
     expect((await me(kit.deviceId, session.accessToken)).status).toBe(200);
@@ -70,7 +70,7 @@ describe('[AUTH-005] access tokens', () => {
 
   it('expire after 15 minutes and are renewed with a rotated refresh token', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
-    const session = await signIn(app, kit, 'CASHIER');
+    const session = await signIn(app, kit, 'MANAGER');
     minutes(9);
     const renewed = LoginResponse.parse((await refresh(kit.deviceId, session.refreshToken)).body);
     expect(renewed.refreshToken).not.toBe(session.refreshToken);
@@ -108,7 +108,7 @@ describe('[AUTH-005] inactivity', () => {
 
 describe('[AUTH-005] refresh tokens', () => {
   it('revoke the whole session when a replaced refresh token is used again', async () => {
-    const session = await signIn(app, kit, 'CASHIER');
+    const session = await signIn(app, kit, 'MANAGER');
     const renewed = LoginResponse.parse((await refresh(kit.deviceId, session.refreshToken)).body);
     const replay = await refresh(kit.deviceId, session.refreshToken);
     expect(codeOf(replay)).toBe('SESSION_REVOKED');
@@ -122,7 +122,7 @@ describe('[AUTH-005] refresh tokens', () => {
   });
 
   it('only work on the device they were issued to', async () => {
-    const session = await signIn(app, kit, 'CASHIER');
+    const session = await signIn(app, kit, 'MANAGER');
     const other = await addDevice(app, kit);
     expect(codeOf(await refresh(other, session.refreshToken))).toBe('DEVICE_MISMATCH');
     expect(codeOf(await refresh(kit.deviceId, 'x'.repeat(43)))).toBe('SESSION_REVOKED');
@@ -164,7 +164,7 @@ describe('[AUTH-005] refresh tokens', () => {
 
 describe('[AUTH-005] [AUTH-013] logout and deactivation', () => {
   it('logout ends the session and is audited', async () => {
-    const session = await signIn(app, kit, 'CASHIER');
+    const session = await signIn(app, kit, 'MANAGER');
     const response = await server()
       .post('/api/v1/auth/logout')
       .set(authHeaders(kit.deviceId, session.accessToken));
@@ -209,18 +209,18 @@ describe('[AUTH-005] [AUTH-013] logout and deactivation', () => {
   });
 
   it('a role change applies at the next request', async () => {
-    const session = await signIn(app, kit, 'CASHIER');
+    const session = await signIn(app, kit, 'KITCHEN');
     const waiterRole = await prisma.role.findFirstOrThrow({ where: { key: 'WAITER' } });
-    const cashierRole = await prisma.role.findFirstOrThrow({ where: { key: 'CASHIER' } });
+    const kitchenRole = await prisma.role.findFirstOrThrow({ where: { key: 'KITCHEN' } });
     await prisma.staff.update({
-      where: { id: kit.staff.CASHIER },
+      where: { id: kit.staff.KITCHEN },
       data: { roleId: waiterRole.id },
     });
     const response = await me(kit.deviceId, session.accessToken);
     expect(response.body).toMatchObject({ principal: { role: 'WAITER' } });
     await prisma.staff.update({
-      where: { id: kit.staff.CASHIER },
-      data: { roleId: cashierRole.id },
+      where: { id: kit.staff.KITCHEN },
+      data: { roleId: kitchenRole.id },
     });
   });
 });

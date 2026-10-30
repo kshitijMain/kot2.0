@@ -57,7 +57,7 @@ export async function seedDesignRestaurant(app: INestApplication, kit: AuthKit):
     restaurantId: kit.restaurantId,
     deviceId: kit.deviceId,
     waiterId: kit.staff.WAITER,
-    cashierId: kit.staff.CASHIER,
+    billerId: kit.staff.BILLER,
     managerId: kit.staff.MANAGER,
     taxGroupId: tax.id,
     stationId: station.id,

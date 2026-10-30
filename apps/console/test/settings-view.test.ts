@@ -42,13 +42,13 @@ describe('[MGR-007] what people type', () => {
     expect(parseBp('12.5')).toBe(1250);
     expect(parseBp('0.05 %')).toBe(5);
     expect(parseBp('12.345')).toBeUndefined();
-    const discount = editorOf('billing.cashierDiscountLimitBp');
+    const discount = editorOf('billing.discountLimitBp');
     expect(discount).toMatchObject({ kind: 'NUMBER', scale: 'BP', min: 0, max: 10_000 });
-    expect(checkedValue('billing.cashierDiscountLimitBp', discount!, '15')).toEqual({
+    expect(checkedValue('billing.discountLimitBp', discount!, '15')).toEqual({
       ok: true,
       value: 1500,
     });
-    expect(checkedValue('billing.cashierDiscountLimitBp', discount!, '150')).toEqual({ ok: false });
+    expect(checkedValue('billing.discountLimitBp', discount!, '150')).toEqual({ ok: false });
   });
 
   it('reads rupees as paise, lists one per line, and times as windows', () => {

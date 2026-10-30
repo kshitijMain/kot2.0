@@ -1,4 +1,4 @@
 {
-  "input": { "type": "string", "enum": ["MANAGER", "CASHIER", "WAITER", "KITCHEN"] },
-  "output": { "type": "string", "enum": ["MANAGER", "CASHIER", "WAITER", "KITCHEN"] }
+  "input": { "type": "string", "enum": ["MANAGER", "WAITER", "KITCHEN"] },
+  "output": { "type": "string", "enum": ["MANAGER", "WAITER", "KITCHEN"] }
 }

@@ -31,6 +31,7 @@ import {
   type AuthKit,
   createAuthKit,
   signIn,
+  signInCustom,
   TEST_PINS,
 } from '../helpers/auth-kit.js';
 import { createTestApp, httpServer } from '../helpers/test-app.js';
@@ -42,6 +43,8 @@ let prisma: PrismaService;
 let kit: AuthKit;
 let manager: LoginResponse;
 let cashier: LoginResponse;
+/** A custom role that may discount within the limit, as a cashier could (ADR-0023, BILL-005). */
+let captain: LoginResponse;
 let waiter: LoginResponse;
 const ids: Record<string, string> = {};
 const id = (name: string) => ids[name] ?? '';
@@ -55,7 +58,8 @@ beforeAll(async () => {
   prisma = app.get(PrismaService);
   kit = await createAuthKit(app);
   manager = await signIn(app, kit, 'MANAGER');
-  cashier = await signIn(app, kit, 'CASHIER');
+  cashier = await signIn(app, kit, 'BILLER');
+  captain = await signInCustom(app, kit, 'WAITER', ['DISCOUNT_WITHIN_LIMIT']);
   waiter = await signIn(app, kit, 'WAITER');
   const base = { restaurantId: kit.restaurantId };
 
@@ -188,7 +192,7 @@ async function bill(target: object, login = cashier): Promise<BillView> {
 async function override(capability: Capability, entityId: string) {
   return OverrideResponse.parse(
     (
-      await server().post('/api/v1/auth/override').set(as(cashier)).send({
+      await server().post('/api/v1/auth/override').set(as(captain)).send({
         approverStaffId: kit.staff.MANAGER,
         pin: TEST_PINS.MANAGER,
         capability,
@@ -277,8 +281,8 @@ describe('[BILL-001] [BILL-004] the bill of a table', () => {
 });
 
 describe('[BILL-005] discounts', () => {
-  it('lets a cashier give a bill discount within the limit, with a reason, audited', async () => {
-    const noReason = await discount(dineIn.id, { kind: 'PERCENT', rateBp: 1_000 });
+  it('lets a captain give a bill discount within the limit, with a reason, audited', async () => {
+    const noReason = await discount(dineIn.id, { kind: 'PERCENT', rateBp: 1_000 }, as(captain));
     expect(noReason.status).toBe(400);
     const byWaiter = await discount(
       dineIn.id,
@@ -287,11 +291,11 @@ describe('[BILL-005] discounts', () => {
     );
     expect(byWaiter.status).toBe(403);
 
-    const given = await discount(dineIn.id, {
-      kind: 'PERCENT',
-      rateBp: 1_000,
-      reason: 'Regular guest',
-    });
+    const given = await discount(
+      dineIn.id,
+      { kind: 'PERCENT', rateBp: 1_000, reason: 'Regular guest' },
+      as(captain),
+    );
     expect(given.status, JSON.stringify(given.body)).toBe(200);
     const view = BillView.parse(given.body);
     expect(view).toMatchObject({ discountTotal: 6_600, taxTotal: 3_204, grandTotal: 62_600 });
@@ -313,29 +317,27 @@ describe('[BILL-005] discounts', () => {
     expect(audit).toMatchObject({ entityId: dineIn.id, reason: 'Regular guest' });
   });
 
-  it('needs a manager PIN above the cashier limit and for a complimentary item', async () => {
+  it('needs a manager PIN above the limit and for a complimentary item', async () => {
     const water = id('item:Water');
-    const tooMuch = await discount(dineIn.id, {
-      orderItemId: water,
-      kind: 'PERCENT',
-      rateBp: 1_500,
-      reason: 'Warm bottle',
-    });
+    const tooMuch = await discount(
+      dineIn.id,
+      { orderItemId: water, kind: 'PERCENT', rateBp: 1_500, reason: 'Warm bottle' },
+      as(captain),
+    );
     expect([tooMuch.status, codeOf(tooMuch)]).toEqual([403, 'OVERRIDE_REQUIRED']);
 
     const lassi = id('item:Lassi');
-    const withoutPin = await discount(dineIn.id, {
-      orderItemId: lassi,
-      kind: 'PERCENT',
-      rateBp: 10_000,
-      reason: 'Birthday',
-    });
+    const withoutPin = await discount(
+      dineIn.id,
+      { orderItemId: lassi, kind: 'PERCENT', rateBp: 10_000, reason: 'Birthday' },
+      as(captain),
+    );
     expect([withoutPin.status, codeOf(withoutPin)]).toEqual([403, 'OVERRIDE_REQUIRED']);
     const token = await override('DISCOUNT_ABOVE_LIMIT', dineIn.id);
     const comp = await discount(
       dineIn.id,
       { orderItemId: lassi, kind: 'PERCENT', rateBp: 10_000, reason: 'Birthday' },
-      { ...as(cashier), 'x-override-token': token },
+      { ...as(captain), 'x-override-token': token },
     );
     expect(comp.status, JSON.stringify(comp.body)).toBe(200);
     const view = BillView.parse(comp.body);
@@ -351,7 +353,7 @@ describe('[BILL-005] discounts', () => {
     const reused = await discount(
       dineIn.id,
       { orderItemId: water, kind: 'PERCENT', rateBp: 1_500, reason: 'Warm bottle' },
-      { ...as(cashier), 'x-override-token': token },
+      { ...as(captain), 'x-override-token': token },
     );
     expect([reused.status, codeOf(reused)]).toEqual([403, 'OVERRIDE_INVALID']);
     // A manager needs no approval.
@@ -377,7 +379,7 @@ describe('[BILL-005] discounts', () => {
     expect(view).toMatchObject({ discountTotal: 8_000, taxTotal: 3_160, grandTotal: 61_200 });
     const row = await prisma.discount.findUniqueOrThrow({ where: { id: billDiscount?.id ?? '' } });
     expect(row.revokedAt).not.toBeNull();
-    expect(row.revokedById).toBe(kit.staff.CASHIER);
+    expect(row.revokedById).toBe(kit.staff.BILLER);
   });
 });
 
@@ -657,7 +659,7 @@ describe('[BILL-014] [BILL-009] printing the bill', () => {
     expect(await prisma.auditLog.count({ where: { action: 'INVOICE_REPRINTED' } })).toBe(0);
     expect(
       await prisma.auditLog.findFirstOrThrow({ where: { action: 'INVOICE_PRINTED' } }),
-    ).toMatchObject({ entityId: invoiceId, actorId: kit.staff.CASHIER });
+    ).toMatchObject({ entityId: invoiceId, actorId: kit.staff.BILLER });
 
     const again = PrintInvoiceResponse.parse((await print()).body);
     expect(again).toMatchObject({ printed: true, duplicate: true, printCount: 2 });
@@ -665,7 +667,7 @@ describe('[BILL-014] [BILL-009] printing the bill', () => {
     const audit = await prisma.auditLog.findFirstOrThrow({
       where: { action: 'INVOICE_REPRINTED' },
     });
-    expect(audit).toMatchObject({ entityId: invoiceId, actorId: kit.staff.CASHIER });
+    expect(audit).toMatchObject({ entityId: invoiceId, actorId: kit.staff.BILLER });
     const events = await prisma.outboxEvent.findMany({ where: { eventType: 'BillPrinted' } });
     expect(
       events.some((row) => (row.payload as { payload: { duplicate: boolean } }).payload.duplicate),
@@ -687,7 +689,7 @@ describe('[BILL-014] [BILL-009] printing the bill', () => {
 describe('[BILL-010] [BILL-003] void and re-issue', () => {
   let voided: InvoiceView;
 
-  it('voids with a manager PIN; the number stays in the series and the table waits again', async () => {
+  it('voids by a manager with a reason; the number stays in the series and the table waits again', async () => {
     const original = await prisma.invoice.findFirstOrThrow({ where: { billId: dineIn.id } });
     const voidIt = (headers: Record<string, string>) =>
       server()
@@ -695,10 +697,10 @@ describe('[BILL-010] [BILL-003] void and re-issue', () => {
         .set(headers)
         .send({ reason: 'Wrong table billed' });
 
-    const withoutPin = await voidIt(as(cashier));
-    expect([withoutPin.status, codeOf(withoutPin)]).toEqual([403, 'OVERRIDE_REQUIRED']);
-    const token = await override('INVOICE_VOID', original.id);
-    const done = await voidIt({ ...as(cashier), 'x-override-token': token });
+    // No cashier asks a manager any more (ADR-0023): a waiter is refused, a manager voids.
+    const byWaiter = await voidIt(as(waiter));
+    expect([byWaiter.status, codeOf(byWaiter)]).toEqual([403, 'FORBIDDEN']);
+    const done = await voidIt(as(cashier));
     expect(done.status, JSON.stringify(done.body)).toBe(200);
     voided = InvoiceView.parse(done.body);
     expect(voided).toMatchObject({
@@ -711,8 +713,8 @@ describe('[BILL-010] [BILL-003] void and re-issue', () => {
     const audit = await prisma.auditLog.findFirstOrThrow({ where: { action: 'INVOICE_VOIDED' } });
     expect(audit).toMatchObject({
       entityId: original.id,
-      actorId: kit.staff.CASHIER,
-      approverId: kit.staff.MANAGER,
+      actorId: kit.staff.BILLER,
+      approverId: null,
       reason: 'Wrong table billed',
     });
     const table = await prisma.diningTable.findUniqueOrThrow({ where: { id: id('T1') } });
@@ -768,7 +770,7 @@ describe('[BILL-010] [BILL-003] void and re-issue', () => {
 describe('[BILL-010] editing a printed bill', () => {
   let edited: InvoiceView;
 
-  it('reopens a printed bill with a manager PIN when items are added after printing', async () => {
+  it('reopens a printed bill, a manager only, when items are added after printing', async () => {
     const printed = await prisma.invoice.findFirstOrThrow({
       where: { billId: dineIn.id, status: 'ISSUED' },
     });
@@ -787,10 +789,9 @@ describe('[BILL-010] editing a printed bill', () => {
         .post(`/api/v1/invoices/${printed.id}/reopen`)
         .set(headers)
         .send({ reason: 'Guest ordered another water' });
-    const withoutPin = await reopen(as(cashier));
-    expect([withoutPin.status, codeOf(withoutPin)]).toEqual([403, 'OVERRIDE_REQUIRED']);
-    const token = await override('BILL_EDIT_AFTER_PRINT', printed.id);
-    const opened = await reopen({ ...as(cashier), 'x-override-token': token });
+    const byWaiter = await reopen(as(waiter));
+    expect([byWaiter.status, codeOf(byWaiter)]).toEqual([403, 'FORBIDDEN']);
+    const opened = await reopen(as(cashier));
     expect(opened.status, JSON.stringify(opened.body)).toBe(200);
     const view = BillView.parse(opened.body);
     expect(view).toMatchObject({ status: 'OPEN', editingInvoiceId: printed.id });
@@ -798,7 +799,8 @@ describe('[BILL-010] editing a printed bill', () => {
     const audit = await prisma.auditLog.findFirstOrThrow({ where: { action: 'INVOICE_REOPENED' } });
     expect(audit).toMatchObject({
       entityId: printed.id,
-      approverId: kit.staff.MANAGER,
+      actorId: kit.staff.BILLER,
+      approverId: null,
       reason: 'Guest ordered another water',
     });
     const again = await reopen(as(manager));
@@ -828,8 +830,8 @@ describe('[BILL-010] editing a printed bill', () => {
     const audit = await prisma.auditLog.findFirstOrThrow({ where: { action: 'INVOICE_EDITED' } });
     expect(audit).toMatchObject({
       entityId: before.id,
-      actorId: kit.staff.CASHIER,
-      approverId: kit.staff.MANAGER,
+      actorId: kit.staff.BILLER,
+      approverId: null,
       reason: 'Guest ordered another water',
     });
     expect(audit.before).toMatchObject({ version: 1, grandTotal: 61_200 });
@@ -888,7 +890,7 @@ describe('[WTR-008] printing the bill from the waiter app', () => {
         await server()
           .post(`/api/v1/tables/${id('T8')}/open`)
           .set(as(manager))
-          .send({ covers: 2, waiterId: kit.staff.CASHIER })
+          .send({ covers: 2, waiterId: kit.staff.BILLER })
       ).body,
     );
     const printBill = (sessionId: string, login = waiter) =>
@@ -898,7 +900,7 @@ describe('[WTR-008] printing the bill from the waiter app', () => {
         (await server().get('/api/v1/tables/overview').set(as(login))).body,
       ).mayPrintBill;
 
-    // The BRD default: waiters ask for the bill, the cashier prints it.
+    // The BRD default: waiters ask for the bill, a manager prints it.
     expect([await mayPrint(waiter), await mayPrint(cashier)]).toEqual([false, true]);
     const off = await printBill(mine.id);
     expect([off.status, codeOf(off)]).toEqual([403, 'BILL_PRINT_NOT_ALLOWED']);

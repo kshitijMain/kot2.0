@@ -31,8 +31,8 @@ Mark an item picked up when you take it from the pass and served when it reaches
 ## Changes
 
 You may cancel an item before the kitchen starts it. After cooking has started you need a
-manager's PIN. You may move a table you own. You cannot give discounts or take payment: ask the
-cashier or request the bill from the table screen.
+manager's PIN. You may move a table you own. You cannot give discounts or take payment: ask a
+manager or request the bill from the table screen.
 
 ## Lost phone
 

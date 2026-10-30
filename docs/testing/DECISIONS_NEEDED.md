@@ -189,3 +189,39 @@ it, and tell restaurants to use English names.
 
 **Recommendation:** A, and change "smart" quotes and dashes into plain ones automatically (no
 decision needed for that part).
+
+---
+
+# Operations changes of 2026-10-30 (ADR-0023)
+
+## D-13: custom roles that were built on the cashier role
+
+**Situation.** The cashier role is gone. A restaurant may have made custom roles on top of it
+(for example "Head cashier" with menu editing). The update cannot know which exist; each one
+changed is in the audit log as `ROLE_CHANGED` with the reason "custom roles built on it now build
+on the waiter role", and the Roles page shows them under the waiter role.
+
+**Today (safest).** They move to the waiter base and keep the extra capabilities stored on them.
+Their people lose what only the cashier base gave (billing, payments, shifts, discounts within the
+limit, reprints) and sign in again. Nobody gains anything: a waiter can do less than a cashier.
+
+**Options.**
+
+- **A.** Keep it; the Owner adds billing capabilities to the role again if wanted.
+- **B.** Turn such a role's people into managers too, like plain cashiers.
+- **C.** Move them to the waiter base and add the cashier's capabilities to the role as extras.
+
+**Recommendation:** A. It never grants more than before, and the Owner sees each changed role in
+the audit log.
+
+## D-14: people who were cashiers are managers now
+
+**Situation.** Everyone on the built-in Cashier role became a Manager, as asked. A manager can
+open the dashboard, change the menu and look after waiters' and kitchen staff's records.
+
+**Today.** Done as asked, each person audited (`STAFF_UPDATED`, before `CASHIER`, after `MANAGER`),
+and their sessions ended so they sign in again with the new role.
+
+**Options.** A: keep it. B: also send the Owner an alert listing them after the update.
+
+**Recommendation:** A plus B (the Owner should look at who now has manager rights).

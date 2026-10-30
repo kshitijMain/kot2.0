@@ -39,14 +39,7 @@ export const PRIYA = staffView('WAITER', {
 
 /** Everyone, as the server lists them: active first, by name. */
 export function team(): StaffView[] {
-  return [
-    staffView('CASHIER'),
-    staffView('KITCHEN'),
-    staffView('OWNER'),
-    staffView('MANAGER'),
-    lockedRavi(),
-    PRIYA,
-  ];
+  return [staffView('KITCHEN'), staffView('OWNER'), staffView('MANAGER'), lockedRavi(), PRIYA];
 }
 
 export function staffList(staff: StaffView[] = team(), pinLength: 4 | 6 = 4) {

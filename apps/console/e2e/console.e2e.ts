@@ -19,7 +19,7 @@ const t = createTranslator();
 const PEOPLE = [
   { name: 'Asha (Owner)', role: 'OWNER', pin: '1111', mode: 'manage' },
   { name: 'Vikram (Manager)', role: 'MANAGER', pin: '2222', mode: 'manage' },
-  { name: 'Neha (Cashier)', role: 'CASHIER', pin: '3333', mode: 'pos' },
+  { name: 'Neha (Manager)', role: 'MANAGER', pin: '3333', mode: 'pos' },
   { name: 'Ravi', role: 'WAITER', pin: '4444', mode: 'pos' },
   { name: 'Chef Imran', role: 'KITCHEN', pin: '6666', mode: 'kds' },
 ] as const;
@@ -196,7 +196,7 @@ test.describe.serial('the web console', () => {
   });
 
   test('[NFR-P11] shows the offline banner while the server is down and recovers when it is back', async () => {
-    await page.getByRole('button', { name: /^Neha \(Cashier\)/ }).click();
+    await page.getByRole('button', { name: /^Neha \(Manager\)/ }).click();
     await page.keyboard.type('3333');
     await expect(page).toHaveURL(/\/pos$/);
     // Connected and in sync, with the floor read: no banner, and no read cut short by the stop.
@@ -425,7 +425,7 @@ test.describe.serial('the web console', () => {
 
   test('[ORD-010] the POS sees the kitchen’s progress', async () => {
     await page.getByRole('button', { name: t('login.signOut') }).click();
-    await page.getByRole('button', { name: /^Neha \(Cashier\)/ }).click();
+    await page.getByRole('button', { name: /^Neha \(Manager\)/ }).click();
     await page.keyboard.type('3333');
     await page.getByRole('button', { name: /^7, Occupied/ }).click();
     await page.getByRole('button', { name: t('pos.table.takeOrder') }).click();
@@ -944,7 +944,7 @@ test.describe.serial('the web console', () => {
 
     // The cashier sells it at once, with its sizes and add-ons (MENU-012).
     await page.getByRole('button', { name: t('login.signOut') }).click();
-    await page.getByRole('button', { name: /^Neha \(Cashier\)/ }).click();
+    await page.getByRole('button', { name: /^Neha \(Manager\)/ }).click();
     await page.keyboard.type('3333');
     await expect(page).toHaveURL(/\/pos$/);
     await page.getByRole('button', { name: t('pos.takeaway') }).click();
@@ -1101,7 +1101,7 @@ test.describe.serial('the web console', () => {
 
   test('[SEC-003] a cashier cannot open the Staff page', async () => {
     await page.getByRole('button', { name: t('login.signOut') }).click();
-    await page.getByRole('button', { name: /^Neha \(Cashier\)/ }).click();
+    await page.getByRole('button', { name: /^Neha \(Manager\)/ }).click();
     await page.keyboard.type('3333');
     await expect(page).toHaveURL(/\/pos$/);
     await page.goto(`${server.url}/manage/staff`);

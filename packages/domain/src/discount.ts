@@ -10,7 +10,7 @@ import {
   type Paise,
   type RoundingMode,
 } from './money.js';
-import type { Role } from './permissions.js';
+import { type Actor, actorGrant } from './permissions.js';
 
 /** An item-level or bill-level discount: a percentage or a flat amount (BILL-005). */
 export type DiscountValue =
@@ -52,36 +52,27 @@ export function effectiveDiscountRateBp(base: Paise, discount: DiscountValue): B
   return divideRounded(discountAmount(base, discount) * BASIS_POINTS_PER_WHOLE, base, 'UP');
 }
 
-/** Per-role discount limit in basis points, e.g. `{ CASHIER: 1000 }` = cashier up to 10 % (BILL-005 ⚙). */
-export type DiscountLimits = Readonly<Partial<Record<Role, BasisPoints>>>;
-
-export const DEFAULT_DISCOUNT_LIMITS: DiscountLimits = { CASHIER: 1000 };
+/** BILL-005 ⚙ default: up to 10 % without a manager's PIN, for those limited to it. */
+export const DEFAULT_DISCOUNT_LIMIT_BP: BasisPoints = 1000;
 
 export type DiscountDecision = 'ALLOWED' | 'REQUIRES_MANAGER_OVERRIDE' | 'DENIED';
 
 /**
- * Applies the discount rules from §4.2 and BILL-005:
- * - Owner and Manager may give any discount, including complimentary items.
- * - Cashier may discount up to their limit; above it, or complimentary, needs a manager PIN.
- * - Waiter and Kitchen cannot discount.
+ * Applies the discount rules from §4.2 and BILL-005 to a person and their custom role (AUTH-012):
+ * - Owner and Manager, and anyone allowed discounts above the limit, may give any discount,
+ *   including complimentary items.
+ * - Anyone allowed discounts within the limit (a custom role) may discount up to `limitBp`; above
+ *   it, or complimentary, needs a manager PIN.
+ * - Everyone else (waiters, kitchen) cannot discount.
  */
 export function decideDiscount(
-  role: Role,
+  actor: Actor,
   requestedRateBp: BasisPoints,
-  limits: DiscountLimits = DEFAULT_DISCOUNT_LIMITS,
+  limitBp: BasisPoints = DEFAULT_DISCOUNT_LIMIT_BP,
 ): DiscountDecision {
   assertBasisPoints(requestedRateBp, 'requested discount', BASIS_POINTS_PER_WHOLE);
-  switch (role) {
-    case 'OWNER':
-    case 'MANAGER':
-      return 'ALLOWED';
-    case 'CASHIER': {
-      const limit = limits.CASHIER ?? 0;
-      const complimentary = requestedRateBp >= BASIS_POINTS_PER_WHOLE;
-      return !complimentary && requestedRateBp <= limit ? 'ALLOWED' : 'REQUIRES_MANAGER_OVERRIDE';
-    }
-    case 'WAITER':
-    case 'KITCHEN':
-      return 'DENIED';
-  }
+  if (actorGrant(actor, 'DISCOUNT_ABOVE_LIMIT') === 'ALLOW') return 'ALLOWED';
+  if (actorGrant(actor, 'DISCOUNT_WITHIN_LIMIT') !== 'ALLOW') return 'DENIED';
+  const complimentary = requestedRateBp >= BASIS_POINTS_PER_WHOLE;
+  return !complimentary && requestedRateBp <= limitBp ? 'ALLOWED' : 'REQUIRES_MANAGER_OVERRIDE';
 }

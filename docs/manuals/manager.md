@@ -1,6 +1,8 @@
 # Manager's manual
 
-You run the floor and the day. Tasks below are in the dashboard (open from the main menu).
+You run the floor and the day, and you do the billing: there is no cashier role. Managers and
+the Owner prepare bills, take payments and run the cash drawer from the POS. Most other tasks
+below are in the dashboard (open from the main menu).
 
 ## Start of day
 
@@ -45,9 +47,26 @@ lost device. Pagers page: issue and collect wrist pagers.
 
 ## During service
 
-Orders page: the live feed with late dishes highlighted. Approve changes above a waiter's
-limit by entering your PIN on their device: a void after preparation started, a discount above
-the cashier's limit, a bill edit after printing. The reason is recorded. Move or merge tables.
+Orders page: the live feed with late dishes highlighted. Approve a waiter's void after
+preparation started by entering your PIN on their device; the reason is recorded. Move or merge
+tables.
+
+## Billing and payments (POS)
+
+Sign in at the POS with your PIN and open your cash shift with the opening cash in the drawer.
+
+- Taking an order at the counter: pick the table or counter, add items, choose sizes and add-ons,
+  send. The kitchen gets it at once. The system works out prices and tax; nobody types a price.
+- Billing: open the table, print the bill, apply a discount if needed (always with a reason),
+  choose the payment type (cash, card, UPI, split or part-payments). The invoice number is given
+  when the bill is printed and is never reused. To split a bill by item or by amount use Split.
+- Mistakes: a printed bill is not changed freely. Reprint is allowed. To change a printed bill
+  use Edit bill, or void the invoice and issue a new one; give the reason each time. Do not
+  hand-write over a printed bill.
+- Cash: record cash taken into or out of the drawer with a reason. At the end close your shift:
+  count the cash, enter it, and the system shows any difference.
+- When the system is slow or down: use paper slips and the manual bill book (support playbook),
+  and enter the slips later.
 
 ## Ending the day
 
