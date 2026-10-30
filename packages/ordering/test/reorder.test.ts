@@ -208,16 +208,43 @@ describe('[MENU-007] a dish served at some hours only', () => {
 });
 
 describe('[WTR-010] [MENU-006] what the menu card says', () => {
-  it('marks sold-out and switched-off dishes, and counts what is left', () => {
+  it('marks sold-out and switched-off dishes "Out of stock", and counts what is left', () => {
     expect(unavailableReason(item(IDS.jamun))).toBe('SOLD_OUT');
-    expect(menuNote(MENU, item(IDS.jamun), t)).toEqual({ unavailable: 'Sold out' });
+    expect(menuNote(MENU, item(IDS.jamun), t)).toEqual({ unavailable: 'Out of stock' });
     const off = { ...item(IDS.dal), available: false };
     expect(unavailableReason(off)).toBe('NOT_AVAILABLE');
-    expect(menuNote(MENU, off, t)).toEqual({ unavailable: 'Not available now' });
+    expect(menuNote(MENU, off, t)).toEqual({ unavailable: 'Out of stock' });
     expect(menuNote(MENU, { ...item(IDS.dal), stockCount: 3 }, t)).toEqual({ note: '3 left' });
     expect(menuNote(MENU, item(IDS.thali), t)).toEqual({ note: t('pos.menu.combo') });
     expect(menuNote(MENU, item(IDS.tikka), t)).toEqual({ note: t('pos.menu.options') });
     expect(menuNote(MENU, item(IDS.dal), t)).toEqual({});
+  });
+});
+
+describe('[MENU-006] [MENU-005] a combo with a part out of stock (ADR-0023)', () => {
+  const withItems = (changes: Record<string, Partial<(typeof MENU.items)[number]>>) => ({
+    ...MENU,
+    items: MENU.items.map((entry) => ({ ...entry, ...changes[entry.id] })),
+  });
+
+  it('is out of stock when a fixed part is, or every choice of a part is', () => {
+    const noDal = withItems({ [IDS.dal]: { available: false } });
+    const thali = noDal.items.find((entry) => entry.id === IDS.thali)!;
+    expect(unavailableReason(thali, { menu: noDal, now: Date.parse('2026-09-26T07:30:00Z') })).toBe(
+      'SOLD_OUT',
+    );
+    expect(menuNote(noDal, thali, t)).toEqual({ unavailable: 'Out of stock' });
+    const noDesserts = withItems({
+      [IDS.jamun]: { available: false },
+      [IDS.rasmalai]: { stockCount: 0 },
+    });
+    expect(menuNote(noDesserts, thali, t)).toEqual({ unavailable: 'Out of stock' });
+  });
+
+  it('stays on sale while another choice of a part is in stock', () => {
+    const noJamun = withItems({ [IDS.jamun]: { available: false } });
+    const thali = noJamun.items.find((entry) => entry.id === IDS.thali)!;
+    expect(menuNote(noJamun, thali, t)).toEqual({ note: t('pos.menu.combo') });
   });
 });
 
@@ -321,8 +348,8 @@ describe('[WTR-010] cart lines the kitchen cannot make now', () => {
     expect([...problems.values()].map((problem) => lineProblemText(problem, t))).toEqual([
       'Only 3 left',
       'Only 3 left',
-      'Not available now',
-      'Sold out',
+      'Out of stock',
+      'Out of stock',
       'No longer on the menu',
     ]);
     expect(lineProblems(menu, [cartLine(IDS.dal, 3, 'a')], 'WAITER_APP').size).toBe(0);

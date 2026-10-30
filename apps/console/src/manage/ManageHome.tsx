@@ -4,6 +4,7 @@ import { Navigate, NavLink, Route, Routes } from 'react-router';
 import { AlertCentre } from '../alerts/AlertCentre.js';
 import { useConsoleState } from '../app/console-context.js';
 import { useT } from '../app/i18n.js';
+import { AvailabilityScreen } from '../stock/AvailabilityScreen.js';
 import { ScreenHelp } from '../help/ScreenHelp.js';
 import { OwnerSecurityScreen } from '../owner/OwnerSecurityScreen.js';
 import { DevicesScreen } from './devices/DevicesScreen.js';
@@ -52,6 +53,8 @@ export function ManageHome() {
   const managesStaff = allows('STAFF_MANAGE');
   const pairsDevices = allows('DEVICE_PAIR');
   const managesMenu = allows('MENU_MANAGE');
+  // ADR-0023: out of stock and back, for whoever manages stock.
+  const managesStock = allows('STOCK_MANAGE');
   const seesReports = allows('REPORTS_VIEW_EXPORT');
   const viewsAudit = allows('AUDIT_VIEW');
   const isOwner = person?.role === 'OWNER';
@@ -112,6 +115,11 @@ export function ManageHome() {
         {managesMenu ? (
           <NavLink to="/manage/menu" className="dashboard__link">
             {t('dashboard.section.menu')}
+          </NavLink>
+        ) : null}
+        {managesStock ? (
+          <NavLink to="/manage/availability" className="dashboard__link">
+            {t('dashboard.section.availability')}
           </NavLink>
         ) : null}
         {pairsDevices ? (
@@ -176,6 +184,7 @@ export function ManageHome() {
           {managesMenu ? <Route path="menu" element={<MenuEditor />} /> : null}
           {managesMenu ? <Route path="menu/import" element={<MenuFileScreen />} /> : null}
           {managesMenu ? <Route path="menu/photos" element={<BulkPhotosScreen />} /> : null}
+          {managesStock ? <Route path="availability" element={<AvailabilityScreen />} /> : null}
           {pairsDevices ? <Route path="devices" element={<DevicesScreen />} /> : null}
           {operates ? <Route path="setup" element={<SetupScreen />} /> : null}
           {operates ? <Route path="setup/readiness" element={<ReadinessChecklist />} /> : null}

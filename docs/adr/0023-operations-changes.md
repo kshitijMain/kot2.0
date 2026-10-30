@@ -37,6 +37,27 @@ needed a business choice, the safest behaviour was built and the choice is in
   writes them into the chain at start-up (no actor: the system did it).
 - The development seed has no cashier: PIN 3333 is a second manager, "Neha (Manager)".
 
+### Part 2: out of stock, live (MENU-006)
+
+- Kitchen staff and managers have a Menu availability screen (KDS: "Menu availability" in the
+  header; dashboard: Menu availability): search, category filter, one big "Out of stock" /
+  "Mark as available" switch per dish, and the portions-left count kept. Every change is audited
+  (`ITEM_AVAILABILITY_CHANGED`) and reaches every device at once (`ItemAvailabilityChanged`).
+- Sold out and switched off both read "Out of stock" on the POS, waiter app, tablet and QR menu,
+  and a combo is out of stock when a fixed part is, or every choice of a part is
+  (`@rp/ordering` `unavailableReason`). The server refuses the dish as `OUT_OF_STOCK` in new
+  orders, combos, approvals and when firing held dishes, whatever the app sends.
+- Every KOT records who sent it (`kots.sent_by_id`, migration `20261030110000_kot_sender`): the
+  waiter of a staff order, the approver of a diner's order, whoever fired held dishes.
+- Marking a dish out of stock (a person, not a count running out) carries `markedOutBy` on the
+  event; `StockOutService` (orders) applies `@rp/domain` `planStockOut`: units on tickets the
+  kitchen has not started are cancelled at no charge, reason "Out of stock", audited in the
+  marker's name, with a CANCELLED slip; lines of a diner's order still waiting are rejected the
+  same way (an order left with nothing waiting is rejected, clearing its approval alert); started,
+  ready and served units are untouched; a combo is cancelled whole only while none of its parts has
+  started (D-16). Each line gets one `OUT_OF_STOCK` alert (new event) to the KOT's sender
+  (`KOT_SENDER`, new recipient kind; for a waiting order, every waiter on duty).
+
 ## Alternatives considered
 
 - Keep CASHIER in the database type and only stop offering it: rejected, the role would linger in
@@ -51,3 +72,4 @@ needed a business choice, the safest behaviour was built and the choice is in
   menu and manage waiters. The Owner should review them after the update (D-13 asks).
 - The OWN grant stays in the permission model for custom rules, but no built-in role uses it for
   shifts or reports any more.
+- Stock is per dish, not per size (D-15): marking a dish out takes off every size.

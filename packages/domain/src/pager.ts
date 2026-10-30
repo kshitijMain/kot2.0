@@ -55,6 +55,8 @@ export const DEFAULT_VIBRATION: Readonly<Record<NotificationEvent, VibrationPatt
   SUPPORT_REQUEST: 'ONE_SHORT',
   VENDOR_RESTORE_CODE: 'ONE_SHORT',
   SIGN_IN_LOCKED: 'ONE_SHORT',
+  // ADR-0023: a dish the waiter sent cannot be made; they must tell the table.
+  OUT_OF_STOCK: 'THREE',
 };
 
 /** An escalated alert always buzzes three times: it has come to the manager. */

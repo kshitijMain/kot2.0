@@ -225,3 +225,57 @@ and their sessions ended so they sign in again with the new role.
 **Options.** A: keep it. B: also send the Owner an alert listing them after the update.
 
 **Recommendation:** A plus B (the Owner should look at who now has manager rights).
+
+## D-15: one size of a dish runs out (Full out, Half still available)
+
+**Situation.** Availability and the stock count are per dish. The kitchen may run out of Full
+portions while Half are still possible.
+
+**Today (safest).** Marking a dish out of stock takes off every size; the kitchen marks it
+available again when any size can be made, and the waiter checks with the kitchen.
+
+**Options.** A: keep it. B: availability per size (a switch per size on the availability screen;
+the server refuses only that size). C: per-size stock counts as well.
+
+**Recommendation:** B, if kitchens ask for it after the pilot.
+
+## D-16: a combo whose out-of-stock part was already sent
+
+**Situation.** A Thali (Dal + 2 Roti) is on a ticket; Roti is marked out of stock.
+
+**Today (safest).** If no part of the combo has been started, the whole combo is cancelled at no
+charge and the sender is told (a combo is sold whole). If any part has been started, nothing is
+cancelled; the sender gets an OUT OF STOCK alert saying the kitchen has started it, and a manager
+decides (a void or a discount) with the guest.
+
+**Options.** A: keep it. B: cancel only the missing part and keep charging the combo. C: cancel
+the missing part and take its menu price off the bill automatically.
+
+**Recommendation:** A (no automatic money change on a combo price).
+
+## D-17: who is "on duty", and the sender who has gone
+
+**Situation.** KOT alerts go to the person who sent the KOT; when they are off duty, every waiter
+on duty gets them.
+
+**Today.** A person is on duty while signed in on a device, or while their pager or waiter phone is
+connected. A sender on break keeps the old rule (NTF-009: the managers take it). A sender on duty
+whose pager and phone are both off is alerted and the managers are called at once (NTF-007).
+Diners' orders still waiting for approval have no sender: every waiter on duty is told.
+
+**Options.** A: keep it. B: on duty = has an open shift or is on today's rota (needs a rota).
+C: off duty only after signing out explicitly.
+
+**Recommendation:** A.
+
+## D-18: what a guest sees for a dish cancelled as out of stock
+
+**Today.** On the table tablet the line is struck through with "Cancelled: Out of stock. Not
+charged." (or "Not accepted: Out of stock" for an order still waiting). The QR page shows the
+order's state; a cancelled line drops out of the order's dishes, and a fully rejected order
+shows "Not accepted" with the reason. The bill never charges cancelled units.
+
+**Options.** A: keep it. B: also show a short apology and a "Call waiter" button next to the
+line. C: hide the cancelled line entirely.
+
+**Recommendation:** A, with B worth testing in the pilot.

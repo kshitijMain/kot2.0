@@ -566,6 +566,7 @@ export class OrdersService {
           kotInputs,
           partIds,
           menu,
+          actor.staffId,
         );
       }
       for (const line of lines) {
@@ -594,7 +595,8 @@ export class OrdersService {
 
   /**
    * Per-station KOTs with their day numbers (ORD-007, ORD-008); combos exploded into parts. Also
-   * used when a diner's order is approved (P3-03a).
+   * used when a diner's order is approved (P3-03a). `sentById` is who sent them: the KOT's alerts
+   * go to that person (ADR-0023).
    */
   async sendToKitchen(
     tx: TransactionClient,
@@ -604,6 +606,7 @@ export class OrdersService {
     inputs: readonly KotItemInput[],
     partIds: ReadonlyMap<string, string>,
     menu: MenuSnapshot,
+    sentById: string | null,
   ): Promise<void> {
     const modes = new Map(menu.stations.map((station) => [station.id, station.mode]));
     for (const draft of splitIntoKots(inputs)) {
@@ -618,6 +621,7 @@ export class OrdersService {
           orderId,
           stationId: draft.stationId,
           kind: 'NEW',
+          sentById,
           printStatus: mode === 'SCREEN' ? 'NOT_REQUIRED' : 'PENDING',
           lines: {
             create: draft.lines.map((line) => ({

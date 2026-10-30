@@ -324,9 +324,10 @@ describe('[ORD-001] [ORD-014] submitting an order', () => {
       orderType: 'TAKEAWAY',
       lines: [line(id('Chaas'))],
     });
+    // Switched off reads as out of stock (ADR-0023).
     expect(SubmitOrderResponse.parse(unavailable.body)).toMatchObject({
       status: 'PARTIALLY_REJECTED',
-      rejectedLines: [{ code: 'NOT_AVAILABLE_NOW' }],
+      rejectedLines: [{ code: 'OUT_OF_STOCK' }],
     });
     await prisma.item.update({ where: { id: id('Chaas') }, data: { available: true } });
   });

@@ -45,6 +45,7 @@ export * from './menu-health.js';
 export * from './menu-review.js';
 export * from './photo-matching.js';
 export * from './notifications.js';
+export * from './stock-out.js';
 export * from './pager.js';
 export * from './pager-firmware.js';
 export * from './associations.js';

@@ -14,8 +14,13 @@ alerted when it is ready. When the waiter takes it, it is marked picked up.
 
 ## Out of stock
 
-Mark a dish out of stock from the KDS (or give the count left). Waiters and guests stop seeing
-it at once. Mark it back when you have more.
+Press **Menu availability** at the top of the KDS. Find the dish (type part of its name, or pick
+its category) and press its big **Out of stock** button. Every screen greys it out at once and
+nobody can order it, not even from the table tablet or the QR menu. Portions of it on tickets you
+have not started are cancelled at no charge (a CANCELLED slip shows them) and each waiter who
+sent one gets an OUT OF STOCK alert for their table; what you are already cooking or have ready
+stays. Press **Mark as available** when you have more. **Portions left** lets you give a count
+instead: the dish sells out by itself at 0. Stock is for the whole dish, all its sizes.
 
 ## Cancelled and changed items
 

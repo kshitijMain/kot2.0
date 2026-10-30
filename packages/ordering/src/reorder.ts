@@ -121,10 +121,10 @@ export function lineProblems(
 
 export function lineProblemText(problem: LineProblem, t: Translator): string {
   switch (problem.kind) {
+    // Sold out and switched off both read "Out of stock" (ADR-0023).
     case 'SOLD_OUT':
-      return t('pos.menu.soldOut');
     case 'NOT_AVAILABLE':
-      return t('pos.menu.notAvailable');
+      return t('pos.menu.soldOut');
     case 'NOT_NOW':
       return problem.hours === undefined
         ? t('pos.menu.notAvailable')

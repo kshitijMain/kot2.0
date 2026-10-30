@@ -949,6 +949,18 @@ Decided 2026-10-30 (operations changes at the Business Owner's request, ADR-0023
      `pending_audit_entries` and written into the chain by `PendingAuditService` at start-up.
 826. Development seed and tests: PIN 3333 is a second manager ("Neha (Manager)"); server tests sign
      in a second manager as `BILLER` where they had a cashier.
+827. Menu availability (MENU-006): one screen for the kitchen (KDS header) and managers
+     (`/manage/availability`, STOCK_MANAGE): search, category, one switch per dish, the count kept.
+828. "Out of stock" is the one label for sold out and switched off everywhere, and a combo follows
+     its parts (a fixed part, or every choice of a part); the server refuses such a line as
+     `OUT_OF_STOCK` (switched off no longer reads "not available now"), also when firing held
+     dishes.
+829. Each KOT records its sender (`kots.sent_by_id`); its alerts go to them (`KOT_SENDER`, every
+     waiter on duty when they are off duty or unknown, D-17).
+830. A person marking a dish out of stock cancels its unstarted units at no charge (reason "Out of
+     stock", in their name, CANCELLED slip), rejects it from diners' orders still waiting, and
+     sends one `OUT_OF_STOCK` alert per line to its sender; a combo is cancelled only while none of
+     its parts has started (D-16). A count running out cancels nothing.
 
 Decided 2026-10-25 (the menu, at the Business Owner's request: a guided editor, by hand or Excel):
 

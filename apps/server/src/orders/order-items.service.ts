@@ -99,6 +99,10 @@ function stepTimes(event: OrderItemEvent, item: OrderItem, now: Date) {
  * nothing reaches or leaves the kitchen silently: cancellations and voids of items a station
  * holds print a CANCELLED slip, and changes a MODIFIED ticket. A combo line carries its parts.
  */
+
+/** The reason on lines cancelled because their dish went out of stock (ADR-0023). */
+export const OUT_OF_STOCK_REASON = 'Out of stock';
+
 @Injectable()
 export class OrderItemsService {
   constructor(
@@ -215,6 +219,17 @@ export class OrderItemsService {
       for (const { id } of held) {
         const line = await this.lock(tx, principal.restaurantId, id);
         if (ownOnly) this.assertOwn(principal, line);
+        // A dish marked out of stock since it was held is not sent (ADR-0023): its stock was
+        // taken when it was ordered, so only the switch counts here.
+        const parts = line.components.length === 0 ? [line] : line.components;
+        for (const part of parts) {
+          const stock = await this.menu.lockAvailability(tx, principal.restaurantId, part.itemId);
+          if (!stock.available && stock.stockCount !== 0) {
+            throw new AppError(409, 'OUT_OF_STOCK', `${part.name} is out of stock.`, {
+              orderItemId: line.id,
+            });
+          }
+        }
         for (const target of [line, ...line.components]) {
           if (target.state !== 'HELD') continue;
           const to = transition(orderItemMachine, target.state, 'FIRE').to;
@@ -255,6 +270,7 @@ export class OrderItemsService {
         inputs,
         partIds,
         menu,
+        principal.staffId,
       );
       await this.audit.record(tx, {
         action: 'ORDER_FIRED',
@@ -298,6 +314,39 @@ export class OrderItemsService {
       return item.orderId;
     });
     return this.orders.get(principal.restaurantId, orderId);
+  }
+
+  /**
+   * ADR-0023: a dish marked out of stock. Cancels a line the kitchen has not started (with its
+   * combo parts) in the name of whoever marked it, at no charge, reason "Out of stock"; inside the
+   * caller's transaction. A line already on a printed bill is left for the manager: returns false.
+   */
+  async cancelOutOfStockInTx(
+    tx: TransactionClient,
+    principal: Principal,
+    orderItemId: string,
+  ): Promise<boolean> {
+    let item: ItemWithOrder;
+    try {
+      item = await this.lockOffBill(tx, principal.restaurantId, orderItemId);
+    } catch (error) {
+      if (error instanceof AppError) return false;
+      throw error;
+    }
+    if (item.state !== 'SENT') return false;
+    await this.end(tx, principal, item, 'CANCEL', OUT_OF_STOCK_REASON);
+    await this.audit.record(tx, {
+      action: 'ORDER_ITEM_CANCELLED',
+      entityType: 'order_item',
+      entityId: item.id,
+      actorId: principal.staffId,
+      deviceId: principal.deviceId,
+      restaurantId: principal.restaurantId,
+      before: { state: item.state, quantity: item.quantity, lineTotal: item.lineTotal },
+      after: { state: 'CANCELLED', automatic: true },
+      reason: OUT_OF_STOCK_REASON,
+    });
+    return true;
   }
 
   async void(
@@ -561,6 +610,7 @@ export class OrderItemsService {
           orderId,
           stationId,
           kind,
+          sentById: principal.staffId,
           printStatus: station.mode === 'SCREEN' ? 'NOT_REQUIRED' : 'PENDING',
           lines: {
             create: stationLines.map((line) => ({

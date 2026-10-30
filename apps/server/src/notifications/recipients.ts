@@ -11,6 +11,8 @@ export interface RecipientSubject {
   readonly wearerId?: string | null;
   /** The person whose own request it is (a waiter asking for the bill): not alerted (P2-06d). */
   readonly askedById?: string | null;
+  /** Who sent the KOT the alert is about (ADR-0023). */
+  readonly kotSenderId?: string | null;
 }
 
 /**
@@ -18,7 +20,9 @@ export interface RecipientSubject {
  * - the responsible waiter of the table session (TBL-002);
  * - the waiters assigned to the table's section today (shift assignments);
  * - managers on duty: Owner and managers signed in on a device now, else every active manager;
- * - the Owner.
+ * - the Owner;
+ * - the KOT's sender, who is on duty while signed in or while their pager or phone is connected
+ *   (ADR-0023, D-17).
  */
 export async function recipientContext(
   tx: TransactionClient,
@@ -78,6 +82,8 @@ export async function recipientContext(
     responsibleWaiterId: session?.waiterId ?? tableWaiterId,
     sectionWaiterIds: [...new Set(sectionWaiterIds)],
     allWaiterIds: byRole(['WAITER']),
+    kotSenderId: subject.kotSenderId ?? null,
+    onDuty: (staffId) => online.has(staffId) || reachable(staffId),
     managersOnDuty: onDuty(managers, online),
     ownerIds: byRole(['OWNER']),
     selectedIds: subject.selectedIds ?? [],

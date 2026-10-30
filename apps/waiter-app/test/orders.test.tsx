@@ -105,7 +105,7 @@ describe('[WTR-003] [ORD-013] taking an order', () => {
     expect(screen.queryByRole('header', { name: 'Paneer Tikka' })).toBeNull();
 
     await fireEvent.press(button('Main Course'));
-    expect(button(/^Gulab Jamun, ₹90.00, Veg, Sold out/)).toBeDisabled();
+    expect(button(/^Gulab Jamun, ₹90.00, Veg, Out of stock/)).toBeDisabled();
     // Rasmalai is sold on the QR menu only.
     expect(screen.queryByRole('button', { name: /^Rasmalai/ })).toBeNull();
     await fireEvent.press(button(/^Dal Makhani,/));
@@ -467,10 +467,10 @@ describe('[ORD-017] [WTR-010] items the kitchen cannot make', () => {
       await Promise.resolve();
     });
     expect(
-      await screen.findByRole('button', { name: /^Dal Makhani, ₹240.00, Veg, Sold out/ }),
+      await screen.findByRole('button', { name: /^Dal Makhani, ₹240.00, Veg, Out of stock/ }),
     ).toBeDisabled();
     await fireEvent.press(screen.getByRole('tab', { name: 'Order (1)' }));
-    expect(screen.getByText('Sold out')).toBeOnTheScreen();
+    expect(screen.getByText('Out of stock')).toBeOnTheScreen();
     expect(screen.getByText('Remove or change the marked items to send.')).toBeOnTheScreen();
     expect(screen.getByTestId('send-kot')).toBeDisabled();
   });
@@ -539,7 +539,7 @@ describe('[NFR-U03] [WTR-012] what was sent', () => {
     ]);
     // Gulab Jamun is sold out: it cannot be ordered again.
     expect(button('Order Gulab Jamun again')).toBeDisabled();
-    expect(screen.getAllByText('Sold out').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Out of stock').length).toBeGreaterThan(0);
   });
 
   it('asks for the choices again when the menu changed how a dish is ordered', async () => {

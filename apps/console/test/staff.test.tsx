@@ -178,7 +178,7 @@ describe('[MGR-004] the Staff page', () => {
       }),
       () => ({
         status: 200,
-        body: staffView('WAITER', { displayName: 'Ravi K', role: 'MANAGER' }),
+        body: staffView('WAITER', { displayName: 'Ravi K', role: 'KITCHEN' }),
       }),
     );
     const { user } = await renderConsole({ fake, path: '/manage/staff', signedIn: 'MANAGER' });
@@ -190,7 +190,7 @@ describe('[MGR-004] the Staff page', () => {
     await fillPerson(user, edit, { name: 'Ravi K' });
     await user.selectOptions(
       within(edit).getByRole('combobox', { name: t('staff.form.role') }),
-      'MANAGER',
+      'KITCHEN',
     );
     await user.click(within(edit).getByRole('button', { name: t('staff.form.save') }));
     expect(await within(edit).findByRole('alert')).toHaveTextContent(
@@ -199,8 +199,8 @@ describe('[MGR-004] the Staff page', () => {
     await user.click(within(edit).getByRole('button', { name: t('staff.form.save') }));
     expect(await toastSays(t('staff.saved', { name: 'Ravi K' }))).toBeVisible();
     expect(fake.callsTo('PATCH', `/api/v1/staff/${RAVI}`).map((call) => call.body)).toEqual([
-      { displayName: 'Ravi K', role: 'MANAGER' },
-      { displayName: 'Ravi K', role: 'MANAGER' },
+      { displayName: 'Ravi K', role: 'KITCHEN' },
+      { displayName: 'Ravi K', role: 'KITCHEN' },
     ]);
   });
 
@@ -464,7 +464,7 @@ describe('[AUTH-001] the sign-in screen', () => {
       () => ({ status: 200, body: { staff: [STAFF.MANAGER, STAFF.WAITER] } }),
     );
     const { sockets } = await renderConsole({ fake });
-    expect(await screen.findByRole('button', { name: /Asha/ })).toBeVisible();
+    expect(await screen.findByRole('button', { name: /Meera/ })).toBeVisible();
     expect(screen.queryByRole('button', { name: /Ravi/ })).toBeNull();
     act(() => {
       sockets.sync(0);

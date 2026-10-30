@@ -37,3 +37,11 @@ manager or request the bill from the table screen.
 ## Lost phone
 
 Tell the manager at once so the phone is revoked.
+
+## Out of stock
+
+A dish the kitchen marked out of stock is greyed out with "Out of stock" and cannot be added. If
+it was on a KOT you sent and the kitchen had not started it, it is cancelled at no charge and you
+get an **OUT OF STOCK** alert for that table (dish and quantity): tell the guests and offer
+something else. If the kitchen had already started a combo with it, the alert says so: talk to
+the guests and a manager.

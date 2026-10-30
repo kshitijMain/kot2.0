@@ -93,10 +93,9 @@ export function resolveOrderLine(
   if (item === undefined || item.archived) {
     return rejectLine(line, 'ARCHIVED', 'This item is no longer on the menu.');
   }
+  // Sold out or switched off: both are out of stock (ADR-0023).
   if (!item.available) {
-    return item.stockCount === 0
-      ? rejectLine(line, 'OUT_OF_STOCK', `${item.name} is out of stock.`)
-      : rejectLine(line, 'NOT_AVAILABLE_NOW', `${item.name} is not available right now.`);
+    return rejectLine(line, 'OUT_OF_STOCK', `${item.name} is out of stock.`);
   }
   if (!item.channels.includes(context.channel)) {
     return rejectLine(line, 'NOT_ON_CHANNEL', `${item.name} cannot be ordered here.`);

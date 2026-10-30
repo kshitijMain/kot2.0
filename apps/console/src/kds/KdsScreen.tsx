@@ -34,6 +34,7 @@ import {
   type ExpoOrder,
   expoOrders,
 } from './kds-view.js';
+import { AvailabilityScreen } from '../stock/AvailabilityScreen.js';
 import { useKdsTheme } from './kds-theme.js';
 import { type KitchenSounds, webAudioSounds } from './sounds.js';
 
@@ -74,6 +75,8 @@ export function KdsScreen({ sounds: given }: { sounds?: KitchenSounds }) {
   const [soundOn, setSoundOn] = useState(false);
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
   const [recallOpen, setRecallOpen] = useState(false);
+  // ADR-0023: the kitchen marks dishes out of stock and back on the same screen.
+  const [stockOpen, setStockOpen] = useState(false);
   const known = useRef<Set<string> | undefined>(undefined);
 
   // Sounds for tickets this screen had not seen (KDS-009); the first read is silent.
@@ -163,6 +166,9 @@ export function KdsScreen({ sounds: given }: { sounds?: KitchenSounds }) {
           onOpenRecall={() => {
             setRecallOpen(true);
           }}
+          onOpenStock={() => {
+            setStockOpen(true);
+          }}
           onStep={(ticket, line, event) => {
             void run(ticket.kotId, () => step(line, event));
           }}
@@ -189,6 +195,18 @@ export function KdsScreen({ sounds: given }: { sounds?: KitchenSounds }) {
           }}
         />
       )}
+      {stockOpen ? (
+        <Sheet
+          open
+          side="end"
+          title={t('stock.title')}
+          onClose={() => {
+            setStockOpen(false);
+          }}
+        >
+          <AvailabilityScreen />
+        </Sheet>
+      ) : null}
       {recallOpen && current !== undefined ? (
         <Sheet
           open
@@ -242,6 +260,7 @@ interface BoardProps {
   soundOn: boolean;
   onEnableSound: () => void;
   onOpenRecall: () => void;
+  onOpenStock: () => void;
   onStep: (ticket: KdsTicket, line: KdsTicketLine, event: KitchenStep) => void;
   onTicketStep: (ticket: KdsTicket, event: 'START_PREPARING' | 'MARK_READY') => void;
   onBump: (ticket: KdsTicket) => void;
@@ -294,6 +313,9 @@ function Board(props: BoardProps) {
             {t('kds.enableSound')}
           </Button>
         )}
+        <Button variant="secondary" onClick={props.onOpenStock}>
+          {t('stock.open')}
+        </Button>
         <Button variant="secondary" startIcon={<Icon name="sync" />} onClick={props.onOpenRecall}>
           {t('kds.recall')}
         </Button>

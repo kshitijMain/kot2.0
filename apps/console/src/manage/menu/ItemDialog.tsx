@@ -596,7 +596,8 @@ export function AvailabilityDialog({
   onSave,
   onClose,
 }: {
-  item: ItemView;
+  /** A draft dish or a published one: only its name and stock are read. */
+  item: Pick<ItemView, 'name' | 'available' | 'stockCount'>;
   busy: boolean;
   error: string | undefined;
   onSave: (body: ItemAvailabilityRequest) => void;

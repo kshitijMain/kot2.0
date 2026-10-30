@@ -28,7 +28,8 @@
           "SUSPICIOUS_ACTIVITY",
           "SUPPORT_REQUEST",
           "VENDOR_RESTORE_CODE",
-          "SIGN_IN_LOCKED"
+          "SIGN_IN_LOCKED",
+          "OUT_OF_STOCK"
         ]
       },
       "lines": {
@@ -79,7 +80,8 @@
           "SUSPICIOUS_ACTIVITY",
           "SUPPORT_REQUEST",
           "VENDOR_RESTORE_CODE",
-          "SIGN_IN_LOCKED"
+          "SIGN_IN_LOCKED",
+          "OUT_OF_STOCK"
         ]
       },
       "lines": {

@@ -35,7 +35,16 @@ function event<T extends string, P extends z.ZodType>(type: T, payload: P) {
 export const MenuPublished = event('MenuPublished', z.object({ menuVersion: z.int().positive() }));
 export const ItemAvailabilityChanged = event(
   'ItemAvailabilityChanged',
-  z.object({ itemId: Id, available: z.boolean(), stockCount: z.int().nonnegative().nullable() }),
+  z.object({
+    itemId: Id,
+    available: z.boolean(),
+    stockCount: z.int().nonnegative().nullable(),
+    /**
+     * Set when a person marked the dish out of stock (ADR-0023): its unstarted units on tickets are
+     * then cancelled in their name. Absent when the count simply ran out.
+     */
+    markedOutBy: z.object({ staffId: Id, deviceId: Id }).optional(),
+  }),
 );
 
 export const TableOpened = event(

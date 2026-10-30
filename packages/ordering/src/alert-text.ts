@@ -52,6 +52,19 @@ function placed(alert: AlertView, what: string, t: Translator): string {
 function detailOf(alert: AlertView, t: Translator): string | null {
   const { payload } = alert;
   switch (alert.type) {
+    case 'OUT_OF_STOCK': {
+      const quantity = numberOf(payload.quantity);
+      const item = textOf(payload.item);
+      if (quantity === null || item === null) return null;
+      if (payload.cancelled === false) {
+        return t('alerts.outOfStockStarted', {
+          quantity,
+          item,
+          line: textOf(payload.line) ?? item,
+        });
+      }
+      return t('alerts.outOfStock', { quantity, item });
+    }
     case 'ITEM_READY': {
       const items = namesOf(payload.items);
       return items.length === 0 ? null : items.join(', ');

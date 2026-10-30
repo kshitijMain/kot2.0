@@ -58,7 +58,7 @@ describe('[ORD-017] a refused line says why', () => {
     expect(codeOf(archived, line())).toBe('ARCHIVED');
   });
 
-  it('tells out of stock from not available now', () => {
+  it('[MENU-006] calls a sold-out and a switched-off dish out of stock (ADR-0023)', () => {
     const off = (stockCount: number | null) => ({
       ...MENU,
       items: MENU.items.map((item) =>
@@ -66,7 +66,7 @@ describe('[ORD-017] a refused line says why', () => {
       ),
     });
     expect(codeOf(off(0), line())).toBe('OUT_OF_STOCK');
-    expect(codeOf(off(null), line())).toBe('NOT_AVAILABLE_NOW');
+    expect(codeOf(off(null), line())).toBe('OUT_OF_STOCK');
   });
 
   it('[QR-006] refuses a dish not offered on the channel', () => {

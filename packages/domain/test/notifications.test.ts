@@ -26,6 +26,8 @@ const context = (overrides: Partial<RecipientContext> = {}): RecipientContext =>
   ownerIds: ['asha'],
   selectedIds: ['sunita'],
   wearerId: 'arjun',
+  kotSenderId: 'sunita',
+  onDuty: () => true,
   onBreak: new Set(),
   reachable: () => true,
   ...overrides,
@@ -56,6 +58,7 @@ describe('[NTF-002] [NTF-003] the Appendix C matrix', () => {
     ['SUPPORT_REQUEST', ['asha', 'vikram'], null, false, 'UNTIL_RESOLVED'],
     ['VENDOR_RESTORE_CODE', ['asha'], null, false, 'NONE'],
     ['SIGN_IN_LOCKED', ['asha', 'vikram'], null, false, 'NONE'],
+    ['OUT_OF_STOCK', ['sunita'], 'T7 OUT OF STOCK', false, 'NONE'],
   ];
 
   it('covers every event type', () => {
@@ -135,6 +138,51 @@ describe('[NTF-005] [NTF-007] [NTF-009] recipients', () => {
       'vikram',
     ]);
     expect(effectiveRule('ITEM_READY')).toEqual(DEFAULT_NOTIFICATION_RULES.ITEM_READY);
+  });
+});
+
+describe('[NTF-002] the waiter who sent the KOT (ADR-0023)', () => {
+  const outOfStock = DEFAULT_NOTIFICATION_RULES.OUT_OF_STOCK;
+
+  it('alerts only the person who sent the ticket', () => {
+    expect(outOfStock.recipients).toEqual(['KOT_SENDER']);
+    expect(resolveRecipients(outOfStock, context())).toEqual({
+      staffIds: ['sunita'],
+      stations: false,
+      escalateNow: false,
+    });
+  });
+
+  it('alerts every waiter on duty when the sender is off duty or unknown (D-17)', () => {
+    const offDuty = context({ onDuty: (id) => id !== 'sunita', allWaiterIds: ['ravi', 'arjun'] });
+    expect(resolveRecipients(outOfStock, offDuty)).toEqual({
+      staffIds: ['ravi', 'arjun'],
+      stations: false,
+      escalateNow: false,
+    });
+    expect(
+      resolveRecipients(outOfStock, context({ kotSenderId: null, allWaiterIds: ['ravi'] }))
+        .staffIds,
+    ).toEqual(['ravi']);
+  });
+
+  it('calls the managers at once when nobody is there to take it', () => {
+    expect(
+      resolveRecipients(outOfStock, context({ onDuty: () => false, allWaiterIds: [] })),
+    ).toEqual({ staffIds: ['vikram'], stations: false, escalateNow: true });
+  });
+
+  it('[NTF-007] [NTF-009] keeps the sender on break or unreachable to the managers', () => {
+    expect(resolveRecipients(outOfStock, context({ onBreak: new Set(['sunita']) }))).toEqual({
+      staffIds: ['vikram'],
+      stations: false,
+      escalateNow: true,
+    });
+    expect(resolveRecipients(outOfStock, context({ reachable: (id) => id !== 'sunita' }))).toEqual({
+      staffIds: ['sunita', 'vikram'],
+      stations: false,
+      escalateNow: true,
+    });
   });
 });
 

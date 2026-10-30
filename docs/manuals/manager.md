@@ -38,6 +38,14 @@ stock (the kitchen can too). Prices include or exclude tax as the restaurant is 
 - Publish: the step shows what changes on the devices, then which devices have the new menu and
   which get it when they reconnect.
 
+## Menu availability
+
+Menu availability (also on the kitchen screen): search or pick a category, then **Out of stock**
+or **Mark as available** for each dish, or **Portions left** for a count. It applies at once on
+every device and is in the audit log. Marking a dish out cancels its portions the kitchen has not
+started, at no charge, and tells each waiter who sent one; nothing being cooked or ready is
+touched. A combo is out of stock when any fixed part, or every choice of a part, is.
+
 ## Staff and devices
 
 Staff page: add a person, set their role and PIN, deactivate someone who leaves (people are

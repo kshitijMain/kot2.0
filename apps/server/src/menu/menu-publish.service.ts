@@ -164,7 +164,15 @@ export class MenuPublishService {
         });
       }
       await this.record(tx, principal, 'ITEM_AVAILABILITY_CHANGED', itemId, before, after);
-      await this.announceAvailability(tx, principal.restaurantId, after);
+      // Marked out of stock by a person: its unstarted units are cancelled (ADR-0023, orders'
+      // StockOutService hears this event).
+      const markedOut = before.available && !after.available;
+      await this.announceAvailability(
+        tx,
+        principal.restaurantId,
+        after,
+        markedOut ? { staffId: principal.staffId, deviceId: principal.deviceId } : undefined,
+      );
       return after;
     });
   }
@@ -417,10 +425,16 @@ export class MenuPublishService {
     tx: TransactionClient,
     restaurantId: string,
     view: ItemAvailabilityView,
+    markedOutBy?: { staffId: string; deviceId: string },
   ): Promise<void> {
     await this.emit(tx, restaurantId, 'item', view.itemId, {
       type: 'ItemAvailabilityChanged',
-      payload: { itemId: view.itemId, available: view.available, stockCount: view.stockCount },
+      payload: {
+        itemId: view.itemId,
+        available: view.available,
+        stockCount: view.stockCount,
+        ...(markedOutBy !== undefined && { markedOutBy }),
+      },
     });
   }
 
@@ -433,7 +447,12 @@ export class MenuPublishService {
       | { type: 'MenuPublished'; payload: { menuVersion: number } }
       | {
           type: 'ItemAvailabilityChanged';
-          payload: { itemId: string; available: boolean; stockCount: number | null };
+          payload: {
+            itemId: string;
+            available: boolean;
+            stockCount: number | null;
+            markedOutBy?: { staffId: string; deviceId: string };
+          };
         },
   ): Promise<void> {
     await appendEvent(

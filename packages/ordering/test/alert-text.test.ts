@@ -236,3 +236,34 @@ describe('[NTF-006] words for printer and disk or backup alerts', () => {
     ).toContain('The nightly backup is failing.');
   });
 });
+
+describe('[MENU-006] an OUT OF STOCK alert (ADR-0023)', () => {
+  it('names the table, the dish and the quantity, and says it was not charged', () => {
+    expect(
+      describeAlert(
+        alert({
+          type: 'OUT_OF_STOCK',
+          payload: { item: 'Dal Makhani', line: 'Dal Makhani', quantity: 2, cancelled: true },
+        }),
+        t,
+      ),
+    ).toEqual({
+      title: 'Table 5 · OUT OF STOCK',
+      detail: '2 × Dal Makhani: cancelled, not charged. Tell the table and offer something else.',
+    });
+  });
+
+  it('says when the kitchen had started a combo with it, so nothing was cancelled', () => {
+    expect(
+      describeAlert(
+        alert({
+          type: 'OUT_OF_STOCK',
+          payload: { item: 'Roti', line: 'Veg Thali', quantity: 1, cancelled: false },
+        }),
+        t,
+      ).detail,
+    ).toBe(
+      '1 × Veg Thali: Roti is out of stock, but the kitchen has started it. Talk to the table and a manager.',
+    );
+  });
+});

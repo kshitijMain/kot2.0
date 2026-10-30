@@ -281,6 +281,7 @@ export class OrderApprovalsService {
           })),
         });
       }
+      // The approver sent it: its alerts are theirs (ADR-0023).
       await this.orders.sendToKitchen(
         tx,
         approver.restaurantId,
@@ -289,6 +290,7 @@ export class OrderApprovalsService {
         inputs,
         partIds,
         menu,
+        approver.staffId,
       );
       for (const { line, quantity, parts } of lines) {
         if (parts.length === 0) {
@@ -383,6 +385,51 @@ export class OrderApprovalsService {
       });
     });
     return this.orders.get(approver.restaurantId, orderId);
+  }
+
+  /**
+   * ADR-0023: lines of a diner's order still waiting for approval whose dish went out of stock end
+   * as rejected with the reason "Out of stock", in the name of whoever marked it; inside the
+   * caller's transaction. An order left with nothing to approve is rejected, which clears its
+   * approval alert.
+   */
+  async rejectOutOfStockInTx(
+    tx: TransactionClient,
+    by: { restaurantId: string; staffId: string; deviceId: string },
+    orderId: string,
+    lineIds: readonly string[],
+    reason: string,
+  ): Promise<string[]> {
+    const approver: Approver = { ...by, ownOnly: false };
+    const now = new Date();
+    const order = await this.lock(tx, approver, orderId);
+    const lines = this.waitingLines(order).filter((line) => lineIds.includes(line.id));
+    const businessDate = await currentBusinessDate(tx, approver.restaurantId, now);
+    for (const line of lines) {
+      await this.end(tx, approver, order, line, reason, now, businessDate);
+      await this.audit.record(tx, {
+        action: 'ORDER_ITEM_REJECTED',
+        entityType: 'order_item',
+        entityId: line.id,
+        actorId: approver.staffId,
+        deviceId: approver.deviceId,
+        restaurantId: approver.restaurantId,
+        before: { state: line.state, quantity: line.quantity },
+        after: { state: 'REJECTED', automatic: true },
+        reason,
+      });
+    }
+    await this.closeIfEnded(tx, order.id);
+    const left = await tx.orderItem.count({
+      where: { orderId: order.id, state: 'PENDING_APPROVAL', parentOrderItemId: null },
+    });
+    if (lines.length > 0 && left === 0) {
+      await this.emit(tx, approver.restaurantId, businessDate, order, {
+        type: 'OrderRejected',
+        payload: { orderId: order.id, rejectedBy: approver.staffId, reason },
+      });
+    }
+    return lines.map((line) => line.id);
   }
 
   // ---------------------------------------------------------------- helpers

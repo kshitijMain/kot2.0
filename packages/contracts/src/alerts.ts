@@ -24,6 +24,7 @@ export const NotificationEventType = z.enum([
   'SUPPORT_REQUEST',
   'VENDOR_RESTORE_CODE',
   'SIGN_IN_LOCKED',
+  'OUT_OF_STOCK',
 ]);
 export type NotificationEventType = z.infer<typeof NotificationEventType>;
 

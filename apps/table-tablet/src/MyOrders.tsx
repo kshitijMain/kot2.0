@@ -98,7 +98,12 @@ export function MyOrders() {
                   <Text testID={`state-${item.id}`} style={{ color: colors.textMuted }}>
                     {state === 'REJECTED' && item.endReason !== null && item.endReason !== undefined
                       ? t('mobile.tablet.ordering.rejected', { reason: item.endReason })
-                      : t(`mobile.tablet.ordering.lineState.${state}`)}
+                      : state === 'CANCELLED' &&
+                          item.endReason !== null &&
+                          item.endReason !== undefined
+                        ? // ADR-0023: e.g. "Cancelled: Out of stock. Not charged."
+                          t('mobile.tablet.ordering.cancelledBecause', { reason: item.endReason })
+                        : t(`mobile.tablet.ordering.lineState.${state}`)}
                   </Text>
                 </View>
               );

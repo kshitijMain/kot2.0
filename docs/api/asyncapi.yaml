@@ -1189,6 +1189,17 @@ components:
                   minimum: 0
                   maximum: 9007199254740991
                 - type: 'null'
+            markedOutBy:
+              type: object
+              properties:
+                staffId:
+                  $ref: '#/components/schemas/Id'
+                deviceId:
+                  $ref: '#/components/schemas/Id'
+              required:
+                - staffId
+                - deviceId
+              additionalProperties: false
           required:
             - itemId
             - available
@@ -1525,6 +1536,7 @@ components:
         - SUPPORT_REQUEST
         - VENDOR_RESTORE_CODE
         - SIGN_IN_LOCKED
+        - OUT_OF_STOCK
     OrderApproved:
       type: object
       properties:

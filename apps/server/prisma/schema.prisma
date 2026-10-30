@@ -1179,6 +1179,8 @@ model Kot {
   /// Who bumped it: the signed-in person, or none in station mode (the device is recorded).
   bumpedById       String?        @map("bumped_by_id") @db.Uuid
   bumpedByDeviceId String?        @map("bumped_by_device_id") @db.Uuid
+  /// Who sent the ticket (ADR-0023): its alerts go to them. Null for tickets nobody sent by hand.
+  sentById         String?        @map("sent_by_id") @db.Uuid
   lines            KotLine[]
   alerts           Alert[]
   createdAt        DateTime       @default(now()) @map("created_at") @db.Timestamptz(3)
@@ -1190,6 +1192,7 @@ model Kot {
   @@index([stationId, businessDate])
   /// The kitchen screen lists a station's tickets not yet bumped (KDS-002).
   @@index([stationId, bumpedAt])
+  @@index([sentById, businessDate])
   /// The print queue (P1-07b) scans PENDING and FAILED tickets.
   @@index([restaurantId, printStatus])
   @@map("kots")

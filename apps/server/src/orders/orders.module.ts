@@ -2,6 +2,8 @@ import { Module } from '@nestjs/common';
 import { LicensingModule } from '../licensing/licensing.module.js';
 import { AuthModule } from '../auth/auth.module.js';
 import { MenuModule } from '../menu/menu.module.js';
+import { EventsModule } from '../events/events.module.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
 import { SettingsModule } from '../settings/settings.module.js';
 import { OrderApprovalsService } from './order-approvals.service.js';
 import { OrderFeedService } from './order-feed.service.js';
@@ -14,13 +16,22 @@ import {
   TabletOrdersController,
 } from './orders.controller.js';
 import { OrdersService } from './orders.service.js';
+import { StockOutService } from './stock-out.service.js';
 
 /**
  * The order engine (P1-06): submission, KOTs, item status (P1-06b), the live feed (P4-01), and
- * diners' orders with their approval (P3-03a).
+ * diners' orders with their approval (P3-03a), and what a dish going out of stock cancels
+ * (ADR-0023).
  */
 @Module({
-  imports: [AuthModule, MenuModule, SettingsModule, LicensingModule],
+  imports: [
+    AuthModule,
+    MenuModule,
+    SettingsModule,
+    LicensingModule,
+    EventsModule,
+    NotificationsModule,
+  ],
   controllers: [
     OrdersController,
     SessionOrdersController,
@@ -28,7 +39,13 @@ import { OrdersService } from './orders.service.js';
     OrderFeedController,
     TabletOrdersController,
   ],
-  providers: [OrdersService, OrderItemsService, OrderFeedService, OrderApprovalsService],
+  providers: [
+    OrdersService,
+    OrderItemsService,
+    OrderFeedService,
+    OrderApprovalsService,
+    StockOutService,
+  ],
   exports: [OrdersService, OrderItemsService],
 })
 export class OrdersModule {}

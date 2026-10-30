@@ -60,7 +60,7 @@ describe('[ORD-001] [MENU-012] taking an order at a table', () => {
     expect(
       screen.getByRole('button', { name: /^Veg Thali Combo, .*, Combo$/ }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /^Gulab Jamun, .*, Sold out$/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /^Gulab Jamun, .*, Out of stock$/ })).toBeDisabled();
     expect(screen.queryByRole('button', { name: /^Rasmalai/ })).toBeNull();
 
     await user.type(screen.getByLabelText(t('pos.menu.search')), 'tikka');

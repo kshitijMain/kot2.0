@@ -390,7 +390,12 @@ describe('[S2] Phase 5 exit: the restaurant’s internet goes for 30 minutes mid
     await qr.run();
     expect(await menuVersions()).toBe(versions + 1);
     expect(await qrOrders(id('qr'))).toHaveLength(1);
-    expect(await prisma.kot.count()).toBe(Number(id('kotsBefore')) + 1);
+    // The POS's Jeera Rice, not yet started when it ran out, was cancelled with a CANCELLED slip
+    // (ADR-0023): one ticket for it and one slip.
+    expect(await prisma.kot.count()).toBe(Number(id('kotsBefore')) + 2);
+    expect(
+      (await prisma.orderItem.findFirstOrThrow({ where: { orderId: id('posDuring') } })).state,
+    ).toBe('CANCELLED');
     expect(await prisma.relayOrder.count()).toBe(1);
 
     // And a new QR order goes through as before.

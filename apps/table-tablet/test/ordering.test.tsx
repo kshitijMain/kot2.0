@@ -439,6 +439,49 @@ describe('[TAB-008] [TAB-009] [TAB-010] ordering from the table', () => {
       ),
     ).toBeOnTheScreen();
   });
+
+  it('[MENU-006] says a dish cancelled for being out of stock was not charged (ADR-0023)', async () => {
+    const { orders } = await atTable();
+    orders.push({
+      id: ID(7811),
+      orderNumber: 8,
+      orderType: 'DINE_IN',
+      source: 'TABLE_TABLET',
+      status: 'OPEN',
+      tableSessionId: SESSION_ID,
+      tableId: TABLE_ID,
+      takeawayToken: null,
+      customerName: null,
+      businessDate: '2026-10-02',
+      createdAt: new Date().toISOString(),
+      note: null,
+      items: [
+        {
+          id: ID(7812),
+          itemId: DISH.dal,
+          parentOrderItemId: null,
+          name: 'Dal Makhani',
+          variantId: null,
+          variantName: null,
+          modifiers: [],
+          quantity: 1,
+          unitPrice: 24_000,
+          lineTotal: 24_000,
+          stationId: STATION,
+          state: 'CANCELLED',
+          instructions: null,
+          endReason: 'Out of stock',
+        },
+      ],
+      kots: [],
+    });
+    await fireEvent.press(tab(t('mobile.tablet.ordering.ordersTab')));
+    expect(
+      await screen.findByText(
+        t('mobile.tablet.ordering.cancelledBecause', { reason: 'Out of stock' }),
+      ),
+    ).toBeOnTheScreen();
+  });
 });
 
 describe('[TAB-013] without the server', () => {

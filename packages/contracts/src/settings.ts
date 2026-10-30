@@ -83,6 +83,7 @@ const NotificationRuleOverrides = z.partialRecord(
           'OWNER',
           'WEARER',
           'SELECTED',
+          'KOT_SENDER',
         ]),
       )
       .min(1)

@@ -70,24 +70,39 @@ export type UnavailableReason = 'SOLD_OUT' | 'NOT_AVAILABLE' | 'NOT_NOW';
 
 /**
  * Why an item cannot be ordered right now, or undefined when it can: sold out or switched off
- * (MENU-006, WTR-010), or, given the menu and the time, outside its hours (MENU-007) or a combo
- * outside its dates or hours (MENU-005), both NOT_NOW. Every surface asks this, and the server
- * checks the same (`resolveOrderLine`).
+ * (MENU-006, WTR-010), a combo with a part out of stock (a fixed part, or every choice of a part:
+ * ADR-0023), or, given the time, outside its hours (MENU-007) or a combo outside its dates or
+ * hours (MENU-005), both NOT_NOW. Every surface asks this, and the server checks the same
+ * (`resolveOrderLine`).
  */
 export function unavailableReason(
   item: MenuItem,
-  at?: { readonly menu: MenuSnapshot; readonly now: Date | number },
+  at?: { readonly menu: MenuSnapshot; readonly now?: Date | number },
 ): UnavailableReason | undefined {
   if (item.stockCount === 0) return 'SOLD_OUT';
   if (!item.available) return 'NOT_AVAILABLE';
-  if (at !== undefined) {
-    const combo = comboOf(at.menu, item);
+  if (at === undefined) return undefined;
+  const combo = comboOf(at.menu, item);
+  if (combo !== undefined && comboPartOut(at.menu, combo)) return 'SOLD_OUT';
+  if (at.now !== undefined) {
     const now = new Date(at.now);
     const timeZone = at.menu.timeZone ?? DEFAULT_TIME_ZONE;
     if (!itemHoursOnNow(item, now, timeZone)) return 'NOT_NOW';
     if (combo !== undefined && !comboOnNow(combo, now, timeZone)) return 'NOT_NOW';
   }
   return undefined;
+}
+
+/** Whether a combo cannot be made: a fixed part, or every choice of a part, is out of stock. */
+function comboPartOut(menu: MenuSnapshot, combo: NonNullable<ReturnType<typeof comboOf>>): boolean {
+  const items = new Map(menu.items.map((entry) => [entry.id, entry]));
+  const inStock = (id: string) => {
+    const part = items.get(id);
+    return part !== undefined && part.available && part.stockCount !== 0;
+  };
+  return combo.components.some((component) =>
+    component.kind === 'FIXED' ? !inStock(component.itemId) : !component.itemIds.some(inStock),
+  );
 }
 
 /** What to say about an item that cannot be ordered now. */
@@ -97,8 +112,9 @@ export function unavailableText(
   item: MenuItem,
   t: Translator,
 ): string {
-  if (reason === 'SOLD_OUT') return t('pos.menu.soldOut');
-  const hours = reason === 'NOT_NOW' ? hoursOf(menu, item) : undefined;
+  // Sold out and switched off both read "Out of stock" (ADR-0023).
+  if (reason === 'SOLD_OUT' || reason === 'NOT_AVAILABLE') return t('pos.menu.soldOut');
+  const hours = hoursOf(menu, item);
   return hours === undefined ? t('pos.menu.notAvailable') : t('pos.menu.onlyAt', { hours });
 }
 
@@ -113,7 +129,7 @@ export function menuNote(
   t: Translator,
   now?: Date | number,
 ): { note?: string; unavailable?: string } {
-  const reason = unavailableReason(item, now === undefined ? undefined : { menu, now });
+  const reason = unavailableReason(item, now === undefined ? { menu } : { menu, now });
   if (reason !== undefined) return { unavailable: unavailableText(reason, menu, item, t) };
   if (item.stockCount !== null) return { note: t('pos.menu.left', { count: item.stockCount }) };
   if (comboOf(menu, item) !== undefined) return { note: t('pos.menu.combo') };

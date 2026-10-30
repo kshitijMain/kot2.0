@@ -26,6 +26,8 @@ export const NOTIFICATION_EVENTS = [
   'VENDOR_RESTORE_CODE',
   /** Wrong PINs or passwords locked a person's sign-in, or stopped a device taking them (PC-S5). */
   'SIGN_IN_LOCKED',
+  /** A dish on a ticket was marked out of stock and its unstarted units cancelled (ADR-0023). */
+  'OUT_OF_STOCK',
 ] as const;
 export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 
@@ -41,6 +43,11 @@ export const RECIPIENT_KINDS = [
   'WEARER',
   /** The waiters a manager chose for a nudge (NTF-008). */
   'SELECTED',
+  /**
+   * The person who sent the KOT the alert is about (for a diner's order, the waiter who approved
+   * it); every waiter on duty when they are off duty or unknown (ADR-0023).
+   */
+  'KOT_SENDER',
 ] as const;
 export type RecipientKind = (typeof RECIPIENT_KINDS)[number];
 
@@ -173,6 +180,14 @@ export const DEFAULT_NOTIFICATION_RULES: Readonly<Record<NotificationEvent, Noti
   VENDOR_RESTORE_CODE: rule(['OWNER'], ['POS', 'DASHBOARD'], null, false, 'NONE'),
   // Not in Appendix C: a lockout may be someone guessing PINs, and a manager can lift it (PC-S5).
   SIGN_IN_LOCKED: rule(['OWNER', 'MANAGERS_ON_DUTY'], ['POS', 'DASHBOARD'], null, false, 'NONE'),
+  // ADR-0023: one per ticket line whose units were cancelled, to whoever sent the ticket.
+  OUT_OF_STOCK: rule(
+    ['KOT_SENDER'],
+    ['PAGER', 'WAITER_APP', 'POS'],
+    '{table} OUT OF STOCK',
+    false,
+    'NONE',
+  ),
 };
 
 /** A manager's change to one event's rule (NTF-002); anything left out keeps the default. */
@@ -324,6 +339,13 @@ export interface RecipientContext {
   readonly ownerIds: readonly string[];
   readonly selectedIds: readonly string[];
   readonly wearerId: string | null;
+  /** Who sent the KOT the alert is about (ADR-0023), if anyone. */
+  readonly kotSenderId?: string | null;
+  /**
+   * Whether a person is on duty now: signed in, or their pager or phone connected (D-17). Someone
+   * off duty does not get a KOT's alerts; every waiter on duty does instead.
+   */
+  readonly onDuty?: (staffId: string) => boolean;
   /** Waiters who set "On break" (NTF-009): their alerts go to the managers until they return. */
   readonly onBreak: ReadonlySet<string>;
   /** Whether a person's pager or waiter app is connected (NTF-007). */
@@ -352,6 +374,7 @@ const WAITER_KINDS: ReadonlySet<RecipientKind> = new Set([
   'SECTION_WAITERS',
   'ALL_WAITERS',
   'SELECTED',
+  'KOT_SENDER',
 ]);
 
 export function resolveRecipients(
@@ -397,6 +420,27 @@ export function resolveRecipients(
       case 'SELECTED':
         addWaiters(context.selectedIds);
         break;
+      case 'KOT_SENDER': {
+        const sender = context.kotSenderId ?? null;
+        if (sender !== null && sender === context.askedById) {
+          waiterFound = true;
+          break;
+        }
+        const onDuty = context.onDuty ?? (() => true);
+        if (sender === null || !onDuty(sender)) {
+          // Signed out or unknown: whoever is on duty takes it (D-17).
+          addWaiters(context.allWaiterIds.filter((id) => onDuty(id)));
+          break;
+        }
+        if (context.onBreak.has(sender)) {
+          escalateNow = true;
+          break;
+        }
+        if (!context.reachable(sender)) escalateNow = true;
+        people.add(sender);
+        waiterFound = true;
+        break;
+      }
       case 'MANAGERS_ON_DUTY':
         for (const id of context.managersOnDuty) people.add(id);
         break;

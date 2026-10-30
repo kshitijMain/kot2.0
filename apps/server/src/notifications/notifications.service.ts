@@ -63,6 +63,8 @@ export interface RaiseAlert {
   readonly raisedByDeviceId?: string | null;
   /** Whose own request it is, e.g. the waiter who asked for the bill: they are not alerted. */
   readonly askedById?: string | null;
+  /** Who sent the KOT the alert is about: KOT_SENDER rules go to them (ADR-0023). */
+  readonly kotSenderId?: string | null;
   /**
    * Raised again while open, the alert rings once more with this payload instead of staying
    * quiet: another dish ready for the same table, now that nobody acknowledges food ready.
@@ -227,6 +229,7 @@ export class NotificationsService implements OnApplicationBootstrap, OnModuleDes
         ...(input.selectedIds !== undefined && { selectedIds: input.selectedIds }),
         ...(input.wearerId !== undefined && { wearerId: input.wearerId }),
         ...(input.askedById !== undefined && { askedById: input.askedById }),
+        ...(input.kotSenderId !== undefined && { kotSenderId: input.kotSenderId }),
       },
       now,
       (staffId) => this.presence.reachable(restaurantId, staffId),
