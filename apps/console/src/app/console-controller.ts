@@ -102,6 +102,8 @@ export class ConsoleController {
   async start(): Promise<void> {
     const record = await this.options.storage.loadDevice();
     if (record === undefined) {
+      // PIN-only (ADR-0025): pair this browser at once, no code typed, and go to the PIN screen.
+      if (await this.pairItself()) return;
       this.update({ phase: 'unpaired' });
       return;
     }
@@ -132,6 +134,23 @@ export class ConsoleController {
     }
     this.update({ phase: 'paired', device, person, session: current });
     this.connect(this.options.storage.loadResume());
+  }
+
+  /**
+   * Where the server runs PIN-only (ADR-0025), pairs this browser by itself with a code the server
+   * gives anyone on the restaurant's network; true when it did. Otherwise, or should it fail, the
+   * pairing screen asks for a manager's code as usual.
+   */
+  private async pairItself(): Promise<boolean> {
+    try {
+      const status = await this.client.api.getFirstRun();
+      if (status.pinOnly !== true || status.needed) return false;
+      const { code } = await this.client.api.createBootstrapPairingCode();
+      await this.pair(code);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /** Pairs this browser with a manager's code, creating its device key (AUTH-007). */

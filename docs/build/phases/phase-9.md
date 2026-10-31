@@ -277,3 +277,32 @@ Acceptance:
 
 - Orders' empty and loading states (unit). All QR e2e pass: 360 px never wider than the screen,
   the card stepper, axe clean, LCP within 2.5 s.
+
+## P9-14 PIN-only sign-in for the pilot
+
+Requirements: AUTH-007, AUTH-005, AUTH-001, AUTH-003, AUTH-010. ADR-0025.
+
+Asked by the Business Owner: in the Mannat pilot every browser landed on `/pair` and needed a code
+from another screen, and the kitchen could not use its PIN. They want: open the console, tap a name,
+enter the PIN.
+
+Deliverables:
+
+- `RP_AUTH_PIN_ONLY`, off by default. When on:
+  - the bootstrap pairing code is given to any client on the restaurant's network (never a public
+    address, 5 a minute per address);
+  - `GET /first-run` says `pinOnly`;
+  - kitchen staff sign in with their PIN.
+- Console: with no stored device and a PIN-only server, it pairs itself and goes to `/login`; the
+  pairing screen remains only as a fallback.
+- Pilot: `mannat-local.sh` sets the flag; `mannat-ngrok.sh` adds it to older pilots; the Mannat seed
+  sets `auth.kitchenIndividualLogins`.
+
+Acceptance:
+
+- With the flag, Manager, Waiter, Kitchen and Owner each sign in on a self-paired browser
+  (integration).
+- No code from a public address; a limit per address (integration).
+- Without the flag, nothing changes: no code for the network, kitchen in station mode
+  (integration).
+- The console goes straight to the PIN screen, or asks for a code without the flag (console).

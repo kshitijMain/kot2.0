@@ -35,6 +35,23 @@ Needs Docker (for PostgreSQL 16), Node 24 and pnpm (`corepack enable`). Optional
 Staff and their first PINs: Owner 1111, Manager 2222, Waiter 1 4444, Waiter 2 5555, Kitchen 6666.
 Change them in Manage → Staff before real service.
 
+## Signing in: PIN only (no pairing codes)
+
+The pilot runs with `RP_AUTH_PIN_ONLY=1` (ADR-0025, set by `setup`; `mannat-ngrok.sh` adds it to a
+pilot set up earlier). Any browser on this Mac or its Wi-Fi opens the console and goes straight to
+the staff tiles; pick a name and enter the PIN. No `/pair`, no codes from Manage → Devices.
+
+| Person   | PIN  | Lands on                 |
+| -------- | ---- | ------------------------ |
+| Owner    | 1111 | Manager dashboard        |
+| Manager  | 2222 | Manager dashboard        |
+| Waiter 1 | 4444 | POS                      |
+| Waiter 2 | 5555 | POS                      |
+| Kitchen  | 6666 | Kitchen display (`/kds`) |
+
+Each browser (or Incognito window) becomes a "Browser N" device; unpair old ones in Manage →
+Devices. Never set the flag on a real restaurant's installation.
+
 ## Trying it
 
 1. `start`, then pair the first POS screen. Either:

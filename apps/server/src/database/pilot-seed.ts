@@ -417,6 +417,8 @@ export async function seedMannat(
     // The diner's mobile number before the first order, printed on the bill (P9-02).
     ['qr.askPhone', 'REQUIRED'],
     ['payments.upiPayeeName', 'Mannat'],
+    // The kitchen signs in with its PIN (6666) rather than a station screen (ADR-0025).
+    ['auth.kitchenIndividualLogins', true],
     ...(options.upiId === undefined
       ? []
       : [['payments.upiId', options.upiId] as [string, unknown]]),

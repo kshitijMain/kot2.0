@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   type FirstRunRequest,
   type FirstRunResponse,
@@ -8,6 +8,7 @@ import {
 import { isEasilyGuessedPin } from '@rp/domain';
 import { AuditService } from '../audit/audit.service.js';
 import { CredentialHasher } from '../auth/credential-hasher.js';
+import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
 import { ADVISORY_LOCKS } from '../database/advisory-locks.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
@@ -50,10 +51,16 @@ export class FirstRunService {
     private readonly prisma: PrismaService,
     private readonly hasher: CredentialHasher,
     private readonly audit: AuditService,
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
   async status(): Promise<FirstRunStatus> {
-    return { needed: (await this.prisma.restaurant.count()) === 0, pinLength: pinLength() };
+    return {
+      needed: (await this.prisma.restaurant.count()) === 0,
+      pinLength: pinLength(),
+      // The console pairs itself and goes straight to the PIN screen (ADR-0025).
+      pinOnly: this.config.authPinOnly,
+    };
   }
 
   async complete(request: FirstRunRequest, loopback: boolean): Promise<FirstRunResponse> {

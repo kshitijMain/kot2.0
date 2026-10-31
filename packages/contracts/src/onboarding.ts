@@ -58,7 +58,15 @@ export type ActivateResponse = z.infer<typeof ActivateResponse>;
  * Whether this server has no restaurant yet (a fresh install, ONB-001), and how many digits the
  * Owner's PIN has (`auth.pinLength`, 4 until the Owner changes it); nothing else.
  */
-export const FirstRunStatus = z.object({ needed: z.boolean(), pinLength: z.int().min(4).max(8) });
+export const FirstRunStatus = z.object({
+  needed: z.boolean(),
+  pinLength: z.int().min(4).max(8),
+  /**
+   * PIN-only sign-in (ADR-0025): a browser on the restaurant's network pairs itself, with no code
+   * typed; staff sign in with their PIN. Absent from older servers: pairing as usual.
+   */
+  pinOnly: z.boolean().optional(),
+});
 export type FirstRunStatus = z.infer<typeof FirstRunStatus>;
 
 /** The restaurant's name and its Owner, entered on the restaurant PC itself (P7-07b). */

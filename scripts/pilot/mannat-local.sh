@@ -47,6 +47,8 @@ RP_QR_SITE_URL=$SITE
 RP_TLS=on
 RP_TLS_HOSTNAMES=$IP
 RP_MQTT=off
+# PIN-only sign-in (ADR-0025): browsers on this network pair themselves; staff use their PINs.
+RP_AUTH_PIN_ONLY=1
 LOG_LEVEL=info
 EOF
 }

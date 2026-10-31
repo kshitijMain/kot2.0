@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
 import { SettingsService } from '../settings/settings.service.js';
 
 /**
@@ -48,7 +49,10 @@ export function authSettingKey(name: keyof AuthSettings): string {
 /** The authentication settings of a restaurant, read through the settings registry (P1-01a). */
 @Injectable()
 export class AuthSettingsService {
-  constructor(private readonly settings: SettingsService) {}
+  constructor(
+    private readonly settings: SettingsService,
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
+  ) {}
 
   /** Current values; a missing or invalid stored value falls back to its default. */
   async get(restaurantId: string): Promise<AuthSettings> {
@@ -68,7 +72,9 @@ export class AuthSettingsService {
       sessionMaxHours: values.get('auth.sessionMaxHours'),
       stepUpMinutes: values.get('auth.stepUpMinutes'),
       overrideSeconds: values.get('auth.overrideSeconds'),
-      kitchenIndividualLogins: values.get('auth.kitchenIndividualLogins'),
+      // PIN-only (ADR-0025): the kitchen signs in with its PIN like everyone else.
+      kitchenIndividualLogins:
+        values.get('auth.kitchenIndividualLogins') || this.config.authPinOnly,
       pairingCodeMinutes: values.get('auth.pairingCodeMinutes'),
       deviceTokenMinutes: values.get('auth.deviceTokenMinutes'),
     };
