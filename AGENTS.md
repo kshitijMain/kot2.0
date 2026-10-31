@@ -40,7 +40,9 @@ Every session, in this order:
    `grep -n "ORD-011" docs/brd/requirements.md`.
 4. Read the ADRs it names, `docs/build/CONVENTIONS.md`, and the code it builds on. Search before
    creating: `@rp/domain`, `@rp/ordering`, `@rp/ui-web`, `@rp/ui-native`, `@rp/mobile-*` probably
-   already have the helper or component you need.
+   already have the helper or component you need. For QR menu **visual** work, read
+   `design-ref/AGENTS.md` and browse shallow clones under `design-ref/tier-*/` (not committed;
+   run `design-ref/clone-all.sh` if missing).
 5. Write a short plan (contracts, domain logic, server, UI, tests, files) and mark the WP `[~]`.
    Do not wait for approval: the owner has asked for continuous building (CLAUDE.md). The
    `/next-step` skill (`.claude/skills/next-step/SKILL.md`) is this loop written out.
