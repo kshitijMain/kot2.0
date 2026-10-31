@@ -1,0 +1,40 @@
+# The QR menu site and the QR relay on one server (P9-01, ADR-0024). Caddy gets and renews the
+# HTTPS certificate by itself. Replace menu.example.in with the site's own address (one line per
+# restaurant site if several share this server: each is a block like this one).
+menu.example.in {
+	encode zstd gzip
+
+	# The relay: diners' and restaurant PCs' calls, and each restaurant's open line.
+	handle /functions/v1/* {
+		reverse_proxy 127.0.0.1:8787
+	}
+	handle /realtime/v1/* {
+		reverse_proxy 127.0.0.1:8787 {
+			# The line is a WebSocket kept open for hours; never time it out here.
+			flush_interval -1
+			stream_timeout 0
+		}
+	}
+	# Menu photos straight from disk: they never change, so phones keep them a year.
+	handle_path /storage/v1/object/public/menu-photos/* {
+		root * /var/lib/rp-relay/photos
+		header Cache-Control "public, max-age=31536000, immutable"
+		header X-Content-Type-Options nosniff
+		file_server
+	}
+	handle /healthz {
+		reverse_proxy 127.0.0.1:8787
+	}
+
+	# Everything else is the QR menu site.
+	handle {
+		reverse_proxy 127.0.0.1:3100
+	}
+
+	log {
+		output file /var/log/caddy/menu.log {
+			roll_size 20MiB
+			roll_keep 7
+		}
+	}
+}

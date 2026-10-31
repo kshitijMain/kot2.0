@@ -1,8 +1,12 @@
 # infra/supabase: QR relay (C8)
 
-The cloud relay between diners' phones (QR menu) and the restaurant's local server, on Supabase in
-the Mumbai region. Design: [ADR-0015](../../docs/adr/0015-qr-relay-on-supabase.md). Package
-`@rp/relay`.
+The cloud relay between diners' phones (QR menu) and the restaurant's local server. Package
+`@rp/relay`. It runs in either of two places:
+
+- **Supabase** in the Mumbai region. Design: [ADR-0015](../../docs/adr/0015-qr-relay-on-supabase.md).
+- **A server of your own** (the QR pilot): `src/host`, built into `dist/relay-host.mjs`, with each
+  restaurant's open line. Design: [ADR-0024](../../docs/adr/0024-qr-pilot-self-hosted-relay.md).
+  Deployment: [`infra/relay-host`](../relay-host/README.md).
 
 - `config.toml`: Supabase CLI settings. For a local stack, run `supabase start --workdir infra`
   (needs Docker). The `relay` schema stays out of the Data API.
@@ -25,6 +29,12 @@ the Mumbai region. Design: [ADR-0015](../../docs/adr/0015-qr-relay-on-supabase.m
     session, presence with the QR settings, publishing the menu, the tables with their code
     hashes, picking up orders and reporting their status, and menu photos into the
     `menu-photos` Storage bucket with their 90-day sweep (P5-03c).
+  - `src/host/` is the self-hosted relay (P9-01): the same functions over Node's HTTP server, the
+    open line (`line.ts`: Realtime's Phoenix protocol, rung by `pg_notify('relay_ring')`), photos
+    on disk, expiry and retention as `relay_janitor`, and settings from the environment
+    (`config.ts`). `@rp/relay/testing` uses these same modules.
+  - `scripts/migrate.mjs` applies the migrations to a self-hosted PostgreSQL;
+    `scripts/provision-restaurant.mjs` adds a restaurant and prints its credential once.
   - `src/entries/` holds the Supabase entries. `pnpm --filter @rp/relay build` bundles them with
     esbuild into `dist/functions/<name>/index.js`, which `config.toml` names.
   - The request and response schemas are in `@rp/contracts/relay`, documented in

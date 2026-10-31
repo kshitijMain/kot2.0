@@ -686,6 +686,16 @@ Recommended next WPs (dependencies met):
   - [x] P8-06b Pilot KPI views: approval time (R-04) and availability over time
   - [ ] P8-06c The pilot itself: UAT, baselines, 4 weeks live [H]
 
+### Phase 9: The QR pilot at Mannat (`phases/phase-9.md`, ADR-0024)
+
+- [x] P9-01 The relay on a server of our own, with an open line to each restaurant (the server
+      itself: manual task 38)
+- [ ] P9-02 The diner's phone number, on the order and the bill
+- [ ] P9-03 The bill on the diner's phone, UPI and "I have paid"
+- [ ] P9-04 The diner's page: phone first, My orders, accepted, order again, Bill tab, a nicer menu
+- [ ] P9-05 The manager's phone rings for QR orders
+- [ ] P9-06 The Mannat pilot set-up and a one-Mac trial
+
 ## Decisions
 
 On 2026-09-25 the Business Owner delegated product and engineering decisions to Claude ("you are
@@ -4610,6 +4620,55 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-10-31: P9-01 The relay on a server of our own, with an open line
+
+The Business Owner approved the QR pilot's architecture (Option B with an open line; ADR-0024)
+and asked for it to be built. Phase 9 added (`phases/phase-9.md`, BUILD_PLAN).
+
+Built:
+
+- `infra/supabase/src/host`:
+  - `host.ts` (functions, line, photos, `/healthz`, timeouts);
+  - `line.ts` (the production version of the old Realtime stand-in: the Phoenix subset, tokens
+    must be `relay_server`, a renewed token cannot change restaurant, 16 KB messages, 4 channels
+    a socket, pings drop dead lines, the LISTEN connection reconnects);
+  - `listener.ts` (9 MB cap before reading);
+  - `database.ts`, `photos.ts` (disk, strict path form), `jobs.ts`, `config.ts`, `main.ts`.
+- `dist/relay-host.mjs` (esbuild, Node).
+- Migration `20261031100000_self_hosted_relay` (`relay.ring()` on both queues; login
+  `relay_janitor` for expiry and retention).
+- `scripts/migrate.mjs`, `scripts/provision-restaurant.mjs`.
+- `infra/relay-host/` (Caddyfile, two systemd units, env templates, `setup-ubuntu.sh`, README).
+- Manual task 38 (replaces 20/21 for the pilot in MANUAL_TASKS.md).
+- `@rp/relay/testing` now builds on `src/host`; `testing/realtime.ts` is gone.
+
+Tests:
+
+- relay `host.test.ts` 9: rings within a second and only its restaurant, a call rings too, keys
+  and tokens refused, photos on disk and traversal refused, the 9 MB cap, the expiry job, 404s,
+  dead lines dropped, settings.
+- `roles.test.ts` and `retention.test.ts` cover `relay_janitor`.
+- Relay suite 168 passed. Server relay, Realtime, QR exit and table-QR integration suites pass on
+  the production line.
+- Checked by hand on Docker PostgreSQL 16: migrate as superuser, logins given passwords, Mannat
+  provisioned, a second migrate is a no-op.
+
+Decided:
+
+- The line speaks the Phoenix subset the PC already speaks, so the PC is unchanged.
+- Migrations run as superuser (as on Supabase); requests as `relay_edge`; jobs as
+  `relay_janitor` (EXECUTE on expiry and retention only).
+- Paths stay Supabase's (`/functions/v1`, `/realtime/v1/websocket`,
+  `/storage/v1/object/public/menu-photos`), so `RP_RELAY_URL` works unchanged and going back to
+  Supabase is a deployment change.
+
+Gotchas:
+
+- Roles are cluster-wide. Do not give `relay_edge` a password on the shared test cluster (the
+  roles test checks logins). The pilot's own relay database runs in its own PostgreSQL.
+- On this Mac, Homebrew is an Intel install and could not install PostgreSQL. The tests use
+  Docker `postgres:16` on port 55432 (`TEST_DATABASE_URL`).
 
 ### 2026-10-27: the Control Plane ready for AWS in Mumbai (staging first)
 

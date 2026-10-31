@@ -122,6 +122,8 @@ describe('[SEC-005] privileges', () => {
       'set_tenant_status',
     ]);
     expect(byRole('relay_control_plane')).toEqual([]);
+    // ADR-0024: a self-hosted relay's jobs, without pg_cron.
+    expect(byRole('relay_janitor')).toEqual(['expire_orders', 'purge']);
   });
 
   it('runs every definer-rights function with an empty search_path', async () => {
@@ -242,6 +244,7 @@ describe('[SEC-005] roles', () => {
     for (const [login, statement] of [
       ['relay_edge', 'SELECT count(*) FROM relay.qr_orders'],
       ['relay_control_plane', "SELECT relay.provision_tenant($1, 'Not Yet')"],
+      ['relay_janitor', 'SELECT count(*) FROM relay.qr_orders'],
     ] as const) {
       const client = await db.admin.connect();
       try {

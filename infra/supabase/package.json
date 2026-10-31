@@ -2,7 +2,7 @@
   "name": "@rp/relay",
   "version": "0.1.0",
   "private": true,
-  "description": "QR relay on Supabase (C8, ADR-0015): migrations, Row-Level Security, edge functions and their tests.",
+  "description": "QR relay (C8): migrations, Row-Level Security, the functions and their tests; served by Supabase (ADR-0015) or by its own Node host with the restaurants' open line (ADR-0024).",
   "type": "module",
   "exports": {
     "./testing": {
