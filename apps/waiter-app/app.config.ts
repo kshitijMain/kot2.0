@@ -134,6 +134,8 @@ export default ({ config, projectRoot }: ConfigContext): ExpoConfig => {
         },
       ],
       'expo-secure-store',
+      // Enough memory for Gradle and Kotlin in a release build (P9-16).
+      './plugins/with-gradle-memory.cjs',
       // Parossa's splash on the off-white page colour (ADR-0022).
       [
         'expo-splash-screen',

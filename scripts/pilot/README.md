@@ -52,6 +52,28 @@ the staff tiles; pick a name and enter the PIN. No `/pair`, no codes from Manage
 Each browser (or Incognito window) becomes a "Browser N" device; unpair old ones in Manage →
 Devices. Never set the flag on a real restaurant's installation.
 
+## The waiter app on a phone (APK built on this Mac)
+
+Build it (Android SDK in `~/Library/Android/sdk`; about 45 s once Gradle's caches are warm, the
+first time much longer):
+
+```bash
+cd apps/waiter-app && APP_ENV=preview ANDROID_HOME=~/Library/Android/sdk pnpm prebuild
+cd android && APP_ENV=preview NODE_ENV=production ANDROID_HOME=~/Library/Android/sdk ./gradlew assembleRelease
+cp app/build/outputs/apk/release/app-release.apk ../../../.pilot/apk/parossa-waiter-preview.apk
+```
+
+It is "Parossa Captain (preview)" (`in.rp.waiter.preview`), signed with the debug key, so it is
+installed directly, not from the Play Store. To put it on a phone on this Wi-Fi:
+
+```bash
+python3 -m http.server 8099 --directory .pilot/apk    # stop with Ctrl-C when done
+```
+
+then open `http://<this Mac's IP>:8099/parossa-waiter-preview.apk` on the phone. Pair it from the
+POS (Manage → Devices → Pair a device → Waiter phone, scan the code with the app) and sign in with
+a PIN. A manager signed in on it takes payment for a printed bill.
+
 ## Trying it
 
 1. `start`, then pair the first POS screen. Either:
