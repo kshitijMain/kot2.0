@@ -701,6 +701,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-10 Approving a diner's order from its alert, and on the manager dashboard
 - [x] P9-11 A designed QR menu: cards, sheets and states
 - [x] P9-12 The open line never waits for ever on a handshake
+- [x] P9-13 Accepted reaches the diner after a pilot reset; My orders survives a reload
 
 ## Decisions
 
@@ -4626,6 +4627,45 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-10-31: P9-13 Accepted reaches the diner after a pilot reset; My orders survives a reload
+
+Reported from the pilot after `mannat-local.sh fresh`:
+
+- a QR order showed on the POS but not in the manager's alerts;
+- after approval the diner never saw Accepted, although the KOT reached the kitchen;
+- reloading the QR page landed on the menu.
+
+Found: the reset (`mannat-fresh-mannat.sql`) truncated `outbox` and `inbox` with RESTART IDENTITY.
+Event numbers are `MAX(sequence) + 1`, so they started again at 1, while every durable consumer's
+cursor stayed at 19. Every new event was skipped as already handled:
+
+- no ORDER_PENDING_APPROVAL alert;
+- the relay never told the order was accepted.
+
+The POS approvals panel and the KOT do not go through consumers, which is why they worked.
+
+Built:
+
+- `EventBus.recoverEmptiedOutbox`: at start-up, a cursor past the newest event is brought back to
+  it, the stream gets a new id (clients read afresh), and a warning is logged.
+- The reset script keeps `outbox` and `inbox`.
+- The pilot was repaired: cursors set to 0, the seven missed events handled; the relay now has the
+  order SENT_TO_KITCHEN.
+- QR page:
+  - the tab lives in the address (`#orders`, `#bill`), so a reload stays there and Back goes to
+    the tab before;
+  - My orders has Refresh and "Updated HH:MM".
+
+Committed with it: the owner's `fresh` command (`mannat-local.sh`, `mannat-fresh-*.sql`, README
+line), now safe.
+
+Tests:
+
+- integration `event-bus` +1 (an emptied outbox still delivers new events; fails without the
+  guard). 14/14.
+- QR unit +1 (Refresh). 24/24.
+- QR e2e +1 (reload on My orders, Back). 17/17.
 
 ### 2026-10-31: P9-12 The open line never waits for ever on a handshake
 

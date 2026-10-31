@@ -648,6 +648,26 @@ body {
   font-size: var(--rp-font-size-lg);
 }
 
+/* Your orders and, beside it, when they were last heard of and Refresh (P9-13). */
+.qr-orders__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rp-space-2);
+  margin-bottom: var(--rp-space-3);
+}
+
+.qr-orders__head .qr-section__title {
+  margin: 0;
+}
+
+.qr-orders__refresh {
+  display: flex;
+  align-items: center;
+  gap: var(--rp-space-2);
+}
+
 .qr-orders > ul {
   display: grid;
   gap: var(--rp-space-3);

@@ -568,3 +568,19 @@ test.describe('[P9-09] a menu made for the phone', () => {
     await expectAccessible(page);
   });
 });
+
+test.describe('[P9-13] where the diner was', () => {
+  test('[QR-007] a reload stays on My orders, which can be refreshed', async ({ page }) => {
+    await tablePage(page, 'T2');
+    const tabs = page.getByRole('navigation', { name: s.tabs.label });
+    await tabs.getByRole('button', { name: s.tabs.orders }).click();
+    await expect(page.getByRole('heading', { name: s.orders.title })).toBeVisible();
+    expect(page.url()).toMatch(/#orders$/);
+    await page.reload();
+    await expect(page.getByRole('heading', { name: s.orders.title })).toBeVisible();
+    await expect(page.getByRole('button', { name: s.orders.refresh })).toBeVisible();
+    // Back goes to the tab before.
+    await page.goBack();
+    await expect(page.getByRole('navigation', { name: s.categories })).toBeVisible();
+  });
+});

@@ -13,6 +13,7 @@ scripts/pilot/mannat-local.sh status
 scripts/pilot/mannat-local.sh pair      # the first screen's pairing code (run on this computer)
 scripts/pilot/mannat-local.sh stop
 scripts/pilot/mannat-local.sh reset     # delete everything set up here and start again
+scripts/pilot/mannat-local.sh fresh     # clear orders, KOTs, approvals; keep QR codes and pairing
 ```
 
 Needs Docker (for PostgreSQL 16), Node 24 and pnpm (`corepack enable`). Optional:

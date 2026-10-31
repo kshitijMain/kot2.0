@@ -27,8 +27,10 @@ export function Orders({
   now,
   readOnly,
   loading = false,
+  heardAt,
   onAgain,
   onBrowse,
+  onRefresh,
 }: {
   orders: readonly QrOrderView[];
   items: ReadonlyMap<string, MenuItem>;
@@ -36,17 +38,37 @@ export function Orders({
   readOnly: boolean;
   /** Still finding this number's orders: a placeholder, not "nothing yet" (P9-11). */
   loading?: boolean;
+  /** When the page last heard from the restaurant about these orders. */
+  heardAt?: number | undefined;
   onAgain: (lines: readonly OrderLineRequest[]) => void;
   /** Back to the menu, from the empty state. */
   onBrowse?: () => void;
+  /** Look again now, rather than at the next tick (P9-13). */
+  onRefresh?: () => void;
 }) {
   const t = useT();
+  const refresh =
+    onRefresh === undefined ? null : (
+      <div className="qr-orders__refresh">
+        {heardAt === undefined ? null : (
+          <span className="qr-muted">
+            {t('qrSite.orders.updated', displayDateTime(new Date(heardAt)))}
+          </span>
+        )}
+        <Button variant="ghost" startIcon={<Icon name="sync" />} onClick={onRefresh}>
+          {t('qrSite.orders.refresh')}
+        </Button>
+      </div>
+    );
   if (orders.length === 0) {
     return (
       <section className="qr-panel" aria-labelledby="qr-orders-title">
-        <h2 id="qr-orders-title" className="qr-section__title">
-          {t('qrSite.orders.title')}
-        </h2>
+        <div className="qr-orders__head">
+          <h2 id="qr-orders-title" className="qr-section__title">
+            {t('qrSite.orders.title')}
+          </h2>
+          {refresh}
+        </div>
         {loading ? (
           <CardSkeleton label={t('qrSite.orders.loading')} />
         ) : (
@@ -63,9 +85,12 @@ export function Orders({
   }
   return (
     <section className="qr-panel qr-orders" aria-labelledby="qr-orders-title">
-      <h2 id="qr-orders-title" className="qr-section__title">
-        {t('qrSite.orders.title')}
-      </h2>
+      <div className="qr-orders__head">
+        <h2 id="qr-orders-title" className="qr-section__title">
+          {t('qrSite.orders.title')}
+        </h2>
+        {refresh}
+      </div>
       <ul>
         {orders.map((order, index) => {
           const status = shownStatus(order, now);

@@ -278,6 +278,26 @@ describe('[QR-007] where an order is', () => {
     expect(onBrowse).toHaveBeenCalledTimes(1);
   });
 
+  it('[QR-007] looks again on Refresh, and says when it last heard (P9-13)', () => {
+    const onRefresh = vi.fn();
+    render(
+      <I18nProvider>
+        <Orders
+          orders={[order({ status: 'RECEIVED' })]}
+          items={items}
+          now={Date.parse('2026-10-02T08:00:30.000Z')}
+          readOnly={false}
+          heardAt={Date.parse('2026-10-02T08:00:30.000Z')}
+          onAgain={onAgain}
+          onRefresh={onRefresh}
+        />
+      </I18nProvider>,
+    );
+    expect(screen.getByText(/^Updated /)).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: en.qrSite.orders.refresh }));
+    expect(onRefresh).toHaveBeenCalledTimes(1);
+  });
+
   it('[NFR-U04] says it is looking, not "nothing yet", while the orders are looked up (P9-11)', () => {
     render(
       <I18nProvider>

@@ -123,8 +123,10 @@ beforeAll(async () => {
   bus = app.get(EventBus);
 });
 
+let appClosed = false;
+
 afterAll(async () => {
-  await app.close();
+  if (!appClosed) await app.close();
   await database.drop();
 });
 
@@ -426,5 +428,41 @@ describe('consumer registration', () => {
     // Not started: waking does nothing.
     fresh.wake();
     expect(fresh.head).toBe(0);
+  });
+});
+
+describe('an outbox emptied by hand (a pilot reset)', () => {
+  it('[NTF-006] still delivers new events: cursors come back to the head, the stream is new (P9-13)', async () => {
+    const event = orderSubmitted(1);
+    await produce(app, [event]);
+    await until(() => probe.handled.includes(event.eventId), 5_000, 'the first event');
+    const stream = bus.streamId;
+    expect(Number((await cursorOf(probe.name)).lastSequence)).toBeGreaterThan(1);
+    await app.close();
+    appClosed = true;
+
+    // What the pilot's reset did: numbering starts again under the consumers' cursors.
+    const pg = await import('pg');
+    const client = new pg.default.Client({ connectionString: database.url });
+    await client.connect();
+    await client.query('TRUNCATE outbox, inbox');
+    await client.end();
+
+    const again = new ProbeConsumer();
+    const restarted = await createTestApp({
+      databaseUrl: database.url,
+      overrides: [{ provide: EVENT_BUS_OPTIONS, useValue: FAST }],
+      beforeInit: (created) => {
+        created.get(EventBus).subscribe(again);
+      },
+    });
+    try {
+      const after = orderSubmitted(2);
+      await produce(restarted, [after]);
+      await until(() => again.handled.includes(after.eventId), 5_000, 'the event after the reset');
+      expect(restarted.get(EventBus).streamId).not.toBe(stream);
+    } finally {
+      await restarted.close();
+    }
   });
 });

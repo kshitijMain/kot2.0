@@ -2360,6 +2360,8 @@ until you press Publish.
       emptyTitle: 'No orders yet',
       empty: 'Pick dishes from the menu and send your order. You can follow it here.',
       loading: 'Looking up your orders…',
+      refresh: 'Refresh',
+      updated: 'Updated {time}',
       number: 'Order {number}',
       placed: 'Sent at {time}',
       SUBMITTED: 'Sending your order to the restaurant...',
