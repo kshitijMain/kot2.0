@@ -22,6 +22,11 @@ export interface RelayRealtimeOptions {
   readonly retryMaxMs: number;
   /** When the relay has no Realtime (no JWT secret), ask again this much later. */
   readonly notConfiguredRetryMs: number;
+  /**
+   * How long opening the line and joining may take (P9-12). A handshake nobody answers raises
+   * neither open nor close: without this the doorbell waited on it for ever. Default 15 s.
+   */
+  readonly connectTimeoutMs?: number;
   /** Replaces the global WebSocket (tests). */
   readonly WebSocket?: typeof WebSocket;
 }
@@ -66,6 +71,7 @@ export class RelayRealtime {
   private retryTimer: NodeJS.Timeout | undefined;
   private heartbeatTimer: NodeJS.Timeout | undefined;
   private refreshTimer: NodeJS.Timeout | undefined;
+  private connectTimer: NodeJS.Timeout | undefined;
 
   constructor(private readonly options: RelayRealtimeOptions) {
     this.WebSocket = options.WebSocket ?? globalThis.WebSocket;
@@ -137,6 +143,12 @@ export class RelayRealtime {
     }
     this.socket = socket;
     const current = session;
+    // Open and joined in time, or start again (P9-12).
+    clearTimeout(this.connectTimer);
+    this.connectTimer = setTimeout(() => {
+      if (socket === this.socket && !this.live) this.drop(socket);
+    }, this.options.connectTimeoutMs ?? 15_000);
+    this.connectTimer.unref();
     socket.addEventListener('open', () => {
       this.join(socket, current);
       this.heartbeatTimer = setInterval(() => {
@@ -238,6 +250,7 @@ export class RelayRealtime {
       return;
     }
     this.failures = 0;
+    clearTimeout(this.connectTimer);
     this.setLive(true);
     // Whatever arrived before the join is picked up now.
     this.options.onRing();
@@ -296,6 +309,7 @@ export class RelayRealtime {
     this.unanswered = undefined;
     clearInterval(this.heartbeatTimer);
     clearTimeout(this.refreshTimer);
+    clearTimeout(this.connectTimer);
     this.setLive(false);
     if (!this.stopped) this.backOff();
   }
