@@ -234,6 +234,34 @@ describe('[ONB-004] table tents', () => {
     expect(pdf).toMatch(/\/MediaBox \[0 0 595\.2\d* 419\.5\d*\]/);
   });
 
+  it('[QR-001] lists and prints the address the server runs with now, so a new site address needs only a restart and a reprint (P9-07)', async () => {
+    const config = app.get<AppConfig>(APP_CONFIG);
+    const principal = {
+      restaurantId: kit.restaurantId,
+      staffId: kit.staff.MANAGER,
+      deviceId: kit.deviceId,
+    } as Principal;
+    const before = await new TableQrService(prisma, app.get(AuditService), config).list(principal);
+    // The same PC after RP_QR_SITE_URL changed (a new ngrok address) and the server restarted.
+    const moved = 'https://another-address.ngrok-free.dev';
+    const after = new TableQrService(prisma, app.get(AuditService), {
+      ...config,
+      qrSiteUrl: moved,
+    });
+    const listed = await after.list(principal);
+    expect(listed.siteUrl).toBe(moved);
+    const coded = listed.tables.filter((table) => table.hasCode);
+    expect(coded.length).toBeGreaterThan(0);
+    for (const table of coded) {
+      const old = before.tables.find((entry) => entry.tableId === table.tableId);
+      // The same code, at the new address: nothing to make again, only to print.
+      expect(table.url).toBe(old?.url?.replace(SITE, moved));
+      expect(table.url?.startsWith(`${moved}/t/`)).toBe(true);
+    }
+    const tents = await after.tents(principal, { size: 'A6', tableIds: [coded[0]?.tableId ?? ''] });
+    expect(tents.pages).toBe(1);
+  });
+
   it('says what is missing when nothing can be printed', async () => {
     const config = app.get<AppConfig>(APP_CONFIG);
     const withoutSite = new TableQrService(prisma, app.get(AuditService), {

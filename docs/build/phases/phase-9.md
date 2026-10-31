@@ -117,3 +117,27 @@ Deliverables:
 
 Acceptance: on this Mac, a QR order from the T2 code reaches the server through the relay host's
 open line, is approved, and makes a KOT for table T2.
+
+## P9-07 Reprinting the tents when the site's address changes (ngrok)
+
+Requirements: QR-001, ONB-004 (step 10).
+
+Context: the codes (P5-04) and their tents exist; the pilot runs the QR site behind a free ngrok
+address that changes at each start, so printed tents go stale while the codes stay right.
+
+Deliverables:
+
+- Manage → QR codes shows the address the codes open now and says to print again when it
+  changes.
+- Each table's row shows its code, its link, Copy link and Print (its own tent, through the
+  existing `tableIds`).
+- `pilot-cli --tents-only` rewrites the tents for the current address.
+- `mannat-ngrok.sh` rewrites `.pilot/mannat-tents.pdf`, warns when the address changed and says
+  where to reprint; its gateway moves into `scripts/pilot/`.
+- The README's reprint section and the manual test.
+
+Acceptance:
+
+- After a restart with a new `RP_QR_SITE_URL`, the list and the tents carry the new address with
+  the same codes.
+- Copy and single-table print work, with a fallback where the browser has no clipboard.

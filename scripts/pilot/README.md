@@ -52,3 +52,42 @@ Change them in Manage → Staff before real service.
 
 This runs over plain http on the Wi-Fi: fine for a trial, never for diners on mobile data. The
 real pilot uses your server's https address.
+
+## Over ngrok (phones on mobile data)
+
+`scripts/pilot/mannat-ngrok.sh` puts the relay and the QR site behind one public ngrok address
+(`scripts/pilot/ngrok-gateway.mjs` sends `/functions`, `/realtime`, `/storage` and `/healthz` to
+the relay and everything else to the site), sets `RP_QR_SITE_URL` and `RP_RELAY_URL` to it and
+restarts the three services. Needs `ngrok` signed in, and `setup` done once.
+
+## When the site's address changes, print the tents again
+
+A table's QR code is the same whatever the address (`/t/<code>`), but a printed tent holds the
+whole address it was printed with. A free ngrok address changes each time ngrok starts, and the
+Wi-Fi trial uses the Mac's address, so tents printed before a change open the old address.
+
+- `mannat-ngrok.sh` rewrites `.pilot/mannat-tents.pdf` for the address it starts, and says when
+  the address changed since the last tents.
+- On the POS, **Manage → QR codes** always shows the address the codes open now, every table's
+  code and link, and prints the tents for that address: **Download table tents** for all, or
+  **Print** on one table's row (after a tent is lost or spilled on). **Copy link** gives a
+  table's link to send or test.
+- **New code** is only for a code that must stop working (copied or photographed); a new address
+  never needs new codes.
+- Without ngrok: `node apps/server/dist/database/pilot-cli.js --tents-only --site <address>
+--tents tents.pdf` (with `.pilot/server.env` loaded) writes the same PDF.
+
+## Manual test: Mannat over ngrok
+
+1. `scripts/pilot/mannat-ngrok.sh`. Note the public address it prints, and that it says the
+   tents were rewritten for it.
+2. On the POS (`https://<Mac>:8080`, Manager 2222), open **Manage → QR codes**:
+   - the notice says the codes open the ngrok address;
+   - each of tables 1 to 5 shows its code and a link starting with that address.
+3. **Copy link** on table 2 and paste it in a note: it is the ngrok address `/t/…`.
+4. Choose **A5 tents**, then **Print** on table 2's row: the PDF has one page, for table 2.
+5. On a phone on **mobile data**, scan that page's code: Mannat opens at table 2. Order, and
+   approve it on the POS.
+6. Stop ngrok and run `mannat-ngrok.sh` again (a new free address). The script warns that the
+   address changed. Manage → QR codes shows the new address. The old printout opens the old
+   address; the new **Download table tents** opens the new one.

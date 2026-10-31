@@ -29,6 +29,10 @@ const SIZES: readonly TableTentSize[] = ['A6', 'A5'];
  * Table QR codes (P5-04, QR-001, ONB-004 step 10): every table's code, made in one step for the
  * tables without one, a new code for a table whose printed one must stop working, and the table
  * tents to print as a PDF (A6 cards or A5 tents that fold). Follows floor changes on any screen.
+ *
+ * P9-07: the address the codes open is shown, with what to do when it changes (a new ngrok or
+ * domain address: print again, nothing to remake); each table shows its code, copies its link and
+ * prints its own tent.
  */
 export function QrCodesScreen() {
   const t = useT();
@@ -40,7 +44,8 @@ export function QrCodesScreen() {
   );
   const [open, setOpen] = useState<Open | undefined>();
   const [size, setSize] = useState<TableTentSize>('A6');
-  const [busy, setBusy] = useState<'ISSUE' | 'PRINT' | undefined>();
+  // 'ISSUE', 'PRINT' (every tent) or a table's id (its own tent).
+  const [busy, setBusy] = useState<string | undefined>();
 
   const issue = () => {
     setBusy('ISSUE');
@@ -60,20 +65,43 @@ export function QrCodesScreen() {
     );
   };
 
-  const print = () => {
-    setBusy('PRINT');
-    controller.api.printTableTents({ body: { size } }).then(
-      (file) => {
-        downloadFile(file);
-        toast.show({ title: t('qrCodes.printed', { file: file.filename }), tone: 'success' });
-        setBusy(undefined);
+  const print = (table?: TableQrView) => {
+    setBusy(table?.tableId ?? 'PRINT');
+    controller.api
+      .printTableTents({
+        body: table === undefined ? { size } : { size, tableIds: [table.tableId] },
+      })
+      .then(
+        (file) => {
+          downloadFile(file);
+          toast.show({ title: t('qrCodes.printed', { file: file.filename }), tone: 'success' });
+          setBusy(undefined);
+        },
+        (failure: unknown) => {
+          toast.show({
+            title: t('qrCodes.failed', { message: messageOf(failure, t) }),
+            tone: 'danger',
+          });
+          setBusy(undefined);
+        },
+      );
+  };
+
+  /** The table's link to the clipboard; where the browser has none, the code and link show. */
+  const copy = (table: TableQrView) => {
+    const url = table.url;
+    if (url === null) return;
+    const { clipboard } = navigator as { clipboard?: Clipboard };
+    if (clipboard === undefined) {
+      setOpen({ kind: 'SHOW', table });
+      return;
+    }
+    clipboard.writeText(url).then(
+      () => {
+        toast.show({ title: t('qrCodes.copied', { label: table.label }), tone: 'success' });
       },
-      (failure: unknown) => {
-        toast.show({
-          title: t('qrCodes.failed', { message: messageOf(failure, t) }),
-          tone: 'danger',
-        });
-        setBusy(undefined);
+      () => {
+        setOpen({ kind: 'SHOW', table });
       },
     );
   };
@@ -102,7 +130,9 @@ export function QrCodesScreen() {
           <p role="status" className="console-notice console-notice--warning">
             {t('qrCodes.noSite')}
           </p>
-        ) : null}
+        ) : (
+          <p className="console-notice">{t('qrCodes.site', { url: siteUrl })}</p>
+        )}
         {missing === 0 ? null : (
           <div className="staff-header">
             <p className="dashboard-section__hint">{t('qrCodes.missing', { count: missing })}</p>
@@ -114,6 +144,14 @@ export function QrCodesScreen() {
         <ul className="staff-list" aria-label={t('qrCodes.title')}>
           {tables.map((table) => (
             <li key={table.tableId} className="staff-row">
+              {table.url === null ? null : (
+                <QrCode
+                  value={table.url}
+                  label={t('qrCodes.codeOf', { label: table.label })}
+                  size={72}
+                  className="qr-row__thumb"
+                />
+              )}
               <div className="staff-row__who">
                 <h3 className="staff-row__name">{t('qrCodes.table', { label: table.label })}</h3>
                 <p className="staff-row__role">{table.sectionName}</p>
@@ -122,6 +160,7 @@ export function QrCodesScreen() {
                     ? t('qrCodes.noCode')
                     : t('qrCodes.madeAt', displayDateTime(new Date(table.issuedAt)))}
                 </p>
+                {table.url === null ? null : <p className="qr-row__url">{table.url}</p>}
               </div>
               <div className="staff-row__actions">
                 <Button
@@ -133,6 +172,27 @@ export function QrCodesScreen() {
                   }}
                 >
                   {t('qrCodes.show')}
+                </Button>
+                <Button
+                  variant="secondary"
+                  disabled={table.url === null}
+                  aria-label={t('qrCodes.copyOf', { label: table.label })}
+                  onClick={() => {
+                    copy(table);
+                  }}
+                >
+                  {t('qrCodes.copy')}
+                </Button>
+                <Button
+                  variant="secondary"
+                  loading={busy === table.tableId}
+                  disabled={busy !== undefined || table.url === null}
+                  aria-label={t('qrCodes.printOf', { label: table.label })}
+                  onClick={() => {
+                    print(table);
+                  }}
+                >
+                  {t('qrCodes.printOne')}
                 </Button>
                 <Button
                   variant="secondary"
@@ -163,7 +223,9 @@ export function QrCodesScreen() {
             <Button
               loading={busy === 'PRINT'}
               disabled={busy !== undefined || withCode === 0 || siteUrl === null}
-              onClick={print}
+              onClick={() => {
+                print();
+              }}
             >
               {t('qrCodes.print')}
             </Button>

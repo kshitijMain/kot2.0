@@ -695,6 +695,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-04 The diner's page: phone first, My orders, accepted, order again, Bill tab, a nicer menu
 - [x] P9-05 The manager's phone rings for QR orders
 - [x] P9-06 The Mannat pilot set-up and a one-Mac trial (the server and the real tables: manual task 38)
+- [x] P9-07 Reprinting the tents when the site's address changes (ngrok)
 
 ## Decisions
 
@@ -4620,6 +4621,56 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-10-31: P9-07 Reprinting the tents when the site's address changes (ngrok)
+
+The Mannat pilot runs behind ngrok (`scripts/pilot/mannat-ngrok.sh`), whose free address changes
+at each start. The codes stay right, but `.pilot/mannat-tents.pdf` and printed tents kept the old
+(LAN) address.
+
+Found:
+
+- The server was already right: `TableQrService` builds every listed URL and every tent from
+  `RP_QR_SITE_URL` at request time, so a restart with the new address lists and prints it. Not
+  changed; a test now proves it.
+- The console had no inline code, no copy and no single-table print, and did not show which
+  address the codes open.
+
+Built:
+
+- `QrCodesScreen`:
+  - a notice "The codes open {address}…" with what to do when it changes;
+  - per table a 72 px code (`@rp/ui-web` QrCode), its link, Copy link (falls back to the code and
+    link dialog where the browser has no clipboard: plain http) and Print, which prints that
+    table's tent at the chosen size (existing `tableIds`).
+- Strings: `qrCodes.site`, `copy`, `copyOf`, `copied`, `printOne`, `printOf`. CSS: `.qr-row__thumb`,
+  `.qr-row__url`.
+- `pilot-cli --tents-only --site … --tents …` writes the existing restaurant's tents for an
+  address.
+- `mannat-ngrok.sh` (now in the repository):
+  - rewrites `.pilot/mannat-tents.pdf` for the ngrok address;
+  - remembers the last address in `.pilot/tents-url.txt` and warns when it changed;
+  - says where to reprint;
+  - its gateway moved from `.pilot/` to `scripts/pilot/ngrok-gateway.mjs`, so the script works on
+    a fresh checkout.
+- README: the reprint section and the manual test for Mannat over ngrok.
+
+Tests:
+
+- server `table-qr.int` +1 (a new site address lists and prints the same codes at the new address).
+- console `qr-codes` +3 (the address and every code inline, copy, copy without a clipboard, one
+  table's tent at A5); the no-site case also disables Copy and Print per row.
+- Tried by hand: `--tents-only` against the live ngrok address wrote 5 A5 pages with the same 5
+  codes.
+
+Gotchas (this Mac):
+
+- `pnpm check` runs every package's tests at once. The Docker test PostgreSQL needs
+  `-c max_connections=400`, or audit, licence and backup tests fail with "too many clients".
+- Still failing here, for the machine alone (CI uses PG 16 tools and a roomy disk):
+  - backup and restore tests: Homebrew's PG 18 client tools, no `initdb`;
+  - the Control Plane audit test: the disk is 93% full, so DISK_FULL is open.
+- Not pushed: this Mac's GitHub account gets 403 (MANUAL_TASKS.md).
 
 ### 2026-10-31: P9-06 The Mannat pilot set-up and a one-Mac trial (Phase 9 built)
 
