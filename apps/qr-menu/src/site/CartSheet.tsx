@@ -1,6 +1,7 @@
 'use client';
 
 import type { MenuSnapshot } from '@rp/contracts';
+import type { QrPhoneAsk } from '@rp/contracts/relay';
 import { formatRupees, type PriceMode } from '@rp/domain';
 import { type CartLine, estimateCart } from '@rp/ordering';
 import { Button, Dialog, IconButton, Icon, QuantityStepper, TextField } from '@rp/ui-web';
@@ -16,6 +17,8 @@ export function CartSheet({
   priceMode,
   note,
   name,
+  phone,
+  phoneAsk,
   readOnly,
   sending,
   message,
@@ -23,6 +26,7 @@ export function CartSheet({
   onRemove,
   onNote,
   onName,
+  onPhone,
   onSend,
   onClose,
 }: {
@@ -31,6 +35,9 @@ export function CartSheet({
   priceMode: PriceMode;
   note: string;
   name: string;
+  /** P9-02: the diner's mobile number, as typed. */
+  phone: string;
+  phoneAsk: QrPhoneAsk;
   readOnly: boolean;
   sending: boolean;
   message: string | undefined;
@@ -38,6 +45,7 @@ export function CartSheet({
   onRemove: (clientLineId: string) => void;
   onNote: (note: string) => void;
   onName: (name: string) => void;
+  onPhone: (phone: string) => void;
   onSend: () => void;
   onClose: () => void;
 }) {
@@ -117,6 +125,23 @@ export function CartSheet({
             onNote(event.target.value);
           }}
         />
+        {phoneAsk === 'OFF' ? null : (
+          <TextField
+            label={
+              phoneAsk === 'REQUIRED' ? t('qrSite.cart.phone') : t('qrSite.cart.phoneOptional')
+            }
+            hint={t('qrSite.cart.phoneHint')}
+            value={phone}
+            type="tel"
+            inputMode="tel"
+            maxLength={16}
+            autoComplete="tel-national"
+            required={phoneAsk === 'REQUIRED'}
+            onChange={(event) => {
+              onPhone(event.target.value);
+            }}
+          />
+        )}
         <TextField
           label={t('qrSite.cart.name')}
           value={name}

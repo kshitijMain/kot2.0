@@ -40,7 +40,7 @@ Requirements: BILL-011, QR-005 (changed: the pilot asks for a phone), QR-006, OR
 
 Deliverables:
 
-- Setting `qr.askPhone` (OFF, OPTIONAL, REQUIRED; default REQUIRED), published in the QR menu
+- Setting `qr.askPhone` (OFF, OPTIONAL, REQUIRED; default OPTIONAL, REQUIRED at Mannat), published in the QR menu
   document.
 - `customerPhone` on the submission, stored by the relay (migration), refused when required and
   missing, and picked up by the PC onto the order.

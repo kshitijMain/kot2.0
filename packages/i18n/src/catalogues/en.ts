@@ -2284,6 +2284,10 @@ until you press Publish.
       quantityOf: 'How many {name}',
       note: 'A note for the whole order (optional)',
       name: 'Your name (optional)',
+      phone: 'Mobile number',
+      phoneOptional: 'Mobile number (optional)',
+      phoneHint: 'Printed on your bill. Used for nothing else.',
+      phoneInvalid: 'Please enter a 10-digit mobile number.',
       subtotal: 'Dishes',
       tax: 'Estimated taxes',
       taxIncluded: 'Taxes included in prices',
@@ -2300,6 +2304,7 @@ until you press Publish.
       offline: 'We couldn’t reach the restaurant right now. Please call a waiter.',
       network: 'That didn’t go through. Check your connection and try again.',
       generic: 'Something went wrong. Please try again or call a waiter.',
+      phoneRequired: 'Please add your mobile number. The restaurant prints it on your bill.',
     },
     orders: {
       title: 'Your orders here',
@@ -2350,7 +2355,7 @@ until you press Publish.
       body1:
         'This page shows the restaurant’s menu and sends your order to the restaurant. It needs no account and sets no advertising or tracking cookies.',
       body2:
-        'What we keep: the dishes you order, your optional name and notes, the table and the time. Your browser keeps a random number so we can limit repeated orders; it says nothing about you. Orders are kept on our order relay for 7 days, then deleted; the restaurant keeps its own records as the law requires.',
+        'What we keep: the dishes you order, your mobile number (printed on your bill, used for nothing else), your optional name and notes, the table and the time. Your browser keeps a random number so we can limit repeated orders; it says nothing about you. Orders are kept on our order relay for 7 days, then deleted; the restaurant keeps its own records as the law requires.',
       body3:
         'Who sees it: only this restaurant and its service provider, who runs the menu and the order relay in India on its behalf.',
       body4:

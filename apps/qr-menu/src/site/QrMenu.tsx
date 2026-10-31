@@ -2,7 +2,7 @@
 
 import type { MenuItem, RecommendationSource } from '@rp/contracts';
 import type { QrMenuDocument, QrMenuResponse, QrOrderView } from '@rp/contracts/relay';
-import { formatRupees, type Recommendation, unitPriceOf } from '@rp/domain';
+import { formatRupees, indianMobile, type Recommendation, unitPriceOf } from '@rp/domain';
 import {
   addLine,
   type CartLine,
@@ -126,6 +126,18 @@ function MenuPage({
   const orderIds = useSyncExternalStore(sent.subscribe, sent.get, () => sent.empty);
   const [note, setNote] = useState('');
   const [name, setName] = useState('');
+  // P9-02: asked once at this table and kept in this browser, so a second order needs nothing.
+  const phoneStore = useMemo(
+    () =>
+      tableValue<string>(
+        token,
+        'phone',
+        (value) => (typeof value === 'string' ? value : undefined),
+        '',
+      ),
+    [token],
+  );
+  const phone = useSyncExternalStore(phoneStore.subscribe, phoneStore.get, () => phoneStore.empty);
   const [sending, setSending] = useState(false);
   const [message, setMessage] = useState<string | undefined>();
   const pendingKey = useRef<string | undefined>(undefined);
@@ -267,7 +279,16 @@ function MenuPage({
     else quickAdd(item, recommendation);
   };
 
+  const phoneAsk = document.phone ?? 'OFF';
   const send = () => {
+    const mobile = phone.trim() === '' ? undefined : indianMobile(phone);
+    if (
+      (phoneAsk === 'REQUIRED' && mobile === undefined) ||
+      (phoneAsk === 'OPTIONAL' && phone.trim() !== '' && mobile === undefined)
+    ) {
+      setMessage(t('qrSite.cart.phoneInvalid'));
+      return;
+    }
     setSending(true);
     setMessage(undefined);
     pendingKey.current ??= newUuid();
@@ -278,6 +299,7 @@ function MenuPage({
       lines: requestLines(lines),
       ...(trimmedNote !== '' && { orderNote: trimmedNote }),
       ...(trimmedName !== '' && { customerName: trimmedName }),
+      ...(phoneAsk !== 'OFF' && mobile !== undefined && { customerPhone: mobile }),
     }).then(
       (answer) => {
         setSending(false);
@@ -306,6 +328,8 @@ function MenuPage({
         } else if (failure instanceof RelayCallError && failure.code === 'RESTAURANT_OFFLINE') {
           setMenu((current) => ({ ...current, readOnly: true }));
           setMessage(t('qrSite.errors.offline'));
+        } else if (failure instanceof RelayCallError && failure.code === 'PHONE_REQUIRED') {
+          setMessage(t('qrSite.errors.phoneRequired'));
         } else if (failure instanceof RelayCallError && failure.code === 'NETWORK') {
           // The same key is sent again, so a retry never orders twice (ORD-013).
           setMessage(t('qrSite.errors.network'));
@@ -488,6 +512,8 @@ function MenuPage({
           priceMode={document.priceMode}
           note={note}
           name={name}
+          phone={phone}
+          phoneAsk={phoneAsk}
           readOnly={menu.readOnly}
           sending={sending}
           message={message}
@@ -499,6 +525,10 @@ function MenuPage({
           }}
           onNote={setNote}
           onName={setName}
+          onPhone={(value) => {
+            phoneStore.set(value);
+            pendingKey.current = undefined;
+          }}
           onSend={send}
           onClose={() => {
             setCartOpen(false);

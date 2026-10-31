@@ -690,7 +690,7 @@ Recommended next WPs (dependencies met):
 
 - [x] P9-01 The relay on a server of our own, with an open line to each restaurant (the server
       itself: manual task 38)
-- [ ] P9-02 The diner's phone number, on the order and the bill
+- [x] P9-02 The diner's phone number, on the order and the bill
 - [ ] P9-03 The bill on the diner's phone, UPI and "I have paid"
 - [ ] P9-04 The diner's page: phone first, My orders, accepted, order again, Bill tab, a nicer menu
 - [ ] P9-05 The manager's phone rings for QR orders
@@ -4620,6 +4620,43 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-10-31: P9-02 The diner's phone number, on the order and the bill
+
+Built:
+
+- Contracts: `DinerPhone` (`+91` and ten digits), `QrPhoneAsk`, `QrMenuDocument.phone`,
+  `QrSubmitOrderRequest.customerPhone`, `QrPickupOrder.customerPhone`.
+- Setting `qr.askPhone` (OFF, OPTIONAL, REQUIRED; restaurant scope).
+- Relay migration `20261031110000_diner_phone` (column, the diner's insert grant, the number
+  immutable).
+- `submit-order` refuses `PHONE_REQUIRED` and stores the number only where the page asks for it.
+- Pickup passes it on.
+- PC:
+  - the menu document carries the setting;
+  - the order takes the number;
+  - `BillsService.create` puts the session's latest QR number (and name) on a new bill with
+    consent;
+  - the printed bill shows `Mobile: ...` when consented.
+- QR site: a mobile field in the cart, required when asked, kept per table in the browser, checked
+  with `@rp/domain` `indianMobile`. P9-04 moves it to the first screen.
+- Privacy notice updated.
+
+Tests:
+
+- relay `diner-functions` +4 (required and stored, the form refused, not kept when not asked,
+  immutable).
+- server `relay-orders.int` +1 (order and bill carry it, with consent).
+- `bill-template` +1 (printed only with consent).
+- Contract snapshots updated; `relay.openapi.json` regenerated.
+
+Decided:
+
+- The default is OPTIONAL, not REQUIRED: every existing restaurant and test sends no number. The
+  Mannat pilot sets REQUIRED (P9-06).
+- The diner's own order view never repeats the number.
+- Entering it on a page that says "printed on your bill, used for nothing else" is consent for the
+  bill only (BILL-011). Digital bills still need their own consent.
 
 ### 2026-10-31: P9-01 The relay on a server of our own, with an open line
 

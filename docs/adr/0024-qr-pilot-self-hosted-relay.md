@@ -79,7 +79,7 @@ already ran a stand-in for Realtime that speaks the Phoenix protocol the PC's do
 
 - The published menu says whether the page asks for a phone number:
   `QrMenuDocument.phone: OFF | OPTIONAL | REQUIRED`, from the setting `qr.askPhone`, default
-  `REQUIRED` for the pilot. The relay refuses an order without one when it is required.
+  `OPTIONAL` (the Mannat pilot sets `REQUIRED`). The relay refuses an order without one when it is required.
 - The number is a 10-digit Indian mobile, stored as `+91XXXXXXXXXX`.
 - The page states the purpose ("printed on your bill") next to the field. Giving it there is the
   diner's consent for that purpose (BILL-011), recorded with the words shown.

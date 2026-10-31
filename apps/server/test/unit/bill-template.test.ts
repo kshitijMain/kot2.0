@@ -109,6 +109,19 @@ describe('[BILL-014] the printed bill', () => {
     expect(printed).not.toContain('DUPLICATE');
   });
 
+  it('[BILL-011] prints the diner’s mobile number given for the bill, only with their consent (P9-02)', () => {
+    const print = (customer: InvoiceView['customer']) =>
+      text(
+        renderBill(
+          { ...INVOICE, customer },
+          { paperWidthMm: 80, duplicate: false, timeZone: 'Asia/Kolkata' },
+        ),
+      );
+    const given = { name: 'Asha', phone: '+919876543210', phoneConsent: true, gstin: null };
+    expect(print(given)).toContain('Mobile: +919876543210');
+    expect(print({ ...given, phoneConsent: false })).not.toContain('9876543210');
+  });
+
   it('[BILL-001] writes the total in words when the invoice was issued with them', () => {
     const render = (amountInWords: boolean) =>
       text(

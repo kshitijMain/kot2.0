@@ -85,6 +85,14 @@ export const QrRecommendations = z.strictObject({
 });
 export type QrRecommendations = z.infer<typeof QrRecommendations>;
 
+/** A diner's mobile number as the QR page sends it: +91 and ten digits (P9-02, BILL-011). */
+export const DinerPhone = z.string().regex(/^\+91[6-9]\d{9}$/);
+export type DinerPhone = z.infer<typeof DinerPhone>;
+
+/** Whether the QR page asks for the diner's mobile number before the first order (`qr.askPhone`). */
+export const QrPhoneAsk = z.enum(['OFF', 'OPTIONAL', 'REQUIRED']);
+export type QrPhoneAsk = z.infer<typeof QrPhoneAsk>;
+
 /**
  * What a local server publishes for its QR menu (QR-002, QR-003, MENU-013): the menu the QR
  * channel offers, live availability included, and what the site needs to show and check it.
@@ -104,6 +112,8 @@ export const QrMenuDocument = z.strictObject({
   photos: z.array(QrPhoto).max(2000),
   /** QR-004; absent from menus published before P5-05b. */
   recommendations: QrRecommendations.optional(),
+  /** P9-02: the page asks for the diner's mobile number; absent (before P9-02) means OFF. */
+  phone: QrPhoneAsk.optional(),
 });
 export type QrMenuDocument = z.infer<typeof QrMenuDocument>;
 
@@ -134,6 +144,11 @@ export const QrSubmitOrderRequest = z.strictObject({
   orderNote: z.string().trim().max(INSTRUCTION_HARD_MAX_LENGTH).optional(),
   /** QR-005: optional. */
   customerName: z.string().trim().min(1).max(60).optional(),
+  /**
+   * P9-02: the diner's mobile number, given on the page that says it is printed on the bill
+   * (their consent for that, BILL-011). Required when the menu's `phone` is REQUIRED.
+   */
+  customerPhone: DinerPhone.optional(),
 });
 export type QrSubmitOrderRequest = z.infer<typeof QrSubmitOrderRequest>;
 
@@ -298,6 +313,8 @@ export const QrPickupOrder = z.object({
   lines: z.array(OrderLineRequest),
   orderNote: z.string().nullable(),
   customerName: z.string().nullable(),
+  /** P9-02: the diner's mobile number; absent from relays before P9-02. */
+  customerPhone: DinerPhone.nullable().optional(),
   /** The publication the lines were checked against. */
   menuVersion: z.int().positive(),
   submittedAt: Timestamp,

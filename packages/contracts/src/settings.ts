@@ -761,6 +761,16 @@ export const SETTINGS = [
     requirements: ['QR-011'],
   }),
   setting({
+    key: 'qr.askPhone',
+    schema: z.enum(['OFF', 'OPTIONAL', 'REQUIRED']),
+    defaultValue: 'OPTIONAL',
+    scope: 'RESTAURANT',
+    capability: 'OPERATIONS_CONFIGURE',
+    description:
+      'The QR page asks for the diner’s mobile number before the first order (REQUIRED: it must be given); it is printed on the bill (ADR-0024).',
+    requirements: ['QR-005', 'BILL-011'],
+  }),
+  setting({
     key: 'qr.readOnlyAfterSeconds',
     schema: int(30, 1_800),
     defaultValue: 120,

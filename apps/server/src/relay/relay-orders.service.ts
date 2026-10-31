@@ -341,6 +341,9 @@ export class RelayOrdersService implements OnModuleInit, OnApplicationBootstrap,
           lines: order.lines,
           ...(order.orderNote !== null && { orderNote: order.orderNote }),
           ...(order.customerName !== null && { customerName: order.customerName }),
+          // P9-02: given on the QR page for the bill (BILL-011).
+          ...(order.customerPhone !== null &&
+            order.customerPhone !== undefined && { customerPhone: order.customerPhone }),
         },
         { tableId: table.id, externalRef: order.id },
       );
