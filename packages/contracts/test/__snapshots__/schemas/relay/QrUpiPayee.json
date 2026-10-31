@@ -1,0 +1,26 @@
+{
+  "input": {
+    "type": "object",
+    "properties": {
+      "upiId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._-]{2,256}@[A-Za-z][A-Za-z0-9.-]{1,63}$"
+      },
+      "payeeName": { "type": "string", "minLength": 1, "maxLength": 60 }
+    },
+    "required": ["upiId", "payeeName"],
+    "additionalProperties": false
+  },
+  "output": {
+    "type": "object",
+    "properties": {
+      "upiId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._-]{2,256}@[A-Za-z][A-Za-z0-9.-]{1,63}$"
+      },
+      "payeeName": { "type": "string", "minLength": 1, "maxLength": 60 }
+    },
+    "required": ["upiId", "payeeName"],
+    "additionalProperties": false
+  }
+}

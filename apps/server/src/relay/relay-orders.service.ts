@@ -483,7 +483,8 @@ export class RelayOrdersService implements OnModuleInit, OnApplicationBootstrap,
       }
       throw error;
     }
-    const type = row.type === 'WATER' || row.type === 'BILL' ? row.type : 'WAITER';
+    const type =
+      row.type === 'WATER' || row.type === 'BILL' || row.type === 'PAID' ? row.type : 'WAITER';
     try {
       const raised = await this.requests.raiseFromQr(restaurantId, row.tableId, type);
       return { outcome: 'RAISED', serviceRequestId: raised.id, reason: null, pushed: 'RECEIVED' };

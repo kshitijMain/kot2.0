@@ -200,6 +200,8 @@ describe('[TAB-004] service request state machine', () => {
       WATER: 'WATER_REQUEST',
       WAITER: 'WAITER_REQUEST',
       BILL: 'BILL_REQUEST',
+      // P9-03: "I have paid" from the QR page.
+      PAID: 'PAYMENT_CLAIMED',
     });
   });
 });

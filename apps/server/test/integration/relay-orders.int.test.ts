@@ -6,6 +6,7 @@ import {
   QrServiceRequestResponse,
   QrServiceRequestView,
   QrSubmitOrderResponse,
+  QrTableBillResponse,
 } from '@rp/contracts/relay';
 import { startRelay, type TestRelay } from '@rp/relay/testing';
 import request from 'supertest';
@@ -472,7 +473,7 @@ describe('[ORD-013] [NFR-A01] never twice, never lost', () => {
 });
 
 /** A diner presses Call waiter or Request bill on the QR page at `table` (QR-011). */
-async function dinerAsks(table: string, type: 'WAITER' | 'BILL'): Promise<string> {
+async function dinerAsks(table: string, type: 'WAITER' | 'BILL' | 'PAID'): Promise<string> {
   const response = await fetch(`${relay.baseUrl}/service-request`, {
     method: 'POST',
     headers: {
@@ -545,6 +546,20 @@ describe('[QR-011] call waiter and request bill from the QR page', () => {
     expect((await dinerSeesRequest('T2', relayRequestId)).status).toBe('DONE');
   });
 
+  it('[BILL-008] "I have paid" alerts the waiters and the managers to check and settle (P9-03)', async () => {
+    const relayRequestId = await dinerAsks('T2', 'PAID');
+    await qr.run();
+    const localId = await localRequestOf(relayRequestId);
+    const local = await prisma.serviceRequest.findUniqueOrThrow({ where: { id: localId ?? '' } });
+    expect(local).toMatchObject({ type: 'PAID', source: 'QR', tableId: id('T2') });
+    const alert = await prisma.alert.findFirstOrThrow({
+      where: { type: 'PAYMENT_CLAIMED', tableId: id('T2'), status: 'OPEN' },
+    });
+    expect(alert.pagerText).toContain('PAID UPI');
+    expect(alert.channels).toContain('WAITER_APP');
+    expect((await dinerSeesRequest('T2', relayRequestId)).status).toBe('RECEIVED');
+  });
+
   it('[BILL-015] asks for the bill: the table shows Bill requested', async () => {
     const relayRequestId = await dinerAsks('T1', 'BILL');
     await qr.run();
@@ -559,5 +574,81 @@ describe('[QR-011] call waiter and request bill from the QR page', () => {
     const seen = await dinerSeesRequest('T4', relayRequestId);
     expect(seen.status).toBe('REJECTED');
     expect(seen.rejectionReason).toContain('not open');
+  });
+});
+
+describe('[QR-011] the printed bill on the diner’s phone, and UPI (P9-03, ADR-0024)', () => {
+  const dinerBill = async (table: string) => {
+    const response = await fetch(`${relay.baseUrl}/table-bill`, {
+      headers: { 'x-rp-table-token': tokens[table] ?? '' },
+    });
+    return QrTableBillResponse.parse(await response.json());
+  };
+
+  it('shows the printed bill with UPI details, and clears it when the table is settled', async () => {
+    await prisma.invoiceSeries.create({
+      data: { restaurantId: kit.restaurantId, name: 'Dine-in', prefix: 'INV', isDefault: true },
+    });
+    await prisma.setting.createMany({
+      data: [
+        { restaurantId: kit.restaurantId, key: 'payments.upiId', value: 'mannat@okhdfcbank' },
+        { restaurantId: kit.restaurantId, key: 'payments.upiPayeeName', value: 'Mannat' },
+      ],
+    });
+    app.get(SettingsService).invalidate();
+    const opened = await server()
+      .post(`/api/v1/tables/${id('T4')}/open`)
+      .set(as(waiter))
+      .send({ covers: 2 });
+    expect(opened.status).toBe(201);
+    const relayOrderId = await dinerOrders('T4', [{ item: 'Jeera Rice', quantity: 2 }]);
+    await qr.run();
+    const order = await localOrder(relayOrderId);
+    expect(
+      (
+        await server()
+          .post(`/api/v1/orders/${order?.id ?? ''}/approve`)
+          .set(as(waiter))
+          .send({})
+      ).status,
+    ).toBe(200);
+    await sync.sync();
+    expect((await dinerBill('T4')).bill).toBeNull();
+
+    const bill = await server()
+      .post('/api/v1/bills')
+      .set(as(manager))
+      .send({ tableSessionId: (opened.body as { id: string }).id });
+    const invoice = await server()
+      .post(`/api/v1/bills/${(bill.body as { id: string }).id}/invoice`)
+      .set(as(manager))
+      .send({});
+    expect(invoice.status, JSON.stringify(invoice.body)).toBe(201);
+    const issued = invoice.body as { id: string; invoiceNumber: string; grandTotal: number };
+    await sync.sync();
+
+    const seen = await dinerBill('T4');
+    expect(seen.bill?.upi).toEqual({ upiId: 'mannat@okhdfcbank', payeeName: 'Mannat' });
+    expect(seen.bill?.invoices).toHaveLength(1);
+    expect(seen.bill?.invoices[0]).toMatchObject({
+      invoiceNumber: issued.invoiceNumber,
+      status: 'ISSUED',
+      grandTotal: issued.grandTotal,
+    });
+    expect(seen.bill?.invoices[0]?.lines[0]).toMatchObject({ quantity: 2 });
+    // Another table's diners see none of it.
+    expect((await dinerBill('T1')).bill).toBeNull();
+
+    const paid = await server()
+      .post(`/api/v1/invoices/${issued.id}/payments`)
+      .set(as(manager))
+      .send({
+        idempotencyKey: randomUUID(),
+        payments: [{ mode: 'UPI', amount: issued.grandTotal, reference: 'UPI-1' }],
+      });
+    expect(paid.status, JSON.stringify(paid.body)).toBe(200);
+    await sync.sync();
+    // Settled, the sitting closes: the next diners at T4 never see this bill.
+    expect((await dinerBill('T4')).bill).toBeNull();
   });
 });

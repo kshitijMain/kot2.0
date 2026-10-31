@@ -1282,6 +1282,92 @@
         "required": ["version", "replayed"],
         "additionalProperties": false
       },
+      "PublishTableBillRequest": {
+        "type": "object",
+        "properties": {
+          "bill": { "anyOf": [{ "$ref": "#/components/schemas/QrTableBill" }, { "type": "null" }] }
+        },
+        "required": ["bill"],
+        "additionalProperties": false
+      },
+      "PublishTableBillResponse": {
+        "type": "object",
+        "properties": {
+          "tableId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          },
+          "cleared": { "type": "boolean" }
+        },
+        "required": ["tableId", "cleared"],
+        "additionalProperties": false
+      },
+      "QrBillInvoice": {
+        "type": "object",
+        "properties": {
+          "invoiceNumber": { "type": "string", "minLength": 1, "maxLength": 16 },
+          "issuedAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          },
+          "status": { "type": "string", "enum": ["ISSUED", "SETTLED"] },
+          "lines": {
+            "maxItems": 300,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "description": { "type": "string", "minLength": 1, "maxLength": 200 },
+                "quantity": {
+                  "type": "integer",
+                  "exclusiveMinimum": 0,
+                  "maximum": 9007199254740991
+                },
+                "amount": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+              },
+              "required": ["description", "quantity", "amount"],
+              "additionalProperties": false
+            }
+          },
+          "subtotal": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+          "discountTotal": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+          "serviceCharge": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+          "taxLines": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "label": { "type": "string", "minLength": 1, "maxLength": 40 },
+                "amount": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+              },
+              "required": ["label", "amount"],
+              "additionalProperties": false
+            }
+          },
+          "roundOff": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "grandTotal": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+        },
+        "required": [
+          "invoiceNumber",
+          "issuedAt",
+          "status",
+          "lines",
+          "subtotal",
+          "discountTotal",
+          "serviceCharge",
+          "taxLines",
+          "roundOff",
+          "grandTotal"
+        ],
+        "additionalProperties": false
+      },
       "QrMenuDocument": {
         "type": "object",
         "properties": {
@@ -2027,7 +2113,7 @@
         "type": "string",
         "enum": ["SUBMITTED", "RECEIVED", "ACKNOWLEDGED", "DONE", "REJECTED", "EXPIRED"]
       },
-      "QrServiceRequestType": { "type": "string", "enum": ["WATER", "WAITER", "BILL"] },
+      "QrServiceRequestType": { "type": "string", "enum": ["WATER", "WAITER", "BILL", "PAID"] },
       "QrServiceRequestView": {
         "type": "object",
         "properties": {
@@ -2148,6 +2234,47 @@
             "required": ["status", "rejectedLines", "version"]
           }
         ]
+      },
+      "QrTableBill": {
+        "type": "object",
+        "properties": {
+          "invoices": {
+            "minItems": 1,
+            "maxItems": 20,
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/QrBillInvoice" }
+          },
+          "upi": { "anyOf": [{ "$ref": "#/components/schemas/QrUpiPayee" }, { "type": "null" }] }
+        },
+        "required": ["invoices", "upi"],
+        "additionalProperties": false
+      },
+      "QrTableBillResponse": {
+        "type": "object",
+        "properties": {
+          "bill": { "anyOf": [{ "$ref": "#/components/schemas/QrTableBill" }, { "type": "null" }] },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              { "type": "null" }
+            ]
+          }
+        },
+        "required": ["bill", "updatedAt"],
+        "additionalProperties": false
+      },
+      "QrUpiPayee": {
+        "type": "object",
+        "properties": {
+          "upiId": { "$ref": "#/components/schemas/UpiId" },
+          "payeeName": { "type": "string", "minLength": 1, "maxLength": 60 }
+        },
+        "required": ["upiId", "payeeName"],
+        "additionalProperties": false
       },
       "RejectedLine": {
         "type": "object",
@@ -2319,6 +2446,18 @@
         "required": ["tableId", "label", "tokenHash", "active"],
         "additionalProperties": false
       },
+      "RelayTableParams": {
+        "type": "object",
+        "properties": {
+          "tableId": {
+            "type": "string",
+            "format": "uuid",
+            "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+          }
+        },
+        "required": ["tableId"],
+        "additionalProperties": false
+      },
       "SyncRelayTablesRequest": {
         "type": "object",
         "properties": {
@@ -2396,6 +2535,10 @@
         },
         "required": ["id", "status"],
         "additionalProperties": false
+      },
+      "UpiId": {
+        "type": "string",
+        "pattern": "^[A-Za-z0-9._-]{2,256}@[A-Za-z][A-Za-z0-9.-]{1,63}$"
       }
     }
   }

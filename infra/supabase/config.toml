@@ -80,3 +80,8 @@ entrypoint = "./dist/functions/server/index.js"
 [functions.service-request]
 verify_jwt = false
 entrypoint = "./dist/functions/service-request/index.js"
+
+# P9-03: the table's printed bill for its diners (ADR-0024).
+[functions.table-bill]
+verify_jwt = false
+entrypoint = "./dist/functions/table-bill/index.js"

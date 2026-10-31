@@ -28,6 +28,8 @@ export const NOTIFICATION_EVENTS = [
   'SIGN_IN_LOCKED',
   /** A dish on a ticket was marked out of stock and its unstarted units cancelled (ADR-0023). */
   'OUT_OF_STOCK',
+  /** A diner says they paid the printed bill by UPI from the QR page (ADR-0024, P9-03). */
+  'PAYMENT_CLAIMED',
 ] as const;
 export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 
@@ -174,6 +176,14 @@ export const DEFAULT_NOTIFICATION_RULES: Readonly<Record<NotificationEvent, Noti
     ['PAGER', 'WAITER_APP', 'POS'],
     '{table} OUT OF STOCK',
     false,
+    'NONE',
+  ),
+  // ADR-0024: whoever takes payments checks their UPI app, then settles the bill at the POS.
+  PAYMENT_CLAIMED: rule(
+    ['ALL_WAITERS', 'MANAGERS_ON_DUTY'],
+    ['PAGER', 'WAITER_APP', 'POS'],
+    '{table} PAID UPI',
+    true,
     'NONE',
   ),
 };

@@ -1,13 +1,13 @@
 {
   "input": {
     "type": "object",
-    "properties": { "type": { "type": "string", "enum": ["WATER", "WAITER", "BILL"] } },
+    "properties": { "type": { "type": "string", "enum": ["WATER", "WAITER", "BILL", "PAID"] } },
     "required": ["type"],
     "additionalProperties": false
   },
   "output": {
     "type": "object",
-    "properties": { "type": { "type": "string", "enum": ["WATER", "WAITER", "BILL"] } },
+    "properties": { "type": { "type": "string", "enum": ["WATER", "WAITER", "BILL", "PAID"] } },
     "required": ["type"],
     "additionalProperties": false
   }

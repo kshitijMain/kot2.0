@@ -123,7 +123,7 @@ describe('[SEC-005] privileges', () => {
     ]);
     expect(byRole('relay_control_plane')).toEqual([]);
     // ADR-0024: a self-hosted relay's jobs, without pg_cron.
-    expect(byRole('relay_janitor')).toEqual(['expire_orders', 'purge']);
+    expect(byRole('relay_janitor')).toEqual(['expire_orders', 'purge', 'purge_table_bills']);
   });
 
   it('runs every definer-rights function with an empty search_path', async () => {

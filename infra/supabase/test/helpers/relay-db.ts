@@ -30,6 +30,7 @@ export const RELAY_TABLES = [
   'presence',
   'qr_orders',
   'qr_service_requests',
+  'qr_table_bills',
 ] as const;
 export type RelayTable = (typeof RELAY_TABLES)[number];
 /** The column naming each table's tenant. */
@@ -225,6 +226,11 @@ export async function seedTenant(db: RelayDb, name: string): Promise<SeededTenan
       id,
       '1.0.0',
     ]);
+    // P9-03: the first table's printed bill.
+    await client.query(
+      'INSERT INTO relay.qr_table_bills (tenant_id, table_id, bill) VALUES ($1, $2, $3)',
+      [id, tables[0].id, JSON.stringify({ invoices: [], upi: null })],
+    );
   });
   const orderIds: [string, string] = [
     await submitOrder(db, id, tables[0].id),
