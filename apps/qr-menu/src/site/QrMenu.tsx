@@ -1,6 +1,6 @@
 'use client';
 
-import type { MenuItem, RecommendationSource } from '@rp/contracts';
+import type { MenuItem, OrderLineRequest, RecommendationSource } from '@rp/contracts';
 import type { QrMenuDocument, QrMenuResponse, QrOrderView } from '@rp/contracts/relay';
 import { formatRupees, indianMobile, type Recommendation, unitPriceOf } from '@rp/domain';
 import {
@@ -17,6 +17,7 @@ import {
   QR_MENU_REFRESH_MS,
   QR_ORDER_POLL_MS,
   qrBestSellers,
+  requestAgainLine,
   qrOrderSettled,
   qrSuggestions,
   removeLine,
@@ -27,7 +28,7 @@ import {
   menuNote,
   updateLine,
 } from '@rp/ordering';
-import { Button, ThemeRoot } from '@rp/ui-web';
+import { Badge, Button, Icon, ThemeRoot } from '@rp/ui-web';
 import {
   type ReactNode,
   useCallback,
@@ -37,12 +38,14 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
+import { BillTab } from './BillTab';
 import { CartSheet } from './CartSheet';
 import { I18nProvider, useT } from './i18n';
-import { HelpButtons } from './HelpButtons';
 import { DishPhoto } from './DishPhoto';
 import { ItemSheet } from './ItemSheet';
-import { Orders } from './Orders';
+import { Orders, shownStatus } from './Orders';
+import { PhoneGate } from './PhoneGate';
+import { useServiceRequests } from './requests';
 import { sourceOf, Suggestions } from './Suggestions';
 import { fetchMenu, fetchOrder, RelayCallError, submitOrder } from './relay';
 import { browserId, newUuid, tableValue } from './storage';
@@ -54,11 +57,16 @@ const FILTERS: readonly TabletFilter[] = ['veg', 'jain', 'spicy', 'bestseller'];
 const SUGGESTIONS = 4;
 const NO_LINES: readonly CartLine[] = [];
 const NO_ORDERS: readonly string[] = [];
+const TABS = ['menu', 'orders', 'bill'] as const;
+type Tab = (typeof TABS)[number];
+/** How long the "accepted" banner stays (P9-04). */
+const ACCEPTED_BANNER_MS = 8_000;
 
 /**
- * The QR menu page (P5-05, QR-002, QR-004 to QR-008): the table's menu with search and filters,
- * dishes with their options, the cart and sending the order, and where each order is. Read-only
- * with a banner while the restaurant is not heard from.
+ * The QR menu page (P5-05, P9-04; QR-002, QR-004 to QR-008, QR-011): a welcome that asks for the
+ * diner's mobile number, then three tabs: the menu with search, filters, dishes and the cart; My
+ * orders with where each is and "Order again"; and the Bill, paid by UPI once it is printed. The
+ * table comes from the code alone. Read-only with a banner while the restaurant is not heard from.
  */
 export function QrMenu(props: {
   token: string;
@@ -143,6 +151,12 @@ function MenuPage({
   const pendingKey = useRef<string | undefined>(undefined);
   const [orders, setOrders] = useState<ReadonlyMap<string, QrOrderView>>(new Map());
   const [now, setNow] = useState(() => Date.now());
+  const [tab, setTab] = useState<Tab>('menu');
+  const [skippedPhone, setSkippedPhone] = useState(false);
+  const [changingPhone, setChangingPhone] = useState(false);
+  const [accepted, setAccepted] = useState(false);
+  const statuses = useRef(new Map<string, QrOrderView['status']>());
+  const requests = useServiceRequests(token, relayUrl);
 
   const document = menu.document;
   const items = useMemo(() => channelItems(document.menu, 'QR'), [document]);
@@ -238,7 +252,19 @@ function MenuPage({
       for (const id of unsettledKey.split(',')) {
         fetchOrder(relayUrl, token, id).then(
           (order) => {
-            if (!stopped) setOrders((current) => new Map([...current, [id, order]]));
+            if (stopped) return;
+            setOrders((current) => new Map([...current, [id, order]]));
+            // P9-04: "Your order is accepted", once, when the restaurant accepts it.
+            const before = statuses.current.get(id);
+            statuses.current.set(id, order.status);
+            if (
+              order.status === 'SENT_TO_KITCHEN' &&
+              (before === 'SUBMITTED' || before === 'RECEIVED')
+            ) {
+              setAccepted(true);
+              // Not every browser can (iPhones cannot); where it can, a short buzz.
+              if ('vibrate' in navigator) navigator.vibrate(200);
+            }
           },
           () => undefined,
         );
@@ -286,7 +312,9 @@ function MenuPage({
       (phoneAsk === 'REQUIRED' && mobile === undefined) ||
       (phoneAsk === 'OPTIONAL' && phone.trim() !== '' && mobile === undefined)
     ) {
-      setMessage(t('qrSite.cart.phoneInvalid'));
+      // Back to the welcome step for a number; the cart stays as it is.
+      setCartOpen(false);
+      setChangingPhone(true);
       return;
     }
     setSending(true);
@@ -315,10 +343,12 @@ function MenuPage({
           return;
         }
         sent.set([answer.order.id, ...orderIds.filter((id) => id !== answer.order.id)]);
+        statuses.current.set(answer.order.id, answer.order.status);
         setOrders((current) => new Map([...current, [answer.order.id, answer.order]]));
         changeLines([]);
         setNote('');
         setCartOpen(false);
+        setTab('orders');
       },
       (failure: unknown) => {
         setSending(false);
@@ -340,6 +370,41 @@ function MenuPage({
     );
   };
 
+  /** "Order again": the lines back in the cart as they were, those the menu can still serve. */
+  const orderAgain = (again: readonly OrderLineRequest[]) => {
+    let next: readonly CartLine[] = lines;
+    let added = 0;
+    for (const line of again) {
+      const back = requestAgainLine(document.menu, line, 'QR', Date.now());
+      if (back === undefined) continue;
+      next = addLine(next, back, newUuid);
+      added += back.quantity;
+    }
+    changeLines(next);
+    setAnnounced(
+      added === 0
+        ? t('qrSite.orders.againNone')
+        : t('qrSite.orders.againAdded', { count: added }) +
+            (added < again.reduce((total, line) => total + line.quantity, 0)
+              ? ` ${t('qrSite.orders.againSome')}`
+              : ''),
+    );
+    if (added > 0) {
+      setTab('menu');
+      setCartOpen(true);
+    }
+  };
+
+  useEffect(() => {
+    if (!accepted) return;
+    const timer = setTimeout(() => {
+      setAccepted(false);
+    }, ACCEPTED_BANNER_MS);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [accepted]);
+
   const count = lines.reduce((total, line) => total + line.quantity, 0);
   const shownOrders = orderIds.flatMap((id) => {
     const order = orders.get(id);
@@ -357,120 +422,201 @@ function MenuPage({
   });
   const needsChoice = (item: MenuItem) => needsOptions(document.menu, item);
 
+  const activeOrders = shownOrders.filter((order) => {
+    const status = shownStatus(order, now);
+    return status === 'SUBMITTED' || status === 'RECEIVED';
+  }).length;
+
+  // P9-02, P9-04: the welcome asks for the number before anything is ordered.
+  if (phoneAsk !== 'OFF' && ((phone === '' && !skippedPhone) || changingPhone)) {
+    return (
+      <PhoneGate
+        restaurant={document.restaurantName}
+        table={menu.table.label}
+        ask={phoneAsk}
+        initial={phone}
+        onDone={(value) => {
+          phoneStore.set(value);
+          pendingKey.current = undefined;
+          setChangingPhone(false);
+        }}
+        onSkip={() => {
+          setSkippedPhone(true);
+          setChangingPhone(false);
+        }}
+      />
+    );
+  }
+
   return (
-    <div className="qr-page">
+    <div className="qr-page" data-tab={tab}>
       <header className="qr-header">
-        <h1 className="qr-header__name">{document.restaurantName}</h1>
-        <p className="qr-header__table">{t('qrSite.table', { label: menu.table.label })}</p>
+        <div className="qr-header__text">
+          <h1 className="qr-header__name">{document.restaurantName}</h1>
+          <p className="qr-header__table">
+            <Icon name="users" />
+            <span>{t('qrSite.table', { label: menu.table.label })}</span>
+          </p>
+        </div>
+        {document.serviceRequests ? (
+          <button
+            type="button"
+            className="qr-header__call"
+            disabled={menu.readOnly || requests.busy !== undefined}
+            onClick={() => {
+              requests.ask('WAITER');
+            }}
+          >
+            <Icon name="bell" />
+            <span>{t('qrSite.help.WAITER')}</span>
+          </button>
+        ) : null}
       </header>
       {menu.readOnly ? (
         <p role="status" className="qr-notice qr-notice--warning qr-banner">
           {t('qrSite.readOnly')}
         </p>
       ) : null}
-
-      <Orders orders={shownOrders} items={byId} now={now} />
-      {document.serviceRequests ? (
-        <HelpButtons token={token} relayUrl={relayUrl} readOnly={menu.readOnly} />
+      {requests.latest('WAITER') === undefined ? null : (
+        <p role="status" className="qr-help__status qr-call-status">
+          {t('qrSite.help.line', {
+            what: t('qrSite.help.WAITER'),
+            status: t(`qrSite.help.status.${requests.latest('WAITER')?.status ?? 'SUBMITTED'}`, {
+              reason: requests.latest('WAITER')?.rejectionReason ?? '',
+            }),
+          })}
+        </p>
+      )}
+      {accepted ? (
+        <p role="alert" className="qr-accepted">
+          <Icon name="check" />
+          <span>{t('qrSite.orders.acceptedBanner')}</span>
+        </p>
       ) : null}
 
-      <div className="qr-tools">
-        <label className="qr-search">
-          <span className="qr-visually-hidden">{t('qrSite.search')}</span>
-          <input
-            type="search"
-            value={query}
-            placeholder={t('qrSite.searchHint')}
-            aria-label={t('qrSite.search')}
-            onChange={(event) => {
-              setQuery(event.target.value);
-            }}
-          />
-        </label>
-        <fieldset className="qr-filters">
-          <legend className="qr-visually-hidden">{t('qrSite.filters.legend')}</legend>
-          {FILTERS.filter(
-            (filter) => filter !== 'bestseller' || document.recommendations !== undefined,
-          ).map((filter) => (
-            <label key={filter} className="qr-chip">
-              <input
-                type="checkbox"
-                checked={filters.has(filter)}
-                onChange={(event) => {
-                  const next = new Set(filters);
-                  if (event.target.checked) next.add(filter);
-                  else next.delete(filter);
-                  setFilters(next);
-                }}
-              />
-              <span>{t(`qrSite.filters.${filter}`)}</span>
-            </label>
-          ))}
-        </fieldset>
-        {sections.length > 1 && query === '' ? (
-          <nav className="qr-categories" aria-label={t('qrSite.categories')}>
-            {sections.map((section) => (
-              <a key={section.id} href={`#c-${section.id}`}>
-                {section.name}
-              </a>
-            ))}
-          </nav>
-        ) : null}
-      </div>
-
-      <main>
-        {query.trim() === '' ? (
-          <Suggestions
-            title={count === 0 ? t('reco.row.menu') : t('reco.row.cart')}
-            suggestions={suggestions}
-            items={byId}
-            readOnly={menu.readOnly}
-            needsChoice={needsChoice}
-            onPick={pick}
-          />
-        ) : null}
-        {shown.length === 0 ? <p className="qr-muted qr-empty">{t('qrSite.noMatch')}</p> : null}
-        {sections.map((section) => (
-          <section
-            key={section.id}
-            id={`c-${section.id}`}
-            className="qr-section"
-            aria-label={section.name}
-          >
-            {section.heading ? <h2 className="qr-section__title">{section.name}</h2> : null}
-            <ul className="qr-dishes">
-              {section.items.map((item) => (
-                <DishRow
-                  key={item.id}
-                  item={item}
-                  unavailable={menuNote(menuAt, item, t, now).unavailable}
-                  photo={
-                    <DishPhoto
-                      photo={photoOf(item)}
-                      base={menu.photoBase}
-                      sizes="4.5rem"
-                      className="qr-dish__photo"
-                    />
-                  }
-                  needsChoice={needsOptions(document.menu, item)}
-                  readOnly={menu.readOnly}
-                  onChoose={() => {
-                    setOpen({ item });
-                  }}
-                  onAdd={() => {
-                    quickAdd(item);
+      <div hidden={tab !== 'menu'}>
+        <div className="qr-tools">
+          <label className="qr-search">
+            <span className="qr-visually-hidden">{t('qrSite.search')}</span>
+            <input
+              type="search"
+              value={query}
+              placeholder={t('qrSite.searchHint')}
+              aria-label={t('qrSite.search')}
+              onChange={(event) => {
+                setQuery(event.target.value);
+              }}
+            />
+          </label>
+          <fieldset className="qr-filters">
+            <legend className="qr-visually-hidden">{t('qrSite.filters.legend')}</legend>
+            {FILTERS.filter(
+              (filter) => filter !== 'bestseller' || document.recommendations !== undefined,
+            ).map((filter) => (
+              <label key={filter} className="qr-chip">
+                <input
+                  type="checkbox"
+                  checked={filters.has(filter)}
+                  onChange={(event) => {
+                    const next = new Set(filters);
+                    if (event.target.checked) next.add(filter);
+                    else next.delete(filter);
+                    setFilters(next);
                   }}
                 />
+                <span>{t(`qrSite.filters.${filter}`)}</span>
+              </label>
+            ))}
+          </fieldset>
+          {sections.length > 1 && query === '' ? (
+            <nav className="qr-categories" aria-label={t('qrSite.categories')}>
+              {sections.map((section) => (
+                <a key={section.id} href={`#c-${section.id}`}>
+                  {section.name}
+                </a>
               ))}
-            </ul>
-          </section>
-        ))}
-      </main>
+            </nav>
+          ) : null}
+        </div>
+
+        <main>
+          {query.trim() === '' ? (
+            <Suggestions
+              title={count === 0 ? t('reco.row.menu') : t('reco.row.cart')}
+              suggestions={suggestions}
+              items={byId}
+              readOnly={menu.readOnly}
+              needsChoice={needsChoice}
+              onPick={pick}
+            />
+          ) : null}
+          {shown.length === 0 ? <p className="qr-muted qr-empty">{t('qrSite.noMatch')}</p> : null}
+          {sections.map((section) => (
+            <section
+              key={section.id}
+              id={`c-${section.id}`}
+              className="qr-section"
+              aria-label={section.name}
+            >
+              {section.heading ? <h2 className="qr-section__title">{section.name}</h2> : null}
+              <ul className="qr-dishes">
+                {section.items.map((item) => (
+                  <DishRow
+                    key={item.id}
+                    item={item}
+                    unavailable={menuNote(menuAt, item, t, now).unavailable}
+                    photo={
+                      <DishPhoto
+                        photo={photoOf(item)}
+                        base={menu.photoBase}
+                        sizes="4.5rem"
+                        className="qr-dish__photo"
+                      />
+                    }
+                    needsChoice={needsOptions(document.menu, item)}
+                    readOnly={menu.readOnly}
+                    onChoose={() => {
+                      setOpen({ item });
+                    }}
+                    onAdd={() => {
+                      quickAdd(item);
+                    }}
+                  />
+                ))}
+              </ul>
+            </section>
+          ))}
+        </main>
+      </div>
+
+      {tab === 'orders' ? (
+        <Orders
+          orders={shownOrders}
+          items={byId}
+          now={now}
+          readOnly={menu.readOnly}
+          onAgain={orderAgain}
+        />
+      ) : null}
+      {
+        <div hidden={tab !== 'bill'}>
+          <BillTab
+            token={token}
+            relayUrl={relayUrl}
+            document={document}
+            orders={shownOrders}
+            requests={requests}
+            readOnly={menu.readOnly}
+            active={tab === 'bill'}
+            now={now}
+          />
+        </div>
+      }
 
       <p role="status" aria-live="polite" className="qr-visually-hidden">
         {announced}
       </p>
-      {count === 0 ? null : (
+      {count === 0 || tab === 'bill' ? null : (
         <div className="qr-cart-bar">
           <Button
             fullWidth
@@ -483,6 +629,28 @@ function MenuPage({
           </Button>
         </div>
       )}
+
+      <nav className="qr-tabbar" aria-label={t('qrSite.tabs.label')}>
+        {TABS.map((id) => (
+          <button
+            key={id}
+            type="button"
+            className="qr-tabbar__tab"
+            aria-current={tab === id ? 'page' : undefined}
+            onClick={() => {
+              setTab(id);
+              setNow(Date.now());
+              globalThis.scrollTo({ top: 0 });
+            }}
+          >
+            <Icon name={id === 'menu' ? 'handPlatter' : id === 'orders' ? 'inbox' : 'receipt'} />
+            <span>{t(`qrSite.tabs.${id}`)}</span>
+            {id === 'orders' && activeOrders > 0 ? (
+              <Badge tone="info">{String(activeOrders)}</Badge>
+            ) : null}
+          </button>
+        ))}
+      </nav>
 
       {open === undefined ? null : (
         <ItemSheet
@@ -514,6 +682,10 @@ function MenuPage({
           name={name}
           phone={phone}
           phoneAsk={phoneAsk}
+          onChangePhone={() => {
+            setCartOpen(false);
+            setChangingPhone(true);
+          }}
           readOnly={menu.readOnly}
           sending={sending}
           message={message}
@@ -525,10 +697,6 @@ function MenuPage({
           }}
           onNote={setNote}
           onName={setName}
-          onPhone={(value) => {
-            phoneStore.set(value);
-            pendingKey.current = undefined;
-          }}
           onSend={send}
           onClose={() => {
             setCartOpen(false);

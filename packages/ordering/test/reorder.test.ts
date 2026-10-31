@@ -3,7 +3,7 @@ import { createTranslator } from '@rp/i18n';
 import { describe, expect, it } from 'vitest';
 import type { CartLine } from '../src/cart.js';
 import { issueText, menuNote, ruleOf, summaryOf, unavailableReason } from '../src/item-choice.js';
-import { againLine, lineProblems, lineProblemText } from '../src/reorder.js';
+import { againLine, lineProblems, lineProblemText, requestAgainLine } from '../src/reorder.js';
 import { IDS, MENU, sentOrder } from '../src/testing/index.js';
 
 const t = createTranslator();
@@ -353,5 +353,62 @@ describe('[WTR-010] cart lines the kitchen cannot make now', () => {
       'No longer on the menu',
     ]);
     expect(lineProblems(menu, [cartLine(IDS.dal, 3, 'a')], 'WAITER_APP').size).toBe(0);
+  });
+});
+
+describe('[QR-004] "Order again" on the QR page (P9-04)', () => {
+  const sent = {
+    clientLineId: '0199a0e0-0000-7000-8000-000000000a01',
+    itemId: IDS.tikka,
+    quantity: 2,
+    variantId: IDS.full,
+    modifiers: [{ groupId: IDS.extras, optionIds: [IDS.cheese] }],
+    instructions: 'Less spicy',
+  };
+
+  it('puts a sent line back as it was, priced from the menu now', () => {
+    const again = requestAgainLine(MENU, sent, 'WAITER_APP');
+    expect(again).toMatchObject({
+      itemId: IDS.tikka,
+      quantity: 2,
+      selection: {
+        variantId: IDS.full,
+        modifiers: [{ groupId: IDS.extras, optionIds: [IDS.cheese] }],
+      },
+      instructions: 'Less spicy',
+      summary: 'Full · Cheese',
+    });
+    expect(again?.unitPrice).toBeGreaterThan(0);
+  });
+
+  it('keeps a combo’s choices, and gives up when they no longer fit', () => {
+    const thali = { ...sent, itemId: IDS.thali, variantId: undefined, modifiers: [] };
+    expect(
+      requestAgainLine(MENU, { ...thali, comboChoices: [IDS.jamun] }, 'WAITER_APP')?.comboChoices,
+    ).toEqual([IDS.jamun]);
+    expect(
+      requestAgainLine(MENU, { ...thali, comboChoices: [IDS.tikka] }, 'WAITER_APP'),
+    ).toBeUndefined();
+    expect(requestAgainLine(MENU, { ...thali, comboChoices: [] }, 'WAITER_APP')).toBeUndefined();
+  });
+
+  it('gives up on a dish out of stock, gone from the QR menu, or with an option it no longer has', () => {
+    const soldOut: MenuSnapshot = {
+      ...MENU,
+      items: MENU.items.map((entry) =>
+        entry.id === IDS.tikka ? { ...entry, stockCount: 0 } : entry,
+      ),
+    };
+    expect(requestAgainLine(soldOut, sent, 'WAITER_APP')).toBeUndefined();
+    // The fixture's tikka is not on the QR menu.
+    expect(requestAgainLine(MENU, sent, 'QR')).toBeUndefined();
+    expect(requestAgainLine(MENU, { ...sent, itemId: IDS.full }, 'WAITER_APP')).toBeUndefined();
+    expect(
+      requestAgainLine(
+        MENU,
+        { ...sent, modifiers: [{ groupId: IDS.extras, optionIds: [IDS.full] }] },
+        'QR',
+      ),
+    ).toBeUndefined();
   });
 });

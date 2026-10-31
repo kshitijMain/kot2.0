@@ -692,7 +692,7 @@ Recommended next WPs (dependencies met):
       itself: manual task 38)
 - [x] P9-02 The diner's phone number, on the order and the bill
 - [x] P9-03 The bill on the diner's phone, UPI and "I have paid"
-- [ ] P9-04 The diner's page: phone first, My orders, accepted, order again, Bill tab, a nicer menu
+- [x] P9-04 The diner's page: phone first, My orders, accepted, order again, Bill tab, a nicer menu
 - [ ] P9-05 The manager's phone rings for QR orders
 - [ ] P9-06 The Mannat pilot set-up and a one-Mac trial
 
@@ -4620,6 +4620,52 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-10-31: P9-04 The diner's page
+
+Built in `apps/qr-menu`:
+
+- `PhoneGate` (the welcome step: restaurant, "You're at table T3", the mobile number, skippable
+  only when OPTIONAL).
+- Tabs Menu, My orders and Bill at the bottom, with a badge counting orders on their way.
+- Call waiter in the header band (the restaurant's accent colour).
+- `Orders`: cards with a coloured edge, plain statuses ("Waiting for the restaurant to accept
+  it", "accepted and has gone to the kitchen"), the shared StatusChip per dish, "Order again"
+  per order and + per dish.
+- An "accepted" banner with a short buzz the moment the restaurant accepts (status seen moving
+  from SUBMITTED or RECEIVED to SENT_TO_KITCHEN).
+- `BillTab`:
+  - before the bill: the estimate of what was ordered so far (orders not taken and dishes not
+    served left out) and Ask for the bill;
+  - after: each printed invoice with Pay with UPI (`upi://`), the GPay, PhonePe and Paytm links,
+    a UPI QR code (`@rp/ui-web` QrCode), Copy UPI ID and I have paid;
+  - "settled, thank you" when the bill it showed goes away;
+  - asks every 5 s while open or asked for, 30 s otherwise.
+- `requests.ts` (`useServiceRequests`) is shared by the header, the Bill tab and HelpButtons.
+- The cart shows the number "On your bill" with Change.
+- Restyled `qr.css`: dish cards, category pills, welcome card, tab bar, bill and pay.
+- `@rp/ordering` `requestAgainLine` (a QR request line back in the cart, or undefined when the menu
+  cannot serve it now).
+- Strings: `qrSite.tabs`, `welcome`, `bill`, new `orders` and `help` texts. Terms say the bill
+  may be paid by UPI.
+
+Tests:
+
+- site unit 19 (+6: order again, empty, the welcome refuses and takes numbers, skip, the
+  estimate, ask for the bill, the printed bill's UPI links, QR and I have paid, the thanks after
+  settlement).
+- ordering `reorder` +3.
+- QR e2e on a Pixel 7: +1 for Mannat (phone REQUIRED) end to end through the real relay, 13 of 13
+  pass.
+
+Fixed: the e2e photo test looked for `img.qr-dish__photo`, but since 039496e the class is on
+DishPhoto's wrapper (`.qr-dish__photo img`). It failed on main before this.
+
+Decided:
+
+- The menu stays in the page while another tab shows (hidden, not unmounted), so the search, the
+  filters and the scroll survive a look at the bill.
+- iPhones get the app links next to the generic one (iOS may open no app for `upi://`).
 
 ### 2026-10-31: P9-03 The bill on the diner's phone, UPI and "I have paid"
 

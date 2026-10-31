@@ -1,4 +1,4 @@
-import type { MenuSnapshot, OrderView } from '@rp/contracts';
+import type { MenuSnapshot, OrderLineRequest, OrderView } from '@rp/contracts';
 import { type ItemSelection, unitPriceOf, validateSelection } from '@rp/domain';
 import type { Translator } from '@rp/i18n';
 import type { CartLine, NewCartLine } from './cart.js';
@@ -69,6 +69,55 @@ export function againLine(
     quantity: 1,
     selection,
     ...(comboChoices !== undefined && { comboChoices }),
+    instructions: line.instructions ?? '',
+    unitPrice: unitPriceOf(def, selection),
+  };
+}
+
+/**
+ * A line a diner sent from the QR page, ordered again as it was: same quantity, variant, options,
+ * combo choices and note (P9-04, "Order again"). Undefined when the menu no longer offers it that
+ * way or cannot serve it now (out of stock, outside its hours): the diner chooses again. The
+ * price is the menu's now; the restaurant prices the order itself (ORD-014).
+ */
+export function requestAgainLine(
+  menu: MenuSnapshot,
+  line: OrderLineRequest,
+  channel: SalesChannel,
+  now?: Date | number,
+): NewCartLine | undefined {
+  const item = menu.items.find((candidate) => candidate.id === line.itemId);
+  if (item === undefined || item.archived || !item.channels.includes(channel)) return undefined;
+  if (unavailableReason(item, now === undefined ? undefined : { menu, now }) !== undefined) {
+    return undefined;
+  }
+  const def = selectable(menu, item);
+  const selection: ItemSelection = {
+    ...(line.variantId !== undefined && { variantId: line.variantId }),
+    ...(line.modifiers.length > 0 && {
+      modifiers: line.modifiers.map((entry) => ({
+        groupId: entry.groupId,
+        optionIds: [...entry.optionIds],
+      })),
+    }),
+  };
+  if (validateSelection(def, selection).length > 0) return undefined;
+  const combo = comboOf(menu, item);
+  const slots = combo === undefined ? [] : comboSlots(menu, combo);
+  const choices = line.comboChoices ?? [];
+  if (
+    choices.length !== slots.length ||
+    slots.some((slot, index) => !slot.options.some((option) => option.id === choices[index]))
+  ) {
+    return undefined;
+  }
+  return {
+    itemId: item.id,
+    name: item.name,
+    summary: summaryOf(menu, item, selection, slots.length > 0 ? choices : undefined),
+    quantity: line.quantity,
+    selection,
+    ...(slots.length > 0 && { comboChoices: [...choices] }),
     instructions: line.instructions ?? '',
     unitPrice: unitPriceOf(def, selection),
   };

@@ -137,7 +137,7 @@ test.describe('[MENU-008] [QR-012] photos', () => {
     await tablePage(page);
     const mains = page.getByRole('region', { name: 'Main Course' });
     const dal = mains.getByRole('listitem').filter({ hasText: 'Dal Makhani' });
-    const photo = dal.locator('img.qr-dish__photo');
+    const photo = dal.locator('.qr-dish__photo img');
     await photo.scrollIntoViewIfNeeded();
     // Loaded (the CSP lets the relay's origin in) and decorative: the name is beside it.
     // (A failed load has no natural size; srcset scales a loaded one to its density.)
@@ -151,7 +151,7 @@ test.describe('[MENU-008] [QR-012] photos', () => {
       .toBe(true);
     await expect(photo).toHaveAttribute('alt', '');
     await expect(page.getByRole('img')).toHaveCount(0);
-    await expect(page.locator('img.qr-dish__photo')).toHaveCount(1);
+    await expect(page.locator('.qr-dish__photo img')).toHaveCount(1);
   });
 });
 
@@ -351,5 +351,122 @@ test.describe('[NFR-P05] [MENU-006] an open page follows the menu', () => {
       document.dispatchEvent(new Event('visibilitychange'));
     });
     await expect(inMenu(page, 'Add Dal Makhani')).toBeVisible();
+  });
+});
+
+test.describe('[P9] Mannat: the whole table on a phone (ADR-0024)', () => {
+  /** Mannat's local server at the relay. */
+  async function asMannat<T>(method: string, path: string, body?: unknown): Promise<T> {
+    const response = await fetch(`${state.relayUrl}/server/${path}`, {
+      method,
+      headers: {
+        authorization: `Bearer ${state.mannat.credential}`,
+        'content-type': 'application/json',
+      },
+      ...(body !== undefined && { body: JSON.stringify(body) }),
+    });
+    if (!response.ok)
+      throw new Error(`${path}: ${String(response.status)} ${await response.text()}`);
+    return (await response.json()) as T;
+  }
+
+  test('[BILL-011] [QR-007] welcome with the mobile, order, accepted, order again, the bill and UPI', async ({
+    page,
+  }) => {
+    await page.goto(`${state.site}/t/${state.mannat.token}`);
+    // The welcome step: the table comes from the code alone, and the number is asked first.
+    await expect(page.getByRole('heading', { level: 1, name: 'Mannat' })).toBeVisible();
+    await expect(page.getByText('You’re at table M3')).toBeVisible();
+    await expect(page.getByRole('button', { name: s.welcome.skip })).toHaveCount(0);
+    await expectAccessible(page);
+    await page.getByLabel(new RegExp(`^${s.cart.phone}`)).fill('98765 43210');
+    await page.getByRole('button', { name: s.welcome.start }).click();
+
+    await inMenu(page, 'Add Dal Makhani').click();
+    await page.getByRole('button', { name: /Your order · 1 item/ }).click();
+    const cart = page.getByRole('dialog', { name: s.cart.title });
+    await expect(cart.getByText('On your bill: +91 9876543210')).toBeVisible();
+    await cart.getByRole('button', { name: s.cart.send }).click();
+    // Sent: the page shows My orders.
+    await expect(page.getByText(s.orders.SUBMITTED)).toBeVisible();
+    await expectAccessible(page);
+
+    // The restaurant picks it up with the number, and the manager accepts it.
+    const { orders } = await asMannat<{
+      orders: { id: string; customerPhone: string | null; lines: { clientLineId: string }[] }[];
+    }>('GET', 'orders');
+    const order = orders.at(-1);
+    if (order === undefined) throw new Error('nothing to pick up');
+    expect(order.customerPhone).toBe('+919876543210');
+    await asMannat('POST', `orders/${order.id}/status`, { status: 'RECEIVED' });
+    await expect(page.getByText(s.orders.RECEIVED)).toBeVisible();
+    await asMannat('POST', `orders/${order.id}/status`, {
+      status: 'SENT_TO_KITCHEN',
+      detail: { items: [{ clientLineId: order.lines[0]?.clientLineId, state: 'PREPARING' }] },
+    });
+    await expect(
+      page.getByRole('alert').filter({ hasText: s.orders.acceptedBanner }),
+    ).toBeVisible();
+    await expect(page.getByText(s.orders.SENT_TO_KITCHEN)).toBeVisible();
+
+    // Order again: the same dish back in the cart.
+    await page.getByRole('button', { name: s.orders.again }).click();
+    const again = page.getByRole('dialog', { name: s.cart.title });
+    await expect(again.getByText('Dal Makhani')).toBeVisible();
+    await again.getByRole('button', { name: 'Remove Dal Makhani' }).click();
+    await page.keyboard.press('Escape');
+
+    // The bill is printed: the diner pays by UPI with the amount filled in.
+    await asMannat('PUT', `tables/${state.mannat.tableId}/bill`, {
+      bill: {
+        invoices: [
+          {
+            invoiceNumber: 'INV/26-27/000042',
+            issuedAt: new Date().toISOString(),
+            status: 'ISSUED',
+            lines: [{ description: 'Dal Makhani', quantity: 1, amount: 28_000 }],
+            subtotal: 28_000,
+            discountTotal: 0,
+            serviceCharge: 0,
+            taxLines: [
+              { label: 'CGST 2.5%', amount: 700 },
+              { label: 'SGST 2.5%', amount: 700 },
+            ],
+            roundOff: -400,
+            grandTotal: 29_000,
+          },
+        ],
+        upi: { upiId: 'mannat@okhdfcbank', payeeName: 'Mannat' },
+      },
+    });
+    await page
+      .getByRole('navigation', { name: s.tabs.label })
+      .getByRole('button', { name: s.tabs.bill })
+      .click();
+    const pay = page.getByRole('link', { name: 'Pay ₹290.00 with UPI' });
+    await expect(pay).toBeVisible();
+    await expect(pay).toHaveAttribute(
+      'href',
+      'upi://pay?pa=mannat%40okhdfcbank&pn=Mannat&am=290.00&cu=INR&tn=Mannat%20bill%20INV%2F26-27%2F000042',
+    );
+    await expect(page.getByRole('img', { name: /QR code to pay ₹290\.00/ })).toBeVisible();
+    await expectAccessible(page);
+    await page.getByRole('button', { name: s.help.PAID }).click();
+    await expect(
+      page.getByText(
+        s.help.line.replace('{what}', s.help.PAID).replace('{status}', s.help.status.SUBMITTED),
+      ),
+    ).toBeVisible();
+    const { requests } = await asMannat<{ requests: { type: string }[] }>(
+      'GET',
+      'service-requests',
+    );
+    expect(requests.map((request) => request.type)).toContain('PAID');
+
+    // Settled: the table closes and the bill goes; the page thanks the diner.
+    await asMannat('PUT', `tables/${state.mannat.tableId}/bill`, { bill: null });
+    await expect(
+      page.getByText('Your bill is settled. Thank you for dining at Mannat!'),
+    ).toBeVisible();
   });
 });
