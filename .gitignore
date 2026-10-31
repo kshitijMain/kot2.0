@@ -60,3 +60,6 @@ apps/control-plane/src/generated/
 
 # Vitest report output
 .vitest/
+
+# The QR pilot on one Mac (scripts/pilot/mannat-local.sh): databases, secrets, logs
+/.pilot/

@@ -151,7 +151,10 @@ body {
 
 .qr-filters {
   display: flex;
-  flex-wrap: wrap;
+  /* One row that scrolls sideways, so more of the menu fits on a phone (P9-04). */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
   gap: var(--rp-space-2);
   border: 0;
   margin: var(--rp-space-2) 0 0;
@@ -159,6 +162,8 @@ body {
 }
 
 .qr-chip {
+  flex: none;
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: var(--rp-space-1);
@@ -599,8 +604,8 @@ body {
 
 .qr-tabbar__tab .rp-badge {
   position: absolute;
-  top: var(--rp-space-1);
-  right: calc(50% - 1.75rem);
+  top: 2px;
+  left: calc(50% + 0.6rem);
 }
 
 /* "Your order is accepted" (P9-04). */

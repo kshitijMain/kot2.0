@@ -694,7 +694,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-03 The bill on the diner's phone, UPI and "I have paid"
 - [x] P9-04 The diner's page: phone first, My orders, accepted, order again, Bill tab, a nicer menu
 - [x] P9-05 The manager's phone rings for QR orders
-- [ ] P9-06 The Mannat pilot set-up and a one-Mac trial
+- [x] P9-06 The Mannat pilot set-up and a one-Mac trial (the server and the real tables: manual task 38)
 
 ## Decisions
 
@@ -4620,6 +4620,59 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-10-31: P9-06 The Mannat pilot set-up and a one-Mac trial (Phase 9 built)
+
+Built:
+
+- `dev-seed.ts` takes a `SeedProfile` (`DEMO_PROFILE` is the old data, unchanged).
+- `pilot-seed.ts` `MANNAT_PROFILE` + `seedMannat`:
+  - tables 1–5 with QR codes;
+  - a North Indian menu (chapati, naan, thali and more);
+  - Owner, Manager, two waiters, Kitchen;
+  - the kitchen on its screen;
+  - `qr.askPhone` REQUIRED, payee name Mannat, a UPI ID when given.
+- `pilot-cli.ts` (`pnpm --filter @rp/server pilot:mannat --site … --tents … --upi-id …`) prints the
+  PINs and QR addresses and writes the A5 tents.
+- `scripts/pilot/mannat-local.sh` (setup, start, status, stop, reset) and its README:
+  PostgreSQL 16 in Docker, the relay host, the QR site and the KOT server with LAN TLS, secrets
+  in `.pilot/` (git-ignored). Manual task 38 points to it.
+
+Fixed on the way:
+
+- `relay-cli` audited with entity id "credential", which the audit table (UUID) refuses once a
+  restaurant exists. It now uses the restaurant's id.
+- The QR page's `crypto.randomUUID` exists only on secure pages, so over http on the Wi-Fi adding
+  to the cart threw. `newUuid` falls back to `getRandomValues`.
+- The page now looks at a new order again after 1 s, since the line brings it to the PC in about
+  130 ms.
+- My orders scrolls to the top after sending.
+- Primary buttons use the restaurant's colour, and the filters sit in one scrolling row.
+
+Tests:
+
+- server `pilot-mannat.int` 3: 5 codes open the same menu at their own table with the phone
+  required; table 2's order comes down the open line with polling an hour away, alerts the
+  manager, is approved, and makes a KOT sent by the manager, with the diner told; the bill
+  carries the phone and the diner's page shows it with UPI.
+- schema and service-day (the demo seed) pass.
+- site +1 (UUIDs on insecure pages).
+
+Checked by hand on this Mac (`mannat-local.sh`, Pixel 7 browser):
+
+- Welcome, menu, cart ("On your bill"), send.
+- The PC received the order 133 ms after it was sent, over the line.
+- POS "1 order to approve: Table 2"; Approve opened table 2 and made KOT #1.
+- The diner page read accepted with per-dish states.
+- The POS bill had the diner's number; Print bill showed the bill with Pay ₹410.00 with UPI,
+  the app links and the QR code on the phone.
+- I have paid raised `T3 PAID UPI` to the manager on duty.
+
+Decided:
+
+- The pilot seed refuses a database with a restaurant, like the dev seed. Mannat on a fresh
+  install, and nothing is overwritten.
+- No kitchen printer by default (the KDS works without one); add it in Manage → Printers.
 
 ### 2026-10-31: P9-05 The manager's phone rings for QR orders
 

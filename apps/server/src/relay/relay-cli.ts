@@ -30,11 +30,18 @@ async function main(argv: readonly string[]): Promise<number> {
     await prisma.transaction(async (tx) => {
       await saveRelayCredential(tx, createSecretStore(config), credential);
       // AUD-001, without the credential itself; before the setup wizard there is no restaurant.
-      if ((await tx.restaurant.count()) > 0) {
+      // The entry is about the restaurant's link to the relay: its id is the restaurant's (audit
+      // ids are UUIDs; "credential" was refused once a restaurant existed, P9-06).
+      const restaurant = await tx.restaurant.findFirst({
+        orderBy: { createdAt: 'asc' },
+        select: { id: true },
+      });
+      if (restaurant !== null) {
         await new AuditService(prisma).record(tx, {
           action: 'RELAY_CREDENTIAL_SET',
           entityType: 'relay',
-          entityId: 'credential',
+          entityId: restaurant.id,
+          restaurantId: restaurant.id,
           after: { relayUrl: config.relayUrl ?? null },
           reason: 'QR relay credential stored from the command line',
         });

@@ -14,6 +14,12 @@ everything. Creating the server, the domain and the restaurant's credential need
 
 Never paste a password, key or credential into a Claude session, a chat or a commit.
 
+## 0. (Optional) Try it on the restaurant's Wi-Fi first
+
+Everything also runs on one Mac or PC, with no server and no domain: see
+[`scripts/pilot/README.md`](../scripts/pilot/README.md). It sets up Mannat with its 5 tables,
+prints the tents and starts everything, so phones on the same Wi-Fi can order.
+
 ## 1. Create the server
 
 1. Oracle Cloud → Compute → Instances → **Create instance**.
@@ -55,7 +61,13 @@ It prints a long credential **once**. Copy it straight into step 5 and nowhere e
 
 ## 5. Connect the restaurant PC
 
-On the restaurant PC (or the Mac running the pilot, see `scripts/pilot/README.md`):
+On the restaurant PC, first set up Mannat if it is a fresh install:
+
+```sh
+pnpm --filter @rp/server pilot:mannat --site https://menu.mannat.in --tents tents.pdf --upi-id <business UPI ID>
+```
+
+It prints the first PINs and the 5 tables' QR addresses, and writes the tents to print. Then:
 
 1. In the server's `.env`, set:
 

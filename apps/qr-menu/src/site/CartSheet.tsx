@@ -62,6 +62,7 @@ export function CartSheet({
       footer={
         <Button
           fullWidth
+          variant="accent"
           size="lg"
           loading={sending}
           disabled={lines.length === 0 || readOnly}

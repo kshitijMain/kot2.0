@@ -62,7 +62,7 @@ export function PhoneGate({
               setError(undefined);
             }}
           />
-          <Button type="submit" size="lg" fullWidth>
+          <Button type="submit" size="lg" fullWidth variant="accent">
             {t('qrSite.welcome.start')}
           </Button>
           {ask === 'OPTIONAL' ? (

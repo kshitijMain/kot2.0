@@ -271,9 +271,13 @@ function MenuPage({
       }
     };
     poll();
+    // The restaurant's PC picks an order up within a second of it arriving (its open line,
+    // ADR-0024): one early look shows "Received" at once, then every few seconds.
+    const early = setTimeout(poll, 1_000);
     const timer = setInterval(poll, QR_ORDER_POLL_MS);
     return () => {
       stopped = true;
+      clearTimeout(early);
       clearInterval(timer);
     };
   }, [relayUrl, token, unsettledKey]);
@@ -349,6 +353,7 @@ function MenuPage({
         setNote('');
         setCartOpen(false);
         setTab('orders');
+        globalThis.scrollTo({ top: 0 });
       },
       (failure: unknown) => {
         setSending(false);
@@ -620,6 +625,7 @@ function MenuPage({
         <div className="qr-cart-bar">
           <Button
             fullWidth
+            variant="accent"
             size="lg"
             onClick={() => {
               setCartOpen(true);

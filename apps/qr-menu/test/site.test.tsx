@@ -11,7 +11,7 @@ import type { ServiceRequests } from '../src/site/requests';
 import { DishPhoto } from '../src/site/DishPhoto';
 import { I18nProvider } from '../src/site/i18n';
 import { Orders } from '../src/site/Orders';
-import { browserId, tableValue } from '../src/site/storage';
+import { browserId, newUuid, tableValue } from '../src/site/storage';
 import { contentSecurityPolicy, newNonce } from '../src/proxy';
 
 beforeEach(() => {
@@ -418,5 +418,24 @@ describe('[QR-011] the bill on the diner’s phone and UPI (P9-03, P9-04)', () =
       ).toBeVisible();
     });
     vi.useRealTimers();
+  });
+});
+
+describe('[ORD-013] keys made in the browser', () => {
+  it('makes v4 UUIDs on a page that is not secure too (a test over http on the Wi-Fi)', () => {
+    const secure = Object.getOwnPropertyDescriptor(globalThis, 'isSecureContext');
+    Object.defineProperty(globalThis, 'isSecureContext', { value: false, configurable: true });
+    try {
+      const keys = Array.from({ length: 50 }, newUuid);
+      for (const key of keys) {
+        expect(key).toMatch(
+          /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/,
+        );
+      }
+      expect(new Set(keys).size).toBe(50);
+    } finally {
+      if (secure === undefined) Reflect.deleteProperty(globalThis, 'isSecureContext');
+      else Object.defineProperty(globalThis, 'isSecureContext', secure);
+    }
   });
 });
