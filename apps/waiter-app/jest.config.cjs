@@ -13,7 +13,11 @@ module.exports = {
     '^@rp/([a-z0-9-]+)$': '<rootDir>/../../packages/$1/dist/index.js',
     '^@rp/([a-z0-9-]+)/testing$': '<rootDir>/../../packages/$1/dist/testing/index.js',
   },
-  transformIgnorePatterns: ['node_modules/(?!(\\.pnpm|(@react-native|react-native|@rp)/))'],
+  // Expo's packages ship TypeScript sources (expo-status-bar): they are compiled too, or a test
+  // file with a cold transform cache cannot load the app (P9-16).
+  transformIgnorePatterns: [
+    'node_modules/(?!(\\.pnpm|(@react-native|react-native|@rp|expo[a-z0-9-]*|@expo)/))',
+  ],
   // Root and session wire the native modules; the Android build and Maestro cover them.
   collectCoverageFrom: ['src/**/*.{ts,tsx}', '!src/Root.tsx', '!src/session.ts'],
   coverageThreshold: { global: { lines: 80, functions: 80, statements: 80, branches: 70 } },

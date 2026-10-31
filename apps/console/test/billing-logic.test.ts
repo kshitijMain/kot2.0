@@ -5,7 +5,7 @@ import {
   paiseFromInput,
   type PlannedPayment,
   stillToPay,
-} from '../src/billing/money-input.js';
+} from '@rp/ordering';
 import { itemsSplit } from '../src/billing/split.js';
 import { B, billView } from './billing-fixture.js';
 

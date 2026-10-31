@@ -13,6 +13,7 @@ import { ServiceRequests } from '../pos/ServiceRequests.js';
 import { type FloorData, useFloor } from '../pos/use-floor.js';
 import { FILTER_PARAMS } from './order-feed-view.js';
 import { SetupBanner } from './setup/SetupScreen.js';
+import { UpiNotice } from './UpiNotice.js';
 import { type OrderFeedData, serverNow, useOrderFeed } from './use-order-feed.js';
 
 /** Move "25 min" and the late marks on this often between reads. */
@@ -32,6 +33,7 @@ export function Overview() {
   return (
     <>
       <SetupBanner />
+      <UpiNotice />
       {/* Diners' orders wait here too, not only on the POS floor (P9-10). */}
       <Approvals />
       <ServiceRequests />

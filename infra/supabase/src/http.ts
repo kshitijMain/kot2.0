@@ -87,6 +87,9 @@ const ALLOWED_HEADERS = [
   BROWSER_ID_HEADER,
   // P9-08: the diner's number for their orders (table-orders).
   DINER_PHONE_HEADER,
+  // P9-16: a relay behind ngrok's free plan answers browsers with its warning page unless asked
+  // not to; the QR site asks.
+  'ngrok-skip-browser-warning',
 ].join(', ');
 
 function corsHeaders(request: Request, allowed: readonly string[]): Record<string, string> {

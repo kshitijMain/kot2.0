@@ -18,6 +18,7 @@ import { downloadFile } from '../../app/download.js';
 import { useT } from '../../app/i18n.js';
 import { messageOf } from '../../app/messages.js';
 import { useLive } from '../../app/use-live.js';
+import { UpiNotice } from '../UpiNotice.js';
 
 type Open =
   | { readonly kind: 'SHOW'; readonly table: TableQrView }
@@ -241,6 +242,7 @@ export function QrCodesScreen() {
         {t('qrCodes.title')}
       </h2>
       <p className="dashboard-section__hint">{t('qrCodes.intro')}</p>
+      <UpiNotice />
       {content}
       {open?.kind === 'SHOW' && open.table.url !== null ? (
         <Dialog

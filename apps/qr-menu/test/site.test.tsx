@@ -13,6 +13,7 @@ import { I18nProvider } from '../src/site/i18n';
 import { Orders } from '../src/site/Orders';
 import { orderStep } from '../src/site/progress';
 import { browserId, newUuid, tableValue } from '../src/site/storage';
+import { throughNgrok } from '../src/site/relay';
 import { contentSecurityPolicy, newNonce } from '../src/proxy';
 
 beforeEach(() => {
@@ -538,5 +539,18 @@ describe('[ORD-013] keys made in the browser', () => {
       if (secure === undefined) Reflect.deleteProperty(globalThis, 'isSecureContext');
       else Object.defineProperty(globalThis, 'isSecureContext', secure);
     }
+  });
+});
+
+describe('[QR-007] a relay behind ngrok (P9-16)', () => {
+  it('asks ngrok for the relay, not its warning page, and only there', () => {
+    expect(throughNgrok('https://abc.ngrok-free.dev/functions/v1/order-status')).toEqual({
+      'ngrok-skip-browser-warning': '1',
+    });
+    expect(throughNgrok('https://abc.ngrok.app/functions/v1/x')).toHaveProperty(
+      'ngrok-skip-browser-warning',
+    );
+    expect(throughNgrok('https://relay.menu.example.in/functions/v1/x')).toEqual({});
+    expect(throughNgrok('http://192.168.1.20:8787/functions/v1/x')).toEqual({});
   });
 });

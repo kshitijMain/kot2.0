@@ -70,7 +70,7 @@ describe('[NTF-002] the notification rules', () => {
       ),
     ).toBeVisible();
     expect(within(water).getByText(t('notificationRules.factory'))).toBeVisible();
-    expect(within(water).getByText(/T4 WATER|\{table\} WATER/)).toBeVisible();
+    expect(within(water).getByText(/T5 WATER/)).toBeVisible();
     const kitchen = await rowOf('ORDER_CHANGED');
     expect(within(kitchen).getByText(new RegExp(t('notificationRules.noPager')))).toBeVisible();
     await expectNoAxeViolations(container);

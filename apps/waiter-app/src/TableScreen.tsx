@@ -45,6 +45,7 @@ import { useCart } from './carts';
 import { EndItemSheet, type Ending } from './EndItemSheet';
 import { MenuBrowser } from './MenuBrowser';
 import { mayMove, MoveSheet } from './MoveSheet';
+import { mayTakePayment, PaymentSheet } from './PaymentSheet';
 import { SentOrders } from './SentOrders';
 import { Approvals } from './Approvals';
 import { ServiceRequests } from './ServiceRequests';
@@ -119,6 +120,7 @@ export function TableScreen({
     menu !== null && menu !== undefined,
   );
   const [moving, setMoving] = useState(false);
+  const [paying, setPaying] = useState(false);
   const [notice, setNotice] = useState<string | undefined>();
   const [asking, setAsking] = useState(false);
   const [printing, setPrinting] = useState(false);
@@ -475,6 +477,18 @@ export function TableScreen({
                 {t('mobile.tables.requestBill')}
               </Button>
             ) : null}
+            {/* P9-16: the manager settles the printed bill at the table. */}
+            {table.state === 'BILL_PRINTED' && table.session !== null && mayTakePayment(person) ? (
+              <Button
+                style={styles.grow}
+                testID="take-payment"
+                onPress={() => {
+                  setPaying(true);
+                }}
+              >
+                {t('billing.pay')}
+              </Button>
+            ) : null}
             {mayPrint && table.state !== 'BILL_PRINTED' ? (
               <Button
                 variant="secondary"
@@ -596,6 +610,20 @@ export function TableScreen({
           }}
           onMoved={(message) => {
             setMoving(false);
+            toast.show({ title: message, tone: 'success' });
+            tables.reload();
+          }}
+        />
+      ) : null}
+      {paying && table !== undefined ? (
+        <PaymentSheet
+          sessionId={sessionId}
+          tableLabel={table.label}
+          onClose={() => {
+            setPaying(false);
+          }}
+          onPaid={(message) => {
+            setPaying(false);
             toast.show({ title: message, tone: 'success' });
             tables.reload();
           }}

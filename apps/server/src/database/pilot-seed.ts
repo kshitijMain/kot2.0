@@ -340,6 +340,11 @@ const ITEMS: readonly ItemSpec[] = [
   },
 ];
 
+/** Mannat's opening hours: every day, 11:00 to 23:30. */
+export const MANNAT_HOURS = (['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] as const).map(
+  (day) => ({ day, start: '11:00', end: '23:30' }),
+);
+
 export const MANNAT_PROFILE: SeedProfile = {
   legalName: 'Mannat',
   displayName: 'Mannat',
@@ -426,5 +431,10 @@ export async function seedMannat(
   for (const [key, value] of settings) {
     await prisma.setting.create({ data: { restaurantId, key, value: value as never } });
   }
+  // Open every day, 11:00 to 23:30 (P9-16): without hours the restaurant reads "Closed".
+  await prisma.restaurant.update({
+    where: { id: restaurantId },
+    data: { businessHours: MANNAT_HOURS },
+  });
   return { restaurantId, tables };
 }

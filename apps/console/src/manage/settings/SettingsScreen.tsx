@@ -14,7 +14,7 @@ import {
   useToast,
 } from '@rp/ui-web';
 import { type ReactNode, useCallback, useId, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { useConsole } from '../../app/console-context.js';
 import { useT } from '../../app/i18n.js';
 import { messageOf } from '../../app/messages.js';
@@ -174,7 +174,9 @@ export function SettingsScreen() {
     },
     (type) => type === 'SettingsChanged' || type === 'RestaurantChanged',
   );
-  const [search, setSearch] = useState('');
+  // `?find=UPI` opens the page on those settings, e.g. from the overview's notice (P9-16).
+  const [params] = useSearchParams();
+  const [search, setSearch] = useState(params.get('find') ?? '');
   const [editing, setEditing] = useState<
     { readonly setting: SettingView; readonly editor: Editor } | undefined
   >();

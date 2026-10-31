@@ -40,7 +40,9 @@ NGROK="$(curl -s "$NGROK_API/api/tunnels" | python3 -c "import sys,json; t=json.
 echo "$NGROK" > "$STATE/ngrok-url.txt"
 
 perl -pi -e "s|^RELAY_PUBLIC_URL=.*|RELAY_PUBLIC_URL=$NGROK|" "$STATE/relay-host.env"
-perl -pi -e "s|^RELAY_ALLOWED_ORIGINS=.*|RELAY_ALLOWED_ORIGINS=$NGROK|" "$STATE/relay-host.env"
+# The ngrok address and the Wi-Fi one: a phone on the Wi-Fi link orders too (P9-16).
+WIFI_SITE="http://$(ipconfig getifaddr en0 2>/dev/null || echo 127.0.0.1):3100"
+perl -pi -e "s|^RELAY_ALLOWED_ORIGINS=.*|RELAY_ALLOWED_ORIGINS=$NGROK,$WIFI_SITE|" "$STATE/relay-host.env"
 perl -pi -e "s|^RP_RELAY_URL=.*|RP_RELAY_URL=$NGROK/functions/v1|" "$STATE/server.env"
 perl -pi -e "s|^RP_QR_SITE_URL=.*|RP_QR_SITE_URL=$NGROK|" "$STATE/server.env"
 # PIN-only sign-in (ADR-0025) for a pilot set up before it existed.

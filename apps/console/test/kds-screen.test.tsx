@@ -126,7 +126,11 @@ describe('[KDS-001] [KDS-002] [KDS-003] [KDS-004] the station board', () => {
     expect(
       within(first).getByText(t('kds.ageMinutes', { minutes: 12 }), { exact: false }),
     ).toHaveTextContent(`${t('kds.ageMinutes', { minutes: 12 })} · ${t('kds.age.amber')}`);
-    expect(within(first).getByText(`Ravi · ${t('kds.source.WAITER_APP')}`)).toBeInTheDocument();
+    expect(
+      within(first).getByText(
+        `${t('kds.source.WAITER_APP')} · ${t('kds.sentBy', { name: 'Ravi' })}`,
+      ),
+    ).toBeInTheDocument();
     expect(within(first).getByText(t('kds.badge.moved', { table: 'T2' }))).toBeInTheDocument();
     expect(within(first).getByText('Veg Thali')).toBeInTheDocument();
     expect(within(first).getByText('Extra butter')).toBeInTheDocument();

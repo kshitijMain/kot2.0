@@ -16,7 +16,7 @@ import { useConsole } from '../app/console-context.js';
 import { useT } from '../app/i18n.js';
 import { messageOf } from '../app/messages.js';
 import { useLive } from '../app/use-live.js';
-import { paiseFromInput } from './money-input.js';
+import { paiseFromInput } from '@rp/ordering';
 
 /** Indian notes and coins, largest first; the same value as note or coin is one count. */
 export const DENOMINATIONS = [

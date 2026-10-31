@@ -191,6 +191,9 @@ export class RelayOrdersService implements OnModuleInit, OnApplicationBootstrap,
       retryBaseMs: this.options.retryBaseMs,
       retryMaxMs: this.options.retryMaxMs,
       notConfiguredRetryMs: 60 * 60_000,
+      warn: (message, details) => {
+        this.logger.warn(details ?? {}, message);
+      },
     });
     this.realtime.start(this.options.realtimeDelayMs);
   }
