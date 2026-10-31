@@ -12,6 +12,43 @@ import { buildMenuContent, menuChecksum } from '../menu/menu-content.js';
 export interface SeedOptions {
   /** Hashes a PIN with the server's pepper; when given, every person gets the PIN listed below. */
   readonly hashPin?: (pin: string) => Promise<string>;
+  /** Another restaurant than the demo one (the QR pilot's Mannat, P9-06); the demo by default. */
+  readonly profile?: SeedProfile;
+}
+
+/**
+ * What a seeded restaurant is: who it is, its floor, its people with their PINs and its menu
+ * (P9-06). The demo restaurant is `DEMO_PROFILE`; the QR pilot's is in `pilot-seed.ts`.
+ */
+export interface SeedProfile {
+  readonly legalName: string;
+  readonly displayName: string;
+  readonly accentColor?: string;
+  readonly stateCode: string;
+  readonly address: { readonly line1: string; readonly city: string; readonly pincode: string };
+  readonly sections: readonly {
+    readonly name: string;
+    /** Table labels, as staff call them and as they print on tickets. */
+    readonly tables: readonly { readonly label: string; readonly capacity: number }[];
+  }[];
+  /** Role, display name and PIN (development and pilot set-up only). */
+  readonly people: readonly (readonly [
+    'OWNER' | 'MANAGER' | 'WAITER' | 'KITCHEN',
+    string,
+    string,
+  ])[];
+  readonly categories: readonly string[];
+  readonly items: readonly ItemSpec[];
+  /** The Veg Thali combo: its own item's name, its fixed parts and its dessert choices. */
+  readonly thali?: {
+    readonly item: string;
+    readonly fixed: readonly (readonly [string, number])[];
+    readonly desserts: readonly string[];
+  };
+  /** Items whose stock is counted, with the count. */
+  readonly stock?: readonly (readonly [string, number])[];
+  /** A kitchen printer on the network; without one the kitchen works on its screen (KDS). */
+  readonly kitchenPrinter?: { readonly host: string; readonly port: number };
 }
 
 /** Development PINs (never used outside development and tests). */
@@ -34,7 +71,7 @@ export interface SeedSummary {
 
 type Food = 'VEG' | 'NON_VEG' | 'EGG';
 
-interface ItemSpec {
+export interface ItemSpec {
   readonly name: string;
   readonly category: string;
   readonly price: number;
@@ -239,10 +276,57 @@ const ITEMS: readonly ItemSpec[] = [
   { name: 'Veg Thali Combo', category: 'Combos', price: 349 * R, food: 'VEG', station: 'kitchen' },
 ];
 
+/** The demo restaurant (P0-08): the seed's original data, unchanged. */
+export const DEMO_PROFILE: SeedProfile = {
+  legalName: 'Demo Foods Private Limited',
+  displayName: 'Demo Dhaba',
+  stateCode: '27',
+  address: { line1: '1 Demo Road', city: 'Pune', pincode: '411001' },
+  // 6 tables in the hall, 4 on the terrace.
+  sections: [
+    {
+      name: 'Main Hall',
+      tables: Array.from({ length: 6 }, (_, index) => ({
+        label: String(index + 1),
+        capacity: index % 3 === 0 ? 6 : 4,
+      })),
+    },
+    {
+      name: 'Terrace',
+      tables: Array.from({ length: 4 }, (_, index) => ({
+        label: String(index + 7),
+        capacity: (index + 6) % 3 === 0 ? 6 : 4,
+      })),
+    },
+  ],
+  people: [
+    ['OWNER', 'Asha (Owner)', DEV_PINS['Asha (Owner)']],
+    ['MANAGER', 'Vikram (Manager)', DEV_PINS['Vikram (Manager)']],
+    ['MANAGER', 'Neha (Manager)', DEV_PINS['Neha (Manager)']],
+    ['WAITER', 'Ravi', DEV_PINS.Ravi],
+    ['WAITER', 'Sunita', DEV_PINS.Sunita],
+    ['KITCHEN', 'Chef Imran', DEV_PINS['Chef Imran']],
+  ],
+  categories: CATEGORIES,
+  items: ITEMS,
+  thali: {
+    item: 'Veg Thali Combo',
+    fixed: [
+      ['Dal Makhani', 1],
+      ['Tandoori Roti', 2],
+      ['Jeera Rice', 1],
+    ],
+    desserts: ['Gulab Jamun', 'Rasmalai'],
+  },
+  stock: [['Gulab Jamun', 40]],
+  kitchenPrinter: { host: '192.168.1.50', port: 9100 },
+};
+
 export async function seedDevelopmentData(
   prisma: PrismaClient,
   options: SeedOptions = {},
 ): Promise<SeedSummary> {
+  const profile = options.profile ?? DEMO_PROFILE;
   if ((await prisma.restaurant.count()) > 0) {
     throw new Error(
       'The database already has a restaurant; the development seed only runs on an empty database.',
@@ -252,10 +336,11 @@ export async function seedDevelopmentData(
     async (tx) => {
       const restaurant = await tx.restaurant.create({
         data: {
-          legalName: 'Demo Foods Private Limited',
-          displayName: 'Demo Dhaba',
-          stateCode: '27',
-          address: { line1: '1 Demo Road', city: 'Pune', pincode: '411001' },
+          legalName: profile.legalName,
+          displayName: profile.displayName,
+          ...(profile.accentColor !== undefined && { accentColor: profile.accentColor }),
+          stateCode: profile.stateCode,
+          address: profile.address,
         },
       });
       const restaurantId = restaurant.id;
@@ -296,36 +381,42 @@ export async function seedDevelopmentData(
         ],
       });
 
-      const printer = await tx.printer.create({
-        data: {
-          ...base,
-          name: 'Kitchen printer',
-          connection: 'NETWORK',
-          host: '192.168.1.50',
-          port: 9100,
-        },
-      });
+      const printer =
+        profile.kitchenPrinter === undefined
+          ? null
+          : await tx.printer.create({
+              data: {
+                ...base,
+                name: 'Kitchen printer',
+                connection: 'NETWORK',
+                host: profile.kitchenPrinter.host,
+                port: profile.kitchenPrinter.port,
+              },
+            });
       const kitchen = await tx.station.create({
-        data: { ...base, name: 'Kitchen', mode: 'BOTH', printerId: printer.id },
+        data:
+          printer === null
+            ? { ...base, name: 'Kitchen', mode: 'SCREEN' }
+            : { ...base, name: 'Kitchen', mode: 'BOTH', printerId: printer.id },
       });
       const bar = await tx.station.create({ data: { ...base, name: 'Bar', mode: 'SCREEN' } });
 
-      // Floor: 6 tables in the hall, 4 on the terrace.
-      const hall = await tx.section.create({
-        data: { ...base, name: 'Main Hall', displayOrder: 1 },
-      });
-      const terrace = await tx.section.create({
-        data: { ...base, name: 'Terrace', displayOrder: 2 },
-      });
-      await tx.diningTable.createMany({
-        data: Array.from({ length: 10 }, (_, index) => ({
-          ...base,
-          sectionId: index < 6 ? hall.id : terrace.id,
-          label: String(index + 1),
-          capacity: index % 3 === 0 ? 6 : 4,
-          displayOrder: index + 1,
-        })),
-      });
+      // Floor.
+      let tables = 0;
+      for (const [order, spec] of profile.sections.entries()) {
+        const section = await tx.section.create({
+          data: { ...base, name: spec.name, displayOrder: order + 1 },
+        });
+        await tx.diningTable.createMany({
+          data: spec.tables.map((table) => ({
+            ...base,
+            sectionId: section.id,
+            label: table.label,
+            capacity: table.capacity,
+            displayOrder: (tables += 1),
+          })),
+        });
+      }
 
       // Built-in roles and one person per role (two managers, two waiters).
       const roleIds = new Map<string, string>();
@@ -338,16 +429,9 @@ export async function seedDevelopmentData(
         const role = await tx.role.create({ data: { ...base, key, name, baseRole: key } });
         roleIds.set(key, role.id);
       }
-      const people = [
-        ['OWNER', 'Asha (Owner)'],
-        ['MANAGER', 'Vikram (Manager)'],
-        ['MANAGER', 'Neha (Manager)'],
-        ['WAITER', 'Ravi'],
-        ['WAITER', 'Sunita'],
-        ['KITCHEN', 'Chef Imran'],
-      ] as const;
+      const people = profile.people;
       let ownerId: string | undefined;
-      for (const [role, displayName] of people) {
+      for (const [role, displayName, pin] of people) {
         const staff = await tx.staff.create({
           data: { ...base, roleId: roleIds.get(role) ?? '', displayName },
         });
@@ -358,7 +442,7 @@ export async function seedDevelopmentData(
               ...base,
               staffId: staff.id,
               kind: 'PIN',
-              secretHash: await options.hashPin(DEV_PINS[displayName]),
+              secretHash: await options.hashPin(pin),
             },
           });
         }
@@ -366,7 +450,7 @@ export async function seedDevelopmentData(
 
       // Menu.
       const categoryIds = new Map<string, string>();
-      for (const [index, name] of CATEGORIES.entries()) {
+      for (const [index, name] of profile.categories.entries()) {
         const category = await tx.category.create({
           data: { ...base, name, displayOrder: index + 1 },
         });
@@ -406,7 +490,7 @@ export async function seedDevelopmentData(
       const tagIds = new Map<string, string>();
 
       const itemIds = new Map<string, string>();
-      for (const [index, spec] of ITEMS.entries()) {
+      for (const [index, spec] of profile.items.entries()) {
         const id = newId();
         itemIds.set(spec.name, id);
         await tx.item.create({
@@ -421,7 +505,7 @@ export async function seedDevelopmentData(
             spiceLevel: spec.spice ?? 0,
             stationId: spec.station === 'bar' ? bar.id : kitchen.id,
             displayOrder: index + 1,
-            trackStock: spec.name === 'Gulab Jamun',
+            trackStock: (profile.stock ?? []).some(([name]) => name === spec.name),
             variants: {
               create: (spec.variants ?? []).map(([name, price], order) => ({
                 ...base,
@@ -449,47 +533,47 @@ export async function seedDevelopmentData(
           await tx.itemTag.create({ data: { ...base, itemId: id, tagId } });
         }
       }
-      await tx.stockLevel.create({
-        data: { ...base, itemId: itemIds.get('Gulab Jamun') ?? '', quantity: 40 },
-      });
+      for (const [name, quantity] of profile.stock ?? []) {
+        await tx.stockLevel.create({
+          data: { ...base, itemId: itemIds.get(name) ?? '', quantity },
+        });
+      }
 
-      // Combo: Veg Thali = Dal Makhani + 2 Tandoori Roti + Jeera Rice + a choice of dessert, sold
-      // all day (a time window would make demos and tests depend on the clock).
+      // Combo: Veg Thali = its fixed parts + a choice of dessert, sold all day (a time window
+      // would make demos and tests depend on the clock).
       const item = (name: string) => itemIds.get(name) ?? '';
-      await tx.combo.create({
-        data: {
-          ...base,
-          itemId: item('Veg Thali Combo'),
-          components: {
-            create: [
-              { ...base, kind: 'FIXED', itemId: item('Dal Makhani'), quantity: 1, displayOrder: 1 },
-              {
-                ...base,
-                kind: 'FIXED',
-                itemId: item('Tandoori Roti'),
-                quantity: 2,
-                displayOrder: 2,
-              },
-              { ...base, kind: 'FIXED', itemId: item('Jeera Rice'), quantity: 1, displayOrder: 3 },
-              {
-                ...base,
-                kind: 'CHOICE',
-                label: 'Dessert',
-                quantity: 1,
-                displayOrder: 4,
-                choices: {
-                  create: [
-                    { ...base, itemId: item('Gulab Jamun') },
-                    { ...base, itemId: item('Rasmalai') },
-                  ],
+      const thali = profile.thali;
+      if (thali !== undefined) {
+        await tx.combo.create({
+          data: {
+            ...base,
+            itemId: item(thali.item),
+            components: {
+              create: [
+                ...thali.fixed.map(([name, quantity], index) => ({
+                  ...base,
+                  kind: 'FIXED' as const,
+                  itemId: item(name),
+                  quantity,
+                  displayOrder: index + 1,
+                })),
+                {
+                  ...base,
+                  kind: 'CHOICE' as const,
+                  label: 'Dessert',
+                  quantity: 1,
+                  displayOrder: thali.fixed.length + 1,
+                  choices: {
+                    create: thali.desserts.map((name) => ({ ...base, itemId: item(name) })),
+                  },
                 },
-              },
-            ],
+              ],
+            },
           },
-        },
-      });
+        });
+      }
 
-      // Publish the demo menu as version 1 (MENU-013), as the Owner would.
+      // Publish the menu as version 1 (MENU-013), as the Owner would.
       const content = await buildMenuContent(tx, restaurantId);
       const publishedAt = new Date();
       await tx.menuVersion.create({
@@ -504,7 +588,7 @@ export async function seedDevelopmentData(
         },
       });
 
-      return { restaurantId, items: ITEMS.length, tables: 10, staff: people.length };
+      return { restaurantId, items: profile.items.length, tables, staff: people.length };
     },
     { timeout: 60_000 },
   );
