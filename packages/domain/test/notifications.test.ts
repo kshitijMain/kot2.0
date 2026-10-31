@@ -40,7 +40,8 @@ describe('[NTF-002] [NTF-003] the Appendix C matrix', () => {
   // escalates from the kitchen (KDS-006), a nudge closes itself.
   const MATRIX: readonly [NotificationEvent, string[], string | null, boolean, string][] = [
     // Any waiter, any table (ADR-0023): the floor's alerts go to every waiter on duty.
-    ['ORDER_PENDING_APPROVAL', ['ravi', 'sunita', 'arjun'], 'T7 NEW ORDER', true, 'NONE'],
+    // ADR-0024: the managers on duty hear of every diner's order too.
+    ['ORDER_PENDING_APPROVAL', ['ravi', 'sunita', 'arjun', 'vikram'], 'T7 NEW ORDER', true, 'NONE'],
     ['ITEM_READY', ['ravi', 'sunita', 'arjun'], 'T7 READY', false, 'NONE'],
     ['WATER_REQUEST', ['ravi', 'sunita', 'arjun'], 'T7 WATER', true, 'NONE'],
     ['WAITER_REQUEST', ['ravi', 'sunita', 'arjun'], 'T7 WAITER', true, 'NONE'],

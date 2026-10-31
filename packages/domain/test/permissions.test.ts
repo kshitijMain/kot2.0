@@ -229,9 +229,10 @@ describe('[AUTH-012] custom roles', () => {
 });
 
 describe('[AUTH-001] [AUTH-010] who signs in on which device', () => {
-  it('keeps a waiter phone for waiters (2026-10-25), and every other device for everyone', () => {
+  it('keeps a waiter phone for waiters and managers (ADR-0024), and every other device for everyone', () => {
     expect(maySignInOn('WAITER_PHONE', 'WAITER')).toBe(true);
-    for (const role of ['OWNER', 'MANAGER', 'KITCHEN'] as const) {
+    expect(maySignInOn('WAITER_PHONE', 'MANAGER')).toBe(true);
+    for (const role of ['OWNER', 'KITCHEN'] as const) {
       expect(maySignInOn('WAITER_PHONE', role)).toBe(false);
       expect(maySignInOn('POS', role)).toBe(true);
     }

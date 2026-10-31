@@ -105,8 +105,10 @@ const rule = (
  * `kds.readyNotCollectedMinutes` (KDS-006). A manager can bring the repeats back per rule.
  */
 export const DEFAULT_NOTIFICATION_RULES: Readonly<Record<NotificationEvent, NotificationRule>> = {
+  // ADR-0024: the managers on duty too, so a manager's phone rings for every diner's order (QR
+  // pilot); a restaurant can take them off on the Notification rules page (NTF-002).
   ORDER_PENDING_APPROVAL: rule(
-    ['ALL_WAITERS'],
+    ['ALL_WAITERS', 'MANAGERS_ON_DUTY'],
     ['PAGER', 'WAITER_APP', 'POS'],
     '{table} NEW ORDER',
     true,

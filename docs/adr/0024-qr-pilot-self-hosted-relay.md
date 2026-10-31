@@ -120,8 +120,9 @@ already ran a stand-in for Realtime that speaks the Phoenix protocol the PC's do
 - A manager may sign in on a waiter phone (`SIGN_IN_ROLES.WAITER_PHONE` gains MANAGER),
   reversing the 2026-10-25 waiters-only rule for this purpose.
 - Customer-order approvals alert the managers on duty as well as the waiters, so the manager's
-  phone rings for every QR order. The setting `qr.approvalAlerts` (default `WAITERS_AND_MANAGERS`)
-  lets the restaurant go back to waiters only.
+  phone rings for every QR order: the factory rule of `ORDER_PENDING_APPROVAL` names
+  `MANAGERS_ON_DUTY` too. A restaurant that wants only its waiters to hear changes that rule on the
+  Notification rules page (NTF-002); no separate setting is needed.
 
 ### The pilot set-up (P9-06)
 

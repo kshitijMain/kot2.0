@@ -693,7 +693,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-02 The diner's phone number, on the order and the bill
 - [x] P9-03 The bill on the diner's phone, UPI and "I have paid"
 - [x] P9-04 The diner's page: phone first, My orders, accepted, order again, Bill tab, a nicer menu
-- [ ] P9-05 The manager's phone rings for QR orders
+- [x] P9-05 The manager's phone rings for QR orders
 - [ ] P9-06 The Mannat pilot set-up and a one-Mac trial
 
 ## Decisions
@@ -4620,6 +4620,27 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-10-31: P9-05 The manager's phone rings for QR orders
+
+Built:
+
+- `@rp/domain` `SIGN_IN_ROLES.WAITER_PHONE` is `['WAITER', 'MANAGER']`, reversing the 2026-10-25
+  waiters-only rule for the QR pilot (ADR-0024).
+- `DEFAULT_NOTIFICATION_RULES.ORDER_PENDING_APPROVAL` names `MANAGERS_ON_DUTY` as well as
+  `ALL_WAITERS`. Managers on duty are those signed in on a device now, else every active manager
+  (P2-03), so a manager signed in on a phone hears every diner's order.
+
+Tests: domain permissions and the notification matrix; server `auth-login.int` (a manager is
+listed and signs in on a waiter phone; Owner and kitchen refused); waiter app login screen. 46
+server tests on approval alerts pass unchanged.
+
+Decided:
+
+- No `qr.approvalAlerts` setting (the spec had one). The rule is already a manager's setting on
+  the Notification rules page (NTF-002), so the factory rule changes and a restaurant can take the
+  managers off there.
+- Tablet orders alert the managers too, since they are the same customer-order approvals.
 
 ### 2026-10-31: P9-04 The diner's page
 
