@@ -167,6 +167,17 @@ Exit: §18 acceptance met, pilot KPIs measured, zero open Critical/High security
 - P8-05 Runbooks, manuals and training material
 - P8-06 Pilot readiness: strict traceability, UAT, go-live checklist
 
+### Phase 9: The QR pilot at Mannat (`phases/phase-9.md`)
+
+Exit: manual task 38 done; the phone test works on mobile data. Design: ADR-0024.
+
+- P9-01 The relay on a server of our own, with an open line to each restaurant
+- P9-02 The diner's phone number, on the order and the bill
+- P9-03 The bill on the diner's phone, UPI and "I have paid"
+- P9-04 The diner's page: phone first, My orders, accepted, order again, Bill tab, a nicer menu
+- P9-05 The manager's phone rings for QR orders
+- P9-06 The Mannat pilot set-up and a one-Mac trial
+
 ## Parallel lanes
 
 Once P0-07 exists, these can proceed in separate sessions without stepping on each other:

@@ -57,10 +57,13 @@ code from going live:
       gear): waiters-only sign-in, the back button, the screen's edges, notifications that come and
       go, Picked up meaning served, the new home screen:
       [`manual-tasks/37-waiter-phone-feedback.md`](manual-tasks/37-waiter-phone-feedback.md).
-- [ ] Supabase organisation, Mumbai region (QR relay), then deploy the relay schema and give the
-      edge functions and the Control Plane their logins:
+- [ ] **QR pilot (Mannat): put the QR site and relay on your own server** (Oracle VM, Ubuntu
+      24.04, one script) and connect the restaurant PC; replaces tasks 20 and 21 for the pilot
+      (ADR-0024): [`manual-tasks/38-qr-pilot-server.md`](manual-tasks/38-qr-pilot-server.md).
+- [ ] (Not for the pilot) Supabase organisation, Mumbai region (QR relay), then deploy the relay
+      schema and give the edge functions and the Control Plane their logins:
       [`manual-tasks/20-supabase-relay.md`](manual-tasks/20-supabase-relay.md).
-- [ ] Host the QR menu site (Next.js, India region) on its domain:
+- [ ] (Not for the pilot) Host the QR menu site (Next.js, India region) on its domain:
       [`manual-tasks/21-qr-site.md`](manual-tasks/21-qr-site.md).
 - [ ] Legal review of the QR site's privacy notice and terms (drafts at `/privacy` and `/terms`).
 - [ ] Expo account + Android app-signing keystore (signed APKs, OTA updates), and the update

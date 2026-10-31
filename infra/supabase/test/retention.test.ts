@@ -165,13 +165,15 @@ describe('[BRD §9.3] relay retention', () => {
     );
   });
 
-  it('is run by the database itself, never by a relay or API role', async () => {
-    for (const role of [...RELAY_ROLES, ...API_ROLES]) {
+  it('is run by the database itself or the self-hosted jobs’ login, never by a relay or API role', async () => {
+    for (const role of [...RELAY_ROLES, ...API_ROLES].filter((name) => name !== 'relay_janitor')) {
       const error = await refusal(
         db.as(role, { tenant_id: tenant.id }, (client) => client.query('SELECT relay.purge()')),
       );
       expect(error.code, role).toBe(DENIED);
     }
+    // ADR-0024: where there is no pg_cron, the relay host's jobs run it as relay_janitor.
+    await db.as('relay_janitor', undefined, (client) => client.query('SELECT relay.purge()'));
   });
 
   it('is scheduled hourly where pg_cron exists (Supabase)', async (context) => {
