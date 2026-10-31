@@ -70,11 +70,13 @@ export class DevicesController {
   }
 
   // Public: the first device has nothing to sign in with; limited to the server PC's loopback
-  // address while no device is paired (see DevicesService.createBootstrapCode).
+  // address while no device is paired, or, in PIN-only mode, to the restaurant's network (see
+  // DevicesService.createBootstrapCode, ADR-0025).
   @Post('pairing-codes/bootstrap')
   @Public()
   createBootstrapCode(@Req() request: Request): Promise<PairingCodeResponse> {
-    return this.devices.createBootstrapCode(LOOPBACK.has(request.socket.remoteAddress ?? ''));
+    const address = request.socket.remoteAddress;
+    return this.devices.createBootstrapCode(LOOPBACK.has(address ?? ''), address);
   }
 
   // Public: the device has no credential yet; the one-time code is the credential.

@@ -182,6 +182,7 @@ Exit: manual task 38 done; the phone test works on mobile data. Design: ADR-0024
 - P9-09 A menu made for the phone: sections that follow, a stepper on the card, an order tracker
 - P9-10 Approving a diner's order from its alert, and on the manager dashboard
 - P9-11 A designed QR menu: cards, sheets and states
+- P9-14 PIN-only sign-in for the pilot (ADR-0025)
 
 ## Parallel lanes
 

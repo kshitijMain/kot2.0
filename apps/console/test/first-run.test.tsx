@@ -72,6 +72,31 @@ describe('[ONB-001] [ONB-004] the first run on the restaurant PC', () => {
     expect(await screen.findByRole('heading', { name: t('login.title') })).toBeInTheDocument();
   });
 
+  it('[AUTH-007] pairs by itself where the server is PIN-only, straight to the PIN screen (P9-14)', async () => {
+    const fake = server()
+      .on('GET', '/api/v1/first-run', () => ({
+        status: 200,
+        body: { needed: false, pinLength: 4, pinOnly: true },
+      }))
+      .on('POST', '/api/v1/devices/pairing-codes/bootstrap', bootstrap);
+    await renderConsole({ fake, pair: false, path: '/kds' });
+    expect(await screen.findByRole('heading', { name: t('login.title') })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: t('firstRun.pair') })).toBeNull();
+    expect(fake.callsTo('POST', '/api/v1/devices/pair')[0]?.body).toMatchObject({
+      code: 'ABCD-EFGH',
+    });
+  });
+
+  it('asks for a code as usual where the server is not PIN-only', async () => {
+    const fake = server().on('GET', '/api/v1/first-run', () => ({
+      status: 200,
+      body: { needed: false, pinLength: 4 },
+    }));
+    await renderConsole({ fake, pair: false });
+    expect(await screen.findByRole('button', { name: t('firstRun.pair') })).toBeVisible();
+    expect(fake.callsTo('POST', '/api/v1/devices/pair')).toHaveLength(0);
+  });
+
   it('knows the restaurant PC by its own address', () => {
     expect(onServerPc('localhost')).toBe(true);
     expect(onServerPc('127.0.0.1')).toBe(true);

@@ -702,6 +702,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-11 A designed QR menu: cards, sheets and states
 - [x] P9-12 The open line never waits for ever on a handshake
 - [x] P9-13 Accepted reaches the diner after a pilot reset; My orders survives a reload
+- [x] P9-14 PIN-only sign-in for the pilot (ADR-0025)
 
 ## Decisions
 
@@ -4627,6 +4628,42 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-10-31: P9-14 PIN-only sign-in for the pilot
+
+Asked by the Business Owner: no pairing in the Mannat pilot. Open the console, tap a name, enter the
+PIN; the kitchen with 6666.
+
+Decided:
+
+- **An environment flag, not a setting.** Per ADR-0025: `RP_AUTH_PIN_ONLY`, off by default.
+  Dropping device trust takes access to the PC, not a click in the dashboard.
+- **Reuse the bootstrap code and pairing** rather than a new endpoint: one audited way for devices
+  to come in.
+- **Network only.** Codes go to loopback and private addresses only, 5 a minute per address. PIN
+  lockouts are per credential, so new browsers do not get new attempts.
+
+Built:
+
+- `config.authPinOnly`.
+- `common/network.ts` `onLocalNetwork`.
+- `DevicesService.createBootstrapCode(loopback, address)`: in PIN-only mode it pairs a "Browser N"
+  POS.
+- `AuthSettingsService`: kitchen PIN sign-in when PIN-only.
+- `FirstRunStatus.pinOnly`, optional.
+- Console `pairItself()` in `start()`.
+- Pilot scripts and seed; README section; ADR-0025.
+
+Follow-ups:
+
+- The waiter app and table tablet still pair with a code (unchanged).
+- A paying restaurant must not set the flag (ADR-0025).
+
+Tests:
+
+- integration `pin-only` (5): every role on self-paired browsers; no code from a public address; a
+  limit per address; the network test; without the flag, nothing changes.
+- console +2 (straight to the PIN screen; a code as usual without the flag). 443/443.
 
 ### 2026-10-31: P9-13 Accepted reaches the diner after a pilot reset; My orders survives a reload
 

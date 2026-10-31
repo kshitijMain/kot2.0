@@ -1,5 +1,5 @@
 import { randomInt } from 'node:crypto';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   type CreatePairingCodeRequest,
   type DeviceChallengeResponse,
@@ -33,6 +33,8 @@ import { RateLimiter } from '../auth/rate-limiter.js';
 import { SignInLockouts } from '../auth/sign-in-lockouts.js';
 import { sha256Hex } from '../auth/tokens.js';
 import { newId } from '../common/ids.js';
+import { onLocalNetwork } from '../common/network.js';
+import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
 import { ADVISORY_LOCKS } from '../database/advisory-locks.js';
 import { PrismaService, type TransactionClient } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
@@ -197,6 +199,7 @@ export class DevicesService {
     private readonly realtime: RealtimeGateway,
     private readonly licence: LicenceAgentService,
     private readonly lockouts: SignInLockouts,
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
   async createPairingCode(
@@ -225,7 +228,24 @@ export class DevicesService {
    * The installer pairs the POS on the server PC with this code (ONB-001). Only from the server PC
    * itself and only while no device is paired, so it cannot be used to add devices later.
    */
-  async createBootstrapCode(loopback: boolean): Promise<PairingCodeResponse> {
+  async createBootstrapCode(loopback: boolean, address?: string): Promise<PairingCodeResponse> {
+    // PIN-only (ADR-0025): any browser on the restaurant's network pairs itself as a POS, and the
+    // PIN is what lets anyone in. Never from the internet; a few a minute per address.
+    if (this.config.authPinOnly && onLocalNetwork(address)) {
+      this.throttle(`self-pair:${address ?? ''}`, 5);
+      return this.prisma.transaction(async (tx) => {
+        const restaurant = await tx.restaurant.findFirst({ orderBy: { createdAt: 'asc' } });
+        if (restaurant === null) throw errors.notSetUp();
+        const count = await tx.device.count({ where: { type: 'POS' } });
+        return this.issueCode(
+          tx,
+          restaurant.id,
+          { type: 'POS', name: `Browser ${String(count + 1)}` },
+          null,
+          null,
+        );
+      });
+    }
     if (!loopback) throw errors.bootstrapClosed();
     return this.prisma.transaction(async (tx) => {
       await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(${ADVISORY_LOCKS.pairingBootstrap})`;

@@ -43,6 +43,8 @@ perl -pi -e "s|^RELAY_PUBLIC_URL=.*|RELAY_PUBLIC_URL=$NGROK|" "$STATE/relay-host
 perl -pi -e "s|^RELAY_ALLOWED_ORIGINS=.*|RELAY_ALLOWED_ORIGINS=$NGROK|" "$STATE/relay-host.env"
 perl -pi -e "s|^RP_RELAY_URL=.*|RP_RELAY_URL=$NGROK/functions/v1|" "$STATE/server.env"
 perl -pi -e "s|^RP_QR_SITE_URL=.*|RP_QR_SITE_URL=$NGROK|" "$STATE/server.env"
+# PIN-only sign-in (ADR-0025) for a pilot set up before it existed.
+grep -q '^RP_AUTH_PIN_ONLY=' "$STATE/server.env" || echo 'RP_AUTH_PIN_ONLY=1' >> "$STATE/server.env"
 
 echo "== Restart relay, site, server with ngrok URLs"
 for name in relay-host qr-site server; do
@@ -72,7 +74,8 @@ set +a
 nohup env NODE_ENV="$NODE_ENV" HOST="$HOST" PORT="$PORT" DATABASE_URL="$DATABASE_URL" \
   RP_DATA_DIR="$RP_DATA_DIR" RP_CONSOLE_DIR="$RP_CONSOLE_DIR" RP_RELAY_URL="$RP_RELAY_URL" \
   RP_QR_SITE_URL="$RP_QR_SITE_URL" RP_TLS="$RP_TLS" RP_TLS_HOSTNAMES="$RP_TLS_HOSTNAMES" \
-  RP_MQTT="$RP_MQTT" LOG_LEVEL="$LOG_LEVEL" node "$ROOT/apps/server/dist/main.js" \
+  RP_MQTT="$RP_MQTT" RP_AUTH_PIN_ONLY="${RP_AUTH_PIN_ONLY:-off}" LOG_LEVEL="$LOG_LEVEL" \
+  node "$ROOT/apps/server/dist/main.js" \
   >> "$STATE/logs/server.log" 2>&1 &
 echo $! > "$STATE/server.pid"
 

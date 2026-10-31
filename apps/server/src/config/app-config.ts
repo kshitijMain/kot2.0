@@ -199,6 +199,12 @@ export const AppConfigSchema = z.object({
   updateIssuer: z.string().min(3).max(500).optional(),
   /** Accept unsigned update installers (`RP_UPDATE_ALLOW_UNSIGNED=on`): test builds only. */
   updateAllowUnsigned: booleanFlag,
+  /**
+   * PIN-only sign-in for a pilot or a trial (ADR-0025): a browser on the restaurant's network pairs
+   * itself, no code typed, and everyone (kitchen included) signs in with their PIN. Off by default:
+   * a real install pairs every device with a manager's code (AUTH-007).
+   */
+  authPinOnly: booleanFlag,
   /** Extra host names for the server certificate, e.g. `pos.local` (comma-separated). */
   tlsHostnames: z
     .string()
@@ -266,6 +272,7 @@ export function loadConfig(
     updatePublisher: env.RP_UPDATE_PUBLISHER === '' ? undefined : env.RP_UPDATE_PUBLISHER,
     updateIssuer: env.RP_UPDATE_ISSUER === '' ? undefined : env.RP_UPDATE_ISSUER,
     updateAllowUnsigned: env.RP_UPDATE_ALLOW_UNSIGNED,
+    authPinOnly: env.RP_AUTH_PIN_ONLY,
     licenceEnforce: env.RP_LICENCE_ENFORCE,
     licenceKeys: env.RP_LICENCE_KEYS,
     pagerFirmwareKeys: env.RP_PAGER_FIRMWARE_KEYS,

@@ -3,7 +3,8 @@
     "type": "object",
     "properties": {
       "needed": { "type": "boolean" },
-      "pinLength": { "type": "integer", "minimum": 4, "maximum": 8 }
+      "pinLength": { "type": "integer", "minimum": 4, "maximum": 8 },
+      "pinOnly": { "type": "boolean" }
     },
     "required": ["needed", "pinLength"]
   },
@@ -11,7 +12,8 @@
     "type": "object",
     "properties": {
       "needed": { "type": "boolean" },
-      "pinLength": { "type": "integer", "minimum": 4, "maximum": 8 }
+      "pinLength": { "type": "integer", "minimum": 4, "maximum": 8 },
+      "pinOnly": { "type": "boolean" }
     },
     "required": ["needed", "pinLength"],
     "additionalProperties": false
