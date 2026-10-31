@@ -24,6 +24,7 @@ const ITEMS: readonly ItemSpec[] = [
   // Starters
   {
     name: 'Paneer Tikka',
+    description: 'Cottage cheese cubes in spiced yoghurt, charred in the tandoor.',
     category: 'Starters',
     price: 280 * R,
     food: 'VEG',
@@ -34,6 +35,7 @@ const ITEMS: readonly ItemSpec[] = [
   },
   {
     name: 'Hara Bhara Kabab',
+    description: 'Spinach, peas and potato patties, crisp outside and soft inside.',
     category: 'Starters',
     price: 230 * R,
     food: 'VEG',
@@ -42,6 +44,7 @@ const ITEMS: readonly ItemSpec[] = [
   },
   {
     name: 'Crispy Corn',
+    description: 'Golden fried sweet corn tossed with pepper, onion and chaat masala.',
     category: 'Starters',
     price: 210 * R,
     food: 'VEG',
@@ -50,6 +53,7 @@ const ITEMS: readonly ItemSpec[] = [
   },
   {
     name: 'Chicken Tikka',
+    description: 'Boneless chicken marinated overnight and roasted in the tandoor.',
     category: 'Starters',
     price: 340 * R,
     food: 'NON_VEG',
@@ -63,6 +67,7 @@ const ITEMS: readonly ItemSpec[] = [
   },
   {
     name: 'Tandoori Chicken',
+    description: 'Bone-in chicken in a smoky red marinade, served with mint chutney.',
     category: 'Starters',
     price: 420 * R,
     food: 'NON_VEG',
@@ -77,6 +82,7 @@ const ITEMS: readonly ItemSpec[] = [
   // Main course
   {
     name: 'Paneer Butter Masala',
+    description: 'Paneer in a mild, creamy tomato and butter gravy.',
     category: 'Main Course',
     price: 320 * R,
     food: 'VEG',
@@ -88,6 +94,7 @@ const ITEMS: readonly ItemSpec[] = [
   },
   {
     name: 'Dal Makhani',
+    description: 'Black lentils slow-cooked overnight with butter and cream.',
     category: 'Main Course',
     price: 260 * R,
     food: 'VEG',
@@ -100,6 +107,7 @@ const ITEMS: readonly ItemSpec[] = [
   },
   {
     name: 'Dal Tadka',
+    description: 'Yellow lentils tempered with cumin, garlic and red chilli.',
     category: 'Main Course',
     price: 210 * R,
     food: 'VEG',
@@ -108,6 +116,7 @@ const ITEMS: readonly ItemSpec[] = [
   },
   {
     name: 'Kadai Paneer',
+    description: 'Paneer, capsicum and onion in a spicy kadai masala.',
     category: 'Main Course',
     price: 310 * R,
     food: 'VEG',
@@ -117,15 +126,24 @@ const ITEMS: readonly ItemSpec[] = [
   },
   {
     name: 'Chole Masala',
+    description: 'Chickpeas in a tangy onion-tomato gravy.',
     category: 'Main Course',
     price: 220 * R,
     food: 'VEG',
     station: 'kitchen',
     spice: 2,
   },
-  { name: 'Mix Veg', category: 'Main Course', price: 240 * R, food: 'VEG', station: 'kitchen' },
+  {
+    name: 'Mix Veg',
+    description: 'Seasonal vegetables in a home-style gravy.',
+    category: 'Main Course',
+    price: 240 * R,
+    food: 'VEG',
+    station: 'kitchen',
+  },
   {
     name: 'Butter Chicken',
+    description: 'Tandoori chicken in a rich, mildly sweet tomato butter gravy.',
     category: 'Main Course',
     price: 380 * R,
     food: 'NON_VEG',
@@ -140,6 +158,7 @@ const ITEMS: readonly ItemSpec[] = [
   },
   {
     name: 'Kadai Chicken',
+    description: 'Chicken with capsicum and freshly ground kadai spices.',
     category: 'Main Course',
     price: 360 * R,
     food: 'NON_VEG',
@@ -149,6 +168,7 @@ const ITEMS: readonly ItemSpec[] = [
   },
   {
     name: 'Mutton Rogan Josh',
+    description: 'Slow-cooked mutton in a Kashmiri red chilli gravy.',
     category: 'Main Course',
     price: 460 * R,
     food: 'NON_VEG',
@@ -158,6 +178,7 @@ const ITEMS: readonly ItemSpec[] = [
   // Breads
   {
     name: 'Chapati',
+    description: 'Soft whole-wheat flatbread from the tawa.',
     category: 'Breads',
     price: 25 * R,
     food: 'VEG',
@@ -167,20 +188,57 @@ const ITEMS: readonly ItemSpec[] = [
   },
   {
     name: 'Tandoori Roti',
+    description: 'Whole-wheat bread baked in the tandoor.',
     category: 'Breads',
     price: 30 * R,
     food: 'VEG',
     station: 'kitchen',
     modifiers: ['addons'],
   },
-  { name: 'Butter Naan', category: 'Breads', price: 60 * R, food: 'VEG', station: 'kitchen' },
-  { name: 'Garlic Naan', category: 'Breads', price: 80 * R, food: 'VEG', station: 'kitchen' },
-  { name: 'Lachha Paratha', category: 'Breads', price: 70 * R, food: 'VEG', station: 'kitchen' },
-  { name: 'Missi Roti', category: 'Breads', price: 50 * R, food: 'VEG', station: 'kitchen' },
+  {
+    name: 'Butter Naan',
+    description: 'Leavened bread from the tandoor, brushed with butter.',
+    category: 'Breads',
+    price: 60 * R,
+    food: 'VEG',
+    station: 'kitchen',
+  },
+  {
+    name: 'Garlic Naan',
+    description: 'Naan topped with garlic and coriander.',
+    category: 'Breads',
+    price: 80 * R,
+    food: 'VEG',
+    station: 'kitchen',
+  },
+  {
+    name: 'Lachha Paratha',
+    description: 'Layered, flaky whole-wheat paratha.',
+    category: 'Breads',
+    price: 70 * R,
+    food: 'VEG',
+    station: 'kitchen',
+  },
+  {
+    name: 'Missi Roti',
+    description: 'Gram flour and wheat roti with spices.',
+    category: 'Breads',
+    price: 50 * R,
+    food: 'VEG',
+    station: 'kitchen',
+  },
   // Rice
-  { name: 'Jeera Rice', category: 'Rice', price: 180 * R, food: 'VEG', station: 'kitchen' },
+  {
+    name: 'Jeera Rice',
+    description: 'Basmati rice tempered with cumin.',
+    category: 'Rice',
+    price: 180 * R,
+    food: 'VEG',
+    station: 'kitchen',
+  },
   {
     name: 'Veg Biryani',
+    description: 'Fragrant basmati layered with vegetables and whole spices.',
     category: 'Rice',
     price: 260 * R,
     food: 'VEG',
@@ -189,6 +247,7 @@ const ITEMS: readonly ItemSpec[] = [
   },
   {
     name: 'Chicken Biryani',
+    description: 'Dum-cooked basmati with spiced chicken, served with raita.',
     category: 'Rice',
     price: 340 * R,
     food: 'NON_VEG',
@@ -199,12 +258,34 @@ const ITEMS: readonly ItemSpec[] = [
       ['Full', 340 * R],
     ],
   },
-  { name: 'Steamed Rice', category: 'Rice', price: 140 * R, food: 'VEG', station: 'kitchen' },
+  {
+    name: 'Steamed Rice',
+    description: 'Plain steamed basmati rice.',
+    category: 'Rice',
+    price: 140 * R,
+    food: 'VEG',
+    station: 'kitchen',
+  },
   // Beverages
-  { name: 'Masala Chaas', category: 'Beverages', price: 70 * R, food: 'VEG', station: 'kitchen' },
-  { name: 'Sweet Lassi', category: 'Beverages', price: 90 * R, food: 'VEG', station: 'kitchen' },
+  {
+    name: 'Masala Chaas',
+    description: 'Spiced buttermilk with roasted cumin and mint.',
+    category: 'Beverages',
+    price: 70 * R,
+    food: 'VEG',
+    station: 'kitchen',
+  },
+  {
+    name: 'Sweet Lassi',
+    description: 'Thick, chilled sweet yoghurt drink.',
+    category: 'Beverages',
+    price: 90 * R,
+    food: 'VEG',
+    station: 'kitchen',
+  },
   {
     name: 'Fresh Lime Soda',
+    description: 'Lime with soda, sweet or salted.',
     category: 'Beverages',
     price: 90 * R,
     food: 'VEG',
@@ -214,9 +295,17 @@ const ITEMS: readonly ItemSpec[] = [
       ['Salted', 90 * R],
     ],
   },
-  { name: 'Masala Chai', category: 'Beverages', price: 40 * R, food: 'VEG', station: 'kitchen' },
+  {
+    name: 'Masala Chai',
+    description: 'Tea brewed with milk, ginger and cardamom.',
+    category: 'Beverages',
+    price: 40 * R,
+    food: 'VEG',
+    station: 'kitchen',
+  },
   {
     name: 'Packaged Water',
+    description: 'Sealed 1-litre bottle.',
     category: 'Beverages',
     price: 20 * R,
     food: 'VEG',
@@ -224,10 +313,25 @@ const ITEMS: readonly ItemSpec[] = [
     tax: 'gst18',
   },
   // Desserts and the thali
-  { name: 'Gulab Jamun', category: 'Desserts', price: 90 * R, food: 'VEG', station: 'kitchen' },
-  { name: 'Rasmalai', category: 'Desserts', price: 120 * R, food: 'VEG', station: 'kitchen' },
+  {
+    name: 'Gulab Jamun',
+    description: 'Two warm milk dumplings in rose-cardamom syrup.',
+    category: 'Desserts',
+    price: 90 * R,
+    food: 'VEG',
+    station: 'kitchen',
+  },
+  {
+    name: 'Rasmalai',
+    description: 'Soft cheese patties in saffron milk.',
+    category: 'Desserts',
+    price: 120 * R,
+    food: 'VEG',
+    station: 'kitchen',
+  },
   {
     name: 'Mannat Veg Thali',
+    description: 'Dal makhani, paneer butter masala, 3 chapatis, jeera rice and a dessert.',
     category: 'Thalis',
     price: 349 * R,
     food: 'VEG',

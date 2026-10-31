@@ -28,7 +28,7 @@ import {
   menuNote,
   updateLine,
 } from '@rp/ordering';
-import { Badge, Button, Icon, ThemeRoot } from '@rp/ui-web';
+import { Badge, Button, Icon, QuantityStepper, ThemeRoot } from '@rp/ui-web';
 import {
   type ReactNode,
   useCallback,
@@ -63,6 +63,9 @@ type Tab = (typeof TABS)[number];
 const TABLE_ORDERS_REFRESH_MS = 15_000;
 /** How long the "accepted" banner stays (P9-04). */
 const ACCEPTED_BANNER_MS = 8_000;
+/** How far down the screen a section's heading counts as the one being read: just under the
+ * sticky section bar (P9-09). */
+const SECTION_IN_VIEW_PX = 96;
 
 /**
  * The QR menu page (P5-05, P9-04; QR-002, QR-004 to QR-008, QR-011): a welcome that asks for the
@@ -70,6 +73,7 @@ const ACCEPTED_BANNER_MS = 8_000;
  * orders with where each is and "Order again"; and the Bill, paid by UPI once it is printed. The
  * table comes from the code alone. Read-only with a banner while the restaurant is not heard from.
  */
+
 export function QrMenu(props: {
   token: string;
   relayUrl: string;
@@ -160,6 +164,9 @@ function MenuPage({
   // P9-08: when the table's current sitting began, as the relay says; orders before it are an
   // earlier party's and are not shown, even when this browser kept them.
   const [sittingSince, setSittingSince] = useState<string | null>(null);
+  // P9-09: the section in view, lit in the section bar, which scrolls to keep it in sight.
+  const [activeSection, setActiveSection] = useState<string | undefined>();
+  const sectionBar = useRef<HTMLElement>(null);
   const statuses = useRef(new Map<string, QrOrderView['status']>());
   const requests = useServiceRequests(token, relayUrl);
 
@@ -180,7 +187,15 @@ function MenuPage({
     () => new Map(document.menu.items.map((item) => [item.id, item])),
     [document],
   );
-  const bestSellers = useMemo(() => qrBestSellers(document, new Date(now)), [document, now]);
+  // The best sellers: from the restaurant's own sales, and the dishes it tags as such, so a new
+  // restaurant without sales still shows its favourites (P9-09).
+  const bestSellers = useMemo(() => {
+    const popular = new Set(qrBestSellers(document, new Date(now)));
+    for (const item of document.menu.items) {
+      if (item.tags.some((tag) => tag.toLowerCase() === 'bestseller')) popular.add(item.id);
+    }
+    return popular;
+  }, [document, now]);
   const shown = useMemo(
     () => filterMenu(searchMenu(items, query), filters, bestSellers),
     [items, query, filters, bestSellers],
@@ -198,6 +213,48 @@ function MenuPage({
           })),
     [document, shown, query, t],
   );
+
+  const sectionKey = sections.map((section) => section.id).join(',');
+  useEffect(() => {
+    if (tab !== 'menu' || sectionKey === '') return;
+    const page = globalThis.document;
+    const ids = sectionKey.split(',');
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      // The last section whose heading has gone under the sticky bar; at the very bottom of the
+      // page the last section, however short it is.
+      let current = ids[0];
+      for (const id of ids) {
+        const top = page.getElementById(`c-${id}`)?.getBoundingClientRect().top;
+        if (top !== undefined && top <= SECTION_IN_VIEW_PX) current = id;
+      }
+      const atBottom =
+        window.scrollY > 0 &&
+        window.innerHeight + window.scrollY >= page.documentElement.scrollHeight - 2;
+      setActiveSection(atBottom ? ids.at(-1) : current);
+    };
+    const onScroll = () => {
+      if (frame === 0) frame = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      if (frame !== 0) cancelAnimationFrame(frame);
+    };
+  }, [sectionKey, tab]);
+  useEffect(() => {
+    const bar = sectionBar.current;
+    if (bar === null || activeSection === undefined) return;
+    const pill = bar.querySelector<HTMLElement>(`[data-section="${activeSection}"]`);
+    if (pill === null) return;
+    // Sideways only: the page itself never moves for this.
+    bar.scrollTo({
+      left: pill.offsetLeft - (bar.clientWidth - pill.clientWidth) / 2,
+      behavior: 'smooth',
+    });
+  }, [activeSection]);
 
   const changeLines = useCallback(
     (next: readonly CartLine[]) => {
@@ -460,6 +517,19 @@ function MenuPage({
     };
   }, [accepted]);
 
+  /** How many of a dish are in the cart, whatever their options (P9-09). */
+  const inCart = (itemId: string) =>
+    lines.reduce((total, line) => total + (line.itemId === itemId ? line.quantity : 0), 0);
+  /** The dish's line as Add puts it (no options, no note), which its card's stepper changes. */
+  const plainLineOf = (itemId: string) =>
+    lines.find(
+      (line) =>
+        line.itemId === itemId &&
+        line.instructions === '' &&
+        line.comboChoices === undefined &&
+        Object.keys(line.selection).length === 0,
+    );
+
   const count = lines.reduce((total, line) => total + line.quantity, 0);
   const since = sittingSince === null ? null : Date.parse(sittingSince);
   const shownOrders = orderIds
@@ -577,31 +647,36 @@ function MenuPage({
           </label>
           <fieldset className="qr-filters">
             <legend className="qr-visually-hidden">{t('qrSite.filters.legend')}</legend>
-            {FILTERS.filter(
-              (filter) => filter !== 'bestseller' || document.recommendations !== undefined,
-            ).map((filter) => (
-              <label key={filter} className="qr-chip">
-                <input
-                  type="checkbox"
-                  checked={filters.has(filter)}
-                  onChange={(event) => {
-                    const next = new Set(filters);
-                    if (event.target.checked) next.add(filter);
-                    else next.delete(filter);
-                    setFilters(next);
-                  }}
-                />
-                <span>{t(`qrSite.filters.${filter}`)}</span>
-              </label>
-            ))}
+            {FILTERS.filter((filter) => filter !== 'bestseller' || bestSellers.size > 0).map(
+              (filter) => (
+                <label key={filter} className="qr-chip">
+                  <input
+                    type="checkbox"
+                    checked={filters.has(filter)}
+                    onChange={(event) => {
+                      const next = new Set(filters);
+                      if (event.target.checked) next.add(filter);
+                      else next.delete(filter);
+                      setFilters(next);
+                    }}
+                  />
+                  <span>{t(`qrSite.filters.${filter}`)}</span>
+                </label>
+              ),
+            )}
           </fieldset>
         </div>
         {/* Only the sections stay at the top while the menu scrolls (P9-08): the search and the
             filters scroll away, so the dishes keep most of a phone's screen. */}
         {sections.length > 1 && query === '' ? (
-          <nav className="qr-categories" aria-label={t('qrSite.categories')}>
+          <nav className="qr-categories" aria-label={t('qrSite.categories')} ref={sectionBar}>
             {sections.map((section) => (
-              <a key={section.id} href={`#c-${section.id}`}>
+              <a
+                key={section.id}
+                href={`#c-${section.id}`}
+                data-section={section.id}
+                aria-current={section.id === activeSection ? 'true' : undefined}
+              >
                 {section.name}
               </a>
             ))}
@@ -627,7 +702,14 @@ function MenuPage({
               className="qr-section"
               aria-label={section.name}
             >
-              {section.heading ? <h2 className="qr-section__title">{section.name}</h2> : null}
+              {section.heading ? (
+                <h2 className="qr-section__title">
+                  {section.name}
+                  <span className="qr-section__count">
+                    {t('qrSite.dishCount', { count: section.items.length })}
+                  </span>
+                </h2>
+              ) : null}
               <ul className="qr-dishes">
                 {section.items.map((item) => (
                   <DishRow
@@ -647,11 +729,21 @@ function MenuPage({
                     }
                     needsChoice={needsOptions(document.menu, item)}
                     readOnly={menu.readOnly}
+                    bestseller={bestSellers.has(item.id)}
+                    inCart={inCart(item.id)}
+                    plain={plainLineOf(item.id)}
                     onChoose={() => {
                       setOpen({ item });
                     }}
                     onAdd={() => {
                       quickAdd(item);
+                    }}
+                    onPlainQuantity={(line, quantity) => {
+                      changeLines(
+                        quantity === 0
+                          ? removeLine(lines, line.clientLineId)
+                          : updateLine(lines, line.clientLineId, { quantity }),
+                      );
                     }}
                   />
                 ))}
@@ -690,16 +782,21 @@ function MenuPage({
       </p>
       {count === 0 || tab === 'bill' ? null : (
         <div className="qr-cart-bar">
-          <Button
-            fullWidth
-            variant="accent"
-            size="lg"
+          <button
+            type="button"
+            key={count}
+            className="qr-cart-bar__button"
+            aria-label={t('qrSite.cart.open', { count, total: formatRupees(cartTotal(lines)) })}
             onClick={() => {
               setCartOpen(true);
             }}
           >
-            {t('qrSite.cart.open', { count, total: formatRupees(cartTotal(lines)) })}
-          </Button>
+            <span className="qr-cart-bar__summary">
+              <span>{t('qrSite.cart.items', { count })}</span>
+              <span className="qr-cart-bar__total">{formatRupees(cartTotal(lines))}</span>
+            </span>
+            <span className="qr-cart-bar__cta">{t('qrSite.cart.view')}</span>
+          </button>
         </div>
       )}
 
@@ -786,8 +883,12 @@ function DishRow({
   photo,
   needsChoice,
   readOnly,
+  bestseller,
+  inCart,
+  plain,
   onChoose,
   onAdd,
+  onPlainQuantity,
 }: {
   item: MenuItem;
   /** Why it cannot be ordered now (sold out, off, or a combo outside its hours). */
@@ -796,8 +897,15 @@ function DishRow({
   photo: ReactNode;
   needsChoice: boolean;
   readOnly: boolean;
+  /** One of the restaurant's best sellers (P9-09). */
+  bestseller: boolean;
+  /** How many are in the cart, whatever their options. */
+  inCart: number;
+  /** The line Add made, which the card's stepper changes; undefined when there is none. */
+  plain: CartLine | undefined;
   onChoose: () => void;
   onAdd: () => void;
+  onPlainQuantity: (line: CartLine, quantity: number) => void;
 }) {
   const t = useT();
   const foodType =
@@ -819,6 +927,11 @@ function DishRow({
           <span>{item.name}</span>
           <span className="qr-visually-hidden">{foodType}</span>
         </p>
+        {bestseller ? (
+          <Badge tone="highlight" className="qr-dish__badge">
+            {t('qrSite.bestseller')}
+          </Badge>
+        ) : null}
         {item.description === undefined ? null : (
           <p className="qr-dish__description">{item.description}</p>
         )}
@@ -833,15 +946,20 @@ function DishRow({
         {unavailable !== undefined ? (
           <span className="qr-dish__unavailable">{unavailable}</span>
         ) : needsChoice ? (
-          <Button
-            variant="secondary"
-            disabled={readOnly}
-            aria-label={t('qrSite.chooseOf', { name: item.name })}
-            onClick={onChoose}
-          >
-            {t('qrSite.choose')}
-          </Button>
-        ) : (
+          <>
+            <Button
+              variant="secondary"
+              disabled={readOnly}
+              aria-label={t('qrSite.chooseOf', { name: item.name })}
+              onClick={onChoose}
+            >
+              {t('qrSite.choose')}
+            </Button>
+            {inCart === 0 ? null : (
+              <span className="qr-dish__in-cart">{t('qrSite.inCart', { count: inCart })}</span>
+            )}
+          </>
+        ) : plain === undefined ? (
           <Button
             variant="secondary"
             disabled={readOnly}
@@ -850,6 +968,21 @@ function DishRow({
           >
             {t('qrSite.add')}
           </Button>
+        ) : (
+          // In the cart already: change how many right here (P9-09).
+          <QuantityStepper
+            className="qr-dish__stepper"
+            value={plain.quantity}
+            min={0}
+            max={99}
+            disabled={readOnly}
+            label={t('qrSite.cart.quantityOf', { name: item.name })}
+            decreaseLabel={t('qrSite.lessOf', { name: item.name })}
+            increaseLabel={t('qrSite.moreOf', { name: item.name })}
+            onChange={(quantity) => {
+              onPlainQuantity(plain, quantity);
+            }}
+          />
         )}
       </div>
     </li>

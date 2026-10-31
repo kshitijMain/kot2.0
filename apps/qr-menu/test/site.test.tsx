@@ -11,6 +11,7 @@ import type { ServiceRequests } from '../src/site/requests';
 import { DishPhoto } from '../src/site/DishPhoto';
 import { I18nProvider } from '../src/site/i18n';
 import { Orders } from '../src/site/Orders';
+import { orderStep } from '../src/site/progress';
 import { browserId, newUuid, tableValue } from '../src/site/storage';
 import { contentSecurityPolicy, newNonce } from '../src/proxy';
 
@@ -196,7 +197,10 @@ describe('[QR-007] where an order is', () => {
       Date.parse('2026-10-02T08:00:30.000Z'),
     );
     expect(screen.getByText(en.qrSite.orders.SENT_TO_KITCHEN)).toBeVisible();
-    expect(screen.getByText(en.qrSite.orders.itemState.READY)).toBeVisible();
+    // The dish's own chip; the tracker above names the step "Ready" too.
+    expect(
+      screen.getByText(en.qrSite.orders.itemState.READY, { selector: '.rp-status-chip' }),
+    ).toBeVisible();
     expect(screen.getByText('Reason: The kitchen is closing')).toBeVisible();
   });
 
@@ -207,6 +211,51 @@ describe('[QR-007] where an order is', () => {
     expect(again.at(-1)?.map((line) => [line.itemId, line.quantity])).toEqual([[IDS.dal, 2]]);
     fireEvent.click(screen.getByRole('button', { name: 'Add Dal Makhani again' }));
     expect(again.at(-1)?.map((line) => [line.itemId, line.quantity])).toEqual([[IDS.dal, 1]]);
+  });
+
+  it('[QR-007] tracks an order from sent to served, step by step (P9-09)', () => {
+    const line = '0199a0e0-0000-7000-8000-000000000b01';
+    const other = '0199a0e0-0000-7000-8000-000000000b02';
+    type ItemState = NonNullable<QrOrderView['detail']['items']>[number]['state'];
+    const kitchen = (...states: ItemState[]): QrOrderView =>
+      order({
+        status: 'SENT_TO_KITCHEN',
+        detail: {
+          items: states.map((state, index) => ({
+            clientLineId: index === 0 ? line : other,
+            state,
+          })),
+        },
+      });
+    expect(orderStep(order({}))).toBe(0);
+    expect(orderStep(order({ status: 'RECEIVED' }))).toBe(0);
+    expect(orderStep(order({ status: 'SENT_TO_KITCHEN' }))).toBe(1);
+    expect(orderStep(kitchen('SENT', 'PREPARING'))).toBe(2);
+    // Ready only when every dish still coming is ready; a cancelled dish does not hold it back.
+    expect(orderStep(kitchen('READY', 'PREPARING'))).toBe(2);
+    expect(orderStep(kitchen('READY', 'CANCELLED'))).toBe(3);
+    expect(orderStep(kitchen('SERVED', 'READY'))).toBe(3);
+    expect(orderStep(kitchen('SERVED', 'SERVED'))).toBe(4);
+    expect(orderStep(order({ status: 'REJECTED' }))).toBeUndefined();
+    // An order past its pickup time reads EXPIRED and leaves the tracker.
+    expect(orderStep(order({}), 'EXPIRED')).toBeUndefined();
+
+    show([kitchen('READY', 'PREPARING')], Date.parse('2026-10-02T08:00:30.000Z'));
+    const tracker = screen.getByRole('list', { name: en.qrSite.progress.label });
+    const current = tracker.querySelector('[aria-current="step"]');
+    expect(current).toHaveTextContent(en.qrSite.progress.preparing);
+    expect(current).toHaveAttribute('data-state', 'done');
+    expect(tracker.querySelector('[data-state="next"]')).toHaveTextContent(
+      en.qrSite.progress.ready,
+    );
+  });
+
+  it('shows no tracker for an order that was not taken', () => {
+    show(
+      [order({ status: 'REJECTED', detail: { rejectionReason: 'Closed' } })],
+      Date.parse('2026-10-02T08:00:30.000Z'),
+    );
+    expect(screen.queryByRole('list', { name: en.qrSite.progress.label })).toBeNull();
   });
 
   it('says plainly when there is nothing yet', () => {

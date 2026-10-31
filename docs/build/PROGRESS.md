@@ -697,6 +697,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-06 The Mannat pilot set-up and a one-Mac trial (the server and the real tables: manual task 38)
 - [x] P9-07 Reprinting the tents when the site's address changes (ngrok)
 - [x] P9-08 A diner's orders follow their number; a compact page; pairing the first screen
+- [x] P9-09 A menu made for the phone: sections that follow, a stepper on the card, an order tracker
 
 ## Decisions
 
@@ -4622,6 +4623,68 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-10-31: P9-09 A menu made for the phone
+
+Asked by the Business Owner: find how the best menus present themselves, and make the QR page as
+easy for diners. A short look, not an endless one, covered:
+
+- Swiggy's design team ("Menus to Mmmmenus") and a heuristic evaluation of Swiggy;
+- a Zomato review and a Swiggy vs Zomato study;
+- QR-menu guides from Adobe Express, Loop, sundayapp and QRMax;
+- Seenlabs on why diners dislike digital-only menus.
+
+They agree on:
+
+- a category bar that follows the scroll;
+- an Add that becomes − n + on the card;
+- a one-line description and a marked bestseller;
+- a sticky cart bar with count and total;
+- a delivery-style tracker;
+- above all, speed and nothing in the way.
+
+Built:
+
+- `site/progress.ts`: `orderStep` (Sent, Accepted, Cooking, Ready, Served). It returns the step
+  every dish still coming has reached; cancelled, voided and rejected dishes don't hold an order
+  back. An order that was rejected, or whose pickup time passed, has no tracker. `Orders` shows it
+  as an `ol` with `aria-current="step"`.
+- Section bar:
+  - the active section is the last whose heading has gone under the sticky bar, or the last one at
+    the page's bottom;
+  - a scroll listener throttled to one check per frame replaced the IntersectionObserver, which
+    never marked a short last section;
+  - the bar scrolls sideways to the active pill; smooth scrolling unless reduced motion.
+- Section headings show their dish count.
+- Dish card:
+  - a plain dish in the order shows a `QuantityStepper` (0 removes it);
+  - a dish with options shows "n in cart";
+  - a Bestseller badge (tag `bestseller` or the recommendation engine's bestsellers), and the
+    filter shows whenever either exists.
+- Cart bar: count and total on the left and "View order ›" on the right; its accessible name is
+  unchanged.
+- Mannat: one-line descriptions for all 32 dishes (`ItemSpec.description`, used by the seed).
+  `pilot-cli --menu-text` fills in empty descriptions on an existing database.
+
+Gotcha: a 150 ms colour fade on the active pill failed axe colour contrast, because axe sampled
+mid-fade. The fade is gone: a pill switches at once.
+
+Tests:
+
+- QR site unit +2: the tracker for every status and dish state; no tracker for a rejected order.
+  The chip assertion is scoped, because the tracker also says "Ready". 22/22.
+- QR e2e +1: the card stepper adds and removes, the cart bar counts, and the tapped last section
+  is marked; axe clean. 16/16.
+- Server `pilot-mannat.int` +1: every dish has a description on the QR menu. 5/5.
+- Checked by hand: screenshots at 360 px on the pilot. The page is 360 px wide, the active pill
+  follows, and the stepper and cart bar look right.
+
+On the pilot Mac:
+
+- `pilot-cli --menu-text` filled 32 descriptions, and the stack was restarted on the new build (same
+  ngrok address).
+- **Manager to do:** Manage → Menu → Publish, so the descriptions reach the QR page and the
+  phones.
 
 ### 2026-10-31: P9-08 Orders by number, a compact page, pairing the first screen
 

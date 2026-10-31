@@ -179,6 +179,7 @@ Exit: manual task 38 done; the phone test works on mobile data. Design: ADR-0024
 - P9-06 The Mannat pilot set-up and a one-Mac trial
 - P9-07 Reprinting the tents when the site's address changes (ngrok)
 - P9-08 A diner's orders follow their number; a compact page; pairing the first screen
+- P9-09 A menu made for the phone: sections that follow, a stepper on the card, an order tracker
 
 ## Parallel lanes
 
