@@ -2,6 +2,10 @@
 // [--site https://menu.example.in] [--tents tents.pdf]`, after `build`. Reads DATABASE_URL and
 // RP_DATA_DIR (for the secrets the server checks PINs with); refuses a database that already holds
 // a restaurant. Prints each table's QR address and, with --tents, writes the A5 tents to print.
+//
+// `--tents-only --site <address> --tents <file>` (P9-07) sets nothing up: it writes the tents of
+// the restaurant already there for the site's address now (after a new ngrok or domain address),
+// the same codes the console's Manage → QR codes prints.
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -19,6 +23,7 @@ const { values } = parseArgs({
     'upi-id': { type: 'string' },
     site: { type: 'string', default: process.env.RP_QR_SITE_URL },
     tents: { type: 'string' },
+    'tents-only': { type: 'boolean', default: false },
   },
 });
 const databaseUrl = process.env.DATABASE_URL;
@@ -36,6 +41,54 @@ const site = values.site?.replace(/\/+$/, '');
 const prisma = new PrismaClient({
   adapter: new PrismaPg({ connectionString: databaseUrl, options: UTC_SESSION }),
 });
+
+/** Writes the A5 tents of `tables` at `site` to `file`. */
+async function writeTents(
+  tables: readonly { readonly label: string; readonly code: string }[],
+  restaurant: { readonly displayName: string; readonly accentColor: string | null },
+  site: string,
+  file: string,
+): Promise<void> {
+  const { pdf } = await tableTentsPdf(
+    tables.map((table) => ({ label: table.label, url: `${site}/t/${table.code}` })),
+    { restaurantName: restaurant.displayName, accentColor: restaurant.accentColor },
+    'A5',
+    { generatedAt: new Date().toISOString() },
+  );
+  await writeFile(file, pdf);
+}
+
+if (values['tents-only']) {
+  try {
+    if (site === undefined || values.tents === undefined) {
+      throw new Error('--tents-only needs --site (or RP_QR_SITE_URL) and --tents');
+    }
+    const restaurant = await prisma.restaurant.findFirst({
+      orderBy: { createdAt: 'asc' },
+      select: { id: true, displayName: true, accentColor: true },
+    });
+    if (restaurant === null)
+      throw new Error('There is no restaurant here yet: run the set-up first.');
+    const rows = await prisma.diningTable.findMany({
+      where: { restaurantId: restaurant.id, archivedAt: null, qrToken: { not: null } },
+      orderBy: [{ section: { displayOrder: 'asc' } }, { displayOrder: 'asc' }],
+      select: { label: true, qrToken: true },
+    });
+    const tables = rows.map((row) => ({ label: row.label, code: row.qrToken ?? '' }));
+    await writeTents(tables, restaurant, site, values.tents);
+    process.stdout.write(
+      [
+        `Table tents for ${site} (A5, ${String(tables.length)} pages): ${values.tents}`,
+        ...tables.map((table) => `  Table ${table.label.padEnd(3)} ${site}/t/${table.code}`),
+        '',
+      ].join('\n'),
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
+  process.exit(0);
+}
+
 try {
   const hasher = new CredentialHasher(
     new FileSecretStore(join(process.env.RP_DATA_DIR ?? './.data', 'secrets')),
@@ -61,16 +114,15 @@ try {
   }
   if (values.tents !== undefined) {
     if (site === undefined) throw new Error('--tents needs --site (or RP_QR_SITE_URL)');
-    const { pdf } = await tableTentsPdf(
-      summary.tables.map((table) => ({ label: table.label, url: `${site}/t/${table.code}` })),
+    await writeTents(
+      summary.tables,
       {
-        restaurantName: MANNAT_PROFILE.displayName,
+        displayName: MANNAT_PROFILE.displayName,
         accentColor: MANNAT_PROFILE.accentColor ?? null,
       },
-      'A5',
-      { generatedAt: new Date().toISOString() },
+      site,
+      values.tents,
     );
-    await writeFile(values.tents, pdf);
     lines.push('', `Table tents (A5, ${String(summary.tables.length)} pages): ${values.tents}`);
   }
   process.stdout.write(`${lines.join('\n')}\n`);

@@ -2527,6 +2527,7 @@ until you press Publish.
     noTables: 'There are no tables yet. Add them on the floor first.',
     noSite:
       'The QR menu site is not set up on this PC yet, so codes cannot be printed. The vendor sets it.',
+    site: 'The codes open {url}. When this address changes (a new domain or ngrok address), print the tents again: the codes stay the same, but printed ones still open the old address.',
     missing: '{count, plural, one {# table has} other {# tables have}} no code yet.',
     issue: 'Make {count, plural, one {a code} other {# codes}}',
     issued: 'The tables have their codes.',
@@ -2536,6 +2537,11 @@ until you press Publish.
     show: 'Show',
     showOf: 'Show the code of table {label}',
     codeOf: 'QR code of table {label}',
+    copy: 'Copy link',
+    copyOf: 'Copy the link of table {label}',
+    copied: 'The link of table {label} is copied.',
+    printOne: 'Print',
+    printOf: 'Print the tent of table {label}',
     new: 'New code',
     newOf: 'New code for table {label}',
     newWarning:

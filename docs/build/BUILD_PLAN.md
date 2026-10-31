@@ -177,6 +177,7 @@ Exit: manual task 38 done; the phone test works on mobile data. Design: ADR-0024
 - P9-04 The diner's page: phone first, My orders, accepted, order again, Bill tab, a nicer menu
 - P9-05 The manager's phone rings for QR orders
 - P9-06 The Mannat pilot set-up and a one-Mac trial
+- P9-07 Reprinting the tents when the site's address changes (ngrok)
 
 ## Parallel lanes
 

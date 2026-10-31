@@ -1218,6 +1218,22 @@ body {
   gap: var(--rp-space-2);
 }
 
+/* P9-07: each table's code beside it, and its link, on the QR codes page. */
+.qr-row__thumb {
+  flex: none;
+  padding: var(--rp-space-1);
+  border: 1px solid var(--rp-color-border);
+  border-radius: var(--rp-radius-md);
+  background: #ffffff;
+}
+
+.qr-row__url {
+  margin: 0;
+  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-sm);
+  overflow-wrap: anywhere;
+}
+
 .staff-form__role {
   margin: 0;
   font-weight: var(--rp-font-weight-medium);
