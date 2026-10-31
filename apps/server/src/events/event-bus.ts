@@ -308,8 +308,9 @@ export class EventBus implements OnApplicationBootstrap, OnModuleDestroy {
   private async start(): Promise<void> {
     if (this.stopped) return;
     try {
-      this.stream = await this.ensureStreamId();
       const head = await this.maxSequence();
+      await this.recoverEmptiedOutbox(head);
+      this.stream = await this.ensureStreamId();
       for (const state of this.consumers.values()) {
         await this.prisma.eventConsumerCursor.createMany({
           data: [
@@ -614,6 +615,28 @@ export class EventBus implements OnApplicationBootstrap, OnModuleDestroy {
   private async maxSequence(): Promise<number> {
     const { _max } = await this.prisma.outboxEvent.aggregate({ _max: { sequence: true } });
     return _max.sequence === null ? 0 : Number(_max.sequence);
+  }
+
+  /**
+   * Sequences never restart while the outbox keeps its newest event (see `cleanup`). Emptied by
+   * hand (a pilot's reset), numbering starts again at 1 while consumers' cursors still point past
+   * it, and every new event would be skipped: no alerts, no word to the QR relay (P9-13). A cursor
+   * past the head is brought back to it, and the stream gets a new id so clients read afresh.
+   */
+  private async recoverEmptiedOutbox(head: number): Promise<void> {
+    const ahead = await this.prisma.eventConsumerCursor.updateMany({
+      where: { lastSequence: { gt: BigInt(head) } },
+      data: { lastSequence: BigInt(head), attempts: 0, lastError: null },
+    });
+    if (ahead.count === 0) return;
+    await this.prisma.systemMeta.updateMany({
+      where: { key: STREAM_ID_KEY },
+      data: { value: randomUUID() },
+    });
+    this.logger.warn(
+      { consumers: ahead.count, head },
+      'Event cursors were past the newest event (was the outbox emptied?); brought back to it',
+    );
   }
 
   private async ensureStreamId(): Promise<string> {

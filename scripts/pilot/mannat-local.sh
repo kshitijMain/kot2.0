@@ -9,6 +9,7 @@
 #   scripts/pilot/mannat-local.sh pair     # a pairing code for the first screen (POS), on this PC
 #   scripts/pilot/mannat-local.sh stop
 #   scripts/pilot/mannat-local.sh reset    # stop and delete everything set up here
+#   scripts/pilot/mannat-local.sh fresh    # clear orders/KOTs/approvals; keep QR codes and pairing
 #
 # Settings (environment): PILOT_IP (default: this Mac's Wi-Fi address), PILOT_UPI_ID (the
 # restaurant's business UPI ID; without it the bill has no Pay button). Secrets stay in .pilot/
@@ -213,6 +214,21 @@ reset() {
   echo "Everything set up here is gone."
 }
 
+fresh() {
+  [[ -f "$STATE/server.env" ]] || { echo "Run setup first." >&2; exit 1; }
+  stop
+  docker start "$PG_CONTAINER" >/dev/null
+  until docker exec "$PG_CONTAINER" pg_isready -U postgres >/dev/null 2>&1; do sleep 1; done
+  echo "== Clear relay QR queues and table bills"
+  psql_in rp_relay < "$ROOT/scripts/pilot/mannat-fresh-relay.sql"
+  echo "== Clear KOT server orders, kitchen, approvals, open tables"
+  psql_in rp_mannat < "$ROOT/scripts/pilot/mannat-fresh-mannat.sql"
+  start
+  echo
+  echo "Service data cleared. Same table QR codes (.pilot/mannat.txt) and paired devices remain."
+  echo "On each phone: close the QR tab or clear site data for $SITE so cart and phone cache reset."
+}
+
 case "${1:-}" in
   setup) setup ;;
   start) start ;;
@@ -220,5 +236,6 @@ case "${1:-}" in
   status) status ;;
   pair) pair ;;
   reset) reset ;;
+  fresh) fresh ;;
   *) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

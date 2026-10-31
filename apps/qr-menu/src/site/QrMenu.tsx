@@ -59,6 +59,19 @@ const NO_LINES: readonly CartLine[] = [];
 const NO_ORDERS: readonly string[] = [];
 const TABS = ['menu', 'orders', 'bill'] as const;
 type Tab = (typeof TABS)[number];
+/** The tab in the page's address (#orders, #bill), so a reload stays on it (P9-13). */
+function tabOfAddress(): Tab {
+  const name = globalThis.location.hash.slice(1);
+  return (TABS as readonly string[]).includes(name) ? (name as Tab) : 'menu';
+}
+function onAddressChange(changed: () => void): () => void {
+  globalThis.addEventListener('hashchange', changed);
+  return () => {
+    globalThis.removeEventListener('hashchange', changed);
+  };
+}
+const MENU_TAB = (): Tab => 'menu';
+
 /** How often an open page asks for its number's orders at the table (P9-08). */
 const TABLE_ORDERS_REFRESH_MS = 15_000;
 /** How long the "accepted" banner stays (P9-04). */
@@ -157,7 +170,15 @@ function MenuPage({
   const pendingKey = useRef<string | undefined>(undefined);
   const [orders, setOrders] = useState<ReadonlyMap<string, QrOrderView>>(new Map());
   const [now, setNow] = useState(() => Date.now());
-  const [tab, setTab] = useState<Tab>('menu');
+  // The server draws the menu; the browser then shows the tab the address names (P9-13).
+  const tab = useSyncExternalStore(onAddressChange, tabOfAddress, MENU_TAB);
+  const setTab = useCallback((next: Tab) => {
+    // A history entry per tab: the phone's Back goes to the tab before.
+    if (tabOfAddress() !== next) globalThis.location.hash = next;
+  }, []);
+  // "Refresh" on My orders: look again now (P9-13); and when the page last heard back.
+  const [refreshTick, setRefreshTick] = useState(0);
+  const [heardAt, setHeardAt] = useState<number | undefined>();
   const [skippedPhone, setSkippedPhone] = useState(false);
   const [changingPhone, setChangingPhone] = useState(false);
   const [accepted, setAccepted] = useState(false);
@@ -318,6 +339,7 @@ function MenuPage({
         fetchOrder(relayUrl, token, id).then(
           (order) => {
             if (stopped) return;
+            setHeardAt(Date.now());
             setOrders((current) => new Map([...current, [id, order]]));
             // P9-04: "Your order is accepted", once, when the restaurant accepts it.
             const before = statuses.current.get(id);
@@ -345,7 +367,7 @@ function MenuPage({
       clearTimeout(early);
       clearInterval(timer);
     };
-  }, [relayUrl, token, unsettledKey]);
+  }, [relayUrl, token, unsettledKey, refreshTick]);
 
   // P9-08: "My orders" follows the diner's number, not this browser: the same number at this
   // table, on any phone or browser, finds the orders it placed during this sitting. Asked when the
@@ -362,6 +384,7 @@ function MenuPage({
       fetchTableOrders(relayUrl, token, mobile).then(
         (found) => {
           if (stopped) return;
+          setHeardAt(Date.now());
           setLookedUpFor(mobile);
           setSittingSince(found.since);
           setOrders((current) => {
@@ -393,7 +416,7 @@ function MenuPage({
       clearInterval(timer);
       page.removeEventListener('visibilitychange', back);
     };
-  }, [relayUrl, token, phone, sent]);
+  }, [relayUrl, token, phone, sent, refreshTick]);
 
   const add = (line: NewCartLine) => {
     changeLines(addLine(lines, line, newUuid));
@@ -778,8 +801,13 @@ function MenuPage({
           now={now}
           readOnly={menu.readOnly}
           loading={ordersLoading}
+          heardAt={heardAt}
           onAgain={orderAgain}
           onBrowse={browse}
+          onRefresh={() => {
+            setNow(Date.now());
+            setRefreshTick((tick) => tick + 1);
+          }}
         />
       ) : null}
       {
