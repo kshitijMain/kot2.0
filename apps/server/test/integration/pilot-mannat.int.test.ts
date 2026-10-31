@@ -6,6 +6,7 @@ import {
   QrOrderView,
   QrSubmitOrderResponse,
   QrTableBillResponse,
+  QrTableOrdersResponse,
 } from '@rp/contracts/relay';
 import { startRelay, type TestRelay } from '@rp/relay/testing';
 import request from 'supertest';
@@ -235,5 +236,34 @@ describe('[P9] the QR pilot at Mannat (ADR-0024)', () => {
     expect(seen.bill?.invoices[0]?.grandTotal).toBe(
       (invoice.body as { grandTotal: number }).grandTotal,
     );
+  });
+
+  it('[QR-007] shows a number its orders at the table on any phone, and an earlier sitting’s never (P9-08)', async () => {
+    const mine = () =>
+      fetch(`${relay.baseUrl}/table-orders`, {
+        headers: { 'x-rp-table-token': codeOf('2'), 'x-rp-diner-phone': '+919876543210' },
+      }).then(async (response) => QrTableOrdersResponse.parse(await response.json()));
+    // Another phone at table 2, the same number: the order placed earlier is there.
+    expect((await mine()).orders).toHaveLength(1);
+
+    // The table pays and closes; the PC tells the relay when the sitting ended.
+    const invoice = await prisma.invoice.findFirstOrThrow({
+      where: { tableSession: { table: { label: '2', restaurantId: mannat.restaurantId } } },
+    });
+    const paid = await server()
+      .post(`/api/v1/invoices/${invoice.id}/payments`)
+      .set(authHeaders(kit.deviceId, manager.accessToken))
+      .send({
+        idempotencyKey: randomUUID(),
+        payments: [{ mode: 'UPI', amount: invoice.grandTotal, reference: 'UPI-PILOT' }],
+      });
+    expect(paid.status, JSON.stringify(paid.body)).toBe(200);
+    await sync.sync();
+    const after = await mine();
+    expect(after.orders).toEqual([]);
+    const closed = await prisma.tableSession.findFirstOrThrow({
+      where: { table: { label: '2', restaurantId: mannat.restaurantId }, status: 'CLOSED' },
+    });
+    expect(after.since).toBe(closed.closedAt?.toISOString());
   });
 });

@@ -47,7 +47,7 @@ import { Orders, shownStatus } from './Orders';
 import { PhoneGate } from './PhoneGate';
 import { useServiceRequests } from './requests';
 import { sourceOf, Suggestions } from './Suggestions';
-import { fetchMenu, fetchOrder, RelayCallError, submitOrder } from './relay';
+import { fetchMenu, fetchOrder, fetchTableOrders, RelayCallError, submitOrder } from './relay';
 import { browserId, newUuid, tableValue } from './storage';
 
 type LoadedMenu = QrMenuResponse & { document: QrMenuDocument };
@@ -59,6 +59,8 @@ const NO_LINES: readonly CartLine[] = [];
 const NO_ORDERS: readonly string[] = [];
 const TABS = ['menu', 'orders', 'bill'] as const;
 type Tab = (typeof TABS)[number];
+/** How often an open page asks for its number's orders at the table (P9-08). */
+const TABLE_ORDERS_REFRESH_MS = 15_000;
 /** How long the "accepted" banner stays (P9-04). */
 const ACCEPTED_BANNER_MS = 8_000;
 
@@ -155,6 +157,9 @@ function MenuPage({
   const [skippedPhone, setSkippedPhone] = useState(false);
   const [changingPhone, setChangingPhone] = useState(false);
   const [accepted, setAccepted] = useState(false);
+  // P9-08: when the table's current sitting began, as the relay says; orders before it are an
+  // earlier party's and are not shown, even when this browser kept them.
+  const [sittingSince, setSittingSince] = useState<string | null>(null);
   const statuses = useRef(new Map<string, QrOrderView['status']>());
   const requests = useServiceRequests(token, relayUrl);
 
@@ -281,6 +286,51 @@ function MenuPage({
       clearInterval(timer);
     };
   }, [relayUrl, token, unsettledKey]);
+
+  // P9-08: "My orders" follows the diner's number, not this browser: the same number at this
+  // table, on any phone or browser, finds the orders it placed during this sitting. Asked when the
+  // number is known, again every few seconds while the page is open, and when the diner comes back.
+  const sentRef = useRef(orderIds);
+  useEffect(() => {
+    sentRef.current = orderIds;
+  }, [orderIds]);
+  useEffect(() => {
+    const mobile = phone === '' ? undefined : indianMobile(phone);
+    if (mobile === undefined) return;
+    let stopped = false;
+    const lookUp = () => {
+      fetchTableOrders(relayUrl, token, mobile).then(
+        (found) => {
+          if (stopped) return;
+          setSittingSince(found.since);
+          setOrders((current) => {
+            const next = new Map(current);
+            for (const order of found.orders) {
+              next.set(order.id, order);
+              statuses.current.set(order.id, statuses.current.get(order.id) ?? order.status);
+            }
+            return next;
+          });
+          const known = new Set(sentRef.current);
+          const added = found.orders.map((order) => order.id).filter((id) => !known.has(id));
+          if (added.length > 0) sent.set([...added, ...sentRef.current].slice(0, 50));
+        },
+        () => undefined,
+      );
+    };
+    lookUp();
+    const timer = setInterval(lookUp, TABLE_ORDERS_REFRESH_MS);
+    const page = globalThis.document;
+    const back = () => {
+      if (page.visibilityState === 'visible') lookUp();
+    };
+    page.addEventListener('visibilitychange', back);
+    return () => {
+      stopped = true;
+      clearInterval(timer);
+      page.removeEventListener('visibilitychange', back);
+    };
+  }, [relayUrl, token, phone, sent]);
 
   const add = (line: NewCartLine) => {
     changeLines(addLine(lines, line, newUuid));
@@ -411,10 +461,15 @@ function MenuPage({
   }, [accepted]);
 
   const count = lines.reduce((total, line) => total + line.quantity, 0);
-  const shownOrders = orderIds.flatMap((id) => {
-    const order = orders.get(id);
-    return order === undefined ? [] : [order];
-  });
+  const since = sittingSince === null ? null : Date.parse(sittingSince);
+  const shownOrders = orderIds
+    .flatMap((id) => {
+      const order = orders.get(id);
+      return order === undefined ? [] : [order];
+    })
+    // An earlier sitting's orders, kept by this browser, are not this party's (P9-08).
+    .filter((order) => since === null || Date.parse(order.submittedAt) > since)
+    .sort((a, b) => Date.parse(b.submittedAt) - Date.parse(a.submittedAt));
   // REC-005: nothing already ordered here (unless it may be had again), the veg filter honoured.
   const { suggestions } = qrSuggestions(document, {
     ordered: [
@@ -441,6 +496,13 @@ function MenuPage({
         ask={phoneAsk}
         initial={phone}
         onDone={(value) => {
+          // Another number is another diner: this browser's list starts again, and the number's
+          // own orders at this table come from the relay (P9-08).
+          if (value !== phone) {
+            sent.set(NO_ORDERS);
+            setOrders(new Map());
+            setSittingSince(null);
+          }
           phoneStore.set(value);
           pendingKey.current = undefined;
           setChangingPhone(false);
@@ -533,16 +595,18 @@ function MenuPage({
               </label>
             ))}
           </fieldset>
-          {sections.length > 1 && query === '' ? (
-            <nav className="qr-categories" aria-label={t('qrSite.categories')}>
-              {sections.map((section) => (
-                <a key={section.id} href={`#c-${section.id}`}>
-                  {section.name}
-                </a>
-              ))}
-            </nav>
-          ) : null}
         </div>
+        {/* Only the sections stay at the top while the menu scrolls (P9-08): the search and the
+            filters scroll away, so the dishes keep most of a phone's screen. */}
+        {sections.length > 1 && query === '' ? (
+          <nav className="qr-categories" aria-label={t('qrSite.categories')}>
+            {sections.map((section) => (
+              <a key={section.id} href={`#c-${section.id}`}>
+                {section.name}
+              </a>
+            ))}
+          </nav>
+        ) : null}
 
         <main>
           {query.trim() === '' ? (
@@ -571,12 +635,15 @@ function MenuPage({
                     item={item}
                     unavailable={menuNote(menuAt, item, t, now).unavailable}
                     photo={
-                      <DishPhoto
-                        photo={photoOf(item)}
-                        base={menu.photoBase}
-                        sizes="4.5rem"
-                        className="qr-dish__photo"
-                      />
+                      // A menu with no photos at all shows no empty squares (P9-08).
+                      document.photos.length === 0 ? null : (
+                        <DishPhoto
+                          photo={photoOf(item)}
+                          base={menu.photoBase}
+                          sizes="4.5rem"
+                          className="qr-dish__photo"
+                        />
+                      )
                     }
                     needsChoice={needsOptions(document.menu, item)}
                     readOnly={menu.readOnly}
@@ -725,7 +792,7 @@ function DishRow({
   item: MenuItem;
   /** Why it cannot be ordered now (sold out, off, or a combo outside its hours). */
   unavailable: string | undefined;
-  /** Its photo, when the restaurant has one at the relay. */
+  /** Its photo or the placeholder; null on a menu without any photos (a list of names). */
   photo: ReactNode;
   needsChoice: boolean;
   readOnly: boolean;
@@ -740,7 +807,11 @@ function DishRow({
         ? t('qrSite.egg')
         : t('qrSite.nonVeg');
   return (
-    <li className="qr-dish" data-unavailable={unavailable === undefined ? undefined : true}>
+    <li
+      className="qr-dish"
+      data-unavailable={unavailable === undefined ? undefined : true}
+      data-text-only={photo === null ? true : undefined}
+    >
       {photo}
       <div className="qr-dish__what">
         <p className="qr-dish__name">

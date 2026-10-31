@@ -1285,7 +1285,17 @@
       "PublishTableBillRequest": {
         "type": "object",
         "properties": {
-          "bill": { "anyOf": [{ "$ref": "#/components/schemas/QrTableBill" }, { "type": "null" }] }
+          "bill": { "anyOf": [{ "$ref": "#/components/schemas/QrTableBill" }, { "type": "null" }] },
+          "lastClosedAt": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              { "type": "null" }
+            ]
+          }
         },
         "required": ["bill"],
         "additionalProperties": false
@@ -2266,6 +2276,49 @@
         },
         "required": ["bill", "updatedAt"],
         "additionalProperties": false
+      },
+      "QrTableOrdersResponse": {
+        "type": "object",
+        "properties": {
+          "orders": {
+            "maxItems": 50,
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/QrOrderView" }
+          },
+          "since": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              { "type": "null" }
+            ]
+          }
+        },
+        "required": ["orders", "since"],
+        "additionalProperties": false
+      },
+      "QrTableOrdersResponseInput": {
+        "type": "object",
+        "properties": {
+          "orders": {
+            "maxItems": 50,
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/QrOrderViewInput" }
+          },
+          "since": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+              },
+              { "type": "null" }
+            ]
+          }
+        },
+        "required": ["orders", "since"]
       },
       "QrUpiPayee": {
         "type": "object",

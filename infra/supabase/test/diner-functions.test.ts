@@ -5,6 +5,7 @@ import {
   QrMenuResponse,
   QrOrderView,
   QrSubmitOrderResponse,
+  QrTableOrdersResponse,
   TABLE_TOKEN_HEADER,
 } from '@rp/contracts/relay';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -12,6 +13,7 @@ import type { FunctionContext, Handler } from '../src/http.js';
 import { orderStatus } from '../src/order-status.js';
 import { qrMenu } from '../src/qr-menu.js';
 import { submitOrder } from '../src/submit-order.js';
+import { tableOrders } from '../src/table-orders.js';
 import { IDS, POS_ONLY, qrMenuDocument } from './helpers/qr-menu.js';
 import {
   edgeDatabase,
@@ -360,6 +362,101 @@ describe('[BILL-011] the diner’s mobile number (P9-02)', () => {
       ),
     );
     expect(error.code).toBe('42501');
+  });
+});
+
+describe('[QR-007] a diner’s orders follow their number, not their browser (P9-08)', () => {
+  const PHONE = '+919876543210';
+  const lookUp = async (token: string, phone: string | null) => {
+    const headers = new Headers({ [TABLE_TOKEN_HEADER]: token });
+    if (phone !== null) headers.set('x-rp-diner-phone', phone);
+    const response = await tableOrders(
+      new Request('https://relay.example.invalid/functions/v1/table-orders', { headers }),
+      context,
+    );
+    return { status: response.status, body: await response.json() };
+  };
+  const ordersFor = async (token: string, phone: string) =>
+    QrTableOrdersResponse.parse((await lookUp(token, phone)).body);
+  const closedAt = (tenantId: string, tableId: string, at: string | null) =>
+    db.as('relay_writer', { tenant_id: tenantId }, (client) =>
+      client.query(
+        `INSERT INTO relay.qr_table_bills (tenant_id, table_id, bill, last_closed_at)
+         VALUES ($1, $2, NULL, $3)
+         ON CONFLICT (tenant_id, table_id) DO UPDATE SET last_closed_at = excluded.last_closed_at`,
+        [tenantId, tableId, at],
+      ),
+    );
+
+  it('finds the orders a number placed at this table, from any browser, newest first', async () => {
+    const tenant = await seedTenant(db, 'Mannat Sitting');
+    await publishMenu(db, tenant.id, 2, qrMenuDocument({ phone: 'REQUIRED' }));
+    const [first, second] = tenant.tables;
+    const options = (browser: string) => ({ token: first.token, browser });
+    const one = await accepted(
+      order([dal()], { customerPhone: PHONE }),
+      options('browser-phone-one-0001'),
+    );
+    const two = await accepted(
+      order([dal()], { customerPhone: PHONE }),
+      options('browser-phone-two-0002'),
+    );
+    await accepted(
+      order([dal()], { customerPhone: '+919811122233' }),
+      options('browser-friend-000003'),
+    );
+
+    const found = await ordersFor(first.token, PHONE);
+    expect(found.orders.map((entry) => entry.id)).toEqual([two.order.id, one.order.id]);
+    expect(found.since).toBeNull();
+    // Another number at the same table, the same number at another table: nothing of these.
+    expect((await ordersFor(first.token, '+919999999999')).orders).toEqual([]);
+    expect((await ordersFor(second.token, PHONE)).orders).toEqual([]);
+    // Nor at another restaurant's table.
+    expect((await ordersFor(b.tables[0].token, PHONE)).orders).toEqual([]);
+  });
+
+  it('shows only this sitting: orders before the table last closed belong to an earlier party', async () => {
+    const tenant = await seedTenant(db, 'Mannat Next Party');
+    await publishMenu(db, tenant.id, 2, qrMenuDocument({ phone: 'REQUIRED' }));
+    const table = tenant.tables[0];
+    await accepted(order([dal()], { customerPhone: PHONE }), { token: table.token });
+    const closed = new Date().toISOString();
+    await closedAt(tenant.id, table.id, closed);
+    const before = await ordersFor(table.token, PHONE);
+    expect(before.orders).toEqual([]);
+    expect(Date.parse(before.since ?? '')).toBe(Date.parse(closed));
+
+    const later = await accepted(order([dal()], { customerPhone: PHONE }), { token: table.token });
+    expect((await ordersFor(table.token, PHONE)).orders.map((entry) => entry.id)).toEqual([
+      later.order.id,
+    ]);
+  });
+
+  it('never shows an order older than 12 hours, even when no close was ever heard', async () => {
+    const tenant = await seedTenant(db, 'Mannat Offline Close');
+    await publishMenu(db, tenant.id, 2, qrMenuDocument({ phone: 'REQUIRED' }));
+    const table = tenant.tables[0];
+    const old = await accepted(order([dal()], { customerPhone: PHONE }), { token: table.token });
+    const client = await db.admin.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('SET LOCAL session_replication_role = replica');
+      await client.query(
+        "UPDATE relay.qr_orders SET submitted_at = now() - interval '13 hours' WHERE id = $1",
+        [old.order.id],
+      );
+      await client.query('COMMIT');
+    } finally {
+      client.release();
+    }
+    expect((await ordersFor(table.token, PHONE)).orders).toEqual([]);
+  });
+
+  it('needs a number of the right form and a valid code', async () => {
+    expect((await lookUp(a.tables[0].token, null)).status).toBe(400);
+    expect((await lookUp(a.tables[0].token, '9876543210')).status).toBe(400);
+    expect((await lookUp(newTableToken(), PHONE)).status).toBe(404);
   });
 });
 

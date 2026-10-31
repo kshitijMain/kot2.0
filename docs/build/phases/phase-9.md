@@ -141,3 +141,38 @@ Acceptance:
 - After a restart with a new `RP_QR_SITE_URL`, the list and the tents carry the new address with
   the same codes.
 - Copy and single-table print work, with a fallback where the browser has no clipboard.
+
+## P9-08 A diner's orders follow their number; a compact page that never drags sideways; pairing the first screen
+
+Requirements: QR-007, QR-002, QR-012, AUTH-007, NFR-U03.
+
+Found by the Business Owner in the pilot:
+
+- The same number on another browser at the same table showed no orders or bill estimate.
+- The menu was too large and dragged sideways.
+- The POS opened by the PC's address could not be paired: the button stayed grey for a PIN, and
+  no screen existed yet to make a code.
+
+Deliverables:
+
+- Relay: `table-orders` (by `x-rp-diner-phone`, the token's table, this sitting, at most 12
+  hours); `qr_table_bills.last_closed_at`, sent by the PC with each table's bill; CORS for the
+  header.
+- Page: "My orders" merges the number's orders and drops earlier sittings; another number starts
+  afresh.
+- A compact menu:
+  - only the section bar stays at the top;
+  - smaller cards, a text-only list when the menu has no photos;
+  - two columns on wide screens;
+  - the filters' fieldset no longer widens the page;
+  - the cart bar no longer covers the tabs.
+- Pairing:
+  - the button explains a short code or a PIN instead of staying grey;
+  - an IP-opened screen says how the first one is paired;
+  - `mannat-local.sh pair` prints the first screen's code from the PC.
+
+Acceptance:
+
+- Another phone with the same number sees the orders, and another number does not (e2e).
+- After the table closes, the number sees nothing of it (integration).
+- A 360 px phone never scrolls sideways, and the tabs stay tappable with a cart (e2e).

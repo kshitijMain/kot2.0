@@ -295,7 +295,8 @@ export class RelaySyncService implements OnApplicationBootstrap, OnModuleDestroy
   /**
    * P9-03 (ADR-0024): each table's printed bill for its diners, with how to pay it by UPI. Sent
    * when it changes, and cleared once the table's sitting closes, so the next sitting never sees
-   * it. Only tables with a QR code are looked at.
+   * it. With it goes when the table's last sitting ended (P9-08), which bounds the orders a
+   * diner's number shows. Only tables with a QR code are looked at.
    */
   private async syncBills(
     client: RelayClient,
@@ -318,6 +319,16 @@ export class RelaySyncService implements OnApplicationBootstrap, OnModuleDestroy
       where: { restaurantId: restaurant.id, archivedAt: null, qrToken: { not: null } },
       select: { id: true, sessions: { where: { status: 'OPEN' }, select: { id: true } } },
     });
+    // P9-08: when each table's last sitting ended, so a diner's number shows only this one's
+    // orders on any phone. One query for every table.
+    const closed = await this.prisma.tableSession.groupBy({
+      by: ['tableId'],
+      where: { restaurantId: restaurant.id, status: 'CLOSED', closedAt: { not: null } },
+      _max: { closedAt: true },
+    });
+    const lastClosed = new Map(
+      closed.map((row) => [row.tableId, row._max.closedAt?.toISOString() ?? null]),
+    );
     const hashes = { ...saved.billHashes };
     for (const table of tables) {
       const sessionId = table.sessions[0]?.id;
@@ -333,11 +344,12 @@ export class RelaySyncService implements OnApplicationBootstrap, OnModuleDestroy
         invoiceIds.map(({ id }) => this.invoices.view(restaurant.id, id)),
       );
       const bill = qrTableBillOf(invoices, upi);
-      const hash = bill === null ? 'none' : hashOf(bill);
-      // A table never sent a bill needs no clearing.
+      const lastClosedAt = lastClosed.get(table.id) ?? null;
+      // A table with nothing to say, never told anything, is left alone.
+      const hash = bill === null && lastClosedAt === null ? 'none' : hashOf({ bill, lastClosedAt });
       if (hash === (hashes[table.id] ?? 'none')) continue;
       try {
-        await client.publishTableBill(table.id, { bill });
+        await client.publishTableBill(table.id, { bill, lastClosedAt });
       } catch (error) {
         // Not at the relay yet (its code is new): the next sync sends the tables first.
         if (error instanceof RelayError && error.code === 'TABLE_NOT_FOUND') continue;

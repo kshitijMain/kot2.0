@@ -10,6 +10,7 @@ server stays on the restaurant PC.
 scripts/pilot/mannat-local.sh setup     # once (about 3 minutes)
 scripts/pilot/mannat-local.sh start
 scripts/pilot/mannat-local.sh status
+scripts/pilot/mannat-local.sh pair      # the first screen's pairing code (run on this computer)
 scripts/pilot/mannat-local.sh stop
 scripts/pilot/mannat-local.sh reset     # delete everything set up here and start again
 ```
@@ -35,9 +36,16 @@ Change them in Manage → Staff before real service.
 
 ## Trying it
 
-1. `start`, then open the POS on this computer: `https://<this computer's IP>:8080`. The browser
-   warns about the restaurant's own certificate; continue. Press **Pair this PC** and sign in as
-   **Manager** (2222).
+1. `start`, then pair the first POS screen. Either:
+   - on this computer, open `https://localhost:8080` and press **Pair this PC**; or
+   - run `scripts/pilot/mannat-local.sh pair`, open `https://<this computer's IP>:8080` in any
+     browser on the Wi-Fi, and type the code it prints (8 characters like `ZRWV-TYLP`, **not** a
+     PIN) in **Pairing code**.
+
+   The browser warns about the restaurant's own certificate; continue. Then sign in as
+   **Manager** (2222). Every other screen or phone gets its code from **Manage → Devices → Pair
+   a device** on this POS.
+
 2. On a phone on the same Wi-Fi, scan table 2's tent (or open its address from `mannat.txt`).
    Mannat's page asks for a mobile number, then shows the menu.
 3. Add dishes and send. The order appears on the POS under **Order to approve** within a second.
@@ -52,6 +60,15 @@ Change them in Manage → Staff before real service.
 
 This runs over plain http on the Wi-Fi: fine for a trial, never for diners on mobile data. The
 real pilot uses your server's https address.
+
+## A diner's orders follow their number
+
+"My orders" and the bill's estimate come from the diner's mobile number, not the browser: scan
+the table's code again (another browser, another phone) and give the same number, and the
+orders that number placed at that table during this sitting are there. A different number sees
+none; the same number at another table sees none; and once the table is settled and closed, the
+next party never sees the earlier one's orders, even with the same number (orders older than 12
+hours are never shown either).
 
 ## Over ngrok (phones on mobile data)
 

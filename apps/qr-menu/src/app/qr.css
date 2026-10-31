@@ -6,6 +6,16 @@
   color-scheme: light;
 }
 
+/*
+ * P9-08: the page never moves sideways. Nothing is wider than the screen (.qr-root clips, which
+ * unlike overflow: hidden on the body keeps the section bar sticky), and a sideways swipe that
+ * reaches the end of a row of chips does not carry on to the page.
+ */
+html,
+body {
+  overscroll-behavior-x: none;
+}
+
 body {
   margin: 0;
   background: var(--rp-color-background);
@@ -17,14 +27,15 @@ body {
 
 .qr-root {
   min-height: 100vh;
+  overflow-x: clip;
 }
 
 .qr-page {
   max-width: 40rem;
   margin: 0 auto;
   /* Room for the cart bar above the tab bar (P9-04). */
-  padding: var(--rp-space-3) var(--rp-space-4)
-    calc(var(--rp-space-16) * 2 + var(--rp-space-8) + env(safe-area-inset-bottom));
+  padding: var(--rp-space-3) var(--rp-space-3)
+    calc(var(--rp-space-16) * 2 + var(--rp-space-4) + env(safe-area-inset-bottom));
 }
 
 .qr-message,
@@ -59,8 +70,8 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: var(--rp-space-3);
-  padding: var(--rp-space-5) var(--rp-space-4);
-  margin-bottom: var(--rp-space-3);
+  padding: var(--rp-space-3) var(--rp-space-4);
+  margin-bottom: var(--rp-space-2);
   border-radius: var(--rp-radius-lg);
   background: var(--rp-color-accent);
   color: var(--rp-color-on-accent);
@@ -68,7 +79,7 @@ body {
 }
 
 .qr-header__name {
-  font-size: var(--rp-font-size-3xl);
+  font-size: var(--rp-font-size-2xl);
   line-height: var(--rp-line-height-tight);
   letter-spacing: 0.01em;
   margin: 0;
@@ -78,8 +89,8 @@ body {
   display: inline-flex;
   align-items: center;
   gap: var(--rp-space-1);
-  margin: var(--rp-space-2) 0 0;
-  padding: var(--rp-space-1) var(--rp-space-3);
+  margin: var(--rp-space-1) 0 0;
+  padding: 2px var(--rp-space-2);
   border-radius: var(--rp-radius-full);
   background: rgb(255 255 255 / 0.18);
   font-weight: var(--rp-font-weight-semibold);
@@ -91,9 +102,10 @@ body {
   flex-direction: column;
   align-items: center;
   gap: var(--rp-space-1);
+  flex: none;
   min-width: var(--rp-touch-target);
   min-height: var(--rp-touch-target);
-  padding: var(--rp-space-2) var(--rp-space-3);
+  padding: var(--rp-space-1) var(--rp-space-2);
   border: 1px solid rgb(255 255 255 / 0.5);
   border-radius: var(--rp-radius-md);
   background: transparent;
@@ -130,21 +142,18 @@ body {
 }
 
 .qr-tools {
-  position: sticky;
-  top: 0;
-  z-index: var(--rp-z-sticky);
-  background: var(--rp-color-background);
-  padding: var(--rp-space-2) 0;
+  padding: var(--rp-space-1) 0 0;
 }
 
 .qr-search input {
   box-sizing: border-box;
   width: 100%;
-  min-height: var(--rp-touch-target);
+  min-height: 2.75rem;
   border: 1px solid var(--rp-color-border-strong);
   border-radius: var(--rp-radius-full);
   padding: 0 var(--rp-space-4);
   font: inherit;
+  font-size: var(--rp-font-size-sm);
   background: var(--rp-color-surface);
   color: var(--rp-color-text);
 }
@@ -154,11 +163,16 @@ body {
   /* One row that scrolls sideways, so more of the menu fits on a phone (P9-04). */
   flex-wrap: nowrap;
   overflow-x: auto;
+  overscroll-behavior-x: contain;
   scrollbar-width: none;
   gap: var(--rp-space-2);
   border: 0;
   margin: var(--rp-space-2) 0 0;
   padding: 0;
+  /* A fieldset is as wide as its content unless told otherwise: on a 360 px phone the chips made
+     the whole page wider than the screen, and it dragged sideways (P9-08). */
+  min-width: 0;
+  min-inline-size: 0;
 }
 
 .qr-chip {
@@ -167,26 +181,42 @@ body {
   display: inline-flex;
   align-items: center;
   gap: var(--rp-space-1);
-  min-height: var(--rp-touch-min);
+  min-height: 2.5rem;
   padding: 0 var(--rp-space-3);
-  border: 1px solid var(--rp-color-border-strong);
+  border: 1px solid var(--rp-color-border);
   border-radius: var(--rp-radius-full);
   background: var(--rp-color-surface);
   font-size: var(--rp-font-size-sm);
 }
 
+.qr-chip input {
+  margin: 0;
+}
+
+/* The menu's sections, the one bar that stays at the top while the dishes scroll (P9-08). */
 .qr-categories {
+  position: sticky;
+  top: 0;
+  z-index: var(--rp-z-sticky);
   display: flex;
   gap: var(--rp-space-2);
   overflow-x: auto;
-  padding: var(--rp-space-2) 0 var(--rp-space-1);
+  overscroll-behavior-x: contain;
+  margin: 0 calc(-1 * var(--rp-space-3));
+  padding: var(--rp-space-2) var(--rp-space-3);
+  background: var(--rp-color-background);
+  border-bottom: 1px solid var(--rp-color-border);
   font-size: var(--rp-font-size-sm);
   scrollbar-width: none;
 }
 
 .qr-categories a {
+  flex: none;
   white-space: nowrap;
-  padding: var(--rp-space-2) var(--rp-space-3);
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0 var(--rp-space-3);
   border-radius: var(--rp-radius-full);
   background: var(--rp-color-surface-sunken);
   color: var(--rp-color-text);
@@ -195,12 +225,13 @@ body {
 }
 
 .qr-section {
-  margin-top: var(--rp-space-5);
-  scroll-margin-top: 9rem;
+  margin-top: var(--rp-space-4);
+  /* Below the sticky section bar when a section is jumped to. */
+  scroll-margin-top: 3.5rem;
 }
 
 .qr-section__title {
-  font-size: var(--rp-font-size-xl);
+  font-size: var(--rp-font-size-lg);
   margin: 0 0 var(--rp-space-2);
 }
 
@@ -214,13 +245,30 @@ body {
 
 .qr-dish {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--rp-space-3);
-  padding: var(--rp-space-3);
-  margin-bottom: var(--rp-space-3);
-  border-radius: var(--rp-radius-lg);
+  padding: var(--rp-space-2) var(--rp-space-3);
+  margin-bottom: var(--rp-space-2);
+  border: 1px solid var(--rp-color-border);
+  border-radius: var(--rp-radius-md);
   background: var(--rp-color-surface);
-  box-shadow: var(--rp-elevation-1);
+}
+
+/* Two columns of dishes where the screen has room (a tablet, a phone on its side). */
+@media (min-width: 40rem) {
+  .qr-page {
+    max-width: 60rem;
+  }
+
+  .qr-dishes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--rp-space-2);
+  }
+
+  .qr-dish {
+    margin-bottom: 0;
+  }
 }
 
 /* A sold-out dish fades, but its words stay readable on the page colour (WCAG AA, 6.3:1). */
@@ -242,8 +290,8 @@ body {
 .qr-dish__photo {
   flex: none;
   align-self: center;
-  width: 5.5rem;
-  height: 5.5rem;
+  width: 4rem;
+  height: 4rem;
   aspect-ratio: auto;
   border-radius: var(--rp-radius-md);
 }
@@ -259,20 +307,31 @@ body {
   align-items: center;
   gap: var(--rp-space-2);
   margin: 0;
+  font-size: var(--rp-font-size-md);
   font-weight: var(--rp-font-weight-semibold);
+  line-height: var(--rp-line-height-tight);
 }
 
+/* Two lines at most; the dish's sheet shows it all. */
 .qr-dish__description {
-  margin: var(--rp-space-1) 0 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  margin: 2px 0 0;
   color: var(--rp-color-text-muted);
   font-size: var(--rp-font-size-sm);
+  line-height: var(--rp-line-height-tight);
 }
 
 .qr-dish__facts {
   display: flex;
-  gap: var(--rp-space-3);
+  flex-wrap: wrap;
+  gap: 0 var(--rp-space-2);
   align-items: baseline;
-  margin: var(--rp-space-1) 0 0;
+  margin: 2px 0 0;
+  font-size: var(--rp-font-size-sm);
 }
 
 .qr-dish__price {
@@ -282,6 +341,18 @@ body {
 .qr-dish__action {
   flex: none;
   align-self: center;
+}
+
+.qr-dish__action .rp-button {
+  min-height: 2.5rem;
+  min-width: 4.5rem;
+  padding-inline: var(--rp-space-3);
+  font-size: var(--rp-font-size-sm);
+}
+
+/* A menu without photos is a clean list of names and prices (P9-08). */
+.qr-dish[data-text-only] {
+  padding-block: var(--rp-space-3);
 }
 
 .qr-dish__unavailable {
@@ -297,10 +368,10 @@ body {
   position: fixed;
   left: 0;
   right: 0;
-  /* Above the tab bar (P9-04). */
-  bottom: calc(4rem + env(safe-area-inset-bottom));
+  /* Just above the tab bar, never over it (P9-04, P9-08). */
+  bottom: calc(3.5rem + env(safe-area-inset-bottom));
   z-index: var(--rp-z-sticky);
-  padding: var(--rp-space-3) var(--rp-space-4) calc(var(--rp-space-3) + env(safe-area-inset-bottom));
+  padding: var(--rp-space-2) var(--rp-space-3);
   background: var(--rp-color-surface-raised);
   box-shadow: var(--rp-elevation-2);
 }
@@ -578,7 +649,7 @@ body {
   align-items: center;
   justify-content: center;
   gap: 2px;
-  min-height: 4rem;
+  min-height: 3.5rem;
   border: 0;
   background: transparent;
   color: var(--rp-color-text-muted);

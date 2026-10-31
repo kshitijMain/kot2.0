@@ -25,7 +25,14 @@ export function PairingScreen() {
 
   async function submit(event: SyntheticEvent): Promise<void> {
     event.preventDefault();
-    if (!valid || busy) return;
+    if (busy) return;
+    // Say what is wrong rather than leave the button grey (P9-08): a PIN is the usual mistake.
+    if (!valid) {
+      setError(
+        /^\d{1,6}$/.test(code.replace('-', '')) ? t('pairing.notAPin') : t('pairing.codeFormat'),
+      );
+      return;
+    }
     setBusy(true);
     setError(undefined);
     try {
@@ -65,6 +72,7 @@ export function PairingScreen() {
             value={code}
             onChange={(event) => {
               setCode(formatPairingCode(event.target.value));
+              setError(undefined);
             }}
             error={error}
             autoComplete="off"
@@ -73,10 +81,13 @@ export function PairingScreen() {
             disabled={!secure}
             required
           />
-          <Button type="submit" size="lg" disabled={!secure || !valid || busy}>
+          <Button type="submit" size="lg" disabled={!secure || busy || code === ''}>
             {busy ? t('pairing.working') : t('pairing.submit')}
           </Button>
         </form>
+        {onServerPc() ? null : (
+          <p className="dashboard-section__hint">{t('pairing.firstScreen')}</p>
+        )}
       </Card>
     </main>
   );
