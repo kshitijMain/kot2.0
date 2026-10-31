@@ -1,6 +1,7 @@
 import type { OrderView, PendingApprovalsResponse } from '@rp/contracts';
 import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { SERVICE } from './dashboard-fixture.js';
 import type { FakeServer } from './fake-server.js';
 import { STAFF } from './fakes.js';
 import { expectNoAxeViolations, renderConsole, server, signsInAs, t } from './harness.js';
@@ -184,5 +185,18 @@ describe('[ORD-004] [WTR-004] approving diners’ orders at the POS', () => {
     expect(fake.callsTo('POST', `/api/v1/orders/${ORDER}/reject`)[0]?.body).toEqual({
       reason: 'Kitchen closed',
     });
+  });
+});
+
+describe('[ORD-004] [MGR-002] approving on the manager dashboard (P9-10)', () => {
+  it('shows the waiting order first on the dashboard and approves it there', async () => {
+    const fake = posServer()
+      .on('GET', '/api/v1/order-feed', () => ({ status: 200, body: SERVICE }))
+      .on('GET', '/api/v1/alerts', () => ({ status: 200, body: { alerts: [] } }));
+    const { user } = await renderConsole({ fake, path: '/manage', signedIn: 'MANAGER' });
+    const approvals = await panel();
+    expect(approvals.getByText('2 × Paneer Tikka')).toBeVisible();
+    await user.click(approvals.getByRole('button', { name: t('approvals.approveOf', { title }) }));
+    expect(await screen.findByText(t('approvals.approved', { number: 31 }))).toBeVisible();
   });
 });

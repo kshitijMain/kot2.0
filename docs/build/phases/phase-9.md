@@ -214,3 +214,28 @@ Acceptance:
   tapping it; no serious accessibility violation (e2e).
 - Every Mannat dish has a description on the QR menu (integration).
 - A 360 px phone still never scrolls sideways (e2e).
+
+## P9-10 Approving a diner's order from its alert, and on the manager dashboard
+
+Requirements: ORD-003, ORD-004, QR-007, MGR-002, MGR-008, NTF-004.
+
+Found by the Business Owner in the pilot: two QR orders stayed "Received. Waiting for the
+restaurant to accept it." on the diner's phone after the manager "accepted" them. The manager had
+pressed **Acknowledge** on the approval alerts. That only silences an alert, and the orders were
+still waiting for approval. The manager dashboard, where a manager signs in, had no approvals panel
+(only the POS floor had one), so the alert was the only thing they saw.
+
+Deliverables:
+
+- Alert centre: an `ORDER_PENDING_APPROVAL` alert shows **Approve** and **Reject** (with the reason
+  the diner reads) for anyone with `ORDER_APPROVE_CUSTOMER`, instead of Acknowledge. Approving or
+  rejecting clears the alert, as before.
+- Manager dashboard: the POS floor's Approvals panel (Approve, Change, Reject) first on the
+  overview.
+
+Acceptance:
+
+- Approve and reject from the alert send the same requests as the POS panel (console).
+- The dashboard shows the waiting order and approves it (console).
+- After approval the diner sees accepted, then every dish Cooking, Ready and Served, each step
+  carried by the PC to the relay (integration).

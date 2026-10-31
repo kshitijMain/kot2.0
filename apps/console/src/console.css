@@ -830,6 +830,12 @@ body {
   margin: 0;
 }
 
+.alert-row__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rp-space-2);
+}
+
 .alert-row__meta {
   display: flex;
   flex-wrap: wrap;

@@ -133,7 +133,7 @@ describe('[P9] the QR pilot at Mannat (ADR-0024)', () => {
     );
   });
 
-  it('[QR-009] [ORD-003] a diner at table 2 orders; the line brings it, the manager accepts, the kitchen gets a KOT', async () => {
+  it('[QR-009] [ORD-003] [QR-007] a diner at table 2 orders; the manager accepts; the kitchen and floor move it to served, and the diner sees each step', async () => {
     const menu = QrMenuResponse.parse(
       await (
         await fetch(`${relay.baseUrl}/qr-menu`, { headers: { 'x-rp-table-token': codeOf('2') } })
@@ -222,6 +222,48 @@ describe('[P9] the QR pilot at Mannat (ADR-0024)', () => {
       5_000,
       'the diner to see the order accepted',
     );
+
+    // Cooking, ready, served: each step in the kitchen and on the floor reaches the diner's page.
+    // (Picking up at the pass serves the dish too where `kds.pickupMarksServed` is on.)
+    const items = await prisma.orderItem.findMany({
+      where: { orderId: order.id, parentOrderItemId: null },
+      select: { id: true },
+    });
+    // At a phone's pace: the relay lets one table read 5 times a second.
+    const diner = async () => {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      await qr.run();
+      const response = await fetch(`${relay.baseUrl}/order-status?id=${relayOrderId}`, {
+        headers: { 'x-rp-table-token': codeOf('2') },
+      });
+      const body: unknown = await response.json();
+      if (!response.ok) throw new Error(`${String(response.status)} ${JSON.stringify(body)}`);
+      return QrOrderView.parse(body);
+    };
+    for (const [event, state] of [
+      ['START_PREPARING', 'PREPARING'],
+      ['MARK_READY', 'READY'],
+      ['SERVE', 'SERVED'],
+    ] as const) {
+      for (const item of items) {
+        const moved = await server()
+          .post(`/api/v1/order-items/${item.id}/status`)
+          .set(authHeaders(kit.deviceId, manager.accessToken))
+          .send({ event });
+        expect(moved.status, `${event}: ${JSON.stringify(moved.body)}`).toBe(200);
+      }
+      await until(
+        async () => {
+          const view = await diner();
+          const states = (view.detail.items ?? []).map((line) => line.state);
+          return states.length === items.length && states.every((seen) => seen === state)
+            ? view
+            : undefined;
+        },
+        5_000,
+        `the diner to see every dish ${state}`,
+      );
+    }
   });
 
   it('[QR-011] puts table 2’s printed bill, with the phone on it and UPI, on the diner’s page', async () => {
