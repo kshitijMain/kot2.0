@@ -70,6 +70,17 @@ none; the same number at another table sees none; and once the table is settled 
 next party never sees the earlier one's orders, even with the same number (orders older than 12
 hours are never shown either).
 
+## Dish descriptions on a pilot set up before P9-09
+
+Since P9-09 the set-up gives every dish a one-line description. On a database set up before that:
+
+```bash
+(set -a; source .pilot/server.env; set +a; node apps/server/dist/database/pilot-cli.js --menu-text)
+```
+
+Then publish the menu on the POS (Manage → Menu → Publish). The QR page shows the descriptions
+within a minute.
+
 ## Over ngrok (phones on mobile data)
 
 `scripts/pilot/mannat-ngrok.sh` puts the relay and the QR site behind one public ngrok address

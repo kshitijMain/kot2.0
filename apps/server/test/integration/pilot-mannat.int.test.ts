@@ -121,6 +121,18 @@ describe('[P9] the QR pilot at Mannat (ADR-0024)', () => {
     }
   });
 
+  it('[MENU-002] describes every dish in a line, as the diner reads the menu (P9-09)', async () => {
+    const response = await fetch(`${relay.baseUrl}/qr-menu`, {
+      headers: { 'x-rp-table-token': codeOf('1') },
+    });
+    const items = QrMenuResponse.parse(await response.json()).document?.menu.items ?? [];
+    expect(items.length).toBeGreaterThan(30);
+    expect(items.filter((item) => (item.description ?? '') === '')).toEqual([]);
+    expect(items.find((item) => item.name === 'Chapati')?.description).toBe(
+      'Soft whole-wheat flatbread from the tawa.',
+    );
+  });
+
   it('[QR-009] [ORD-003] a diner at table 2 orders; the line brings it, the manager accepts, the kitchen gets a KOT', async () => {
     const menu = QrMenuResponse.parse(
       await (

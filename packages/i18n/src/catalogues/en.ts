@@ -2293,6 +2293,21 @@ until you press Publish.
     added: '{name} added to your order',
     choose: 'Choose',
     chooseOf: 'Choose options for {name}',
+    /** P9-09: the menu as the diner reads it. */
+    dishCount: '{count, plural, one {# dish} other {# dishes}}',
+    bestseller: 'Bestseller',
+    inCart: '{count} in cart',
+    lessOf: 'One fewer {name}',
+    moreOf: 'One more {name}',
+    /** P9-09: where an order is, as a tracker. */
+    progress: {
+      label: 'Where your order is',
+      sent: 'Sent',
+      accepted: 'Accepted',
+      preparing: 'Cooking',
+      ready: 'Ready',
+      served: 'Served',
+    },
     item: {
       quantity: 'How many',
       instructions: 'Anything the kitchen should know? (optional)',
@@ -2302,6 +2317,8 @@ until you press Publish.
     },
     cart: {
       open: 'Your order · {count, plural, one {# item} other {# items}} · {total}',
+      items: '{count, plural, one {# item} other {# items}}',
+      view: 'View order',
       title: 'Your order',
       empty: 'Nothing here yet. Add dishes from the menu.',
       remove: 'Remove {name}',

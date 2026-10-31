@@ -210,6 +210,11 @@ body {
   scrollbar-width: none;
 }
 
+.qr-categories a[aria-current='true'] {
+  background: var(--rp-color-accent);
+  color: var(--rp-color-on-accent);
+}
+
 .qr-categories a {
   flex: none;
   white-space: nowrap;
@@ -231,8 +236,17 @@ body {
 }
 
 .qr-section__title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--rp-space-2);
   font-size: var(--rp-font-size-lg);
   margin: 0 0 var(--rp-space-2);
+}
+
+.qr-section__count {
+  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-sm);
+  font-weight: var(--rp-font-weight-regular);
 }
 
 .qr-dishes,
@@ -873,4 +887,185 @@ body {
 
 .qr-paid-ask {
   margin-top: var(--rp-space-4);
+}
+
+/* ---------------------------------------------------------------- P9-09: the menu as a diner uses it */
+
+/* A section tapped in the bar glides there; never for those who asked for less motion. The bar's
+   mark switches at once: a fade would show a pill in colours that cannot be read on the way. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+.qr-dish__badge {
+  margin-top: 2px;
+  font-size: var(--rp-font-size-xs);
+}
+
+.qr-dish__action {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.qr-dish__in-cart {
+  color: var(--rp-color-accent);
+  font-size: var(--rp-font-size-xs);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+/* The card's own stepper, compact but still a thumb's width per button. */
+.qr-dish__stepper {
+  gap: var(--rp-space-1);
+  border: 1px solid var(--rp-color-accent);
+  border-radius: var(--rp-radius-md);
+  padding: 2px;
+}
+
+.qr-dish__stepper .rp-icon-button {
+  min-width: 2.25rem;
+  min-height: 2.25rem;
+  border: 0;
+  color: var(--rp-color-accent);
+}
+
+.qr-dish__stepper .rp-stepper__value {
+  min-width: 1.5rem;
+  text-align: center;
+  font-weight: var(--rp-font-weight-bold);
+  color: var(--rp-color-accent);
+}
+
+/* The cart bar: what is in it on the left, the way to it on the right. */
+.qr-cart-bar__button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rp-space-3);
+  width: 100%;
+  min-height: 3.25rem;
+  padding: 0 var(--rp-space-4);
+  border: 0;
+  border-radius: var(--rp-radius-md);
+  background: var(--rp-color-accent);
+  color: var(--rp-color-on-accent);
+  font: inherit;
+  cursor: pointer;
+}
+
+.qr-cart-bar__summary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  font-size: var(--rp-font-size-sm);
+  line-height: var(--rp-line-height-tight);
+}
+
+.qr-cart-bar__total {
+  font-size: var(--rp-font-size-md);
+  font-weight: var(--rp-font-weight-bold);
+}
+
+.qr-cart-bar__cta {
+  font-weight: var(--rp-font-weight-bold);
+}
+
+.qr-cart-bar__cta::after {
+  content: ' ›';
+}
+
+/* A little bounce when something is added (the bar is drawn again for each count). */
+@media (prefers-reduced-motion: no-preference) {
+  .qr-cart-bar__button {
+    animation: qr-cart-added 300ms ease-out;
+  }
+}
+
+@keyframes qr-cart-added {
+  0% {
+    transform: scale(0.97);
+  }
+  60% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Where an order is: five dots on a line, the steps reached filled, the next one pulsing. */
+.qr-progress {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: var(--rp-space-1) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.qr-progress__step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--rp-space-1);
+  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-xs);
+  text-align: center;
+}
+
+/* The line to the previous step. */
+.qr-progress__step + .qr-progress__step::before {
+  content: '';
+  position: absolute;
+  top: 0.4rem;
+  right: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--rp-color-border);
+}
+
+.qr-progress__step[data-state='done']::before {
+  background: var(--rp-color-success);
+}
+
+.qr-progress__dot {
+  position: relative;
+  z-index: 1;
+  width: 0.875rem;
+  height: 0.875rem;
+  border: 2px solid var(--rp-color-border-strong);
+  border-radius: 50%;
+  background: var(--rp-color-surface);
+}
+
+.qr-progress__step[data-state='done'] {
+  color: var(--rp-color-text);
+}
+
+.qr-progress__step[data-state='done'] .qr-progress__dot {
+  border-color: var(--rp-color-success);
+  background: var(--rp-color-success);
+}
+
+.qr-progress__step[data-state='next'] .qr-progress__dot {
+  border-color: var(--rp-color-accent);
+}
+
+.qr-progress__step[aria-current='step'] {
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .qr-progress__step[data-state='next'] .qr-progress__dot {
+    animation: qr-next-step 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes qr-next-step {
+  50% {
+    box-shadow: 0 0 0 4px rgb(138 28 43 / 0.15);
+  }
 }

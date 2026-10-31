@@ -5,6 +5,7 @@ import type { QrOrderView } from '@rp/contracts/relay';
 import { displayDateTime } from '@rp/domain';
 import { Button, Icon, StatusChip } from '@rp/ui-web';
 import { useT } from './i18n';
+import { ORDER_STEPS, orderStep } from './progress';
 
 /** Where an order is, by the page's own clock too: one nobody picked up in time reads EXPIRED. */
 export function shownStatus(order: QrOrderView, now: number): QrOrderView['status'] {
@@ -83,6 +84,7 @@ export function Orders({
                 />
                 <span>{t(`qrSite.orders.${status}`)}</span>
               </p>
+              <Progress step={orderStep(order, status)} />
               {status === 'REJECTED' && order.detail.rejectionReason !== undefined ? (
                 <p className="qr-order__reason">
                   {t('qrSite.orders.reason', { reason: order.detail.rejectionReason })}
@@ -131,5 +133,29 @@ export function Orders({
         })}
       </ul>
     </section>
+  );
+}
+
+/**
+ * Where the order is, as a tracker (P9-09): the steps reached are filled, the next one pulses.
+ * Nothing for an order the restaurant did not take.
+ */
+function Progress({ step }: { step: number | undefined }) {
+  const t = useT();
+  if (step === undefined) return null;
+  return (
+    <ol className="qr-progress" aria-label={t('qrSite.progress.label')}>
+      {ORDER_STEPS.map((name, index) => (
+        <li
+          key={name}
+          className="qr-progress__step"
+          data-state={index <= step ? 'done' : index === step + 1 ? 'next' : 'todo'}
+          aria-current={index === step ? 'step' : undefined}
+        >
+          <span className="qr-progress__dot" aria-hidden="true" />
+          <span className="qr-progress__label">{t(`qrSite.progress.${name}`)}</span>
+        </li>
+      ))}
+    </ol>
   );
 }

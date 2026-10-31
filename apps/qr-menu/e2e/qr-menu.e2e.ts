@@ -541,3 +541,30 @@ test.describe('[P9-08] the same number on any phone, and a page that never moves
     await context.close();
   });
 });
+
+test.describe('[P9-09] a menu made for the phone', () => {
+  test('[QR-002] changes a dish’s count on its card, and the sections follow the scroll', async ({
+    page,
+  }) => {
+    // No glide or fade, so the checks below see where the page lands, not a frame on the way.
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    await tablePage(page, 'T2');
+    const mains = page.getByRole('region', { name: 'Main Course' });
+    await inMenu(page, 'Add Dal Makhani').click();
+    // Once in the order, the card's Add becomes − 1 +, like a delivery app.
+    await mains.getByRole('button', { name: s.moreOf.replace('{name}', 'Dal Makhani') }).click();
+    await expect(page.getByRole('button', { name: /Your order · 2 items/ })).toBeVisible();
+    const fewer = mains.getByRole('button', { name: s.lessOf.replace('{name}', 'Dal Makhani') });
+    await fewer.click();
+    await fewer.click();
+    await expect(inMenu(page, 'Add Dal Makhani')).toBeVisible();
+    await expect(page.getByRole('button', { name: /Your order ·/ })).toHaveCount(0);
+
+    // The section in view is the one marked in the bar at the top.
+    const bar = page.getByRole('navigation', { name: s.categories });
+    const last = bar.getByRole('link').last();
+    await last.click();
+    await expect(last).toHaveAttribute('aria-current', 'true');
+    await expectAccessible(page);
+  });
+});

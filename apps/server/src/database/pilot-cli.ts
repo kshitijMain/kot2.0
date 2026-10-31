@@ -6,6 +6,10 @@
 // `--tents-only --site <address> --tents <file>` (P9-07) sets nothing up: it writes the tents of
 // the restaurant already there for the site's address now (after a new ngrok or domain address),
 // the same codes the console's Manage → QR codes prints.
+//
+// `--menu-text` (P9-09) gives the dishes of a restaurant set up before the menu had descriptions
+// the one-line descriptions of the set-up menu, where a dish has none; nothing else changes.
+// Publish the menu afterwards (Manage → Menu → Publish) so the QR page and the phones show them.
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
@@ -24,6 +28,7 @@ const { values } = parseArgs({
     site: { type: 'string', default: process.env.RP_QR_SITE_URL },
     tents: { type: 'string' },
     'tents-only': { type: 'boolean', default: false },
+    'menu-text': { type: 'boolean', default: false },
   },
 });
 const databaseUrl = process.env.DATABASE_URL;
@@ -56,6 +61,37 @@ async function writeTents(
     { generatedAt: new Date().toISOString() },
   );
   await writeFile(file, pdf);
+}
+
+if (values['menu-text']) {
+  try {
+    const restaurant = await prisma.restaurant.findFirst({
+      orderBy: { createdAt: 'asc' },
+      select: { id: true },
+    });
+    if (restaurant === null)
+      throw new Error('There is no restaurant here yet: run the set-up first.');
+    let filled = 0;
+    for (const spec of MANNAT_PROFILE.items) {
+      if (spec.description === undefined) continue;
+      const { count } = await prisma.item.updateMany({
+        where: {
+          restaurantId: restaurant.id,
+          name: spec.name,
+          archivedAt: null,
+          OR: [{ description: null }, { description: '' }],
+        },
+        data: { description: spec.description },
+      });
+      filled += count;
+    }
+    process.stdout.write(
+      `${String(filled)} dishes got a description. Publish the menu (Manage → Menu → Publish) to show them.\n`,
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
+  process.exit(0);
 }
 
 if (values['tents-only']) {

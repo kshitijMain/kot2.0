@@ -73,6 +73,8 @@ type Food = 'VEG' | 'NON_VEG' | 'EGG';
 
 export interface ItemSpec {
   readonly name: string;
+  /** One line for the menu (P9-09). */
+  readonly description?: string;
   readonly category: string;
   readonly price: number;
   readonly food: Food;
@@ -499,6 +501,7 @@ export async function seedDevelopmentData(
             id,
             categoryId: categoryIds.get(spec.category) ?? '',
             name: spec.name,
+            ...(spec.description !== undefined && { description: spec.description }),
             basePrice: spec.price,
             taxGroupId: spec.tax === 'gst18' ? gst18.id : gst5.id,
             foodType: spec.food,

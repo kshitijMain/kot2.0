@@ -176,3 +176,41 @@ Acceptance:
 - Another phone with the same number sees the orders, and another number does not (e2e).
 - After the table closes, the number sees nothing of it (integration).
 - A 360 px phone never scrolls sideways, and the tabs stay tappable with a cart (e2e).
+
+## P9-09 A menu made for the phone: sections that follow the scroll, a stepper on the card, an order tracker
+
+Requirements: QR-002, QR-004, QR-007, MENU-002, NFR-U03.
+
+Asked by the Business Owner: look at how the best menus and food apps present a menu, and make the
+QR page as easy. What the research said (Swiggy and Zomato case studies, QR-menu guides):
+
+- the category bar should follow the scroll;
+- a dish's count should change on its card;
+- dishes need a one-line description;
+- bestsellers should be marked;
+- the order's place should show as a delivery-style tracker;
+- a sticky cart bar should show the count and the total.
+
+Deliverables:
+
+- Section bar: the section being read is marked, and the bar scrolls sideways to keep it in view;
+  tapping one glides there (not with reduced motion).
+- Each section heading says how many dishes it has.
+- Dish card:
+  - a dish without options turns its Add into − n + once in the order;
+  - a dish with options says "n in cart" under Choose;
+  - a Bestseller badge (the restaurant's tag or the recommendation engine's bestsellers).
+- Cart bar: "n items · ₹ total" on the left and "View order ›" on the right, with a short pulse
+  when something is added.
+- My orders: a five-step tracker per order (Sent, Accepted, Cooking, Ready, Served). It takes the
+  step every dish still coming has reached, and there is no tracker for an order not taken.
+- Mannat's 32 dishes get a one-line description. `pilot-cli --menu-text` fills them in on a
+  database set up before, and the manager then publishes the menu.
+
+Acceptance:
+
+- The tracker's steps for every status and dish state (unit).
+- The card stepper adds and removes, the cart bar counts, and the last section is marked after
+  tapping it; no serious accessibility violation (e2e).
+- Every Mannat dish has a description on the QR menu (integration).
+- A 360 px phone still never scrolls sideways (e2e).
