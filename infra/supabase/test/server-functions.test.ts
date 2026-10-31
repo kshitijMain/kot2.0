@@ -14,6 +14,7 @@ import {
   RelaySessionResponse,
   SyncRelayTablesResponse,
   TABLE_TOKEN_HEADER,
+  QrTableBillResponse,
   UpdateQrOrderResponse,
 } from '@rp/contracts/relay';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -22,6 +23,7 @@ import { orderStatus } from '../src/order-status.js';
 import { qrMenu } from '../src/qr-menu.js';
 import { SESSION_SECONDS, server } from '../src/server.js';
 import { submitOrder } from '../src/submit-order.js';
+import { tableBill } from '../src/table-bill.js';
 import { IDS, qrMenuDocument } from './helpers/qr-menu.js';
 import {
   edgeDatabase,
@@ -648,5 +650,89 @@ describe('[MENU-008] menu photos', () => {
     expect((await sweep([], newCredential())).status).toBe(401);
     const bad = await asServer('photos/sweep', { method: 'POST', body: { inUse: ['nope'] } });
     expect(bad.status).toBe(400);
+  });
+});
+
+describe('[QR-011] the table’s printed bill for its diners (P9-03, ADR-0024)', () => {
+  const bill = (grandTotal = 61_200) => ({
+    invoices: [
+      {
+        invoiceNumber: 'INV/26-27/000007',
+        issuedAt: new Date().toISOString(),
+        status: 'ISSUED' as const,
+        lines: [{ description: 'Dal Makhani', quantity: 2, amount: 56_000 }],
+        subtotal: 56_000,
+        discountTotal: 0,
+        serviceCharge: 0,
+        taxLines: [
+          { label: 'CGST 2.5%', amount: 1_400 },
+          { label: 'SGST 2.5%', amount: 1_400 },
+        ],
+        roundOff: 2_400,
+        grandTotal,
+      },
+    ],
+    upi: { upiId: 'mannat@okhdfcbank', payeeName: 'Mannat' },
+  });
+  const putBill = (tableId: string, body: unknown, credential?: string) =>
+    asServer(`tables/${tableId}/bill`, { method: 'PUT', body, credential });
+  const dinerBill = async (token: string) =>
+    QrTableBillResponse.parse((await diner(tableBill, 'table-bill', token)).body);
+
+  it('shows the bill to the table’s diners only, until it is cleared', async () => {
+    const [first, second] = a.tables;
+    const put = await putBill(first.id, { bill: bill() });
+    expect(put.status, JSON.stringify(put.body)).toBe(200);
+    expect(put.body).toEqual({ tableId: first.id, cleared: false });
+
+    const seen = await dinerBill(first.token);
+    expect(seen.bill?.invoices[0]?.grandTotal).toBe(61_200);
+    expect(seen.bill?.upi).toEqual({ upiId: 'mannat@okhdfcbank', payeeName: 'Mannat' });
+    // The next table, and another restaurant's tables, see nothing of it.
+    expect((await dinerBill(second.token)).bill).toBeNull();
+    expect((await dinerBill(b.tables[0].token)).bill).not.toEqual(seen.bill);
+
+    // Settled, then the table closes: the next sitting never sees it.
+    await putBill(first.id, {
+      bill: { ...bill(), invoices: [{ ...bill().invoices[0]!, status: 'SETTLED' }] },
+    });
+    expect((await dinerBill(first.token)).bill?.invoices[0]?.status).toBe('SETTLED');
+    expect((await putBill(first.id, { bill: null })).body).toEqual({
+      tableId: first.id,
+      cleared: true,
+    });
+    expect((await dinerBill(first.token)).bill).toBeNull();
+  });
+
+  it('[ORD-014] refuses a bill that is not the contract’s, and another restaurant’s table', async () => {
+    const wrong = await putBill(a.tables[0].id, {
+      bill: { ...bill(), upi: { upiId: 'not a upi id', payeeName: 'X' } },
+    });
+    expect(wrong.status).toBe(400);
+    const fractional = await putBill(a.tables[0].id, { bill: bill(612.5) });
+    expect(fractional.status).toBe(400);
+    const theirs = await putBill(b.tables[0].id, { bill: bill() });
+    expect(theirs.status).toBe(404);
+    expect(codeOf(theirs.body)).toBe('TABLE_NOT_FOUND');
+  });
+
+  it('clears a bill nobody cleared after a day (BRD §9.3)', async () => {
+    await putBill(a.tables[1].id, { bill: bill() });
+    const client = await db.admin.connect();
+    try {
+      await client.query('BEGIN');
+      await client.query('SET LOCAL session_replication_role = replica');
+      await client.query(
+        "UPDATE relay.qr_table_bills SET updated_at = now() - interval '25 hours' WHERE table_id = $1",
+        [a.tables[1].id],
+      );
+      await client.query('COMMIT');
+    } finally {
+      client.release();
+    }
+    await db.as('relay_janitor', undefined, (client) =>
+      client.query('SELECT relay.purge_table_bills()'),
+    );
+    expect((await dinerBill(a.tables[1].token)).bill).toBeNull();
   });
 });

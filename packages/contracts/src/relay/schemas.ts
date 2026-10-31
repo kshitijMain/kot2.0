@@ -1,5 +1,14 @@
 import { z } from 'zod';
-import { Id, IdempotencyKey, IsoDate, OrderItemState, PriceMode, Timestamp } from '../common.js';
+import {
+  Id,
+  IdempotencyKey,
+  IsoDate,
+  OrderItemState,
+  Paise,
+  PriceMode,
+  SignedPaise,
+  Timestamp,
+} from '../common.js';
 import { MenuSnapshot } from '../menu.js';
 import { INSTRUCTION_HARD_MAX_LENGTH, OrderLineRequest, RejectedLine } from '../order.js';
 import { RecommendationTarget } from '../recommendations.js';
@@ -346,7 +355,7 @@ export type UpdateQrOrderResponse = z.infer<typeof UpdateQrOrderResponse>;
 // ---------------------------------------------------------------- call waiter / request bill (P5-05c)
 
 /** What a diner can ask for from the QR page (QR-011): the tablet's buttons. */
-export const QrServiceRequestType = z.enum(['WATER', 'WAITER', 'BILL']);
+export const QrServiceRequestType = z.enum(['WATER', 'WAITER', 'BILL', 'PAID']);
 export type QrServiceRequestType = z.infer<typeof QrServiceRequestType>;
 
 /**
@@ -448,3 +457,69 @@ export const RelayPhotoSweepResponse = z.object({
   missing: z.array(Id),
 });
 export type RelayPhotoSweepResponse = z.infer<typeof RelayPhotoSweepResponse>;
+
+// ---------------------------------------------------------------- the table's bill and UPI (P9-03)
+
+/** A UPI ID (VPA), as NPCI writes it: `name@bank`. */
+export const UpiId = z.string().regex(/^[A-Za-z0-9._-]{2,256}@[A-Za-z][A-Za-z0-9.-]{1,63}$/);
+export type UpiId = z.infer<typeof UpiId>;
+
+/** Where diners pay by UPI: the restaurant's UPI ID and the name their apps show. */
+export const QrUpiPayee = z.strictObject({
+  upiId: UpiId,
+  payeeName: z.string().min(1).max(60),
+});
+export type QrUpiPayee = z.infer<typeof QrUpiPayee>;
+
+/** One printed invoice of the table, as the diner reads it: amounts in paise, as printed. */
+export const QrBillInvoice = z.strictObject({
+  invoiceNumber: z.string().min(1).max(16),
+  issuedAt: Timestamp,
+  /** SETTLED once the restaurant has taken the payment. */
+  status: z.enum(['ISSUED', 'SETTLED']),
+  lines: z
+    .array(
+      z.strictObject({
+        description: z.string().min(1).max(200),
+        quantity: z.int().positive(),
+        amount: Paise,
+      }),
+    )
+    .max(300),
+  subtotal: Paise,
+  discountTotal: Paise,
+  serviceCharge: Paise,
+  /** Each tax as printed, e.g. "CGST 2.5%". */
+  taxLines: z.array(z.strictObject({ label: z.string().min(1).max(40), amount: Paise })).max(20),
+  roundOff: SignedPaise,
+  grandTotal: Paise,
+});
+export type QrBillInvoice = z.infer<typeof QrBillInvoice>;
+
+/**
+ * The table's bill for its current sitting (P9-03, ADR-0024): every invoice printed for it (a split
+ * bill has several), and how to pay by UPI. The restaurant publishes it when it prints, settles or
+ * voids an invoice, and clears it when the table closes, so the next sitting never sees it.
+ */
+export const QrTableBill = z.strictObject({
+  invoices: z.array(QrBillInvoice).min(1).max(20),
+  upi: QrUpiPayee.nullable(),
+});
+export type QrTableBill = z.infer<typeof QrTableBill>;
+
+/** The restaurant's side: the table's bill, or null to clear it. */
+export const PublishTableBillRequest = z.strictObject({ bill: QrTableBill.nullable() });
+export type PublishTableBillRequest = z.infer<typeof PublishTableBillRequest>;
+
+export const PublishTableBillResponse = z.object({ tableId: Id, cleared: z.boolean() });
+export type PublishTableBillResponse = z.infer<typeof PublishTableBillResponse>;
+
+export const RelayTableParams = z.strictObject({ tableId: Id });
+export type RelayTableParams = z.infer<typeof RelayTableParams>;
+
+/** The diner's side: the bill of the table their code opens, or none yet. */
+export const QrTableBillResponse = z.object({
+  bill: QrTableBill.nullable(),
+  updatedAt: Timestamp.nullable(),
+});
+export type QrTableBillResponse = z.infer<typeof QrTableBillResponse>;

@@ -19,7 +19,8 @@
       "SUPPORT_REQUEST",
       "VENDOR_RESTORE_CODE",
       "SIGN_IN_LOCKED",
-      "OUT_OF_STOCK"
+      "OUT_OF_STOCK",
+      "PAYMENT_CLAIMED"
     ]
   },
   "output": {
@@ -42,7 +43,8 @@
       "SUPPORT_REQUEST",
       "VENDOR_RESTORE_CODE",
       "SIGN_IN_LOCKED",
-      "OUT_OF_STOCK"
+      "OUT_OF_STOCK",
+      "PAYMENT_CLAIMED"
     ]
   }
 }

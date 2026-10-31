@@ -32,7 +32,10 @@ export function startJobs(options: {
     }
   };
   const expire = () => run('expiry', 'SELECT relay.expire_orders()');
-  const purge = () => run('retention', 'SELECT relay.purge()');
+  const purge = async () => {
+    await run('retention', 'SELECT relay.purge()');
+    await run('bill retention', 'SELECT relay.purge_table_bills()');
+  };
   const expiring = setInterval(() => void expire(), options.expireEveryMs ?? 60_000);
   const purging = setInterval(() => void purge(), options.purgeEveryMs ?? 3_600_000);
   expiring.unref();

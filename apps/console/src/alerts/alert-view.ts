@@ -38,6 +38,7 @@ const GROUP_OF_TYPE: Readonly<
   VENDOR_RESTORE_CODE: 'system',
   SIGN_IN_LOCKED: 'staff',
   OUT_OF_STOCK: 'kitchen',
+  PAYMENT_CLAIMED: 'tables',
 };
 
 export function groupOf(alert: AlertView, staffId: string): AlertGroup {

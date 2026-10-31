@@ -691,7 +691,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-01 The relay on a server of our own, with an open line to each restaurant (the server
       itself: manual task 38)
 - [x] P9-02 The diner's phone number, on the order and the bill
-- [ ] P9-03 The bill on the diner's phone, UPI and "I have paid"
+- [x] P9-03 The bill on the diner's phone, UPI and "I have paid"
 - [ ] P9-04 The diner's page: phone first, My orders, accepted, order again, Bill tab, a nicer menu
 - [ ] P9-05 The manager's phone rings for QR orders
 - [ ] P9-06 The Mannat pilot set-up and a one-Mac trial
@@ -4620,6 +4620,58 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-10-31: P9-03 The bill on the diner's phone, UPI and "I have paid"
+
+Built:
+
+- Settings `payments.upiId` (a UPI ID or none) and `payments.upiPayeeName`, with console labels
+  and hints. The hint says to use a business UPI ID.
+- Contracts: `UpiId`, `QrUpiPayee`, `QrBillInvoice`, `QrTableBill`, `PublishTableBillRequest` and
+  response, `RelayTableParams`, `QrTableBillResponse`.
+- Relay migration `20261031120000_table_bills`:
+  - `relay.qr_table_bills` (RLS: the writer's own restaurant, the diner's own table);
+  - `PAID` in the request types;
+  - `relay.purge_table_bills` (a day) for `relay_janitor` and pg_cron.
+- Relay functions: `PUT server/tables/:tableId/bill` and the diners' `GET table-bill` (host,
+  Supabase entry, config.toml).
+- PC:
+  - `relay/table-bill.ts` maps an invoice to the diner's bill (voided invoices left out);
+  - `RelaySyncService.syncBills` sends each QR table's bill when its hash changes and clears it
+    when the sitting closes;
+  - `BillPrinted`, `BillSettled`, `TableClosed`, `TableStateChanged` and `payments.upi*`
+    settings bring the sync forward (about 2 s).
+- Service request `PAID` ("I have paid"):
+  - domain `SERVICE_REQUEST_TYPES` (the tablet keeps `TABLET_REQUEST_TYPES`);
+  - alert `PAYMENT_CLAIMED` (all waiters and managers on duty, `{table} PAID UPI`, two short
+    buzzes);
+  - Prisma enum and the local inbox's check (migration `20261031100000_qr_paid_request`);
+  - the console's alert group.
+- `@rp/domain` `upiPayLink` and `upiAmount`: NPCI deep link from integer paise, plus the GPay,
+  PhonePe and Paytm app links for iPhones.
+
+Tests:
+
+- relay `server-functions` +3 (shown to its table only, cleared, refused shapes, a day's
+  retention), `service-requests` (+PAID), roles and isolation cover the new table and function.
+  Relay 177.
+- domain `upi.test.ts` 4; notification matrix and service-request alerts.
+- server `relay-orders.int` +2 (the printed bill with UPI and then cleared on settlement; PAID
+  alerts with PAID UPI). Contract snapshots and API docs regenerated.
+- Console 434, waiter app 76, mobile shell 52, tablet 35.
+
+Decided:
+
+- No payment gateway (BRD Q4). UPI intent with staff confirming; "I have paid" alerts them.
+- Settling closes the sitting and clears the bill at once, so a "paid" state is never shown from
+  the relay. The page says thanks when the bill it showed goes away (P9-04).
+- Bills sync with the existing loop, by hash per table, rather than a new loop.
+
+Gotchas:
+
+- This Mac has PostgreSQL 18 client tools (Homebrew `libpq`). Two restore tests fail on
+  `transaction_timeout` against the PG 16 test server; the backup tests need `pg_dump` on PATH.
+  Unrelated to P9; CI runs PG 16 tools.
 
 ### 2026-10-31: P9-02 The diner's phone number, on the order and the bill
 

@@ -4,6 +4,7 @@ import { qrMenu } from '../qr-menu.js';
 import { server } from '../server.js';
 import { serviceRequest } from '../service-request.js';
 import { submitOrder } from '../submit-order.js';
+import { tableBill } from '../table-bill.js';
 
 /** Every function, by the name it is served under (`/functions/v1/<name>`). */
 export const FUNCTIONS: Readonly<Record<string, Handler>> = {
@@ -11,5 +12,6 @@ export const FUNCTIONS: Readonly<Record<string, Handler>> = {
   'submit-order': submitOrder,
   'order-status': orderStatus,
   'service-request': serviceRequest,
+  'table-bill': tableBill,
   server,
 };

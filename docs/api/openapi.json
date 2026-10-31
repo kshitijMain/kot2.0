@@ -19782,7 +19782,8 @@
           "SUPPORT_REQUEST",
           "VENDOR_RESTORE_CODE",
           "SIGN_IN_LOCKED",
-          "OUT_OF_STOCK"
+          "OUT_OF_STOCK",
+          "PAYMENT_CLAIMED"
         ]
       },
       "NotifyManagerResponse": {
@@ -23107,7 +23108,7 @@
         "type": "string",
         "enum": ["ACTIVE", "ESCALATED", "ACKNOWLEDGED", "CANCELLED", "RESOLVED"]
       },
-      "ServiceRequestType": { "type": "string", "enum": ["WATER", "WAITER", "BILL"] },
+      "ServiceRequestType": { "type": "string", "enum": ["WATER", "WAITER", "BILL", "PAID"] },
       "ServiceRequestView": {
         "type": "object",
         "properties": {

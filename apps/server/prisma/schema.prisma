@@ -1257,6 +1257,7 @@ enum ServiceRequestType {
   WATER
   WAITER
   BILL
+  PAID
 }
 
 /// @rp/domain SERVICE_REQUEST_STATES.

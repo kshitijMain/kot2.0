@@ -2,7 +2,7 @@
   "input": {
     "type": "object",
     "properties": {
-      "type": { "type": "string", "enum": ["WATER", "WAITER", "BILL"] },
+      "type": { "type": "string", "enum": ["WATER", "WAITER", "BILL", "PAID"] },
       "idempotencyKey": {
         "type": "string",
         "format": "uuid",
@@ -15,7 +15,7 @@
   "output": {
     "type": "object",
     "properties": {
-      "type": { "type": "string", "enum": ["WATER", "WAITER", "BILL"] },
+      "type": { "type": "string", "enum": ["WATER", "WAITER", "BILL", "PAID"] },
       "idempotencyKey": {
         "type": "string",
         "format": "uuid",

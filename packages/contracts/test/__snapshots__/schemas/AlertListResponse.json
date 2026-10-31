@@ -32,7 +32,8 @@
                 "SUPPORT_REQUEST",
                 "VENDOR_RESTORE_CODE",
                 "SIGN_IN_LOCKED",
-                "OUT_OF_STOCK"
+                "OUT_OF_STOCK",
+                "PAYMENT_CLAIMED"
               ]
             },
             "status": { "type": "string", "enum": ["OPEN", "ACKNOWLEDGED", "CLEARED"] },
@@ -197,7 +198,8 @@
                 "SUPPORT_REQUEST",
                 "VENDOR_RESTORE_CODE",
                 "SIGN_IN_LOCKED",
-                "OUT_OF_STOCK"
+                "OUT_OF_STOCK",
+                "PAYMENT_CLAIMED"
               ]
             },
             "status": { "type": "string", "enum": ["OPEN", "ACKNOWLEDGED", "CLEARED"] },

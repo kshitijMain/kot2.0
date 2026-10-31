@@ -475,6 +475,31 @@ export const SETTINGS = [
     requirements: ['BILL-008'],
   }),
   setting({
+    key: 'payments.upiId',
+    // A UPI ID (VPA) as NPCI writes it: name@bank.
+    schema: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9._-]{2,256}@[A-Za-z][A-Za-z0-9.-]{1,63}$/)
+      .nullable(),
+    defaultValue: null,
+    scope: 'RESTAURANT',
+    capability: 'OPERATIONS_CONFIGURE',
+    description:
+      'The restaurant’s UPI ID: diners pay the printed bill from the QR page with the amount filled in (none: no Pay button). ADR-0024.',
+    requirements: ['BILL-008', 'QR-011'],
+  }),
+  setting({
+    key: 'payments.upiPayeeName',
+    schema: z.string().trim().min(1).max(60).nullable(),
+    defaultValue: null,
+    scope: 'RESTAURANT',
+    capability: 'OPERATIONS_CONFIGURE',
+    description:
+      'The name diners’ UPI apps show for the restaurant’s UPI ID (none: the restaurant’s display name).',
+    requirements: ['BILL-008'],
+  }),
+  setting({
     key: 'bills.digitalBillChannel',
     schema: z.enum(['OFF', 'WHATSAPP', 'SMS']),
     defaultValue: 'OFF',

@@ -2,6 +2,8 @@ import {
   ApiError,
   PublishQrMenuResponse,
   type PublishQrMenuRequest,
+  type PublishTableBillRequest,
+  PublishTableBillResponse,
   QrPickupResponse,
   QrServiceRequestPickupResponse,
   type UpdateQrServiceRequest,
@@ -100,6 +102,19 @@ export class RelayClient {
       'POST',
       `service-requests/${encodeURIComponent(requestId)}/status`,
       UpdateQrServiceRequestResponse,
+      body,
+    );
+  }
+
+  /** P9-03: the table's printed bill for its diners, or null to clear it (ADR-0024). */
+  publishTableBill(
+    tableId: string,
+    body: PublishTableBillRequest,
+  ): Promise<PublishTableBillResponse> {
+    return this.call(
+      'PUT',
+      `tables/${encodeURIComponent(tableId)}/bill`,
+      PublishTableBillResponse,
       body,
     );
   }

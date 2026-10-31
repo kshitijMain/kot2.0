@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AuthModule } from '../auth/auth.module.js';
+import { BillingModule } from '../billing/billing.module.js';
 import { EventsModule } from '../events/events.module.js';
 import { MenuModule } from '../menu/menu.module.js';
 import { OrdersModule } from '../orders/orders.module.js';
@@ -22,6 +23,7 @@ import {
 @Module({
   imports: [
     AuthModule,
+    BillingModule,
     EventsModule,
     MenuModule,
     OrdersModule,

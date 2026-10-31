@@ -159,6 +159,7 @@ export const en = {
       VENDOR_RESTORE_CODE: 'The vendor can open your cloud backups',
       SIGN_IN_LOCKED: 'Sign-in locked after wrong PINs',
       OUT_OF_STOCK: 'OUT OF STOCK',
+      PAYMENT_CLAIMED: 'Paid by UPI: check and settle',
     },
     outOfStock:
       '{quantity} × {item}: cancelled, not charged. Tell the table and offer something else.',
@@ -558,6 +559,7 @@ export const en = {
           WATER: 'Water',
           WAITER: 'Waiter',
           BILL: 'Bill',
+          PAID: 'Paid',
         },
         cancel: 'Cancel',
         requested:
@@ -1750,6 +1752,8 @@ until you press Publish.
       ONE_SHORT: 'One short',
       LONG_SHORT: 'Long, then short',
       OFF: 'Off',
+      OPTIONAL: 'Optional',
+      REQUIRED: 'Required',
       WHATSAPP: 'WhatsApp',
       SMS: 'SMS',
       LIGHT: 'Light',
@@ -3536,6 +3540,8 @@ until you press Publish.
     },
     payments: {
       otherModes: 'Other payment modes',
+      upiId: 'UPI ID for paying from the QR menu',
+      upiPayeeName: 'Name shown in diners’ UPI apps',
     },
     notifications: {
       escalationSeconds: 'Escalate to the manager after (N)',
@@ -3574,6 +3580,7 @@ until you press Publish.
       presenceIntervalSeconds: 'Presence signal every',
       readOnlyAfterSeconds: 'QR menu read-only after',
       serviceRequests: 'Call waiter and Request bill on the QR menu',
+      askPhone: 'Ask diners for their mobile number',
     },
     menu: {
       bestSellerCount: 'Dishes with the bestseller badge',
@@ -3712,6 +3719,9 @@ until you press Publish.
     },
     payments: {
       otherModes: 'Names of payment modes offered besides cash, card and UPI.',
+      upiId:
+        'Diners pay the printed bill from the QR menu by UPI, with the amount filled in. Use a business (merchant) UPI ID: UPI apps may decline links to a personal one. Staff check their UPI app and settle the bill as UPI. Empty: no Pay button.',
+      upiPayeeName: 'Empty: the restaurant’s name.',
     },
     notifications: {
       escalationSeconds:
@@ -3764,6 +3774,8 @@ until you press Publish.
         'For tables without a tablet: diners can call a waiter or ask for the bill from the QR menu, like the tablet’s buttons.',
       readOnlyAfterSeconds:
         'Without a presence signal for this long, the QR menu becomes read-only.',
+      askPhone:
+        'Before the first order the QR menu asks for the diner’s mobile number, printed on their bill and used for nothing else. Required: no order without it.',
     },
     menu: {
       bestSellerCount:

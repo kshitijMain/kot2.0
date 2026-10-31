@@ -1,6 +1,9 @@
 import {
   PublishQrMenuRequest,
   type PublishQrMenuResponse,
+  PublishTableBillRequest,
+  type PublishTableBillResponse,
+  RelayTableParams,
   type QrPickupOrder,
   QrOrderParams,
   type QrPickupServiceRequest,
@@ -517,6 +520,41 @@ async function sweepPhotos(request: Request, context: FunctionContext): Promise<
 }
 
 /**
+ * P9-03 (ADR-0024): the table's current bill for its diners, or null to clear it when the table
+ * closes. A table the relay does not know (not synced yet) is refused, never created.
+ */
+async function publishTableBill(
+  request: Request,
+  context: FunctionContext,
+  match: RegExpExecArray,
+): Promise<Response> {
+  const params = RelayTableParams.safeParse({ tableId: match[1] });
+  if (!params.success) throw new HttpError(400, 'VALIDATION_FAILED', 'Unknown table id.');
+  const body = await readBody(request, PublishTableBillRequest);
+  const found = await context.db.transaction(async (tx) => {
+    await openServer(tx, request);
+    const [table] = await tx.query<{ table_id: string }>(
+      'SELECT table_id FROM relay.dining_tables WHERE table_id = $1',
+      [params.data.tableId],
+    );
+    if (table === undefined) return false;
+    await tx.query(
+      `INSERT INTO relay.qr_table_bills (tenant_id, table_id, bill)
+       VALUES (relay.claim_tenant(), $1, $2::text::jsonb)
+       ON CONFLICT (tenant_id, table_id) DO UPDATE SET bill = excluded.bill`,
+      [params.data.tableId, body.bill === null ? null : JSON.stringify(body.bill)],
+    );
+    return true;
+  });
+  if (!found) throw new HttpError(404, 'TABLE_NOT_FOUND', 'No such table of this restaurant.');
+  const answer: PublishTableBillResponse = {
+    tableId: params.data.tableId,
+    cleared: body.bill === null,
+  };
+  return json(200, answer);
+}
+
+/**
  * Only restaurant PCs call this function: it sends no CORS headers, so no page can read its
  * answers (RELAY-I5), and it reads no body of a call without a credential (RELAY-D3).
  */
@@ -526,6 +564,7 @@ export const server = serveRoutes(
     { method: 'POST', path: /\/server\/presence$/, handler: presence },
     { method: 'PUT', path: /\/server\/menu$/, handler: publishMenu },
     { method: 'PUT', path: /\/server\/tables$/, handler: syncTables },
+    { method: 'PUT', path: /\/server\/tables\/([^/]+)\/bill$/, handler: publishTableBill },
     { method: 'GET', path: /\/server\/orders$/, handler: pickup },
     { method: 'POST', path: /\/server\/orders\/([^/]+)\/status$/, handler: updateOrder },
     { method: 'GET', path: /\/server\/service-requests$/, handler: pickupRequests },

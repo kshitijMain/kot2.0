@@ -53,3 +53,4 @@ export * from './order-feed.js';
 export * from './staff.js';
 export * from './lockout.js';
 export * from './code-integrity.js';
+export * from './upi.js';
