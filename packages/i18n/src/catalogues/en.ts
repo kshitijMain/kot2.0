@@ -617,6 +617,7 @@ export const en = {
   modes: {
     navigation: 'Modes',
     signedInAs: '{name} ({role})',
+    device: 'This screen',
     pos: 'POS',
     kds: 'Kitchen display',
     manage: 'Manage',
@@ -4064,6 +4065,13 @@ until you press Publish.
     takeaway: 'Takeaway',
     shift: 'Shift',
     billTable: 'Bill',
+    /** P9-15: what the tables asked for, on the POS floor and the dashboard. */
+    tableRequests: {
+      openBill: 'Open bill',
+      onMyWay: 'On my way',
+      onMyWayOf: 'On my way: {title}',
+      done: 'Done',
+    },
     billOrder: 'Bill order {number}',
     backToTables: 'Back to tables',
     itemState: {

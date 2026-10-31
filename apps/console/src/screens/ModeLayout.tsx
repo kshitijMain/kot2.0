@@ -53,11 +53,19 @@ export function ModeLayout() {
         </span>
         {person === undefined ? null : <ModeLinks person={person} />}
         <AlertsButton />
-        <span className="console-header__device">{state.device?.name}</span>
+        <span className="console-header__device" title={t('modes.device')}>
+          {state.device?.name}
+        </span>
         {person === undefined ? null : (
           <>
             <span className="console-header__person">
-              {t('modes.signedInAs', { name: person.displayName, role: t(`roles.${person.role}`) })}
+              <span className="console-header__name">{person.displayName}</span>
+              {/* The role, unless the name says it already ("Kitchen", "Manager (Mannat)"). */}
+              {person.displayName
+                .toLowerCase()
+                .includes(t(`roles.${person.role}`).toLowerCase()) ? null : (
+                <span className="console-header__role">{t(`roles.${person.role}`)}</span>
+              )}
             </span>
             <Button
               variant="secondary"

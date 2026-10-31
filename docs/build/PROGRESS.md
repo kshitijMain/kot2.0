@@ -703,6 +703,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-12 The open line never waits for ever on a handshake
 - [x] P9-13 Accepted reaches the diner after a pilot reset; My orders survives a reload
 - [x] P9-14 PIN-only sign-in for the pilot (ADR-0025)
+- [x] P9-15 Bill and requests from the tables reach the staff; one type scale on the console
 
 ## Decisions
 
@@ -4628,6 +4629,62 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-10-31: P9-15 Bill and requests from the tables reach the staff; one type scale on the console
+
+Reported from the pilot:
+
+- a diner's "Ask for the bill" seemed to go nowhere;
+- as a waiter, Bill on Table 2 did nothing (Take order instead);
+- QR Refresh seemed not to work;
+- the console screens looked inconsistent ("big fonts here, tiny there").
+
+Found:
+
+- **The bill request arrived.** The service request was escalated, with a BILL_REQUEST alert open.
+  But the console had no request inbox (only the waiter app had one), and the alert offered only
+  Acknowledge.
+- **The waiter's Bill was refused.** `POST /bills` returned 403: BRD §4.2 lets waiters request the
+  bill, not print it. The POS showed the button anyway.
+- **Errors were hidden.** Its error toast was drawn under the open sheet: native modal dialogs sit
+  in the browser's top layer, above every z-index. This affected every toast shown while a
+  dialog was open.
+- **Refresh worked but gave no sign** while nothing had changed.
+
+Built:
+
+- **Requests panel** (`pos/ServiceRequests.tsx`) on the POS floor and the manager overview: what the
+  tables asked for, oldest first, with age and who is on the way or escalated. It has On my way
+  (acknowledge: the diner reads "Waiter is on the way"), Done, and Open bill for a bill request
+  (whoever prints).
+- **Table sheet:**
+  - Bill for those with BILL_PRINT_AND_PAYMENT, Request bill for waiters (BILL_REQUEST, alerts
+    the managers);
+  - the table's waiting items (approvals, dishes ready, requests);
+  - Take order first and widest.
+- **Alerts:** Bill requested and I have paid get Open bill.
+- **Toasts:** the region is a manual popover, shown again for each toast, so it lands above any
+  open dialog. The attribute is set only where the browser has popovers.
+- **QR Refresh** spins until the restaurant answers (at most 4 s).
+- **One type scale:** page title 24 (was 30), section headings 18 in sentence case (were uppercase
+  14 labels, or 20). The approval and request cards sit side by side, so the floor stays in view.
+- **Header:** the name, and the role under it unless the name says it ("Manager (Mannat)", not
+  "Manager (Mannat) (Manager)"); the device name small.
+- **POS order screen:** no placeholder squares when the menu has no photos.
+
+Tests:
+
+- console +2 (a waiter's Request bill; the requests panel: escalated, On my way, Open bill). The
+  landing test checks name and role separately. 445/445.
+- ui-web 126/126; QR e2e 17/17; lint and typecheck pass.
+- Checked by hand: the screenshot tour of every console screen at 1366×768, before and after.
+
+Next design pass, not done here:
+
+- the Manage side navigation and help strips;
+- the menu editor's density;
+- reports' charts and tables;
+- the KDS header.
 
 ### 2026-10-31: P9-14 PIN-only sign-in for the pilot
 

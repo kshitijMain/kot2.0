@@ -239,6 +239,7 @@ function MenuBrowser({
   const [query, setQuery] = useState('');
   const [categoryId, setCategoryId] = useState<string | undefined>(categories[0]?.id);
   const shown = visibleItems(items, query, categoryId);
+  const anyPhoto = items.some((item) => item.photoId !== undefined);
 
   if (items.length === 0) return <EmptyState title={t('pos.menu.empty')} />;
 
@@ -271,7 +272,7 @@ function MenuBrowser({
       {shown.length === 0 ? (
         <EmptyState title={t('pos.menu.noResults', { query: query.trim() })} />
       ) : (
-        <div className="pos-menu__items">
+        <div className="pos-menu__items" data-photos={anyPhoto || undefined}>
           {shown.map((item) => (
             <MenuItemCard
               key={item.id}
@@ -279,7 +280,10 @@ function MenuBrowser({
               price={displayPrice(item)}
               foodType={item.foodType}
               foodTypeLabel={t(`pos.menu.foodType.${item.foodType}`)}
-              photo={item.photoId === undefined ? null : photoUrl(item.photoId, 160)}
+              // A menu with no photos at all shows no empty squares (as the QR menu, P9-15).
+              {...(anyPhoto && {
+                photo: item.photoId === undefined ? null : photoUrl(item.photoId, 160),
+              })}
               {...menuNote(menu, item, t, now)}
               onSelect={() => {
                 onChoose(item, menu);

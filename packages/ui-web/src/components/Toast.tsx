@@ -78,10 +78,23 @@ export function ToastProvider({ children, duration = 5000, max = 4 }: ToastProvi
 
   const api = useMemo(() => ({ show, dismiss }), [show, dismiss]);
 
+  // A modal dialog sits in the browser's top layer, above every z-index: a toast shown while one
+  // is open (an error from a sheet's button) was drawn under it, unseen. The region is a manual
+  // popover, shown again whenever a toast arrives, so it lands above whatever is open.
+  const region = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const element = region.current;
+    // Only where the browser has popovers: elsewhere a popover attribute would just hide it.
+    if (element === null || typeof element.showPopover !== 'function') return;
+    if (!element.hasAttribute('popover')) element.setAttribute('popover', 'manual');
+    if (element.matches(':popover-open')) element.hidePopover();
+    if (toasts.length > 0) element.showPopover();
+  }, [toasts]);
+
   return (
     <ToastContext value={api}>
       {children}
-      <section aria-label={strings.region} className="rp-toast-region">
+      <section ref={region} aria-label={strings.region} className="rp-toast-region">
         {toasts.map((toast) => (
           <ToastItem
             key={toast.id}

@@ -23,6 +23,7 @@ import { PlanBoard } from '../manage/floor/FloorPlan.js';
 import { planOf } from '../manage/floor/floor-view.js';
 import { floorSections, tileAlert, tileDetails } from '@rp/ordering';
 import { Approvals } from './Approvals.js';
+import { ServiceRequests } from './ServiceRequests.js';
 import { MergeTablesDialog } from './MergeTablesDialog.js';
 import { FreeTableDialog } from './FreeTableDialog.js';
 import { MoveTableDialog } from './MoveTableDialog.js';
@@ -44,6 +45,9 @@ type Panel =
  * details and can move to a free table (TBL-005), merge into another open table or move some of
  * its dishes to one (TBL-006); one waiting to be cleaned can be marked clean (TBL-004).
  */
+/** What the person may do about a table's bill: open it, ask the managers for it, or nothing. */
+type Billing = 'open' | 'request' | 'none';
+
 export function TableOverview() {
   const t = useT();
   const { person } = useConsoleState();
@@ -77,6 +81,13 @@ export function TableOverview() {
   const canMove = person !== undefined && grantOf(person, 'TABLE_MOVE_MERGE') !== 'DENY';
   const canFree = person !== undefined && grantOf(person, 'ORDER_CREATE') !== 'DENY';
   const canCloseDay = person !== undefined && grantOf(person, 'DAY_END_CLOSE') !== 'DENY';
+  // Who prints the bill and takes payment opens it; a waiter asks the managers for it (BRD §4.2).
+  const billing: Billing =
+    person !== undefined && grantOf(person, 'BILL_PRINT_AND_PAYMENT') !== 'DENY'
+      ? 'open'
+      : person !== undefined && grantOf(person, 'BILL_REQUEST') !== 'DENY'
+        ? 'request'
+        : 'none';
   const close = () => {
     setPanel(undefined);
   };
@@ -145,6 +156,7 @@ export function TableOverview() {
         </div>
       </div>
       <Approvals />
+      <ServiceRequests />
       {sections.map((section) => (
         <section
           key={section.id}
@@ -224,6 +236,7 @@ export function TableOverview() {
           now={now}
           canMove={canMove}
           canFree={canFree}
+          billing={billing}
           onClose={close}
           onFree={() => {
             setPanel({ kind: 'free', tableId: selected.tableId });
@@ -269,6 +282,7 @@ function TableDetails({
   now,
   canMove,
   canFree,
+  billing,
   onClose,
   onFree,
   onMove,
@@ -281,6 +295,7 @@ function TableDetails({
   now: number;
   canMove: boolean;
   canFree: boolean;
+  billing: Billing;
   onClose: () => void;
   onFree: () => void;
   onMove: () => void;
@@ -302,7 +317,25 @@ function TableDetails({
     session.amountSoFar === 0 &&
     session.pendingApprovals === 0;
   const [cleaning, setCleaning] = useState(false);
+  const [requesting, setRequesting] = useState(false);
   const [error, setError] = useState<string | undefined>();
+
+  const requestBill = async (sessionId: string) => {
+    setRequesting(true);
+    setError(undefined);
+    try {
+      await controller.api.requestBill({ params: { sessionId } });
+      toast.show({
+        title: t('mobile.tables.billRequested', { table: table.label }),
+        tone: 'success',
+      });
+      onClose();
+    } catch (failure) {
+      setError(messageOf(failure, t));
+    } finally {
+      setRequesting(false);
+    }
+  };
 
   const clean = async () => {
     setCleaning(true);
@@ -350,15 +383,27 @@ function TableDetails({
             </Button>
           </>
         ) : null}
-        <Button
-          variant="secondary"
-          loading={opening}
-          onClick={() => {
-            openBill({ tableSessionId: session.id });
-          }}
-        >
-          {t('pos.billTable')}
-        </Button>
+        {billing === 'open' ? (
+          <Button
+            variant="secondary"
+            loading={opening}
+            onClick={() => {
+              openBill({ tableSessionId: session.id });
+            }}
+          >
+            {t('pos.billTable')}
+          </Button>
+        ) : billing === 'request' ? (
+          <Button
+            variant="secondary"
+            loading={requesting}
+            onClick={() => {
+              void requestBill(session.id);
+            }}
+          >
+            {t('mobile.tables.requestBill')}
+          </Button>
+        ) : null}
         <Button
           onClick={() => {
             onTakeOrder(session.id);
@@ -374,6 +419,7 @@ function TableDetails({
       open
       variant="sheet"
       side="end"
+      className="table-sheet"
       onClose={onClose}
       title={t('pos.table.title', { table: table.label })}
       footer={footer}
@@ -383,15 +429,25 @@ function TableDetails({
           {error}
         </p>
       )}
-      <p>{t(`pos.tableState.${table.state}`)}</p>
-      {table.state === 'NEEDS_CLEANING' ? <p>{t('pos.table.needsCleaning')}</p> : null}
-      {session === null ? null : (
-        <>
-          <p>{tileDetails(table, now, t).slice(0, 2).join(' · ')}</p>
-          <p>{t('pos.table.waiter', { name: session.waiterName })}</p>
-          <Money paise={session.amountSoFar} size="lg" strong />
-        </>
-      )}
+      <div className="table-sheet__facts">
+        <p className="table-sheet__state">{t(`pos.tableState.${table.state}`)}</p>
+        {table.state === 'NEEDS_CLEANING' ? <p>{t('pos.table.needsCleaning')}</p> : null}
+        {session === null ? null : (
+          <>
+            <p className="table-sheet__line">
+              {tileDetails(table, now, t).slice(0, 2).join(' · ')}
+            </p>
+            <p className="table-sheet__line">
+              {t('pos.table.waiter', { name: session.waiterName })}
+            </p>
+            <Money paise={session.amountSoFar} size="lg" strong />
+          </>
+        )}
+        {/* What waits at this table: approvals, dishes ready, requests (the tile's marker). */}
+        {tileAlert(table, t) === undefined ? null : (
+          <p className="console-notice console-notice--warning">{tileAlert(table, t)}</p>
+        )}
+      </div>
     </Dialog>
   );
 }
