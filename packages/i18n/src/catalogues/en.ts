@@ -379,6 +379,12 @@ export const en = {
       unavailable: 'Your pager status could not be read.',
     },
     /** The waiter's inbox of requests from the tables (P2-06d, WTR-005). */
+    /** P9-16: a manager takes payment for a printed bill on the phone. */
+    payment: {
+      title: 'Payment for table {table}',
+      nothingDue: 'Nothing is left to pay on this table’s bill.',
+      needShift: 'Cash needs an open shift. Open one on the POS, or take UPI or card here.',
+    },
     requests: {
       title: '{count, plural, one {# request from a table} other {# requests from tables}}',
       onTheWay: '{name} is on the way',
@@ -717,6 +723,11 @@ export const en = {
   },
   /** The manager dashboard (P4-01, MGR-001 to MGR-003, MGR-011). */
   dashboard: {
+    /** P9-16: diners pay by UPI from the QR menu only once the UPI ID is set. */
+    upi: {
+      missing: 'Diners cannot pay by UPI from the QR menu yet: the restaurant’s UPI ID is not set.',
+      add: 'Add the UPI ID',
+    },
     navigation: 'Dashboard',
     section: {
       overview: 'Overview',
@@ -4465,6 +4476,7 @@ until you press Publish.
       TABLE_TABLET: 'Table tablet',
       QR: 'QR order',
     },
+    sentBy: 'Sent by {name}',
     movedTo: 'Now for {table}',
     badge: {
       moved: 'Moved from {table}',

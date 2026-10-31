@@ -2717,3 +2717,75 @@ body {
     grid-template-areas: 'name' 'category' 'switch' 'count';
   }
 }
+
+/* ---------------------------------------------------------------- P9-16: on a phone */
+
+/* A wide table scrolls inside its box, never the page. */
+.table-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.console-header__mode,
+.dashboard__link {
+  white-space: nowrap;
+}
+
+@media (width < 60rem) {
+  /* The sections are one row that scrolls sideways, not six rows before the page starts. */
+  .dashboard__nav {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+    margin-inline: calc(-1 * var(--rp-space-4));
+    padding: 0 var(--rp-space-4) var(--rp-space-1);
+  }
+
+  .dashboard__link {
+    flex: none;
+  }
+}
+
+@media (width < 40rem) {
+  /* The header in two rows: the logo, the alerts and who is signed in; then the modes. */
+  .console-header {
+    gap: var(--rp-space-2) var(--rp-space-3);
+  }
+
+  .console-header__app {
+    order: 0;
+  }
+
+  .console-header__alerts {
+    order: 1;
+    margin-inline-start: auto;
+  }
+
+  .console-header__person {
+    order: 2;
+  }
+
+  .console-header > .rp-button {
+    order: 3;
+  }
+
+  .console-header__device {
+    display: none;
+  }
+
+  .console-header__modes {
+    order: 4;
+    width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .console-mode > h1 {
+    font-size: var(--rp-font-size-xl);
+  }
+
+  .screen-help__tip {
+    font-size: var(--rp-font-size-sm);
+  }
+}

@@ -3,7 +3,7 @@ import { parseRupees } from '@rp/domain';
 import { Button, Dialog, Select, TextField } from '@rp/ui-web';
 import { useId, useState } from 'react';
 import { useT } from '../app/i18n.js';
-import { paiseFromInput } from './money-input.js';
+import { paiseFromInput } from '@rp/ordering';
 
 /**
  * A discount on the whole bill or one line, as a percentage or an amount off, with the mandatory

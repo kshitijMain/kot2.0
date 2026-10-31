@@ -151,7 +151,7 @@ export function NotificationRulesScreen() {
                   {[
                     rule.pagerText === null
                       ? t('notificationRules.noPager')
-                      : t('notificationRules.pager', { text: rule.pagerText }),
+                      : t('notificationRules.pager', { text: pagerExample(rule.pagerText) }),
                     rule.escalate
                       ? t('notificationRules.escalates')
                       : t('notificationRules.noEscalation'),
@@ -384,4 +384,12 @@ function RuleDialog({
       </form>
     </Dialog>
   );
+}
+
+/**
+ * The pager's words as a pager shows them, for an example table (P9-16): '{table}' became visible
+ * as itself, which read like a mistake.
+ */
+export function pagerExample(text: string): string {
+  return text.replaceAll('{table}', 'T5').replaceAll('{message}', '…');
 }

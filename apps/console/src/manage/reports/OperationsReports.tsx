@@ -4,6 +4,7 @@ import type {
   RecommendationReportResponse,
   TableReportResponse,
 } from '@rp/contracts';
+import { formatDisplayDate } from '@rp/domain';
 import { Table } from '@rp/ui-web';
 import { useConsole } from '../../app/console-context.js';
 import { useT } from '../../app/i18n.js';
@@ -76,7 +77,9 @@ function Approvals({ range }: { range: ReportRange }) {
           <Table<ApprovalDayRow>
             caption={t('reportsPage.approvals.days')}
             columns={[
-              textColumn('date', t('reportsPage.columns.date'), (row) => row.businessDate),
+              textColumn('date', t('reportsPage.columns.date'), (row) =>
+                formatDisplayDate(row.businessDate),
+              ),
               numberColumn('orders', t('reportsPage.approvals.orders'), (row) => row.orders),
               textColumn('median', t('reportsPage.approvals.median'), (row) =>
                 seconds(row.medianSeconds, t),

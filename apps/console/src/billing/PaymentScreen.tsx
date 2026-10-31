@@ -24,7 +24,7 @@ import {
   paiseFromInput,
   type PlannedPayment,
   stillToPay,
-} from './money-input.js';
+} from '@rp/ordering';
 
 const MODES = ['CASH', 'UPI', 'CARD', 'OTHER'] as const;
 const never = () => false;

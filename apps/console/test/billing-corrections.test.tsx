@@ -279,7 +279,7 @@ describe('[BILL-013] [RPT-005] closing the day', () => {
       path: '/pos/day-end',
     });
     expect(
-      await screen.findByRole('heading', { name: t('dayEnd.title', { date: '2026-09-26' }) }),
+      await screen.findByRole('heading', { name: t('dayEnd.title', { date: '26-09-2026' }) }),
     ).toBeInTheDocument();
     expect(screen.getAllByText('₹13,282.50')).toHaveLength(2);
     expect(screen.getByText('INV/26-27/000004')).toBeInTheDocument();
@@ -288,7 +288,7 @@ describe('[BILL-013] [RPT-005] closing the day', () => {
     await user.click(screen.getByLabelText(t('dayEnd.carryForward')));
     await user.click(screen.getByRole('button', { name: t('dayEnd.close') }));
     expect(
-      await screen.findByText(t('dayEnd.closedToast', { date: '2026-09-26' })),
+      await screen.findByText(t('dayEnd.closedToast', { date: '26-09-2026' })),
     ).toBeInTheDocument();
     expect(await screen.findByText(t('dayEnd.closed'))).toBeInTheDocument();
     expect(fake.callsTo('POST', '/api/v1/day-end')[0]?.body).toEqual({

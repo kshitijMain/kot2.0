@@ -1,4 +1,5 @@
 import type { DayEndPreview } from '@rp/contracts';
+import { formatDisplayDate } from '@rp/domain';
 import { Button, Card, ErrorState, Icon, LoadingState, Money, useToast } from '@rp/ui-web';
 import { useState } from 'react';
 import { useConsole } from '../app/console-context.js';
@@ -29,7 +30,7 @@ export function DayEndScreen({ onBack }: { onBack: () => void }) {
         body: { businessDate: preview.businessDate, carryForwardTables: carryForward },
       });
       toast.show({
-        title: t('dayEnd.closedToast', { date: preview.businessDate }),
+        title: t('dayEnd.closedToast', { date: formatDisplayDate(preview.businessDate) }),
         tone: 'success',
       });
     } catch (failure) {
@@ -48,7 +49,7 @@ export function DayEndScreen({ onBack }: { onBack: () => void }) {
         </Button>
         <h2 id="day-end-title" className="pos-floor__heading">
           {data.status === 'ready'
-            ? t('dayEnd.title', { date: data.value.businessDate })
+            ? t('dayEnd.title', { date: formatDisplayDate(data.value.businessDate) })
             : t('dayEnd.open')}
         </h2>
       </header>

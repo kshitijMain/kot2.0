@@ -1,6 +1,7 @@
 import type { Capability } from '@rp/domain';
 import { grantOf } from '../app/modes.js';
-import { Navigate, NavLink, Route, Routes } from 'react-router';
+import { useEffect, useRef } from 'react';
+import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router';
 import { AlertCentre } from '../alerts/AlertCentre.js';
 import { useConsoleState } from '../app/console-context.js';
 import { useT } from '../app/i18n.js';
@@ -60,6 +61,15 @@ export function ManageHome() {
   const isOwner = person?.role === 'OWNER';
   const viewsLicence = person !== undefined && grantOf(person, 'LICENSE_VIEW') !== 'DENY';
   const managesLicence = person !== undefined && grantOf(person, 'LICENSE_MANAGE') !== 'DENY';
+  // On a phone the sections are one row that scrolls sideways: keep the open one in view.
+  const navRef = useRef<HTMLElement>(null);
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const open = navRef.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (open !== null && open !== undefined && typeof open.scrollIntoView === 'function') {
+      open.scrollIntoView({ block: 'nearest', inline: 'center' });
+    }
+  }, [pathname]);
   const first = operates
     ? undefined
     : seesReports
@@ -73,7 +83,7 @@ export function ManageHome() {
             : undefined;
   return (
     <div className="dashboard">
-      <nav aria-label={t('dashboard.navigation')} className="dashboard__nav">
+      <nav aria-label={t('dashboard.navigation')} className="dashboard__nav" ref={navRef}>
         {operates ? (
           <>
             <NavLink to="/manage" end className="dashboard__link">

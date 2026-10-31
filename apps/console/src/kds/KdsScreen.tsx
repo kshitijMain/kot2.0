@@ -467,8 +467,9 @@ function TicketCard({
         <p className="kds-ticket__meta">
           {[
             showStation ? ticket.stationName : '',
-            ticket.waiterName,
             t(`kds.source.${ticket.source}`),
+            // Who sent it, said so (P9-16): a bare name read like part of the station.
+            ticket.waiterName === null ? '' : t('kds.sentBy', { name: ticket.waiterName }),
           ]
             .filter(Boolean)
             .join(' · ')}

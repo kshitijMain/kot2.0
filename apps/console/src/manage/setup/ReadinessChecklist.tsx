@@ -44,31 +44,33 @@ export function ReadinessChecklist() {
         {t('readiness.title')}
       </h2>
       <p className="dashboard-section__hint">{t('readiness.intro')}</p>
-      <table className="readiness-table">
-        <caption className="rp-visually-hidden">{t('readiness.title')}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{t('readiness.done')}</th>
-            <th scope="col">{t('readiness.item')}</th>
-            <th scope="col">{t('readiness.notes')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {READINESS_ITEMS.map((item) => (
-            <tr key={item}>
-              <td>
-                <span className="readiness-box" aria-hidden="true" />
-              </td>
-              <td>
-                <strong>{t(`readiness.items.${item}.title`)}</strong>
-                <br />
-                {t(`readiness.items.${item}.detail`)}
-              </td>
-              <td className="readiness-notes" />
+      <div className="table-scroll">
+        <table className="readiness-table">
+          <caption className="rp-visually-hidden">{t('readiness.title')}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{t('readiness.done')}</th>
+              <th scope="col">{t('readiness.item')}</th>
+              <th scope="col">{t('readiness.notes')}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {READINESS_ITEMS.map((item) => (
+              <tr key={item}>
+                <td>
+                  <span className="readiness-box" aria-hidden="true" />
+                </td>
+                <td>
+                  <strong>{t(`readiness.items.${item}.title`)}</strong>
+                  <br />
+                  {t(`readiness.items.${item}.detail`)}
+                </td>
+                <td className="readiness-notes" />
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <p className="readiness-sign">{t('readiness.signature')}</p>
     </section>
   );

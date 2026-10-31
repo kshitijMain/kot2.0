@@ -704,6 +704,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-13 Accepted reaches the diner after a pilot reset; My orders survives a reload
 - [x] P9-14 PIN-only sign-in for the pilot (ADR-0025)
 - [x] P9-15 Bill and requests from the tables reach the staff; one type scale on the console
+- [x] P9-16 Audit of every screen and the bill journey; managers take payment on the phone
 
 ## Decisions
 
@@ -4629,6 +4630,81 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-10-31: P9-16 Audit of every screen and the bill journey; managers take payment on the phone
+
+Asked by the Business Owner: test every function, button and word; the bill asked for on the QR
+page must be paid there; UPI for Mannat; phone-friendly; the same in the waiter app.
+
+Decided (they did not answer):
+
+- Managers take payment in the waiter app.
+- Build the APK on this Mac.
+- No UPI ID is invented for Mannat. A notice says so where the manager looks, with a link to the
+  setting (Owner and Manager may set it). A wrong VPA would send diners' money elsewhere.
+
+How:
+
+- **A crawler** visited all 27 console routes as the Manager at 1366×768 and 390×844, recording
+  page errors, failed API calls and sideways overflow, with screenshots. Result: no errors, no
+  failed calls; one overflow (Readiness).
+- **A journey** drove a QR diner and the manager through Table 4: order → approve → kitchen → ask
+  for the bill → Open bill from the requests panel → print → the diner's bill → UPI payment → the
+  table closes.
+
+Found and fixed:
+
+- **The QR site behind ngrok lost every status read.** ngrok's free plan answers a browser's GET
+  with its own warning page (200, text/html), so order status, My orders and the bill silently
+  failed. Sending (a POST) worked. This is a likely cause of earlier "status does not update"
+  reports.
+  - The site sends `ngrok-skip-browser-warning` to ngrok addresses only (`throughNgrok`).
+  - The relay allows the header in CORS.
+  - `mannat-ngrok.sh` allows the Wi-Fi origin too, so `http://<ip>:3100` links order as well.
+- **Phone layout:** every Manage page started below the fold (a three-row header and 18 nav
+  buttons in six rows).
+  - Under 60rem the sections are one row that scrolls, keeping the open one in view.
+  - Under 40rem the header is two rows and hides the device name.
+  - Pills do not wrap.
+  - The Readiness table scrolls in its box.
+- **Wording:**
+  - Day-end and the operations report show DD-MM-YYYY (they showed 2026-10-31).
+  - Notification rules show the pager line for an example table ("T5 WATER", not "{table}
+    WATER").
+  - Kitchen tickets read "Kitchen · QR order · Sent by Manager (Mannat)".
+- **Mannat's hours:** the seed sets 11:00–23:30 every day (the restaurant read "Closed" on every
+  day); the pilot is updated.
+- **UPI:**
+  - A notice on the overview and the QR codes page while the UPI ID is not set ("Diners cannot
+    pay by UPI…", "Add the UPI ID").
+  - Settings opens filtered with `?find=UPI`.
+- **The open line:** `RelayRealtime` logs why it is down (session refused, no session, closed
+  before joining, join refused, deadline), and the session itself has the connect deadline. A
+  restart that does not join is now explained in the server log. It recurred twice in 7 full
+  restarts with nothing logged, before the session deadline was added; three restarts since joined
+  within 12 s. Watch the log.
+- **Waiter app:**
+  - **Take payment** for owners and managers on a table whose bill is printed (`PaymentSheet`:
+    the bill found with `openBill`, what is still to pay, Cash, UPI or card, a reference, one
+    idempotency key per payment; cash needs an open shift, which the phone says).
+  - `@rp/ordering` now holds `money-input` (paise from typed rupees), shared by the POS and the
+    phone.
+  - Jest compiles Expo's packages. `expo-status-bar` ships TypeScript, and only a warm transform
+    cache had hidden it; any new test file failed to load.
+
+Pilot data touched by the journey (owner's test data):
+
+- invoice INV/26-27/000001 (Table 4, ₹242, UPI, settled);
+- Table 4's duplicate test order rejected ("Test order from the audit");
+- the journey's kitchen step marked the first ticket on the board (Table 2, KOT 4, Crispy Corn)
+  served, instead of Table 4's.
+
+Tests:
+
+- console 445/445 (day-end date, pager example, KDS line updated).
+- QR unit +1 (`throughNgrok`). 25/25.
+- waiter app +2 (a manager settles by UPI; never offered to a waiter). 78/78.
+- relay-realtime 9/9.
 
 ### 2026-10-31: P9-15 Bill and requests from the tables reach the staff; one type scale on the console
 
