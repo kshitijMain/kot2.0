@@ -50,3 +50,28 @@ These are required, not optional: the threat model of the update pipeline
 
    The CI job "Windows installer" uses this environment only for pushes to `main`; pull requests
    build unsigned test installers.
+
+## Phase 9 pull request
+
+Local `main` holds Phase 9 (P9-01 to P9-18); the description is in `.pilot/pr-body.md`.
+
+With write access for `kunaltomartwo99` (the owner adds it as a collaborator):
+
+```bash
+git push origin main:pilot/mannat-qr-ordering
+gh pr create --repo kshitijMain/kot2.0 --base main --head pilot/mannat-qr-ordering \
+  --title "Phase 9: QR table ordering pilot at Mannat (P9-01 to P9-18)" \
+  --body-file .pilot/pr-body.md
+```
+
+Without it, from a fork (a public copy under your account):
+
+```bash
+gh repo fork kshitijMain/kot2.0 --clone=false --remote=false
+git remote add fork https://github.com/kunaltomartwo99/kot2.0.git
+git push fork main:pilot/mannat-qr-ordering
+gh pr create --repo kshitijMain/kot2.0 --base main \
+  --head kunaltomartwo99:pilot/mannat-qr-ordering \
+  --title "Phase 9: QR table ordering pilot at Mannat (P9-01 to P9-18)" \
+  --body-file .pilot/pr-body.md
+```

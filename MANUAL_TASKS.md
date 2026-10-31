@@ -15,12 +15,12 @@ can be updated. Never paste secrets, keys or passwords into a Claude session or 
       `gh auth login` (GitHub.com, HTTPS, "authenticate Git with your GitHub credentials").
       Steps: [`manual-tasks/01-github-access.md`](manual-tasks/01-github-access.md).
 - [x] `main` is the repository's default branch.
-- [ ] **Give the GitHub account on this Mac write access** (2026-10-31): `kunaltomartwo99` is signed
-      in but `git push` to `kshitijMain/kot2.0` answers 403. Phase 9 (the QR pilot) is merged on
-      local `main` only. Add that account as a collaborator with write access, or sign in with
-      `gh auth login` as one that has it. Then push `main` and the branch `wp/p9-07-qr-reprint`
-      (`git push origin main wp/p9-07-qr-reprint`) and tell Claude, who opens the pull request and
-      watches CI.
+- [ ] **Get Phase 9 onto GitHub** (2026-10-31): both accounts signed in on this Mac have read-only
+      access to `kshitijMain/kot2.0`, so `git push` answers 403. Local `main` holds all of Phase 9,
+      with nothing to merge from GitHub, and the pull request's description is ready in
+      `.pilot/pr-body.md`. Get write access for `kunaltomartwo99`, or open the pull request from a
+      fork (a public copy; Claude's session may not create one). The commands for both are in
+      [`manual-tasks/01-github-access.md`](manual-tasks/01-github-access.md#phase-9-pull-request).
 - [ ] Protect `main` (pull requests, the CI checks) and require 2FA for everyone with access.
       Same file. Checked 2026-10-11: `main` is not protected yet; the `release-signing`
       environment for the code-signing certificate (SEC-013) exists.
