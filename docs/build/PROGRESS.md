@@ -696,6 +696,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-05 The manager's phone rings for QR orders
 - [x] P9-06 The Mannat pilot set-up and a one-Mac trial (the server and the real tables: manual task 38)
 - [x] P9-07 Reprinting the tents when the site's address changes (ngrok)
+- [x] P9-08 A diner's orders follow their number; a compact page; pairing the first screen
 
 ## Decisions
 
@@ -4621,6 +4622,72 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-10-31: P9-08 Orders by number, a compact page, pairing the first screen
+
+Reported by the Business Owner from the pilot. Three problems:
+
+1. **The same number in another browser showed no orders or bill.** "My orders" was only the
+   order ids this browser kept, and the bill's estimate was built from them.
+2. **The page dragged sideways and felt oversized.** On a 360 px phone the filters' `<fieldset>`
+   kept its content's width, so the page was 406 px wide, the fixed bars too, and the cart bar
+   covered the tabs. Search, filters and sections all stayed at the top, taking a third of the
+   screen.
+3. **The first POS couldn't be paired.** On the PC's address (not localhost) only the code form
+   shows, its button stays grey for anything but an 8-character code (a PIN is the usual guess),
+   and no paired screen existed yet to make a code.
+
+Built:
+
+- Relay:
+  - migration `20261031130000_table_sittings` (`qr_table_bills.last_closed_at`, a phone index);
+  - `PUT server/tables/:id/bill` takes `lastClosedAt`;
+  - new diner function `table-orders` (`x-rp-diner-phone`, a header so never in an address; RLS
+    keeps it to the token's table; orders after the last close and within 12 hours);
+  - the header is in CORS; host, Supabase entry and config updated.
+- Contracts: `DINER_PHONE_HEADER`, `QrTableOrdersResponse`, `PublishTableBillRequest.lastClosedAt`.
+- PC: `syncBills` sends each QR table's last close time (one `groupBy`) in the same hashed
+  publish.
+- QR site:
+  - looks the number's orders up when the number is known, every 15 s and on return;
+  - merges them into My orders, sorted, dropping orders before the sitting;
+  - another number empties this browser's list.
+- Layout:
+  - only the section bar is sticky;
+  - compact header, search, chips, pills and cards; a text-only list when the menu has no photos;
+  - two columns from 40rem;
+  - `min-inline-size: 0` on the fieldset, `overflow-x: clip` on the root (not `hidden` on the
+    body, which broke sticky), `overscroll-behavior-x: contain` on the chip rows;
+  - the cart bar sits above the 3.5rem tab bar.
+- Console pairing: the button explains `notAPin` or `codeFormat` instead of staying grey; an
+  IP-opened screen shows `firstScreen`.
+- `mannat-local.sh pair`: the server's bootstrap code (loopback only, nothing paired yet).
+
+Tests:
+
+- relay `diner-functions` +4 (any browser, newest first, other numbers, tables and restaurants
+  get nothing; only this sitting; 12 hours; bad number or code). Relay 180.
+- server `pilot-mannat.int` +1 (after settlement and close, the number sees nothing; `since` is
+  the session's `closedAt`).
+- QR e2e +2 (another phone with the same number sees the order and another number doesn't; at
+  360 px the page is never wider than the screen and Bill is tappable with a cart). 15/15.
+- console +1 (a PIN and a short code explained; nothing sent).
+- Checked by hand: screenshots at 360 px; `mannat-local.sh pair` printed a code.
+
+On the pilot Mac:
+
+- The relay migration was applied and the services restarted (`mannat-ngrok.sh`, same ngrok
+  address).
+- Before the restart the PC's open line was not joined (`restaurantsOnLine: 0`; orders still
+  came by the 5 s fallback). Session calls succeeded every minute but no socket opened. A fresh
+  process joined at once, and the same client joins through ngrok in a test. Cause not found.
+  Watch `/healthz` after restarts; a watchdog for the line client is a candidate if it recurs.
+
+Edge cases decided:
+
+- The number is the diner's key at the table, for this sitting only.
+- A diner who skipped the number (OPTIONAL) keeps orders in that browser only.
+- The printed bill is the table's, for any phone at the table.
 
 ### 2026-10-31: P9-07 Reprinting the tents when the site's address changes (ngrok)
 

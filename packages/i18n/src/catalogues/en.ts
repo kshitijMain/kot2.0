@@ -255,6 +255,11 @@ export const en = {
     title: 'Pair this device',
     intro: 'Ask a manager for a pairing code (Manage → Devices → Pair a device) and enter it here.',
     codeLabel: 'Pairing code',
+    codeFormat: 'Enter the 8-character pairing code, like ABCD-EFGH.',
+    notAPin:
+      'That looks like a PIN. Pair this screen first with an 8-character pairing code (like ABCD-EFGH); you sign in with your PIN after that.',
+    firstScreen:
+      'No screen is paired yet? The first one is paired on the restaurant PC itself: open https://localhost:8080 there and press Pair this PC. Then make codes for every other screen in Manage → Devices.',
     submit: 'Pair device',
     working: 'Pairing…',
     paired: 'Paired as {name}',

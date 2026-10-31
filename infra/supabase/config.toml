@@ -85,3 +85,8 @@ entrypoint = "./dist/functions/service-request/index.js"
 [functions.table-bill]
 verify_jwt = false
 entrypoint = "./dist/functions/table-bill/index.js"
+
+# P9-08: a diner's orders at the table by their mobile number (ADR-0024).
+[functions.table-orders]
+verify_jwt = false
+entrypoint = "./dist/functions/table-orders/index.js"

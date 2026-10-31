@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { expect, type Page, test } from '@playwright/test';
+import { devices, expect, type Page, test } from '@playwright/test';
 import { en } from '@rp/i18n';
 import { QR_MENU_REFRESH_MS } from '@rp/ordering';
 import pg from 'pg';
@@ -468,5 +468,76 @@ test.describe('[P9] Mannat: the whole table on a phone (ADR-0024)', () => {
     await expect(
       page.getByText('Your bill is settled. Thank you for dining at Mannat!'),
     ).toBeVisible();
+  });
+});
+
+test.describe('[P9-08] the same number on any phone, and a page that never moves sideways', () => {
+  test('[QR-007] another phone with the same number finds the orders; another number does not', async ({
+    browser,
+  }) => {
+    // An order from one phone at M3, with its number.
+    const placed = await fetch(`${state.relayUrl}/submit-order`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-rp-table-token': state.mannat.token,
+        'x-rp-browser': 'browser-first-phone-0001',
+      },
+      body: JSON.stringify({
+        idempotencyKey: crypto.randomUUID(),
+        customerPhone: '+919800000008',
+        lines: [{ clientLineId: crypto.randomUUID(), itemId: IDS.dal, quantity: 2, modifiers: [] }],
+      }),
+    });
+    expect(placed.status).toBe(200);
+
+    const open = async (number: string) => {
+      const context = await browser.newContext({ ...devices['Pixel 7'] });
+      const page = await context.newPage();
+      await page.goto(`${state.site}/t/${state.mannat.token}`);
+      await page.getByLabel(new RegExp(`^${s.cart.phone}`)).fill(number);
+      await page.getByRole('button', { name: s.welcome.start }).click();
+      await page
+        .getByRole('navigation', { name: s.tabs.label })
+        .getByRole('button', { name: s.tabs.orders })
+        .click();
+      return { context, page };
+    };
+    const same = await open('98000 00008');
+    const orders = same.page.getByRole('region', { name: s.orders.title });
+    await expect(orders.getByText('2 × Dal Makhani')).toBeVisible();
+    await expect(orders.getByText(s.orders.SUBMITTED)).toBeVisible();
+    await same.context.close();
+
+    const other = await open('98000 00009');
+    await expect(other.page.getByText(s.orders.empty)).toBeVisible();
+    await other.context.close();
+  });
+
+  test('is never wider than a 360 px phone, so it cannot be dragged sideways', async ({
+    browser,
+  }) => {
+    const context = await browser.newContext({
+      ...devices['Pixel 7'],
+      viewport: { width: 360, height: 760 },
+    });
+    const page = await context.newPage();
+    await tablePage(page, 'T2');
+    await expect(page.getByRole('navigation', { name: s.categories })).toBeVisible();
+    const widths = () =>
+      page.evaluate(() => ({
+        page: document.documentElement.scrollWidth,
+        screen: document.documentElement.clientWidth,
+      }));
+    expect((await widths()).page).toBeLessThanOrEqual((await widths()).screen);
+    await inMenu(page, 'Add Dal Makhani').click();
+    expect((await widths()).page).toBeLessThanOrEqual((await widths()).screen);
+    // The tabs stay reachable with something in the cart.
+    await page
+      .getByRole('navigation', { name: s.tabs.label })
+      .getByRole('button', { name: s.tabs.bill })
+      .click();
+    await expect(page.getByRole('heading', { name: s.bill.title })).toBeVisible();
+    await context.close();
   });
 });

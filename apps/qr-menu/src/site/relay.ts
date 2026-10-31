@@ -1,5 +1,7 @@
 import {
   BROWSER_ID_HEADER,
+  DINER_PHONE_HEADER,
+  QrTableOrdersResponse,
   QrMenuResponse,
   QrOrderView,
   QrServiceRequestResponse,
@@ -128,5 +130,21 @@ export function fetchServiceRequest(
 export function fetchTableBill(relayUrl: string, token: string): Promise<QrTableBillResponse> {
   return call(`${relayUrl}/table-bill`, { headers: { [TABLE_TOKEN_HEADER]: token } }, (body) =>
     QrTableBillResponse.parse(body),
+  );
+}
+
+/**
+ * P9-08: the orders this mobile number placed at this table during this sitting, from any phone
+ * or browser. The number goes in a header, never in the address.
+ */
+export function fetchTableOrders(
+  relayUrl: string,
+  token: string,
+  phone: string,
+): Promise<QrTableOrdersResponse> {
+  return call(
+    `${relayUrl}/table-orders`,
+    { headers: { [TABLE_TOKEN_HEADER]: token, [DINER_PHONE_HEADER]: phone } },
+    (body) => QrTableOrdersResponse.parse(body),
   );
 }

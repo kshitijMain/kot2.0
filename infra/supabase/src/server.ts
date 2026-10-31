@@ -538,11 +538,20 @@ async function publishTableBill(
       [params.data.tableId],
     );
     if (table === undefined) return false;
+    // P9-08: when the table's previous sitting ended, when the restaurant says (kept otherwise).
+    const sayClosed = body.lastClosedAt !== undefined;
     await tx.query(
-      `INSERT INTO relay.qr_table_bills (tenant_id, table_id, bill)
-       VALUES (relay.claim_tenant(), $1, $2::text::jsonb)
-       ON CONFLICT (tenant_id, table_id) DO UPDATE SET bill = excluded.bill`,
-      [params.data.tableId, body.bill === null ? null : JSON.stringify(body.bill)],
+      `INSERT INTO relay.qr_table_bills (tenant_id, table_id, bill, last_closed_at)
+       VALUES (relay.claim_tenant(), $1, $2::text::jsonb, $3::timestamptz)
+       ON CONFLICT (tenant_id, table_id) DO UPDATE SET bill = excluded.bill,
+         last_closed_at = CASE WHEN $4 THEN excluded.last_closed_at
+                               ELSE relay.qr_table_bills.last_closed_at END`,
+      [
+        params.data.tableId,
+        body.bill === null ? null : JSON.stringify(body.bill),
+        body.lastClosedAt ?? null,
+        sayClosed,
+      ],
     );
     return true;
   });

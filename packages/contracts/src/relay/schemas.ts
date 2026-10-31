@@ -507,8 +507,14 @@ export const QrTableBill = z.strictObject({
 });
 export type QrTableBill = z.infer<typeof QrTableBill>;
 
-/** The restaurant's side: the table's bill, or null to clear it. */
-export const PublishTableBillRequest = z.strictObject({ bill: QrTableBill.nullable() });
+/**
+ * The restaurant's side: the table's bill, or null to clear it, and when the table's previous
+ * sitting ended (P9-08), so a diner's number shows only this sitting's orders. Absent: unchanged.
+ */
+export const PublishTableBillRequest = z.strictObject({
+  bill: QrTableBill.nullable(),
+  lastClosedAt: Timestamp.nullable().optional(),
+});
 export type PublishTableBillRequest = z.infer<typeof PublishTableBillRequest>;
 
 export const PublishTableBillResponse = z.object({ tableId: Id, cleared: z.boolean() });
@@ -523,3 +529,23 @@ export const QrTableBillResponse = z.object({
   updatedAt: Timestamp.nullable(),
 });
 export type QrTableBillResponse = z.infer<typeof QrTableBillResponse>;
+
+// ---------------------------------------------------------------- a diner's orders by number (P9-08)
+
+/**
+ * The diner's mobile number for looking up their orders, in a header so it is never in an
+ * address (and so never in a server's access log).
+ */
+export const DINER_PHONE_HEADER = 'x-rp-diner-phone';
+
+/**
+ * The orders a number placed at the code's table during this sitting, newest first: what "My
+ * orders" shows on any phone or browser where the diner gives the same number at that table.
+ * `since` is when the table's previous sitting ended (null: none known); the page drops orders it
+ * kept from before then.
+ */
+export const QrTableOrdersResponse = z.object({
+  orders: z.array(QrOrderView).max(50),
+  since: Timestamp.nullable(),
+});
+export type QrTableOrdersResponse = z.infer<typeof QrTableOrdersResponse>;
