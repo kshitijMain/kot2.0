@@ -699,6 +699,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-08 A diner's orders follow their number; a compact page; pairing the first screen
 - [x] P9-09 A menu made for the phone: sections that follow, a stepper on the card, an order tracker
 - [x] P9-10 Approving a diner's order from its alert, and on the manager dashboard
+- [x] P9-11 A designed QR menu: cards, sheets and states
 
 ## Decisions
 
@@ -4624,6 +4625,78 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-10-31: P9-11 A designed QR menu
+
+The Business Owner asked for a designer's pass with the `/qr-menu-redesign` skill:
+
+- audit;
+- brief;
+- implement in the skill's order (rhythm, header and filters, cards, sheets, Orders and Bill,
+  skeletons, copy);
+- verify.
+
+The references read were `design-ref/` (local, patterns only):
+
+- qr-tablev2 `menu-view.tsx` and `order-tracking.tsx`;
+- qr-menu-ahmed-hakim90 `product-badges.tsx`;
+- bubblexport-foodie `cart-sheet.tsx`;
+- FoodHunt `ShimmerRestaurant.jsx`;
+- basil-ui `llms.txt`.
+
+None of the five is GPL or AGPL. qr-tablev2 has no licence (look only); the rest are MIT or ISC.
+No code was copied.
+
+Audit scores, before (out of 5):
+
+- hierarchy 3: the item sheet's CTA was teal while the others were the accent;
+- scannability 3: a ragged action column, prices not tabular;
+- touch targets 4: 36–40 px chips and stepper;
+- states 2: none designed; Orders and Bill said "nothing yet" while still loading; two "!" in the
+  copy;
+- contrast 4: raw white overlays, and Mannat's maroon hard-coded in the step pulse;
+- motion 4.
+
+Built (screen by screen in the phase-9 spec):
+
+- flat cards with one fixed 7 rem action column. With a photo, the action sits over its lower edge
+  (the Indian delivery apps' pattern), so a 360 px phone keeps about 190 px for the name;
+- toggle chips, and section pills with 48 px targets;
+- bottom sheets with a sticky priced CTA;
+- a floating cart bar with a count;
+- status pills and a tracker with checks;
+- designed empty and loading states;
+- tabular money.
+
+`qr.css` has no raw colours left: tints are `color-mix` of tokens.
+
+Decided:
+
+- **Accent on diner CTAs.** Every main action on the QR page uses `Button variant="accent"` (the
+  restaurant's colour). Teal is kept for focus. Recorded in DESIGN_SYSTEM §06.
+- **Non-veg is a triangle** in `@rp/ui-web` and `@rp/ui-native`, as on Indian (FSSAI) labels, so
+  the mark isn't colour-only.
+- **The loading route streams a skeleton.** As a result, an unknown table code now answers HTTP
+  200 with the "not in use" page instead of 404. It is a QR code, not a page to index.
+- **The skeleton header is neutral**, not the accent: the restaurant's colour isn't known before
+  the menu arrives, and a teal band first would flash.
+
+Repo: `design-ref/tier-*/` is ignored by ESLint and Prettier (the clones carry their own configs,
+and root `pnpm lint` crashed on them).
+
+Tests:
+
+- QR unit +2 (Orders' empty state leads to the menu; loading says it is looking). 23/23.
+- QR e2e 16/16 (LCP 996 ms; was 660 ms, budget 2.5 s).
+- `pnpm check`: everything passes except the known `pg_dump`/`PG_BIN` server integration files
+  (10). Native ui-native 39, waiter app 76, tablet 35.
+- Checked by hand: screenshots at 375 and 414 px, with and without photos.
+
+Left out:
+
+- the dish photo in the item sheet already existed and is unchanged;
+- dark mode (the diner surfaces pin light);
+- a cover image or logo in the header (the menu document has no logo yet).
 
 ### 2026-10-31: P9-10 Approving a diner's order from its alert
 

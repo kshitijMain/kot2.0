@@ -466,7 +466,7 @@ test.describe('[P9] Mannat: the whole table on a phone (ADR-0024)', () => {
     // Settled: the table closes and the bill goes; the page thanks the diner.
     await asMannat('PUT', `tables/${state.mannat.tableId}/bill`, { bill: null });
     await expect(
-      page.getByText('Your bill is settled. Thank you for dining at Mannat!'),
+      page.getByText('Your bill is settled. Thank you for dining at Mannat.'),
     ).toBeVisible();
   });
 });

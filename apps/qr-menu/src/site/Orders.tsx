@@ -6,6 +6,8 @@ import { displayDateTime } from '@rp/domain';
 import { Button, Icon, StatusChip } from '@rp/ui-web';
 import { useT } from './i18n';
 import { ORDER_STEPS, orderStep } from './progress';
+import { CardSkeleton } from './Skeletons';
+import { QrEmpty } from './States';
 
 /** Where an order is, by the page's own clock too: one nobody picked up in time reads EXPIRED. */
 export function shownStatus(order: QrOrderView, now: number): QrOrderView['status'] {
@@ -24,22 +26,38 @@ export function Orders({
   items,
   now,
   readOnly,
+  loading = false,
   onAgain,
+  onBrowse,
 }: {
   orders: readonly QrOrderView[];
   items: ReadonlyMap<string, MenuItem>;
   now: number;
   readOnly: boolean;
+  /** Still finding this number's orders: a placeholder, not "nothing yet" (P9-11). */
+  loading?: boolean;
   onAgain: (lines: readonly OrderLineRequest[]) => void;
+  /** Back to the menu, from the empty state. */
+  onBrowse?: () => void;
 }) {
   const t = useT();
   if (orders.length === 0) {
     return (
-      <section className="qr-panel qr-empty-state" aria-labelledby="qr-orders-title">
+      <section className="qr-panel" aria-labelledby="qr-orders-title">
         <h2 id="qr-orders-title" className="qr-section__title">
           {t('qrSite.orders.title')}
         </h2>
-        <p className="qr-muted">{t('qrSite.orders.empty')}</p>
+        {loading ? (
+          <CardSkeleton label={t('qrSite.orders.loading')} />
+        ) : (
+          <QrEmpty
+            icon="inbox"
+            title={t('qrSite.orders.emptyTitle')}
+            body={t('qrSite.orders.empty')}
+            action={t('qrSite.browse')}
+            {...(onBrowse !== undefined && { onAction: onBrowse })}
+          />
+        )}
       </section>
     );
   }
@@ -70,7 +88,7 @@ export function Orders({
                   {t('qrSite.orders.placed', displayDateTime(new Date(order.submittedAt)))}
                 </p>
               </div>
-              <p role="status" className={`qr-order__status qr-order__status--${tone}`}>
+              <p role="status" className="qr-order__status" data-tone={tone}>
                 <Icon
                   name={
                     status === 'SENT_TO_KITCHEN'
@@ -152,7 +170,9 @@ function Progress({ step }: { step: number | undefined }) {
           data-state={index <= step ? 'done' : index === step + 1 ? 'next' : 'todo'}
           aria-current={index === step ? 'step' : undefined}
         >
-          <span className="qr-progress__dot" aria-hidden="true" />
+          <span className="qr-progress__dot" aria-hidden="true">
+            {index <= step ? <Icon name="check" size="0.625rem" /> : null}
+          </span>
           <span className="qr-progress__label">{t(`qrSite.progress.${name}`)}</span>
         </li>
       ))}

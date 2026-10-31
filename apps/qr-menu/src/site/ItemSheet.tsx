@@ -11,7 +11,15 @@ import {
   selectable,
   summaryOf,
 } from '@rp/ordering';
-import { Button, ComboChoices, Dialog, ItemOptions, QuantityStepper, TextField } from '@rp/ui-web';
+import {
+  Button,
+  ComboChoices,
+  Icon,
+  ItemOptions,
+  QuantityStepper,
+  Sheet,
+  TextField,
+} from '@rp/ui-web';
 import { formatRupees } from '@rp/domain';
 import { type ReactNode, useId, useState } from 'react';
 import { useT } from './i18n';
@@ -71,13 +79,13 @@ export function ItemSheet({
   };
 
   return (
-    <Dialog
+    <Sheet
       open
-      size="lg"
+      className="qr-sheet"
       onClose={onClose}
       title={item.name}
       footer={
-        <Button type="submit" form={formId} fullWidth size="lg">
+        <Button type="submit" form={formId} fullWidth size="lg" variant="accent">
           {t('qrSite.item.addToOrder', {
             price: formatRupees((unitPrice ?? def.basePrice) * quantity),
           })}
@@ -85,6 +93,22 @@ export function ItemSheet({
       }
     >
       {photo}
+      <p className="qr-sheet__meta">
+        <span className="rp-food-mark" data-food={item.foodType} aria-hidden="true" />
+        <span>
+          {item.foodType === 'VEG'
+            ? t('qrSite.veg')
+            : item.foodType === 'EGG'
+              ? t('qrSite.egg')
+              : t('qrSite.nonVeg')}
+        </span>
+        {item.spiceLevel > 0 ? (
+          <span className="qr-dish__spice">
+            <Icon name="flame" />
+            {t('qrSite.spice', { level: item.spiceLevel })}
+          </span>
+        ) : null}
+      </p>
       {item.description === undefined ? null : (
         <p className="qr-sheet__description">{item.description}</p>
       )}
@@ -136,6 +160,6 @@ export function ItemSheet({
           />
         )}
       </form>
-    </Dialog>
+    </Sheet>
   );
 }

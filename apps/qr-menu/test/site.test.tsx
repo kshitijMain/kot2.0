@@ -258,9 +258,41 @@ describe('[QR-007] where an order is', () => {
     expect(screen.queryByRole('list', { name: en.qrSite.progress.label })).toBeNull();
   });
 
-  it('says plainly when there is nothing yet', () => {
-    show([], Date.now());
+  it('says plainly when there is nothing yet, and leads back to the menu (P9-11)', () => {
+    const onBrowse = vi.fn();
+    render(
+      <I18nProvider>
+        <Orders
+          orders={[]}
+          items={items}
+          now={Date.now()}
+          readOnly={false}
+          onAgain={onAgain}
+          onBrowse={onBrowse}
+        />
+      </I18nProvider>,
+    );
+    expect(screen.getByText(en.qrSite.orders.emptyTitle)).toBeVisible();
     expect(screen.getByText(en.qrSite.orders.empty)).toBeVisible();
+    fireEvent.click(screen.getByRole('button', { name: en.qrSite.browse }));
+    expect(onBrowse).toHaveBeenCalledTimes(1);
+  });
+
+  it('[NFR-U04] says it is looking, not "nothing yet", while the orders are looked up (P9-11)', () => {
+    render(
+      <I18nProvider>
+        <Orders
+          orders={[]}
+          items={items}
+          now={Date.now()}
+          readOnly={false}
+          loading
+          onAgain={onAgain}
+        />
+      </I18nProvider>,
+    );
+    expect(screen.getByRole('status')).toHaveTextContent(en.qrSite.orders.loading);
+    expect(screen.queryByText(en.qrSite.orders.empty)).toBeNull();
   });
 });
 
@@ -463,7 +495,7 @@ describe('[QR-011] the bill on the diner’s phone and UPI (P9-03, P9-04)', () =
     await vi.advanceTimersByTimeAsync(5_500);
     await waitFor(() => {
       expect(
-        screen.getByText('Your bill is settled. Thank you for dining at Mannat!'),
+        screen.getByText('Your bill is settled. Thank you for dining at Mannat.'),
       ).toBeVisible();
     });
     vi.useRealTimers();

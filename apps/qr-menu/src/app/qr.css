@@ -33,9 +33,20 @@ body {
 .qr-page {
   max-width: 40rem;
   margin: 0 auto;
-  /* Room for the cart bar above the tab bar (P9-04). */
-  padding: var(--rp-space-3) var(--rp-space-3)
-    calc(var(--rp-space-16) * 2 + var(--rp-space-4) + env(safe-area-inset-bottom));
+  /* Room for the cart bar above the tab bar (P9-04). A 16 px gutter, as the cards' own padding. */
+  padding: var(--rp-space-3) var(--rp-space-4)
+    calc(var(--rp-space-16) * 2 + var(--rp-space-6) + env(safe-area-inset-bottom));
+}
+
+/* Money and counts in columns that line up (basil-ui doctrine; P9-11). */
+.qr-dish__price,
+.qr-cart__price,
+.qr-totals dd,
+.qr-bill__lines li > span:last-child,
+.qr-cart-bar__total,
+.qr-cart-bar__count,
+.qr-dish__stepper .rp-stepper__value {
+  font-variant-numeric: tabular-nums;
 }
 
 .qr-message,
@@ -70,12 +81,12 @@ body {
   align-items: center;
   justify-content: space-between;
   gap: var(--rp-space-3);
-  padding: var(--rp-space-3) var(--rp-space-4);
-  margin-bottom: var(--rp-space-2);
-  border-radius: var(--rp-radius-lg);
+  padding: var(--rp-space-4);
+  margin-bottom: var(--rp-space-3);
+  border-radius: var(--rp-radius-xl);
   background: var(--rp-color-accent);
   color: var(--rp-color-on-accent);
-  box-shadow: var(--rp-elevation-2);
+  box-shadow: var(--rp-elevation-1);
 }
 
 .qr-header__name {
@@ -92,27 +103,28 @@ body {
   margin: var(--rp-space-1) 0 0;
   padding: 2px var(--rp-space-2);
   border-radius: var(--rp-radius-full);
-  background: rgb(255 255 255 / 0.18);
+  /* Tints of the accent's own text colour, readable on a light accent as on a dark one. */
+  background: color-mix(in srgb, var(--rp-color-on-accent) 18%, transparent);
   font-weight: var(--rp-font-weight-semibold);
   font-size: var(--rp-font-size-sm);
 }
 
 .qr-header__call {
   display: inline-flex;
-  flex-direction: column;
   align-items: center;
-  gap: var(--rp-space-1);
+  gap: var(--rp-space-2);
   flex: none;
   min-width: var(--rp-touch-target);
   min-height: var(--rp-touch-target);
-  padding: var(--rp-space-1) var(--rp-space-2);
-  border: 1px solid rgb(255 255 255 / 0.5);
-  border-radius: var(--rp-radius-md);
-  background: transparent;
+  padding: 0 var(--rp-space-3);
+  border: 1px solid color-mix(in srgb, var(--rp-color-on-accent) 55%, transparent);
+  border-radius: var(--rp-radius-full);
+  background: color-mix(in srgb, var(--rp-color-on-accent) 10%, transparent);
   color: inherit;
   font: inherit;
-  font-size: var(--rp-font-size-xs);
+  font-size: var(--rp-font-size-sm);
   font-weight: var(--rp-font-weight-semibold);
+  cursor: pointer;
 }
 
 .qr-header__call:disabled {
@@ -148,12 +160,12 @@ body {
 .qr-search input {
   box-sizing: border-box;
   width: 100%;
-  min-height: 2.75rem;
+  min-height: var(--rp-touch-target);
   border: 1px solid var(--rp-color-border-strong);
   border-radius: var(--rp-radius-full);
   padding: 0 var(--rp-space-4);
   font: inherit;
-  font-size: var(--rp-font-size-sm);
+  font-size: var(--rp-font-size-md);
   background: var(--rp-color-surface);
   color: var(--rp-color-text);
 }
@@ -181,16 +193,35 @@ body {
   display: inline-flex;
   align-items: center;
   gap: var(--rp-space-1);
-  min-height: 2.5rem;
-  padding: 0 var(--rp-space-3);
-  border: 1px solid var(--rp-color-border);
+  min-height: var(--rp-touch-target);
+  padding: 0 var(--rp-space-4);
+  border: 1px solid var(--rp-color-border-strong);
   border-radius: var(--rp-radius-full);
   background: var(--rp-color-surface);
   font-size: var(--rp-font-size-sm);
+  font-weight: var(--rp-font-weight-medium);
+  cursor: pointer;
 }
 
-.qr-chip input {
+/* The checkbox stays for keyboards and screen readers; the chip is what is seen (P9-11). */
+.qr-chip__input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
   margin: 0;
+}
+
+.qr-chip:has(.qr-chip__input:focus-visible) {
+  outline: 2px solid var(--rp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* On: filled in the restaurant's colour, with a check, so it is not the colour alone. */
+.qr-chip[data-on] {
+  border-color: var(--rp-color-accent);
+  background: var(--rp-color-accent);
+  color: var(--rp-color-on-accent);
 }
 
 /* The menu's sections, the one bar that stays at the top while the dishes scroll (P9-08). */
@@ -199,48 +230,68 @@ body {
   top: 0;
   z-index: var(--rp-z-sticky);
   display: flex;
-  gap: var(--rp-space-2);
+  gap: var(--rp-space-1);
   overflow-x: auto;
   overscroll-behavior-x: contain;
-  margin: 0 calc(-1 * var(--rp-space-3));
-  padding: var(--rp-space-2) var(--rp-space-3);
+  margin: var(--rp-space-2) calc(-1 * var(--rp-space-4)) 0;
+  padding: var(--rp-space-1) var(--rp-space-4);
   background: var(--rp-color-background);
   border-bottom: 1px solid var(--rp-color-border);
   font-size: var(--rp-font-size-sm);
   scrollbar-width: none;
 }
 
-.qr-categories a[aria-current='true'] {
-  background: var(--rp-color-accent);
-  color: var(--rp-color-on-accent);
-}
-
+/* The link is the 48 px target; the pill inside is what is seen (NFR-U03). */
 .qr-categories a {
   flex: none;
-  white-space: nowrap;
   display: inline-flex;
   align-items: center;
-  min-height: 2.25rem;
-  padding: 0 var(--rp-space-3);
-  border-radius: var(--rp-radius-full);
-  background: var(--rp-color-surface-sunken);
+  min-height: var(--rp-touch-target);
   color: var(--rp-color-text);
   font-weight: var(--rp-font-weight-semibold);
   text-decoration: none;
+  white-space: nowrap;
+}
+
+.qr-categories__pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0 var(--rp-space-4);
+  border-radius: var(--rp-radius-full);
+  background: var(--rp-color-surface-sunken);
+}
+
+/* The section being read: filled, and bolder, not the colour alone. */
+.qr-categories a[aria-current='true'] .qr-categories__pill {
+  background: var(--rp-color-accent);
+  color: var(--rp-color-on-accent);
+  font-weight: var(--rp-font-weight-bold);
+}
+
+.qr-categories a:focus-visible {
+  outline: none;
+}
+
+.qr-categories a:focus-visible .qr-categories__pill {
+  outline: 2px solid var(--rp-color-focus-ring);
+  outline-offset: 2px;
 }
 
 .qr-section {
-  margin-top: var(--rp-space-4);
+  margin-top: var(--rp-space-6);
   /* Below the sticky section bar when a section is jumped to. */
-  scroll-margin-top: 3.5rem;
+  scroll-margin-top: 4rem;
 }
 
 .qr-section__title {
   display: flex;
   align-items: baseline;
   gap: var(--rp-space-2);
-  font-size: var(--rp-font-size-lg);
-  margin: 0 0 var(--rp-space-2);
+  font-size: var(--rp-font-size-xl);
+  line-height: var(--rp-line-height-tight);
+  letter-spacing: -0.01em;
+  margin: 0 0 var(--rp-space-3);
 }
 
 .qr-section__count {
@@ -257,15 +308,24 @@ body {
   padding: 0;
 }
 
+/* A dish (P9-11): flat, one hairline, no shadow (shadows are for what floats). Name and facts on
+   the left; on the right one column the same width on every card, holding the photo with the
+   action over its lower edge (the Indian delivery apps' pattern), or the action alone. */
 .qr-dish {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--rp-space-3);
-  padding: var(--rp-space-2) var(--rp-space-3);
-  margin-bottom: var(--rp-space-2);
+  padding: var(--rp-space-4);
+  margin-bottom: var(--rp-space-3);
   border: 1px solid var(--rp-color-border);
-  border-radius: var(--rp-radius-md);
+  border-radius: var(--rp-radius-lg);
   background: var(--rp-color-surface);
+}
+
+/* In the order: a ring in the restaurant's colour, with "n in cart" or the stepper to say it. */
+.qr-dish[data-in-cart] {
+  border-color: var(--rp-color-accent);
+  box-shadow: 0 0 0 1px var(--rp-color-accent);
 }
 
 /* Two columns of dishes where the screen has room (a tablet, a phone on its side). */
@@ -277,7 +337,7 @@ body {
   .qr-dishes {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: var(--rp-space-2);
+    gap: var(--rp-space-3);
   }
 
   .qr-dish {
@@ -292,38 +352,53 @@ body {
 
 .qr-dish[data-unavailable] .qr-dish__photo {
   opacity: 0.6;
+  filter: grayscale(1);
 }
 
 .qr-dish__what {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--rp-space-1);
   flex: 1;
   min-width: 0;
 }
 
-/* A square thumbnail; the photo keeps its shape and fills it (MENU-008). */
-/* The photo or the shared placeholder (@rp/ui-web DishPhoto), the same square either way. */
-.qr-dish__photo {
-  flex: none;
-  align-self: center;
-  width: 4rem;
-  height: 4rem;
-  aspect-ratio: auto;
-  border-radius: var(--rp-radius-md);
-}
-
-.qr-sheet__photo {
-  max-height: 16rem;
-  border-radius: var(--rp-radius-md);
-  margin-bottom: var(--rp-space-3);
-}
-
 .qr-dish__name {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--rp-space-2);
   margin: 0;
+  font-size: var(--rp-font-size-lg);
+  font-weight: var(--rp-font-weight-semibold);
+  line-height: var(--rp-line-height-snug);
+}
+
+.qr-dish__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rp-space-1) var(--rp-space-3);
+  align-items: center;
+  margin: 0;
+}
+
+.qr-dish__price {
   font-size: var(--rp-font-size-md);
   font-weight: var(--rp-font-weight-semibold);
-  line-height: var(--rp-line-height-tight);
+}
+
+.qr-dish__spice {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-sm);
+}
+
+.qr-dish__spice .rp-icon {
+  width: 1em;
+  height: 1em;
+  color: var(--rp-color-danger);
 }
 
 /* Two lines at most; the dish's sheet shows it all. */
@@ -333,61 +408,142 @@ body {
   -webkit-line-clamp: 2;
   line-clamp: 2;
   overflow: hidden;
-  margin: 2px 0 0;
+  margin: var(--rp-space-1) 0 0;
   color: var(--rp-color-text-muted);
   font-size: var(--rp-font-size-sm);
-  line-height: var(--rp-line-height-tight);
+  line-height: var(--rp-line-height-snug);
 }
 
-.qr-dish__facts {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0 var(--rp-space-2);
-  align-items: baseline;
-  margin: 2px 0 0;
-  font-size: var(--rp-font-size-sm);
-}
-
-.qr-dish__price {
+.qr-dish__badge {
+  min-height: 1.5rem;
+  font-size: var(--rp-font-size-xs);
   font-weight: var(--rp-font-weight-semibold);
 }
 
-.qr-dish__action {
+.qr-dish__side {
   flex: none;
-  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 7rem;
 }
 
-.qr-dish__action .rp-button {
-  min-height: 2.5rem;
-  min-width: 4.5rem;
-  padding-inline: var(--rp-space-3);
-  font-size: var(--rp-font-size-sm);
+/* The photo or the shared placeholder (@rp/ui-web DishPhoto), a square in the column. */
+.qr-dish__photo {
+  width: 7rem;
+  height: 7rem;
+  aspect-ratio: auto;
+  border-radius: var(--rp-radius-md);
 }
 
-/* A menu without photos is a clean list of names and prices (P9-08). */
-.qr-dish[data-text-only] {
-  padding-block: var(--rp-space-3);
+.qr-dish__action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--rp-space-1);
+  width: 100%;
+}
+
+/* Over the photo's lower edge, raised off it. */
+.qr-dish__photo + .qr-dish__action {
+  margin-top: calc(-1 * var(--rp-space-5));
+}
+
+.qr-dish__photo + .qr-dish__action > .rp-button,
+.qr-dish__photo + .qr-dish__action > .qr-dish__stepper {
+  box-shadow: var(--rp-elevation-2);
+}
+
+/* Add and Choose: the whole column wide, in the restaurant's colour on white. */
+.qr-dish__add.rp-button {
+  width: 100%;
+  min-height: var(--rp-touch-target);
+  border-color: var(--rp-color-accent);
+  background: var(--rp-color-surface);
+  color: var(--rp-color-accent);
+  font-weight: var(--rp-font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.qr-dish__in-cart {
+  color: var(--rp-color-accent);
+  font-size: var(--rp-font-size-xs);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+/* The card's own stepper: as wide as Add, its buttons 36 px to see and 48 px to touch. */
+.qr-dish__stepper {
+  justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: var(--rp-touch-target);
+  gap: 0;
+  padding: 0 2px;
+  border-radius: var(--rp-radius-md);
+  background: var(--rp-color-accent);
+}
+
+.qr-dish__stepper .rp-icon-button {
+  position: relative;
+  min-width: 2.25rem;
+  width: 2.25rem;
+  min-height: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--rp-color-on-accent);
+}
+
+.qr-dish__stepper .rp-icon-button::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
+.qr-dish__stepper .rp-stepper__value {
+  min-width: 1.5rem;
+  text-align: center;
+  font-weight: var(--rp-font-weight-bold);
+  color: var(--rp-color-on-accent);
 }
 
 .qr-dish__unavailable {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0 var(--rp-space-3);
+  border-radius: var(--rp-radius-full);
+  background: var(--rp-color-neutral-subtle);
+  color: var(--rp-color-neutral-text);
   font-size: var(--rp-font-size-sm);
-  color: var(--rp-color-text-muted);
+  font-weight: var(--rp-font-weight-semibold);
+  text-align: center;
+}
+
+.qr-sheet__photo {
+  max-height: 16rem;
+  border-radius: var(--rp-radius-lg);
 }
 
 .qr-empty {
   margin-top: var(--rp-space-6);
 }
 
+/* The cart bar floats just above the tab bar, never over it (P9-04, P9-08), as a card of its own
+   (P9-11): nothing behind it but the page. */
 .qr-cart-bar {
   position: fixed;
   left: 0;
   right: 0;
-  /* Just above the tab bar, never over it (P9-04, P9-08). */
   bottom: calc(3.5rem + env(safe-area-inset-bottom));
   z-index: var(--rp-z-sticky);
-  padding: var(--rp-space-2) var(--rp-space-3);
-  background: var(--rp-color-surface-raised);
-  box-shadow: var(--rp-elevation-2);
+  padding: var(--rp-space-2) var(--rp-space-4);
+  pointer-events: none;
+}
+
+.qr-cart-bar > * {
+  pointer-events: auto;
 }
 
 .qr-cart-bar > * {
@@ -401,8 +557,44 @@ body {
   margin-top: var(--rp-space-4);
 }
 
-.qr-sheet__description {
+/* The dish and the order slide up from the bottom (P9-11), no wider than the page on a tablet;
+   their action stays at the bottom while the rest scrolls. */
+.qr-sheet.rp-dialog[data-variant='sheet'][data-side='bottom'] {
+  width: min(100%, 40rem);
+  margin-inline: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.qr-sheet .rp-dialog__panel {
+  padding-bottom: 0;
+}
+
+.qr-sheet .rp-dialog__footer {
+  position: sticky;
+  bottom: 0;
+  margin: 0 calc(-1 * var(--rp-space-6));
+  padding: var(--rp-space-3) var(--rp-space-6) calc(var(--rp-space-3) + env(safe-area-inset-bottom));
+  background: var(--rp-color-surface-raised);
+  border-top: 1px solid var(--rp-color-border);
+}
+
+.qr-sheet__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rp-space-2) var(--rp-space-3);
   margin: 0;
+  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-sm);
+}
+
+.qr-sheet__meta .rp-food-mark {
+  margin-top: 0;
+}
+
+.qr-sheet__description {
+  margin: var(--rp-space-2) 0 0;
   color: var(--rp-color-text-muted);
 }
 
@@ -414,6 +606,9 @@ body {
 }
 
 .qr-cart__name {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--rp-space-2);
   margin: 0;
   font-weight: var(--rp-font-weight-semibold);
 }
@@ -461,12 +656,12 @@ body {
 /* Each order a card, its edge the colour of where it is (P9-04). */
 .qr-order {
   display: grid;
-  gap: var(--rp-space-2);
+  gap: var(--rp-space-3);
   padding: var(--rp-space-4);
-  border-radius: var(--rp-radius-lg);
+  border: 1px solid var(--rp-color-border);
   border-left: 4px solid var(--rp-color-info);
+  border-radius: var(--rp-radius-lg);
   background: var(--rp-color-surface);
-  box-shadow: var(--rp-elevation-1);
 }
 
 .qr-order[data-tone='success'] {
@@ -488,29 +683,38 @@ body {
   font-weight: var(--rp-font-weight-bold);
 }
 
+/* Where the order is, in words with an icon on a tint of its tone (never the colour alone). */
 .qr-order__status {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--rp-space-2);
   margin: 0;
+  padding: var(--rp-space-2) var(--rp-space-3);
+  border-radius: var(--rp-radius-md);
+  background: var(--rp-color-info-subtle);
+  color: var(--rp-color-info-text);
   font-weight: var(--rp-font-weight-semibold);
+  line-height: var(--rp-line-height-snug);
+}
+
+.qr-order__status .rp-icon {
+  flex: none;
+  margin-top: 1px;
+}
+
+.qr-order__status[data-tone='success'] {
+  background: var(--rp-color-success-subtle);
+  color: var(--rp-color-success-text);
+}
+
+.qr-order__status[data-tone='danger'] {
+  background: var(--rp-color-danger-subtle);
+  color: var(--rp-color-danger-text);
 }
 
 .qr-order__reason {
   margin: 0;
   font-size: var(--rp-font-size-sm);
-}
-
-.qr-order__status--success {
-  color: var(--rp-color-success-text);
-}
-
-.qr-order__status--danger {
-  color: var(--rp-color-danger-text);
-}
-
-.qr-order__status--info {
-  color: var(--rp-color-info-text);
 }
 
 .qr-order__lines {
@@ -595,10 +799,22 @@ body {
   gap: var(--rp-space-1);
   align-content: start;
   padding: var(--rp-space-3);
+  border: 1px solid var(--rp-color-border);
   border-radius: var(--rp-radius-lg);
   background: var(--rp-color-surface);
-  box-shadow: var(--rp-elevation-1);
   scroll-snap-align: start;
+}
+
+/* Suggestions scroll sideways to the page's edge, like the section bar. */
+.qr-suggestions ul {
+  margin-inline: calc(-1 * var(--rp-space-4));
+  padding-inline: var(--rp-space-4);
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.qr-suggestion .qr-dish__add {
+  margin-top: var(--rp-space-2);
 }
 
 .qr-suggestion__name,
@@ -632,11 +848,44 @@ body {
   margin: var(--rp-space-2) 0;
 }
 
+/* An empty state that says what to do next (NFR-U04, P9-11). */
 .qr-empty-state {
-  padding: var(--rp-space-8) var(--rp-space-4);
-  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--rp-space-2);
+  padding: var(--rp-space-10) var(--rp-space-6);
+  border: 1px solid var(--rp-color-border);
   border-radius: var(--rp-radius-lg);
   background: var(--rp-color-surface);
+  text-align: center;
+}
+
+.qr-empty-state__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: var(--rp-space-2);
+  border-radius: var(--rp-radius-full);
+  background: color-mix(in srgb, var(--rp-color-accent) 10%, var(--rp-color-surface));
+  color: var(--rp-color-accent);
+}
+
+.qr-empty-state__title {
+  margin: 0;
+  font-size: var(--rp-font-size-lg);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+.qr-empty-state .rp-button {
+  margin-top: var(--rp-space-3);
+}
+
+/* Inside a sheet the state needs no card of its own. */
+.qr-sheet .qr-empty-state {
+  border: 0;
+  padding-block: var(--rp-space-6);
 }
 
 /* The page's three parts, at the thumb (NFR-U03). */
@@ -791,9 +1040,9 @@ body {
 .qr-invoice {
   margin: var(--rp-space-3) 0;
   padding: var(--rp-space-4);
+  border: 1px solid var(--rp-color-border);
   border-radius: var(--rp-radius-lg);
   background: var(--rp-color-surface);
-  box-shadow: var(--rp-elevation-1);
 }
 
 .qr-invoice__head {
@@ -874,7 +1123,9 @@ body {
   gap: var(--rp-space-2);
   padding: var(--rp-space-3);
   border-radius: var(--rp-radius-md);
-  background: #ffffff;
+  /* The page is pinned to the light theme: a white quiet zone around the code. */
+  background: var(--rp-color-surface);
+  border: 1px solid var(--rp-color-border);
 }
 
 .qr-pay__upi {
@@ -899,73 +1150,47 @@ body {
   }
 }
 
-.qr-dish__badge {
-  margin-top: 2px;
-  font-size: var(--rp-font-size-xs);
-}
-
-.qr-dish__action {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
-}
-
-.qr-dish__in-cart {
-  color: var(--rp-color-accent);
-  font-size: var(--rp-font-size-xs);
-  font-weight: var(--rp-font-weight-semibold);
-}
-
-/* The card's own stepper, compact but still a thumb's width per button. */
-.qr-dish__stepper {
-  gap: var(--rp-space-1);
-  border: 1px solid var(--rp-color-accent);
-  border-radius: var(--rp-radius-md);
-  padding: 2px;
-}
-
-.qr-dish__stepper .rp-icon-button {
-  min-width: 2.25rem;
-  min-height: 2.25rem;
-  border: 0;
-  color: var(--rp-color-accent);
-}
-
-.qr-dish__stepper .rp-stepper__value {
-  min-width: 1.5rem;
-  text-align: center;
-  font-weight: var(--rp-font-weight-bold);
-  color: var(--rp-color-accent);
-}
-
-/* The cart bar: what is in it on the left, the way to it on the right. */
+/* The cart bar: how many and the total on the left, the way to it on the right. */
 .qr-cart-bar__button {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--rp-space-3);
   width: 100%;
-  min-height: 3.25rem;
-  padding: 0 var(--rp-space-4);
+  min-height: 3.5rem;
+  padding: 0 var(--rp-space-4) 0 var(--rp-space-3);
   border: 0;
-  border-radius: var(--rp-radius-md);
+  border-radius: var(--rp-radius-lg);
   background: var(--rp-color-accent);
   color: var(--rp-color-on-accent);
+  box-shadow: var(--rp-elevation-3);
   font: inherit;
   cursor: pointer;
 }
 
+.qr-cart-bar__count {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 var(--rp-space-1);
+  box-sizing: border-box;
+  border-radius: var(--rp-radius-full);
+  background: color-mix(in srgb, var(--rp-color-on-accent) 18%, transparent);
+  font-weight: var(--rp-font-weight-bold);
+}
+
 .qr-cart-bar__summary {
   display: flex;
+  flex: 1;
   flex-direction: column;
   align-items: flex-start;
-  font-size: var(--rp-font-size-sm);
+  font-size: var(--rp-font-size-xs);
   line-height: var(--rp-line-height-tight);
 }
 
 .qr-cart-bar__total {
-  font-size: var(--rp-font-size-md);
+  font-size: var(--rp-font-size-lg);
   font-weight: var(--rp-font-weight-bold);
 }
 
@@ -1020,7 +1245,7 @@ body {
 .qr-progress__step + .qr-progress__step::before {
   content: '';
   position: absolute;
-  top: 0.4rem;
+  top: calc(0.5rem - 1px);
   right: 50%;
   width: 100%;
   height: 2px;
@@ -1034,11 +1259,15 @@ body {
 .qr-progress__dot {
   position: relative;
   z-index: 1;
-  width: 0.875rem;
-  height: 0.875rem;
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 1rem;
+  height: 1rem;
   border: 2px solid var(--rp-color-border-strong);
   border-radius: 50%;
   background: var(--rp-color-surface);
+  color: var(--rp-color-on-success);
 }
 
 .qr-progress__step[data-state='done'] {
@@ -1066,6 +1295,105 @@ body {
 
 @keyframes qr-next-step {
   50% {
-    box-shadow: 0 0 0 4px rgb(138 28 43 / 0.15);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--rp-color-accent) 20%, transparent);
+  }
+}
+
+/* ---------------------------------------------------------------- P9-11: loading */
+
+/* Placeholders the shape of what they stand for (FoodHunt's pattern): a gentle pulse, none for
+   those who asked for less motion. */
+.qr-skeleton__line,
+.qr-skeleton__block {
+  display: block;
+  border-radius: var(--rp-radius-sm);
+  background: var(--rp-color-surface-sunken);
+}
+
+.qr-skeleton__line {
+  height: 0.875rem;
+  margin: var(--rp-space-2) 0;
+}
+
+.qr-skeleton .qr-skeleton__line:nth-of-type(1) {
+  width: 70%;
+  height: 1.125rem;
+}
+
+.qr-skeleton .qr-skeleton__line:nth-of-type(2) {
+  width: 30%;
+}
+
+.qr-skeleton .qr-skeleton__line:nth-of-type(3) {
+  width: 90%;
+}
+
+.qr-skeleton .qr-skeleton__line:nth-of-type(4) {
+  width: 55%;
+}
+
+.qr-dish.qr-skeleton .qr-dish__what {
+  display: block;
+  width: 100%;
+}
+
+.qr-skeleton__action {
+  width: 100%;
+  height: var(--rp-touch-target);
+  border-radius: var(--rp-radius-md);
+}
+
+.qr-skeleton__header {
+  height: 5.5rem;
+  box-sizing: border-box;
+  padding: var(--rp-space-4);
+  margin-bottom: var(--rp-space-3);
+  border-radius: var(--rp-radius-xl);
+  background: var(--rp-color-surface-sunken);
+}
+
+.qr-skeleton__header .qr-skeleton__line {
+  background: var(--rp-color-border);
+}
+
+.qr-skeleton__search {
+  height: var(--rp-touch-target);
+  border-radius: var(--rp-radius-full);
+}
+
+.qr-skeleton__chips {
+  display: flex;
+  gap: var(--rp-space-2);
+  margin: var(--rp-space-2) 0 var(--rp-space-6);
+}
+
+.qr-skeleton__chip {
+  width: 5rem;
+  height: var(--rp-touch-target);
+  border-radius: var(--rp-radius-full);
+}
+
+.qr-skeleton .qr-skeleton__title {
+  width: 40%;
+  height: 1.5rem;
+  margin-bottom: var(--rp-space-3);
+}
+
+.qr-card-skeleton {
+  padding: var(--rp-space-4);
+  border: 1px solid var(--rp-color-border);
+  border-radius: var(--rp-radius-lg);
+  background: var(--rp-color-surface);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .qr-skeleton {
+    animation: qr-pulse 1.4s var(--rp-easing-standard) infinite;
+  }
+}
+
+@keyframes qr-pulse {
+  50% {
+    opacity: 0.55;
   }
 }

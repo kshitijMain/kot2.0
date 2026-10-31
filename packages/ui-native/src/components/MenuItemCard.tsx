@@ -57,7 +57,12 @@ export function MenuItemCard({
     <>
       <View style={styles.top}>
         <View testID={`food-${foodType}`} style={[styles.mark, { borderColor: mark }]}>
-          <View style={[styles.markDot, { backgroundColor: mark }]} />
+          {foodType === 'NON_VEG' ? (
+            // A triangle, as on Indian food labels: the shape tells it apart, not only the colour.
+            <View style={[styles.markTriangle, { borderBottomColor: mark }]} />
+          ) : (
+            <View style={[styles.markDot, { backgroundColor: mark }]} />
+          )}
         </View>
         <Text numberOfLines={2} style={[styles.name, { color: colors.text }]}>
           {name}
@@ -132,5 +137,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   markDot: { width: 7, height: 7, borderRadius: radius.full },
+  markTriangle: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 4,
+    borderRightWidth: 4,
+    borderBottomWidth: 7,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+  },
   name: { flex: 1, fontSize: fontSize.md, fontWeight: weight(fontWeight.semibold) },
 });

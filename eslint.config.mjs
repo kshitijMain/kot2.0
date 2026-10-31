@@ -19,6 +19,8 @@ export default tseslint.config(
       '**/.expo/**',
       '**/generated/**',
       '**/storybook-static/**',
+      // Local UI reference clones (design-ref/README.md): other projects, with their own configs.
+      'design-ref/tier-*/**',
       // Hand-written declarations for the shared ESLint helpers (not part of a TS project).
       'packages/config/eslint/*.d.mts',
       // The virtual printer's parser types (development tooling, not part of a TS project).

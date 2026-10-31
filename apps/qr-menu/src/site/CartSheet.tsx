@@ -4,8 +4,9 @@ import type { MenuSnapshot } from '@rp/contracts';
 import type { QrPhoneAsk } from '@rp/contracts/relay';
 import { formatRupees, type PriceMode } from '@rp/domain';
 import { type CartLine, estimateCart } from '@rp/ordering';
-import { Button, Dialog, IconButton, Icon, QuantityStepper, TextField } from '@rp/ui-web';
+import { Button, IconButton, Icon, QuantityStepper, Sheet, TextField } from '@rp/ui-web';
 import { useT } from './i18n';
+import { QrEmpty } from './States';
 
 /**
  * The order before it is sent (QR-004, QR-005): each line with its options and note, how many,
@@ -52,34 +53,54 @@ export function CartSheet({
 }) {
   const t = useT();
   const estimate = estimateCart(lines, menu, priceMode);
+  const foodOf = new Map(menu.items.map((item) => [item.id, item.foodType]));
   return (
-    <Dialog
+    <Sheet
       open
-      size="lg"
+      className="qr-sheet"
       onClose={onClose}
       title={t('qrSite.cart.title')}
       dismissible={!sending}
       footer={
-        <Button
-          fullWidth
-          variant="accent"
-          size="lg"
-          loading={sending}
-          disabled={lines.length === 0 || readOnly}
-          onClick={onSend}
-        >
-          {sending ? t('qrSite.cart.sending') : t('qrSite.cart.send')}
-        </Button>
+        lines.length === 0 ? null : (
+          <Button
+            fullWidth
+            variant="accent"
+            size="lg"
+            loading={sending}
+            disabled={readOnly}
+            onClick={onSend}
+          >
+            {sending
+              ? t('qrSite.cart.sending')
+              : t('qrSite.cart.sendTotal', { total: formatRupees(estimate.total) })}
+          </Button>
+        )
       }
     >
       {lines.length === 0 ? (
-        <p className="qr-muted">{t('qrSite.cart.empty')}</p>
+        <QrEmpty
+          icon="handPlatter"
+          title={t('qrSite.cart.emptyTitle')}
+          body={t('qrSite.cart.empty')}
+          action={t('qrSite.browse')}
+          onAction={onClose}
+        />
       ) : (
         <ul className="qr-cart" aria-label={t('qrSite.cart.title')}>
           {lines.map((line) => (
             <li key={line.clientLineId} className="qr-cart__line">
               <div className="qr-cart__what">
-                <p className="qr-cart__name">{line.name}</p>
+                <p className="qr-cart__name">
+                  {foodOf.has(line.itemId) ? (
+                    <span
+                      className="rp-food-mark"
+                      data-food={foodOf.get(line.itemId)}
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                  <span>{line.name}</span>
+                </p>
                 {line.summary === '' ? null : <p className="qr-muted">{line.summary}</p>}
                 {line.instructions === '' ? null : (
                   <p className="qr-muted">“{line.instructions}”</p>
@@ -178,6 +199,6 @@ export function CartSheet({
           {message}
         </p>
       )}
-    </Dialog>
+    </Sheet>
   );
 }
