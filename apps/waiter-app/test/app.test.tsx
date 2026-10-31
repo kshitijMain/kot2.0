@@ -191,14 +191,15 @@ describe('[WTR-001] waiter app smoke flow', () => {
     expect(server.callsTo('POST', '/api/v1/auth/logout')).toHaveLength(1);
   });
 
-  it('[AUTH-010] offers only waiters on the login screen', async () => {
+  it('[AUTH-010] offers only waiters and managers on the login screen (ADR-0024)', async () => {
     const { restaurant, session } = setup();
     restaurant.holder = null;
     await session.start();
     await session.pair('http://pos.test:3000', 'ABCD-EFGH');
     await render(<App session={session} translator={translator} />);
     expect(await screen.findByRole('button', { name: 'Ravi, Waiter' })).toBeOnTheScreen();
-    expect(screen.queryByText('Meera')).toBeNull();
+    // ADR-0024: a manager's phone rings for diners' orders, so managers sign in here too.
+    expect(screen.getByText('Meera')).toBeOnTheScreen();
     expect(screen.queryByText('Imran')).toBeNull();
     expect(screen.queryByText('Asha')).toBeNull();
   });

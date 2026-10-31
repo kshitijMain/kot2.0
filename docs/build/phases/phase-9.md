@@ -92,16 +92,18 @@ for order again and the bill.
 
 ## P9-05 The manager's phone rings for QR orders
 
-Requirements: ORD-003, ORD-004, ORD-005, WTR-004.
+Requirements: ORD-003, ORD-004, ORD-005, WTR-004, NTF-002.
 
 Deliverables:
 
 - Managers may sign in on a waiter phone.
-- Setting `qr.approvalAlerts` (WAITERS, WAITERS_AND_MANAGERS; default the latter).
-- Customer-order approval alerts include the managers on duty when set.
+- The factory rule for orders waiting for approval names the managers on duty as well as every
+  waiter. It can be changed back on the Notification rules page.
 
-Acceptance: a manager signed in on a phone gets the approval alert and can approve or reject from
-the Approvals inbox.
+Acceptance:
+
+- A manager is listed and signs in on a waiter phone; the Owner and kitchen still cannot.
+- The approval alert reaches the managers on duty.
 
 ## P9-06 The Mannat pilot set-up and a one-Mac trial
 
