@@ -15,6 +15,11 @@ can be updated. Never paste secrets, keys or passwords into a Claude session or 
       `gh auth login` (GitHub.com, HTTPS, "authenticate Git with your GitHub credentials").
       Steps: [`manual-tasks/01-github-access.md`](manual-tasks/01-github-access.md).
 - [x] `main` is the repository's default branch.
+- [ ] **Give the GitHub account on this Mac write access** (2026-10-31): `kunaltomartwo99` is signed
+      in but `git push` to `kshitijMain/kot2.0` answers 403. Phase 9 (the QR pilot, 13 commits) is
+      merged on local `main` only. Add that account as a collaborator with write access (or sign
+      in with `gh auth login` as one that has it), then run `git push origin main
+      wp/p9-06-mannat-pilot` and tell Claude, who opens the pull request and watches CI.
 - [ ] Protect `main` (pull requests, the CI checks) and require 2FA for everyone with access.
       Same file. Checked 2026-10-11: `main` is not protected yet; the `release-signing`
       environment for the code-signing certificate (SEC-013) exists.
