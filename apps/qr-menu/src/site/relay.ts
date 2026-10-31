@@ -7,6 +7,7 @@ import {
   QrServiceRequestView,
   QrSubmitOrderResponse,
   type QrSubmitOrderRequest,
+  QrTableBillResponse,
   TABLE_TOKEN_HEADER,
 } from '@rp/contracts/relay';
 import { ApiError } from '@rp/contracts';
@@ -120,5 +121,12 @@ export function fetchServiceRequest(
     `${relayUrl}/service-request?id=${encodeURIComponent(requestId)}`,
     { headers: { [TABLE_TOKEN_HEADER]: token } },
     (body) => QrServiceRequestView.parse(body),
+  );
+}
+
+/** P9-03: the table's printed bill for this sitting, or none yet. */
+export function fetchTableBill(relayUrl: string, token: string): Promise<QrTableBillResponse> {
+  return call(`${relayUrl}/table-bill`, { headers: { [TABLE_TOKEN_HEADER]: token } }, (body) =>
+    QrTableBillResponse.parse(body),
   );
 }

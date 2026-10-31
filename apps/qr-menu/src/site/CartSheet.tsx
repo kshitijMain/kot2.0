@@ -26,7 +26,7 @@ export function CartSheet({
   onRemove,
   onNote,
   onName,
-  onPhone,
+  onChangePhone,
   onSend,
   onClose,
 }: {
@@ -45,7 +45,8 @@ export function CartSheet({
   onRemove: (clientLineId: string) => void;
   onNote: (note: string) => void;
   onName: (name: string) => void;
-  onPhone: (phone: string) => void;
+  /** Back to the welcome step to give another number. */
+  onChangePhone: () => void;
   onSend: () => void;
   onClose: () => void;
 }) {
@@ -126,21 +127,16 @@ export function CartSheet({
           }}
         />
         {phoneAsk === 'OFF' ? null : (
-          <TextField
-            label={
-              phoneAsk === 'REQUIRED' ? t('qrSite.cart.phone') : t('qrSite.cart.phoneOptional')
-            }
-            hint={t('qrSite.cart.phoneHint')}
-            value={phone}
-            type="tel"
-            inputMode="tel"
-            maxLength={16}
-            autoComplete="tel-national"
-            required={phoneAsk === 'REQUIRED'}
-            onChange={(event) => {
-              onPhone(event.target.value);
-            }}
-          />
+          <p className="qr-cart__phone">
+            <span>
+              {phone === ''
+                ? t('qrSite.cart.noPhone')
+                : t('qrSite.cart.phoneOnBill', { phone: phone.replace(/^\+91/, '+91 ') })}
+            </span>
+            <Button variant="ghost" onClick={onChangePhone}>
+              {phone === '' ? t('qrSite.cart.addPhone') : t('qrSite.welcome.change')}
+            </Button>
+          </p>
         )}
         <TextField
           label={t('qrSite.cart.name')}

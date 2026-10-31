@@ -2237,6 +2237,21 @@ until you press Publish.
   qrSite: {
     title: '{restaurant}: menu',
     table: 'Table {label}',
+    /** P9-04: the page's three parts. */
+    tabs: {
+      label: 'Menu, your orders and the bill',
+      menu: 'Menu',
+      orders: 'My orders',
+      bill: 'Bill',
+    },
+    /** P9-04: the welcome step, with the diner's mobile number (P9-02). */
+    welcome: {
+      hello: 'Welcome to',
+      table: 'You’re at table {label}',
+      start: 'Start ordering',
+      skip: 'Skip',
+      change: 'Change',
+    },
     landing: {
       title: 'Scan the QR code on your table',
       body: 'Point your phone’s camera at the code on your table to see the menu and order. No app needed.',
@@ -2292,6 +2307,9 @@ until you press Publish.
       phoneOptional: 'Mobile number (optional)',
       phoneHint: 'Printed on your bill. Used for nothing else.',
       phoneInvalid: 'Please enter a 10-digit mobile number.',
+      phoneOnBill: 'On your bill: {phone}',
+      noPhone: 'No mobile number on your bill',
+      addPhone: 'Add',
       subtotal: 'Dishes',
       tax: 'Estimated taxes',
       taxIncluded: 'Taxes included in prices',
@@ -2311,11 +2329,20 @@ until you press Publish.
       phoneRequired: 'Please add your mobile number. The restaurant prints it on your bill.',
     },
     orders: {
-      title: 'Your orders here',
-      placed: 'Order sent at {time}',
+      title: 'Your orders',
+      empty: 'Nothing ordered yet. Pick dishes from the menu and send your order.',
+      number: 'Order {number}',
+      placed: 'Sent at {time}',
       SUBMITTED: 'Sending your order to the restaurant...',
-      RECEIVED: 'Received, waiting for waiter confirmation',
-      SENT_TO_KITCHEN: 'Your order has been sent to the kitchen',
+      RECEIVED: 'Received. Waiting for the restaurant to accept it.',
+      SENT_TO_KITCHEN: 'Your order is accepted and has gone to the kitchen.',
+      acceptedBanner: 'Your order is accepted! The kitchen is preparing it.',
+      again: 'Order again',
+      againOne: 'Add {name} again',
+      againAdded:
+        '{count, plural, one {# dish} other {# dishes}} added to your cart. Check it and send.',
+      againSome: 'Some dishes can’t be ordered right now and were left out.',
+      againNone: 'These dishes can’t be ordered right now.',
       EXPIRED: 'We couldn’t reach the restaurant right now. Please call a waiter.',
       REJECTED: 'The restaurant could not take this order.',
       reason: 'Reason: {reason}',
@@ -2336,8 +2363,9 @@ until you press Publish.
     help: {
       title: 'Need something?',
       WAITER: 'Call waiter',
-      BILL: 'Request bill',
+      BILL: 'Ask for the bill',
       WATER: 'Water',
+      PAID: 'I have paid',
       status: {
         SUBMITTED: 'Sending…',
         RECEIVED: 'Waiter notified',
@@ -2348,6 +2376,39 @@ until you press Publish.
       },
       line: '{what}: {status}',
       failed: 'That didn’t go through. Please call a waiter.',
+    },
+    /** P9-03, P9-04: the bill on the diner's phone and paying it by UPI. */
+    bill: {
+      title: 'Your bill',
+      nothing: 'Nothing ordered yet.',
+      soFar: 'Ordered so far',
+      estimate: 'Estimated total',
+      estimateNote: 'An estimate from the menu. The restaurant prints the final bill.',
+      waiting: 'When you’re done, ask for the bill. It appears here as soon as it is printed.',
+      invoice: 'Bill {number}',
+      subtotal: 'Dishes',
+      discount: 'Discount',
+      serviceCharge: 'Service charge',
+      roundOff: 'Round off',
+      total: 'Total',
+      pay: 'Pay {amount} with UPI',
+      payNote: '{restaurant} bill {number}',
+      openIn: 'Or open in',
+      openApple: 'Open in',
+      apps: {
+        GPAY: 'Google Pay',
+        PHONEPE: 'PhonePe',
+        PAYTM: 'Paytm',
+      },
+      qrLabel: 'QR code to pay {amount} by UPI',
+      scan: 'Or scan this code with any UPI app.',
+      upiId: 'UPI ID: {upiId}',
+      copy: 'Copy',
+      copied: 'Copied',
+      paidNote: 'Paid? Tell the staff so they can confirm it.',
+      settled: 'Paid',
+      closed: 'Your bill is settled. Thank you for dining at {restaurant}!',
+      noUpi: 'Please pay your waiter or at the counter.',
     },
     footer: {
       privacy: 'Privacy',
@@ -2368,7 +2429,7 @@ until you press Publish.
     terms: {
       title: 'Terms of use',
       body1:
-        'Use this page to order at the table you are sitting at. Orders are dine-in only, and you pay the restaurant as usual; nothing is paid here.',
+        'Use this page to order at the table you are sitting at. Orders are dine-in only. You pay once the restaurant prints your bill: to your waiter, at the counter, or by UPI from this page, in your own UPI app. Nothing is charged by this page.',
       body2:
         'Prices and availability come from the restaurant and may change. A waiter confirms each order before it goes to the kitchen, and the restaurant may change or decline an order, for example when a dish has run out.',
       body3:

@@ -22,7 +22,9 @@ body {
 .qr-page {
   max-width: 40rem;
   margin: 0 auto;
-  padding: var(--rp-space-4) var(--rp-space-4) calc(var(--rp-space-16) + var(--rp-space-8));
+  /* Room for the cart bar above the tab bar (P9-04). */
+  padding: var(--rp-space-3) var(--rp-space-4)
+    calc(var(--rp-space-16) * 2 + var(--rp-space-8) + env(safe-area-inset-bottom));
 }
 
 .qr-message,
@@ -51,22 +53,58 @@ body {
   margin: 0;
 }
 
+/* The restaurant's band (P9-04): its name in its own colour, the table, and Call waiter. */
 .qr-header {
-  padding-bottom: var(--rp-space-3);
-  border-bottom: 3px solid var(--rp-color-accent);
-  margin-bottom: var(--rp-space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rp-space-3);
+  padding: var(--rp-space-5) var(--rp-space-4);
+  margin-bottom: var(--rp-space-3);
+  border-radius: var(--rp-radius-lg);
+  background: var(--rp-color-accent);
+  color: var(--rp-color-on-accent);
+  box-shadow: var(--rp-elevation-2);
 }
 
 .qr-header__name {
-  font-size: var(--rp-font-size-2xl);
+  font-size: var(--rp-font-size-3xl);
   line-height: var(--rp-line-height-tight);
+  letter-spacing: 0.01em;
   margin: 0;
 }
 
 .qr-header__table {
-  margin: var(--rp-space-1) 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rp-space-1);
+  margin: var(--rp-space-2) 0 0;
+  padding: var(--rp-space-1) var(--rp-space-3);
+  border-radius: var(--rp-radius-full);
+  background: rgb(255 255 255 / 0.18);
   font-weight: var(--rp-font-weight-semibold);
-  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-sm);
+}
+
+.qr-header__call {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--rp-space-1);
+  min-width: var(--rp-touch-target);
+  min-height: var(--rp-touch-target);
+  padding: var(--rp-space-2) var(--rp-space-3);
+  border: 1px solid rgb(255 255 255 / 0.5);
+  border-radius: var(--rp-radius-md);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--rp-font-size-xs);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+.qr-header__call:disabled {
+  opacity: 0.6;
 }
 
 .qr-notice {
@@ -134,15 +172,21 @@ body {
 
 .qr-categories {
   display: flex;
-  gap: var(--rp-space-3);
+  gap: var(--rp-space-2);
   overflow-x: auto;
   padding: var(--rp-space-2) 0 var(--rp-space-1);
   font-size: var(--rp-font-size-sm);
+  scrollbar-width: none;
 }
 
 .qr-categories a {
   white-space: nowrap;
+  padding: var(--rp-space-2) var(--rp-space-3);
+  border-radius: var(--rp-radius-full);
+  background: var(--rp-color-surface-sunken);
   color: var(--rp-color-text);
+  font-weight: var(--rp-font-weight-semibold);
+  text-decoration: none;
 }
 
 .qr-section {
@@ -167,8 +211,11 @@ body {
   display: flex;
   justify-content: space-between;
   gap: var(--rp-space-3);
-  padding: var(--rp-space-3) 0;
-  border-bottom: 1px solid var(--rp-color-border);
+  padding: var(--rp-space-3);
+  margin-bottom: var(--rp-space-3);
+  border-radius: var(--rp-radius-lg);
+  background: var(--rp-color-surface);
+  box-shadow: var(--rp-elevation-1);
 }
 
 /* A sold-out dish fades, but its words stay readable on the page colour (WCAG AA, 6.3:1). */
@@ -190,8 +237,8 @@ body {
 .qr-dish__photo {
   flex: none;
   align-self: center;
-  width: 4.5rem;
-  height: 4.5rem;
+  width: 5.5rem;
+  height: 5.5rem;
   aspect-ratio: auto;
   border-radius: var(--rp-radius-md);
 }
@@ -245,7 +292,8 @@ body {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  /* Above the tab bar (P9-04). */
+  bottom: calc(4rem + env(safe-area-inset-bottom));
   z-index: var(--rp-z-sticky);
   padding: var(--rp-space-3) var(--rp-space-4) calc(var(--rp-space-3) + env(safe-area-inset-bottom));
   background: var(--rp-color-surface-raised);
@@ -315,23 +363,52 @@ body {
   font-size: var(--rp-font-size-lg);
 }
 
-.qr-orders {
-  margin: var(--rp-space-4) 0;
-  padding: var(--rp-space-3) var(--rp-space-4);
+.qr-orders > ul {
+  display: grid;
+  gap: var(--rp-space-3);
+}
+
+/* Each order a card, its edge the colour of where it is (P9-04). */
+.qr-order {
+  display: grid;
+  gap: var(--rp-space-2);
+  padding: var(--rp-space-4);
   border-radius: var(--rp-radius-lg);
+  border-left: 4px solid var(--rp-color-info);
   background: var(--rp-color-surface);
   box-shadow: var(--rp-elevation-1);
 }
 
-.qr-order + .qr-order {
-  margin-top: var(--rp-space-3);
-  padding-top: var(--rp-space-3);
-  border-top: 1px solid var(--rp-color-border);
+.qr-order[data-tone='success'] {
+  border-left-color: var(--rp-color-success);
+}
+
+.qr-order[data-tone='danger'] {
+  border-left-color: var(--rp-color-danger);
+}
+
+.qr-order__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.qr-order__number {
+  margin: 0;
+  font-weight: var(--rp-font-weight-bold);
 }
 
 .qr-order__status {
-  margin: var(--rp-space-1) 0;
+  display: flex;
+  align-items: center;
+  gap: var(--rp-space-2);
+  margin: 0;
   font-weight: var(--rp-font-weight-semibold);
+}
+
+.qr-order__reason {
+  margin: 0;
+  font-size: var(--rp-font-size-sm);
 }
 
 .qr-order__status--success {
@@ -346,11 +423,40 @@ body {
   color: var(--rp-color-info-text);
 }
 
+.qr-order__lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--rp-space-2);
+}
+
 .qr-order__lines li {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--rp-space-2);
   font-size: var(--rp-font-size-sm);
+}
+
+.qr-order__line {
+  flex: 1;
+}
+
+/* One dish again: a small round + (P9-04). */
+.qr-again-one {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: var(--rp-touch-min);
+  height: var(--rp-touch-min);
+  border: 1px solid var(--rp-color-border-strong);
+  border-radius: var(--rp-radius-full);
+  background: var(--rp-color-surface);
+  color: var(--rp-color-text);
+}
+
+.qr-again-one:disabled {
+  opacity: 0.5;
 }
 
 .qr-order__state {
@@ -428,4 +534,267 @@ body {
   margin: var(--rp-space-2) 0 0;
   font-size: var(--rp-font-size-sm);
   color: var(--rp-color-info-text);
+}
+
+/* ---------------------------------------------------------------- P9-04: tabs, welcome, bill */
+
+.qr-panel {
+  margin: var(--rp-space-2) 0;
+}
+
+.qr-empty-state {
+  padding: var(--rp-space-8) var(--rp-space-4);
+  text-align: center;
+  border-radius: var(--rp-radius-lg);
+  background: var(--rp-color-surface);
+}
+
+/* The page's three parts, at the thumb (NFR-U03). */
+.qr-tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--rp-z-sticky);
+  display: flex;
+  justify-content: center;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--rp-color-surface-raised);
+  border-top: 1px solid var(--rp-color-border);
+  box-shadow: var(--rp-elevation-2);
+}
+
+.qr-tabbar__tab {
+  flex: 1;
+  max-width: 13rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 4rem;
+  border: 0;
+  background: transparent;
+  color: var(--rp-color-text-muted);
+  font: inherit;
+  font-size: var(--rp-font-size-xs);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+.qr-tabbar__tab[aria-current='page'] {
+  color: var(--rp-color-accent);
+}
+
+.qr-tabbar__tab[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 25%;
+  right: 25%;
+  height: 3px;
+  border-radius: 0 0 var(--rp-radius-sm) var(--rp-radius-sm);
+  background: var(--rp-color-accent);
+}
+
+.qr-tabbar__tab .rp-badge {
+  position: absolute;
+  top: var(--rp-space-1);
+  right: calc(50% - 1.75rem);
+}
+
+/* "Your order is accepted" (P9-04). */
+.qr-accepted,
+.qr-paid-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--rp-space-2);
+  margin: var(--rp-space-2) 0;
+  padding: var(--rp-space-3) var(--rp-space-4);
+  border-radius: var(--rp-radius-md);
+  background: var(--rp-color-success-subtle);
+  color: var(--rp-color-success-text);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+.qr-accepted {
+  position: sticky;
+  top: var(--rp-space-2);
+  z-index: var(--rp-z-banner);
+  box-shadow: var(--rp-elevation-2);
+}
+
+.qr-call-status {
+  margin: 0 0 var(--rp-space-2);
+}
+
+/* The welcome step (P9-02, P9-04). */
+.qr-welcome {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--rp-space-4);
+  background: var(--rp-color-accent);
+}
+
+.qr-welcome__card {
+  width: 100%;
+  max-width: 26rem;
+  box-sizing: border-box;
+  padding: var(--rp-space-8) var(--rp-space-6);
+  border-radius: var(--rp-radius-xl);
+  background: var(--rp-color-surface);
+  box-shadow: var(--rp-elevation-3);
+  text-align: center;
+}
+
+.qr-welcome__hello {
+  margin: 0;
+  color: var(--rp-color-text-muted);
+}
+
+.qr-welcome__name {
+  margin: var(--rp-space-1) 0;
+  font-size: var(--rp-font-size-3xl);
+  color: var(--rp-color-accent);
+}
+
+.qr-welcome__table {
+  display: inline-block;
+  margin: 0 0 var(--rp-space-6);
+  padding: var(--rp-space-1) var(--rp-space-3);
+  border-radius: var(--rp-radius-full);
+  background: var(--rp-color-surface-sunken);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+.qr-welcome__form {
+  display: grid;
+  gap: var(--rp-space-3);
+  text-align: left;
+}
+
+.qr-cart__phone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rp-space-2);
+  margin: 0;
+  font-size: var(--rp-font-size-sm);
+}
+
+/* The bill (P9-03, P9-04). */
+.qr-bill__lines {
+  list-style: none;
+  margin: var(--rp-space-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--rp-space-2);
+}
+
+.qr-bill__lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--rp-space-3);
+}
+
+.qr-invoice {
+  margin: var(--rp-space-3) 0;
+  padding: var(--rp-space-4);
+  border-radius: var(--rp-radius-lg);
+  background: var(--rp-color-surface);
+  box-shadow: var(--rp-elevation-1);
+}
+
+.qr-invoice__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.qr-invoice__number {
+  margin: 0;
+  font-weight: var(--rp-font-weight-bold);
+}
+
+.qr-invoice__paid {
+  padding: var(--rp-space-1) var(--rp-space-3);
+  border-radius: var(--rp-radius-full);
+  background: var(--rp-color-success-subtle);
+  color: var(--rp-color-success-text);
+  font-weight: var(--rp-font-weight-semibold);
+  font-size: var(--rp-font-size-sm);
+}
+
+.qr-totals div + div {
+  margin-top: var(--rp-space-1);
+}
+
+.qr-totals__total {
+  padding-top: var(--rp-space-2);
+  border-top: 1px dashed var(--rp-color-border-strong);
+}
+
+.qr-pay {
+  display: grid;
+  gap: var(--rp-space-3);
+  margin-top: var(--rp-space-4);
+  justify-items: center;
+}
+
+.qr-pay__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rp-space-2);
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 3.5rem;
+  border-radius: var(--rp-radius-md);
+  background: var(--rp-color-success);
+  color: var(--rp-color-on-success);
+  font-size: var(--rp-font-size-lg);
+  font-weight: var(--rp-font-weight-bold);
+  text-decoration: none;
+  box-shadow: var(--rp-elevation-2);
+}
+
+.qr-pay__apps {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--rp-space-2);
+  margin: 0;
+}
+
+.qr-pay__app {
+  padding: var(--rp-space-2) var(--rp-space-3);
+  border: 1px solid var(--rp-color-border-strong);
+  border-radius: var(--rp-radius-full);
+  color: var(--rp-color-text);
+  font-weight: var(--rp-font-weight-semibold);
+  font-size: var(--rp-font-size-sm);
+  text-decoration: none;
+}
+
+.qr-pay__qr {
+  display: grid;
+  justify-items: center;
+  gap: var(--rp-space-2);
+  padding: var(--rp-space-3);
+  border-radius: var(--rp-radius-md);
+  background: #ffffff;
+}
+
+.qr-pay__upi {
+  display: flex;
+  align-items: center;
+  gap: var(--rp-space-2);
+  margin: 0;
+  font-size: var(--rp-font-size-sm);
+}
+
+.qr-paid-ask {
+  margin-top: var(--rp-space-4);
 }
