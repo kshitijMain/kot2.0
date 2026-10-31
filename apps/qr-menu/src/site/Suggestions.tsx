@@ -50,6 +50,7 @@ export function Suggestions({
             <p className="qr-suggestion__price">{formatRupees(displayPrice(item))}</p>
             <Button
               variant="secondary"
+              className="qr-dish__add"
               disabled={readOnly}
               aria-label={
                 needsChoice(item)

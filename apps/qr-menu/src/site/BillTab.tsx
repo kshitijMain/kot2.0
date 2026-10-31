@@ -6,6 +6,8 @@ import { type CartLine, estimateCart, selectable } from '@rp/ordering';
 import { Button, Icon, QrCode } from '@rp/ui-web';
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { HelpButtons } from './HelpButtons';
+import { CardSkeleton } from './Skeletons';
+import { QrEmpty } from './States';
 import { useT } from './i18n';
 import { shownStatus } from './Orders';
 import { fetchTableBill } from './relay';
@@ -76,6 +78,7 @@ export function BillTab({
   readOnly,
   active,
   now,
+  onBrowse,
 }: {
   token: string;
   relayUrl: string;
@@ -85,11 +88,15 @@ export function BillTab({
   readOnly: boolean;
   active: boolean;
   now: number;
+  /** Back to the menu, from the empty state. */
+  onBrowse?: () => void;
 }) {
   const t = useT();
   const [bill, setBill] = useState<QrTableBill | null | undefined>();
   // A bill seen here that has since gone was settled and its sitting closed.
   const [hadBill, setHadBill] = useState(false);
+  // The first look at the bill came back, either way: until then a placeholder (P9-11).
+  const [looked, setLooked] = useState(false);
   const asked = requests.open('BILL') || requests.open('PAID');
   const often = active || asked;
 
@@ -99,10 +106,14 @@ export function BillTab({
       fetchTableBill(relayUrl, token).then(
         ({ bill: fresh }) => {
           if (stopped) return;
+          setLooked(true);
           setBill(fresh);
           if (fresh !== null) setHadBill(true);
         },
-        () => undefined,
+        () => {
+          // Not reached: say what was ordered, and look again at the next tick.
+          if (!stopped) setLooked(true);
+        },
       );
     };
     load();
@@ -133,10 +144,22 @@ export function BillTab({
             <span>{t('qrSite.bill.closed', { restaurant: document.restaurantName })}</span>
           </p>
         ) : null}
-        {soFar.lines.length === 0 ? (
-          <p className="qr-muted">{t('qrSite.bill.nothing')}</p>
+        {!looked && soFar.lines.length === 0 ? (
+          // The first look at the bill has not come back yet (P9-11).
+          <CardSkeleton label={t('qrSite.bill.loading')} />
+        ) : soFar.lines.length === 0 ? (
+          hadBill ? null : (
+            <QrEmpty
+              icon="receipt"
+              title={t('qrSite.bill.nothingTitle')}
+              body={t('qrSite.bill.nothing')}
+              action={t('qrSite.browse')}
+              {...(onBrowse !== undefined && { onAction: onBrowse })}
+            />
+          )
         ) : (
-          <>
+          <div className="qr-invoice">
+            <p className="qr-invoice__number">{t('qrSite.bill.soFar')}</p>
             <ul className="qr-bill__lines" aria-label={t('qrSite.bill.soFar')}>
               {soFar.lines.map((line) => (
                 <li key={line.clientLineId}>
@@ -154,7 +177,7 @@ export function BillTab({
               </div>
             </dl>
             <p className="qr-muted">{t('qrSite.bill.estimateNote')}</p>
-          </>
+          </div>
         )}
         {soFar.lines.length === 0 ? null : (
           <>
@@ -163,7 +186,7 @@ export function BillTab({
               types={['BILL']}
               requests={requests}
               readOnly={readOnly}
-              variant="primary"
+              variant="accent"
             />
           </>
         )}

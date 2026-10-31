@@ -239,3 +239,41 @@ Acceptance:
 - The dashboard shows the waiting order and approves it (console).
 - After approval the diner sees accepted, then every dish Cooking, Ready and Served, each step
   carried by the PC to the relay (integration).
+
+## P9-11 A designed QR menu: cards, sheets and states
+
+Requirements: QR-002, QR-004, QR-007, QR-012, NFR-U02, NFR-U03, NFR-U04, NFR-U05.
+
+Asked by the Business Owner: a designer's pass over the QR menu, so the phone feels deliberate
+after the scan rather than a prototype. Use the local reference clones (`design-ref/`) for
+patterns only, within the design system's tokens and `@rp/ui-web`.
+
+Deliverables:
+
+- Rhythm: a 16 px gutter; sections 24 px apart; tabular figures for money and counts.
+- Header: overlays derived from `on-accent` (no raw colours); Call waiter is a 48 px pill.
+- Filters: 48 px toggle chips, filled in the accent with a check when on (the checkbox stays for
+  assistive technology).
+- Section bar: 48 px targets around 40 px pills; the active one is filled and bold.
+- Dish cards:
+  - flat, one hairline;
+  - bestseller badge with an icon, then name, price with a spice note, and a two-line
+    description;
+  - a 7 rem column on the right, holding the photo with Add/Choose over its lower edge, or the
+    action alone;
+  - an accent ring when in the cart;
+  - an "Out of stock" pill.
+- Sheets: the dish and the cart are bottom sheets with a sticky footer. "Add to order · ₹…" and
+  "Send order · ₹…" use the restaurant's accent. The dish sheet shows its veg mark and spice; the
+  cart shows veg marks and has an empty state.
+- Orders: the status as a tinted pill with an icon, and a check in each step the tracker has
+  reached.
+- States: a loading skeleton for the menu (`app/t/[token]/loading.tsx`) and for Orders and Bill.
+  Empty states with an icon and "Browse the menu".
+- Copy: no exclamation marks.
+- Library: the non-veg mark is a triangle (web and native), so the shape tells it apart.
+
+Acceptance:
+
+- Orders' empty and loading states (unit). All QR e2e pass: 360 px never wider than the screen,
+  the card stepper, axe clean, LCP within 2.5 s.

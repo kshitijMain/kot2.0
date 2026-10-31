@@ -193,6 +193,15 @@ app) with tests, and gets a line here in the same pull request. Shared ordering 
 | States   | `EmptyState`, `LoadingState`, `ErrorState`, `ConnectionBanner`                                               | (screens in `@rp/mobile-shell`: connection banner, alerts)                  |
 | Setup    | `ThemeRoot`, `UiStringsProvider`                                                                             | theme provider in `theme.tsx`                                               |
 
+Food marks (`rp-food-mark` on web, `MenuItemCard` on native): a square outline with a dot for veg
+(success), a triangle for non-veg (danger) and a dot for egg (warning), as on Indian food labels, so
+the shape tells them apart and not only the colour (NFR-U05). Next to the dish name, with the type
+in words for screen readers.
+
+Diner surfaces (QR menu, table tablet): the main action of each screen uses `accent` (the
+restaurant's colour); teal stays for focus. Menu cards there are flat (one hairline, no shadow);
+only floating layers (cart bar, sheets) cast one.
+
 Buttons: variants `primary` (one per screen, the main action), `secondary`, `ghost`, `danger`
 (destructive, always confirmed) and `accent` (diner surfaces). Sizes `md` (meets 48 px) and `lg`
 (primary actions on touch screens). `loading` shows a spinner, keeps the width and blocks a
