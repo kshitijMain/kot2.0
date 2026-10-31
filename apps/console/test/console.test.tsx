@@ -78,9 +78,10 @@ describe('[AUTH-001] [AUTH-004] staff tiles and PIN login', () => {
     await expectNoAxeViolations(container);
     await signIn(user, name, '1234');
     expect(await screen.findByRole('heading', { level: 1, name: t(heading) })).toBeInTheDocument();
-    expect(
-      screen.getByText(t('modes.signedInAs', { name, role: t(`roles.${role}`) })),
-    ).toBeVisible();
+    // Who is signed in: the name, and the role under it (P9-15).
+    const header = within(screen.getByRole('banner'));
+    expect(header.getByText(name)).toBeVisible();
+    expect(header.getByText(t(`roles.${role}`))).toBeVisible();
     await expectNoAxeViolations(container);
   });
 

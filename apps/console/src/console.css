@@ -211,6 +211,24 @@ body {
 .console-header__device {
   margin-inline-start: auto;
   color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-xs);
+}
+
+/* Who is signed in: the name, and the role under it when the name does not say it. */
+.console-header__person {
+  display: inline-flex;
+  flex-direction: column;
+  line-height: var(--rp-line-height-tight);
+}
+
+.console-header__name {
+  font-size: var(--rp-font-size-sm);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+.console-header__role {
+  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-xs);
 }
 
 .console-inactivity {
@@ -243,7 +261,8 @@ body {
 
 .console-mode > h1 {
   margin: 0;
-  font-size: var(--rp-font-size-3xl);
+  /* One scale on every staff screen (P9-15): page 24, section 18, card 16, detail 14. */
+  font-size: var(--rp-font-size-2xl);
   font-weight: var(--rp-font-weight-bold);
   letter-spacing: -0.02em;
 }
@@ -279,11 +298,10 @@ body {
 
 .pos-floor__heading {
   margin: 0;
-  color: var(--rp-color-text-muted);
-  font-size: var(--rp-font-size-sm);
+  color: var(--rp-color-text);
+  font-size: var(--rp-font-size-lg);
   font-weight: var(--rp-font-weight-semibold);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  letter-spacing: -0.01em;
 }
 
 .pos-floor__tables {
@@ -962,7 +980,7 @@ body {
 
 .dashboard-section__heading {
   margin: 0;
-  font-size: var(--rp-font-size-xl);
+  font-size: var(--rp-font-size-lg);
   font-weight: var(--rp-font-weight-semibold);
   letter-spacing: -0.01em;
 }
@@ -2118,7 +2136,9 @@ body {
 
 .approvals__list {
   display: grid;
-  gap: var(--rp-space-2);
+  /* Side by side where there is room, so the floor stays in view (P9-15). */
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: var(--rp-space-3);
   margin: 0;
   padding: 0;
   list-style: none;
@@ -2126,6 +2146,7 @@ body {
 
 .approvals__order {
   display: grid;
+  align-content: start;
   gap: var(--rp-space-1);
   padding: var(--rp-space-3);
   border: 1px solid var(--rp-color-border);
@@ -2136,7 +2157,51 @@ body {
 
 .approvals__title {
   margin: 0;
+  font-size: var(--rp-font-size-md);
   font-weight: var(--rp-font-weight-semibold);
+}
+
+/* What the tables asked for: the same cards, in the info tone; red edge once escalated. */
+.requests {
+  border-color: var(--rp-color-info);
+  background: var(--rp-color-info-subtle);
+}
+
+.approvals__order[data-escalated] {
+  border-inline-start: 4px solid var(--rp-color-danger);
+}
+
+.approvals__order .bill__actions {
+  margin-top: var(--rp-space-2);
+}
+
+/* A table's sheet: its facts, then its actions, the main one (Take order) first and widest. */
+.table-sheet__facts {
+  display: grid;
+  gap: var(--rp-space-2);
+}
+
+.table-sheet__facts p {
+  margin: 0;
+}
+
+.table-sheet__state {
+  font-size: var(--rp-font-size-lg);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+.table-sheet__line {
+  color: var(--rp-color-text-muted);
+}
+
+.table-sheet .rp-dialog__footer {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.table-sheet .rp-dialog__footer > .rp-button[data-variant='primary'] {
+  grid-column: 1 / -1;
+  order: -1;
 }
 
 .approvals__facts {

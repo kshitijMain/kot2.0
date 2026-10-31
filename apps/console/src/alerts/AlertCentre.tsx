@@ -18,6 +18,7 @@ import { messageOf } from '../app/messages.js';
 import { useNow } from '../app/use-now.js';
 import { type AlertGroup, alertsForMe, groupAlerts } from './alert-view.js';
 import { type AlertsState, useAlerts } from './alerts-context.js';
+import { useOpenBill } from '../billing/use-open-bill.js';
 import { RejectDialog } from '../pos/Approvals.js';
 import { NudgeDialog } from './NudgeDialog.js';
 
@@ -135,6 +136,14 @@ function AlertRow({
   const decides = orderId !== null && grantOf(state.person, 'ORDER_APPROVE_CUSTOMER') !== 'DENY';
   const orderNumber =
     typeof alert.payload.orderNumber === 'number' ? alert.payload.orderNumber : '';
+  // A table asked for its bill, or says it paid: whoever prints and takes payment goes to it.
+  const { openBill, opening } = useOpenBill();
+  const billSession =
+    (alert.type === 'BILL_REQUEST' || alert.type === 'PAYMENT_CLAIMED') &&
+    alert.tableSessionId !== null &&
+    grantOf(state.person, 'BILL_PRINT_AND_PAYMENT') !== 'DENY'
+      ? alert.tableSessionId
+      : null;
   // Whom it is for, when a manager looks over someone else's alert.
   const others = mine
     ? []
@@ -214,16 +223,29 @@ function AlertRow({
           </Button>
         </div>
       ) : (
-        <Button
-          variant="secondary"
-          loading={working}
-          aria-label={t('alerts.acknowledgeOf', { title })}
-          onClick={() => {
-            void acknowledge();
-          }}
-        >
-          {t('alerts.acknowledge')}
-        </Button>
+        <div className="alert-row__actions">
+          {billSession === null ? null : (
+            <Button
+              loading={opening}
+              onClick={() => {
+                state.setPanel(undefined);
+                openBill({ tableSessionId: billSession });
+              }}
+            >
+              {t('pos.tableRequests.openBill')}
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            loading={working}
+            aria-label={t('alerts.acknowledgeOf', { title })}
+            onClick={() => {
+              void acknowledge();
+            }}
+          >
+            {t('alerts.acknowledge')}
+          </Button>
+        </div>
       )}
       {rejecting && orderId !== null ? (
         <RejectDialog

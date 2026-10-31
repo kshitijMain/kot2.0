@@ -179,6 +179,17 @@ function MenuPage({
   // "Refresh" on My orders: look again now (P9-13); and when the page last heard back.
   const [refreshTick, setRefreshTick] = useState(0);
   const [heardAt, setHeardAt] = useState<number | undefined>();
+  // Refresh pressed and not yet answered: the button spins, so it is seen to do something.
+  const [refreshing, setRefreshing] = useState(false);
+  useEffect(() => {
+    if (!refreshing) return;
+    const timer = setTimeout(() => {
+      setRefreshing(false);
+    }, 4_000);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [refreshing]);
   const [skippedPhone, setSkippedPhone] = useState(false);
   const [changingPhone, setChangingPhone] = useState(false);
   const [accepted, setAccepted] = useState(false);
@@ -340,6 +351,7 @@ function MenuPage({
           (order) => {
             if (stopped) return;
             setHeardAt(Date.now());
+            setRefreshing(false);
             setOrders((current) => new Map([...current, [id, order]]));
             // P9-04: "Your order is accepted", once, when the restaurant accepts it.
             const before = statuses.current.get(id);
@@ -385,6 +397,7 @@ function MenuPage({
         (found) => {
           if (stopped) return;
           setHeardAt(Date.now());
+          setRefreshing(false);
           setLookedUpFor(mobile);
           setSittingSince(found.since);
           setOrders((current) => {
@@ -802,10 +815,12 @@ function MenuPage({
           readOnly={menu.readOnly}
           loading={ordersLoading}
           heardAt={heardAt}
+          refreshing={refreshing}
           onAgain={orderAgain}
           onBrowse={browse}
           onRefresh={() => {
             setNow(Date.now());
+            setRefreshing(true);
             setRefreshTick((tick) => tick + 1);
           }}
         />

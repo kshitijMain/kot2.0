@@ -9,6 +9,7 @@ import type { LiveData } from '../app/use-live.js';
 import { messageOf } from '../app/messages.js';
 import { useNow } from '../app/use-now.js';
 import { Approvals } from '../pos/Approvals.js';
+import { ServiceRequests } from '../pos/ServiceRequests.js';
 import { type FloorData, useFloor } from '../pos/use-floor.js';
 import { FILTER_PARAMS } from './order-feed-view.js';
 import { SetupBanner } from './setup/SetupScreen.js';
@@ -33,6 +34,7 @@ export function Overview() {
       <SetupBanner />
       {/* Diners' orders wait here too, not only on the POS floor (P9-10). */}
       <Approvals />
+      <ServiceRequests />
       <section className="dashboard-section" aria-labelledby="dashboard-glance">
         <h2 id="dashboard-glance" className="dashboard-section__heading">
           {t('dashboard.overview.glance')}

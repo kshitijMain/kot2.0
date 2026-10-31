@@ -28,6 +28,7 @@ export function Orders({
   readOnly,
   loading = false,
   heardAt,
+  refreshing = false,
   onAgain,
   onBrowse,
   onRefresh,
@@ -40,6 +41,8 @@ export function Orders({
   loading?: boolean;
   /** When the page last heard from the restaurant about these orders. */
   heardAt?: number | undefined;
+  /** Refresh pressed, the answer not back yet. */
+  refreshing?: boolean;
   onAgain: (lines: readonly OrderLineRequest[]) => void;
   /** Back to the menu, from the empty state. */
   onBrowse?: () => void;
@@ -55,7 +58,12 @@ export function Orders({
             {t('qrSite.orders.updated', displayDateTime(new Date(heardAt)))}
           </span>
         )}
-        <Button variant="ghost" startIcon={<Icon name="sync" />} onClick={onRefresh}>
+        <Button
+          variant="ghost"
+          startIcon={<Icon name="sync" />}
+          loading={refreshing}
+          onClick={onRefresh}
+        >
           {t('qrSite.orders.refresh')}
         </Button>
       </div>
