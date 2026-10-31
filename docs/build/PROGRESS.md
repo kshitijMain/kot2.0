@@ -698,6 +698,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-07 Reprinting the tents when the site's address changes (ngrok)
 - [x] P9-08 A diner's orders follow their number; a compact page; pairing the first screen
 - [x] P9-09 A menu made for the phone: sections that follow, a stepper on the card, an order tracker
+- [x] P9-10 Approving a diner's order from its alert, and on the manager dashboard
 
 ## Decisions
 
@@ -4623,6 +4624,42 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-10-31: P9-10 Approving a diner's order from its alert
+
+Reported by the Business Owner from the pilot: Table 2's two orders stayed "Received. Waiting for
+the restaurant to accept it." after the manager "accepted" them. The owner expected Cooking, Ready
+and Served to fail as well.
+
+Found:
+
+- The server log shows three `POST /alerts/:id/acknowledge` calls and no approval.
+- In the pilot database all three QR orders (8 dishes) were still `PENDING_APPROVAL`, and the relay
+  had them as `RECEIVED`, which is exactly what the phone showed.
+- The console never asked for `/orders/pending-approval`. The manager signs in to the dashboard,
+  whose overview had no approvals panel; only the POS floor did. The alert's only button,
+  Acknowledge, reads like "accept" but only silences it.
+- The PC → relay path was fine. It pushes approval, rejection and every dish state change.
+
+Built:
+
+- Alert centre: an approval alert shows Approve and Reject (shared `RejectDialog`) for anyone
+  with `ORDER_APPROVE_CUSTOMER`; everyone else still sees Acknowledge.
+- Manager dashboard overview: the Approvals panel first, as on the POS floor.
+- The waiter app needed nothing: its Tables screen already lists approvals.
+
+Tests:
+
+- console +3 (approve and reject from the alert; approve on the dashboard). 441/441.
+- server `pilot-mannat.int`: the accept test now carries on, so the diner's page shows every dish
+  Preparing, then Ready, then Served. Reads are 250 ms apart, because the relay lets a table read
+  5 times a second. 5/5.
+
+Gotcha: with `kds.pickupMarksServed` on (the default since 2026-10-25), Pick up at the pass also
+serves the dish. The diner goes from Ready straight to Served, which is intended.
+
+On the pilot Mac: the console is rebuilt and the server restarted. The orders waiting at Table 2
+are approved from the dashboard or the alert.
 
 ### 2026-10-31: P9-09 A menu made for the phone
 

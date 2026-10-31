@@ -8,6 +8,7 @@ import { useT } from '../app/i18n.js';
 import type { LiveData } from '../app/use-live.js';
 import { messageOf } from '../app/messages.js';
 import { useNow } from '../app/use-now.js';
+import { Approvals } from '../pos/Approvals.js';
 import { type FloorData, useFloor } from '../pos/use-floor.js';
 import { FILTER_PARAMS } from './order-feed-view.js';
 import { SetupBanner } from './setup/SetupScreen.js';
@@ -19,7 +20,8 @@ const CLOCK_MS = 15_000;
 /**
  * The dashboard's first page (P4-01): the restaurant at a glance (tables and guests, orders in the
  * kitchen and late dishes, open alerts) and the live floor (MGR-002, TBL-007), both kept live by
- * events. Selecting an occupied table opens the order feed filtered to it.
+ * events. Selecting an occupied table opens the order feed filtered to it. Diners' orders waiting
+ * for approval show first, as on the POS floor.
  */
 export function Overview() {
   const t = useT();
@@ -29,6 +31,8 @@ export function Overview() {
   return (
     <>
       <SetupBanner />
+      {/* Diners' orders wait here too, not only on the POS floor (P9-10). */}
+      <Approvals />
       <section className="dashboard-section" aria-labelledby="dashboard-glance">
         <h2 id="dashboard-glance" className="dashboard-section__heading">
           {t('dashboard.overview.glance')}

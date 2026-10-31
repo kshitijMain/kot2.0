@@ -254,7 +254,8 @@ function ChangeDialog({
   );
 }
 
-function RejectDialog({
+/** Rejecting a diner's order with the reason they read (ORD-004); also used from an alert. */
+export function RejectDialog({
   title,
   onClose,
   onReject,
