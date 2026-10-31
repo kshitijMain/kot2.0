@@ -705,6 +705,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-14 PIN-only sign-in for the pilot (ADR-0025)
 - [x] P9-15 Bill and requests from the tables reach the staff; one type scale on the console
 - [x] P9-16 Audit of every screen and the bill journey; managers take payment on the phone
+- [x] P9-17 The waiter APK builds on this Mac
 
 ## Decisions
 
@@ -4630,6 +4631,25 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-10-31: P9-17 The waiter APK builds on this Mac
+
+The first release build of the waiter app here stopped in KSP with `OutOfMemoryError: Metaspace`.
+The template gives Gradle 2 GB and 512 MB of Metaspace.
+
+Built: `apps/waiter-app/plugins/with-gradle-memory.cjs`, a config plugin. Every prebuild writes
+`org.gradle.jvmargs` (4 GB, 1.5 GB Metaspace) and `kotlin.daemon.jvmargs` (3 GB, 1 GB Metaspace)
+into the generated `gradle.properties`.
+
+Result: `assembleRelease` succeeded in 45 s, giving a 100 MB APK, "Parossa Captain (preview)"
+`in.rp.waiter.preview` 0.1.0, signed with the debug key. It is copied to
+`.pilot/apk/parossa-waiter-preview.apk`. Steps are in `scripts/pilot/README.md`.
+
+Not done:
+
+- installing it on a phone, and the Maestro smoke flow (needs a person with an Android phone;
+  manual task 37 has the checks);
+- a production-signed build (EAS credentials, OWNER_CHECKLIST 7).
 
 ### 2026-10-31: P9-16 Audit of every screen and the bill journey; managers take payment on the phone
 
