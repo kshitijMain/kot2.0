@@ -700,6 +700,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-09 A menu made for the phone: sections that follow, a stepper on the card, an order tracker
 - [x] P9-10 Approving a diner's order from its alert, and on the manager dashboard
 - [x] P9-11 A designed QR menu: cards, sheets and states
+- [x] P9-12 The open line never waits for ever on a handshake
 
 ## Decisions
 
@@ -4625,6 +4626,25 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-10-31: P9-12 The open line never waits for ever on a handshake
+
+The PC's open line to the relay stayed down again after a restart (`restaurantsOnLine: 0`) while
+the server held an established connection to ngrok. Orders still came by the 5 s polling.
+
+Found: `RelayRealtime` joins on `open` and retries on `close`. A WebSocket handshake that is never
+answered raises neither, so `this.socket` stayed set, every later `connect()` returned at once,
+and no heartbeat ever ran. Probes through ngrok and directly both opened, so this is a stall of the
+one attempt, not a broken path. It is the "cause not found" of P9-08.
+
+Built: `connectTimeoutMs` (default 15 s). A line not open and joined in time is dropped and tried
+again with the usual back-off; the timer is cleared on join and on loss.
+
+Tests:
+
+- unit `relay-realtime` +1 (a line that never opens is dropped and joined again). 9/9.
+- integration `relay-realtime` and `pilot-mannat` 11/11.
+- On the pilot, the restarted server joined within 10 s.
 
 ### 2026-10-31: P9-11 A designed QR menu
 
