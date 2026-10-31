@@ -522,10 +522,12 @@ could create or change restaurants and credentials.
 
 A diner, a PC or the API roles delete orders or menus.
 
-- Mitigation: no relay or API role may delete; only the database's own retention job does.
-- Code: `infra/supabase/migrations/20261002130000_relay_schema.sql` (`purge`).
+- Mitigation: no relay or API role may delete; only the database's own retention job does (on a
+  self-hosted relay, the jobs' own login, which may run retention and nothing else, ADR-0024).
+- Code: `infra/supabase/migrations/20261002130000_relay_schema.sql` (`purge`);
+  `infra/supabase/migrations/20261031100000_self_hosted_relay.sql` (`relay_janitor`).
 - Tests: `infra/supabase/test/isolation.test.ts` "deletes nothing";
-  `infra/supabase/test/retention.test.ts` "is run by the database itself, never by a relay or API
-  role".
+  `infra/supabase/test/retention.test.ts` "is run by the database itself or the self-hosted jobs’
+  login, never by a relay or API role".
 - Risk: likelihood Low, impact Medium: Low.
 - Status: Mitigated.

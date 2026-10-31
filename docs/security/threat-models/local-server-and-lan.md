@@ -201,8 +201,8 @@ A phone is stolen while paired, or someone who left still knows their PIN.
   `apps/server/src/auth/session.service.ts` (`SessionService`).
 - Tests: `apps/server/test/integration/devices.int.test.ts` "stops the device token and every
   session on the device at once, and emits DeviceRevoked";
-  `apps/server/test/integration/staff.int.test.ts` "signs the person out everywhere within 5 s,
-  takes back their devices and sections"; `apps/server/test/integration/realtime.int.test.ts`
+  `apps/server/test/integration/staff.int.test.ts` "signs the person out everywhere within 5 s
+  and takes back their devices"; `apps/server/test/integration/realtime.int.test.ts`
   "closes an unpaired device".
 - Risk: likelihood Low, impact Medium: Low.
 - Status: Mitigated.
