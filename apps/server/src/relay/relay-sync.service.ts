@@ -334,6 +334,7 @@ export class RelaySyncService implements OnApplicationBootstrap, OnModuleDestroy
       instructionMaxLength: settings.get('orders.specialInstructionsMaxLength'),
       priceMode: settings.get('billing.priceMode'),
       serviceRequests: settings.get('qr.serviceRequests'),
+      phone: settings.get('qr.askPhone'),
       menu: qrMenu,
       photos: await this.syncPhotos(
         client,

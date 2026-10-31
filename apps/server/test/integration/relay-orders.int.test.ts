@@ -67,6 +67,7 @@ async function giveCodes(): Promise<void> {
 async function dinerOrders(
   table: string,
   lines: { item: string; quantity: number }[],
+  extra: { customerPhone?: string } = {},
 ): Promise<string> {
   const response = await fetch(`${relay.baseUrl}/submit-order`, {
     method: 'POST',
@@ -84,6 +85,7 @@ async function dinerOrders(
         modifiers: [],
       })),
       customerName: 'Asha',
+      ...extra,
     }),
   });
   const answer = QrSubmitOrderResponse.parse(await response.json());
@@ -330,6 +332,33 @@ describe('[QR-009] a diner’s order for an open table', () => {
     expect(await dinerSees('T2', id('second'))).toMatchObject({
       status: 'REJECTED',
       detail: { rejectionReason: 'Rice is finished for today' },
+    });
+  });
+});
+
+describe('[BILL-011] the diner’s mobile number (P9-02)', () => {
+  it('comes with the order and goes on the table’s bill, with consent for the bill', async () => {
+    const opened = await server()
+      .post(`/api/v1/tables/${id('T3')}/open`)
+      .set(as(waiter))
+      .send({ covers: 2 });
+    expect(opened.status).toBe(201);
+    const relayOrderId = await dinerOrders('T3', [{ item: 'Jeera Rice', quantity: 1 }], {
+      customerPhone: '+919876543210',
+    });
+    await qr.run();
+    const order = await localOrder(relayOrderId);
+    expect(order).toMatchObject({ customerPhone: '+919876543210', customerName: 'Asha' });
+
+    const bill = await server()
+      .post('/api/v1/bills')
+      .set(as(manager))
+      .send({ tableSessionId: (opened.body as { id: string }).id });
+    expect(bill.status, JSON.stringify(bill.body)).toBe(200);
+    expect((bill.body as { customer: unknown }).customer).toMatchObject({
+      name: 'Asha',
+      phone: '+919876543210',
+      phoneConsent: true,
     });
   });
 });

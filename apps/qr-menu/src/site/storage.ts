@@ -1,6 +1,7 @@
 /**
  * What the browser keeps for this site (QR-013: nothing that tracks): a random id for the rate
- * limit, the cart for each table so a reload keeps it, and the table's orders to follow them.
+ * limit, the cart for each table so a reload keeps it, the table's orders to follow them, and the
+ * mobile number given for the bill (P9-02), on this phone only.
  * Every read and write survives storage being blocked (private windows).
  */
 
@@ -54,7 +55,7 @@ export interface StoredValue<T> {
 
 export function tableValue<T>(
   token: string,
-  kind: 'cart' | 'orders' | 'requests',
+  kind: 'cart' | 'orders' | 'requests' | 'phone',
   parse: (value: unknown) => T | undefined,
   empty: T,
 ): StoredValue<T> {

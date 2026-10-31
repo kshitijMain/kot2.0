@@ -248,11 +248,12 @@ async function pickup(request: Request, context: FunctionContext): Promise<Respo
       lines: QrPickupOrder['lines'];
       instructions: string | null;
       customer_name: string | null;
+      customer_phone: string | null;
       version: number;
       submitted_at: string;
       expires_at: string;
     }>(
-      `SELECT id, table_id, idempotency_key, lines, instructions, customer_name,
+      `SELECT id, table_id, idempotency_key, lines, instructions, customer_name, customer_phone,
               snapshot_version::int AS version,
               ${isoUtc('submitted_at')} AS submitted_at, ${isoUtc('expires_at')} AS expires_at
        FROM relay.qr_orders
@@ -268,6 +269,7 @@ async function pickup(request: Request, context: FunctionContext): Promise<Respo
       lines: row.lines,
       orderNote: row.instructions,
       customerName: row.customer_name,
+      customerPhone: row.customer_phone,
       menuVersion: row.version,
       submittedAt: row.submitted_at,
       expiresAt: row.expires_at,

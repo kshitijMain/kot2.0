@@ -664,7 +664,8 @@
               "learned"
             ],
             "additionalProperties": false
-          }
+          },
+          "phone": { "type": "string", "enum": ["OFF", "OPTIONAL", "REQUIRED"] }
         },
         "required": [
           "restaurantName",
@@ -1360,7 +1361,8 @@
               "learned"
             ],
             "additionalProperties": false
-          }
+          },
+          "phone": { "type": "string", "enum": ["OFF", "OPTIONAL", "REQUIRED"] }
         },
         "required": [
           "restaurantName",

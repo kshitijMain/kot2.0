@@ -751,6 +751,7 @@
         "additionalProperties": false
       },
       "BrowserId": { "type": "string", "pattern": "^[A-Za-z0-9_-]{16,64}$" },
+      "DinerPhone": { "type": "string", "pattern": "^\\+91[6-9]\\d{9}$" },
       "MenuSnapshot": {
         "type": "object",
         "properties": {
@@ -1296,7 +1297,8 @@
             "type": "array",
             "items": { "$ref": "#/components/schemas/QrPhoto" }
           },
-          "recommendations": { "$ref": "#/components/schemas/QrRecommendations" }
+          "recommendations": { "$ref": "#/components/schemas/QrRecommendations" },
+          "phone": { "$ref": "#/components/schemas/QrPhoneAsk" }
         },
         "required": [
           "restaurantName",
@@ -1490,6 +1492,7 @@
           "detail"
         ]
       },
+      "QrPhoneAsk": { "type": "string", "enum": ["OFF", "OPTIONAL", "REQUIRED"] },
       "QrPhoto": {
         "type": "object",
         "properties": {
@@ -1549,6 +1552,9 @@
           },
           "orderNote": { "type": ["string", "null"] },
           "customerName": { "type": ["string", "null"] },
+          "customerPhone": {
+            "anyOf": [{ "$ref": "#/components/schemas/DinerPhone" }, { "type": "null" }]
+          },
           "menuVersion": { "type": "integer", "exclusiveMinimum": 0, "maximum": 9007199254740991 },
           "submittedAt": {
             "type": "string",
@@ -1598,6 +1604,9 @@
           },
           "orderNote": { "type": ["string", "null"] },
           "customerName": { "type": ["string", "null"] },
+          "customerPhone": {
+            "anyOf": [{ "$ref": "#/components/schemas/DinerPhone" }, { "type": "null" }]
+          },
           "menuVersion": { "type": "integer", "exclusiveMinimum": 0, "maximum": 9007199254740991 },
           "submittedAt": {
             "type": "string",
@@ -2059,7 +2068,8 @@
             "items": { "$ref": "#/components/schemas/OrderLineRequest" }
           },
           "orderNote": { "type": "string", "maxLength": 500 },
-          "customerName": { "type": "string", "minLength": 1, "maxLength": 60 }
+          "customerName": { "type": "string", "minLength": 1, "maxLength": 60 },
+          "customerPhone": { "$ref": "#/components/schemas/DinerPhone" }
         },
         "required": ["idempotencyKey", "lines"],
         "additionalProperties": false
@@ -2079,7 +2089,8 @@
             "items": { "$ref": "#/components/schemas/OrderLineRequestInput" }
           },
           "orderNote": { "type": "string", "maxLength": 500 },
-          "customerName": { "type": "string", "minLength": 1, "maxLength": 60 }
+          "customerName": { "type": "string", "minLength": 1, "maxLength": 60 },
+          "customerPhone": { "$ref": "#/components/schemas/DinerPhone" }
         },
         "required": ["idempotencyKey", "lines"],
         "additionalProperties": false

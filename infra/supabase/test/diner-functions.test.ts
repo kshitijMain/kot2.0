@@ -21,6 +21,7 @@ import {
   openRelayDb,
   publishMenu,
   type RelayDb,
+  refusal,
   seedTenant,
   type SeededTenant,
   sha256,
@@ -307,6 +308,58 @@ describe('[QR-006] submitting an order', () => {
     expect(response.status).toBe(503);
     expect(codeOf(response.body)).toBe('RESTAURANT_OFFLINE');
     await lastSeen(db, a.id, 0);
+  });
+});
+
+describe('[BILL-011] the diner’s mobile number (P9-02)', () => {
+  const phoneOf = async (orderId: string) =>
+    (
+      await db.admin.query<{ customer_phone: string | null }>(
+        'SELECT customer_phone FROM relay.qr_orders WHERE id = $1',
+        [orderId],
+      )
+    ).rows[0]!.customer_phone;
+
+  it('refuses an order without one where the restaurant asks for it, and stores it with one', async () => {
+    const tenant = await seedTenant(db, 'Mannat');
+    await publishMenu(db, tenant.id, 2, qrMenuDocument({ phone: 'REQUIRED' }));
+    const options = { token: tenant.tables[0].token };
+    const missing = await submit(order(), options);
+    expect(missing.status).toBe(422);
+    expect(codeOf(missing.body)).toBe('PHONE_REQUIRED');
+
+    const answer = await accepted(order([dal()], { customerPhone: '+919876543210' }), options);
+    expect(await phoneOf(answer.order.id)).toBe('+919876543210');
+    // The diner's own view of the order does not repeat it.
+    expect(JSON.stringify(answer.order)).not.toContain('9876543210');
+  });
+
+  it('refuses a number that is not an Indian mobile in the same form', async () => {
+    for (const customerPhone of ['9876543210', '+915876543210', '+91987654321', '+449876543210']) {
+      const response = await submit(order([dal()], { customerPhone }));
+      expect(response.status, customerPhone).toBe(400);
+    }
+  });
+
+  it('keeps no number where the restaurant does not ask for one', async () => {
+    const answer = await accepted(order([dal()], { customerPhone: '+919876543210' }));
+    expect(await phoneOf(answer.order.id)).toBeNull();
+  });
+
+  it('never lets the stored number change', async () => {
+    const tenant = await seedTenant(db, 'Mannat Two');
+    await publishMenu(db, tenant.id, 2, qrMenuDocument({ phone: 'OPTIONAL' }));
+    const answer = await accepted(order([dal()], { customerPhone: '+919876543210' }), {
+      token: tenant.tables[0].token,
+    });
+    const error = await refusal(
+      db.as('relay_writer', { tenant_id: tenant.id }, (client) =>
+        client.query("UPDATE relay.qr_orders SET customer_phone = '+919999999999' WHERE id = $1", [
+          answer.order.id,
+        ]),
+      ),
+    );
+    expect(error.code).toBe('42501');
   });
 });
 

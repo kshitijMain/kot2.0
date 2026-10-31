@@ -413,6 +413,10 @@ function buildBill(
   }
   if (invoice.customer.name !== null)
     receipt.lines(wrap(`Customer: ${invoice.customer.name}`, width));
+  // P9-02: the number the diner gave for the bill (BILL-011), only kept with their consent.
+  if (invoice.customer.phone !== null && invoice.customer.phoneConsent) {
+    receipt.line(`Mobile: ${invoice.customer.phone}`);
+  }
   if (invoice.customer.gstin !== null) receipt.line(`Customer GSTIN: ${invoice.customer.gstin}`);
   receipt.line('-'.repeat(width));
 
