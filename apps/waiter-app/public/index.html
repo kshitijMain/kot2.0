@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <!-- viewport-fit=cover: the app draws under the notch and pads with the safe areas. -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta name="theme-color" content="#FAF7F2" />
+    <meta
+      name="description"
+      content="Tables, orders, requests and bills for the restaurant's staff."
+    />
+    <!-- Added to the Home Screen, it opens full screen like an app (iPhone and Android). -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Captain" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="format-detection" content="telephone=no" />
+    <link rel="manifest" href="/phone/manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="/phone/apple-touch-icon.png" />
+    <!-- No inline styles or scripts: the PC's security policy allows only its own files. -->
+    <link rel="stylesheet" href="/phone/page.css" />
+    <title>Parossa Captain</title>
+  </head>
+  <body>
+    <noscript>Turn on JavaScript to use the restaurant's app.</noscript>
+    <div id="root"></div>
+  </body>
+</html>

@@ -82,20 +82,19 @@ describe('[AUTH-001] staff tiles', () => {
     const text = JSON.stringify(response.body);
     expect(text).not.toMatch(/secret|hash|pin/i);
   });
-  it('[AUTH-010] keeps a waiter phone for waiters and managers (ADR-0024): only they are listed and sign in', async () => {
+  it('[AUTH-010] keeps a waiter phone for waiters, managers (ADR-0024) and the Owner (P9-28): only they are listed and sign in', async () => {
     const phone = await addDevice(app, kit, 'WAITER_PHONE');
     const tiles = await server().get('/api/v1/auth/staff-tiles').set(authHeaders(phone));
     expect(
       [...new Set(StaffTilesResponse.parse(tiles.body).staff.map((tile) => tile.role))].sort(),
-    ).toEqual(['MANAGER', 'WAITER']);
+    ).toEqual(['MANAGER', 'OWNER', 'WAITER']);
     expect((await pinLogin(phone, kit.staff.MANAGER, TEST_PINS.MANAGER)).status).toBe(200);
-    for (const role of ['OWNER', 'KITCHEN'] as const) {
-      const refused = await pinLogin(phone, kit.staff[role], TEST_PINS[role]);
-      expect([refused.status, ApiError.parse(refused.body).code]).toEqual([
-        403,
-        'ROLE_NOT_ON_DEVICE',
-      ]);
-    }
+    expect((await pinLogin(phone, kit.staff.OWNER, TEST_PINS.OWNER)).status).toBe(200);
+    const refused = await pinLogin(phone, kit.staff.KITCHEN, TEST_PINS.KITCHEN);
+    expect([refused.status, ApiError.parse(refused.body).code]).toEqual([
+      403,
+      'ROLE_NOT_ON_DEVICE',
+    ]);
     expect((await pinLogin(phone, kit.staff.WAITER, TEST_PINS.WAITER)).status).toBe(200);
   });
 });

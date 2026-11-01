@@ -1,12 +1,12 @@
-import { registerAlertKeepAlive } from '@rp/mobile-native';
+// First: settings the browser build needs before any module builds a schema (P9-28).
+import './src/web-setup';
 import { registerRootComponent } from 'expo';
-import { AppRegistry } from 'react-native';
+import { registerBackgroundTasks } from './src/background';
 import { Root } from './src/Root';
-import { deviceSession } from './src/session';
 
-// Registers the app as `main`, the name the native project starts (Expo development builds).
+// Registers the app as `main`, the name the native project starts (Expo development builds), or
+// renders it into the page in a browser (P9-28).
 registerRootComponent(Root);
 
-// The task the alert service runs to keep the phone listening with the screen off (P2-06b). After
-// Android restarted the service in a new process, it is what starts the device session.
-registerAlertKeepAlive(AppRegistry.registerHeadlessTask, deviceSession);
+// Android: the alert service's keep-alive task (P2-06b). A browser has none.
+registerBackgroundTasks();

@@ -8,7 +8,7 @@ import { DEVICE_AUTHENTICATOR, type DeviceAuthenticator } from './auth/device.js
 import { createSecretStore } from './auth/secret-store.js';
 import { bodyParsers } from './http/body-limits.js';
 import { clientVersionMiddleware } from './http/client-version.js';
-import { consoleMiddleware } from './http/console-static.js';
+import { consoleMiddleware, phoneMiddleware } from './http/console-static.js';
 import {
   DEFAULT_SERVER_LIMITS,
   httpsLimitOptions,
@@ -71,7 +71,9 @@ export function configureApp(
   express.use(limitRequests);
   express.use(clientVersionMiddleware);
   express.use(caDownloadMiddleware(app.get(TlsService)));
-  const { consoleDir } = app.get<AppConfig>(APP_CONFIG);
+  const { consoleDir, phoneDir } = app.get<AppConfig>(APP_CONFIG);
+  // The phone web app first: the console's fallback would answer /phone/ with the console.
+  if (phoneDir !== undefined) express.use(phoneMiddleware(phoneDir));
   if (consoleDir !== undefined) express.use(consoleMiddleware(consoleDir));
   express.use(
     bodyParsers(app.get<DeviceAuthenticator>(DEVICE_AUTHENTICATOR), {

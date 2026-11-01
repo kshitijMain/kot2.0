@@ -45,6 +45,7 @@ function New-TestPaths {
         node             = "$InstallDir\node\node.exe"
         serverDir        = "$InstallDir\server"
         consoleDir       = "$InstallDir\console"
+        phoneDir         = "$InstallDir\phone"
         pgBin            = "$InstallDir\postgres\bin"
         pgData           = "$DataDir\postgres"
         servicesDir      = "$InstallDir\services"

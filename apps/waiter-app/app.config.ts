@@ -91,6 +91,14 @@ export default ({ config, projectRoot }: ConfigContext): ExpoConfig => {
     icon: './assets/icon.png',
     userInterfaceStyle: 'light',
     runtimeVersion: { policy: 'appVersion' },
+    // The same app in a phone's browser (P9-28): served by the restaurant PC at /phone/ for
+    // iPhones and any phone without the APK. One page and its scripts; nothing rendered ahead.
+    web: {
+      bundler: 'metro',
+      output: 'single',
+      favicon: './assets/icon.png',
+    },
+    experiments: { baseUrl: '/phone' },
     android: {
       package: `in.rp.waiter${suffix}`,
       // Android's backup would copy the pinned CA's settings and the cache to the cloud or a
