@@ -16,7 +16,8 @@ export function OpenTableDialog({
 }: {
   table: TableOverviewEntry;
   onClose: () => void;
-  onOpened: () => void;
+  /** The new sitting: the POS goes on to take its order (P9-20). */
+  onOpened: (sessionId: string) => void;
 }) {
   const t = useT();
   const controller = useConsole();
@@ -35,12 +36,12 @@ export function OpenTableDialog({
     setWorking(true);
     setError(undefined);
     try {
-      await controller.api.openTable({
+      const opened = await controller.api.openTable({
         params: { tableId: table.tableId },
         body: { covers },
       });
       toast.show({ title: t('pos.open.opened', { table: table.label }), tone: 'success' });
-      onOpened();
+      onOpened(opened.id);
     } catch (failure) {
       setError(messageOf(failure, t));
       setWorking(false);

@@ -180,7 +180,7 @@ status() {
 
 QR menu site:      $SITE   (each table: see .pilot/mannat.txt; tents: .pilot/mannat-tents.pdf)
 POS and dashboard: https://$IP:$SERVER_PORT   (the browser warns about the restaurant's own certificate)
-First screen not paired yet: scripts/pilot/mannat-local.sh pair
+Sign in on any browser on this network: tap a name, then the PIN (no pairing, ADR-0025).
 Waiter / manager phone: pair the waiter app with the code from Manage → Devices.
 EOF
 }

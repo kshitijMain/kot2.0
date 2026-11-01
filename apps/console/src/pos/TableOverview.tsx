@@ -228,7 +228,15 @@ export function TableOverview() {
         </section>
       ))}
       {selected !== undefined && panel?.kind === 'open' && selected.state === 'FREE' ? (
-        <OpenTableDialog table={selected} onClose={close} onOpened={done} />
+        <OpenTableDialog
+          table={selected}
+          onClose={close}
+          onOpened={(sessionId) => {
+            // Guests seated: straight on to their order, as the waiter app does (P9-20).
+            setPanel(undefined);
+            void navigate(`table/${sessionId}?label=${encodeURIComponent(selected.label)}`);
+          }}
+        />
       ) : null}
       {selected !== undefined && panel?.kind === 'details' ? (
         <TableDetails

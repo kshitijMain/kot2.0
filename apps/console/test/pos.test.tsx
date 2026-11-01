@@ -222,7 +222,8 @@ describe('[TBL-003] opening a table', () => {
     // No waiter is chosen: any waiter serves any table (ADR-0023).
     expect(within(dialog).queryByRole('combobox')).toBeNull();
     expect(fake.callsTo('POST', `/api/v1/tables/${T1}/open`)[0]?.body).toEqual({ covers: 4 });
-    expect(await tile(/^T1, Occupied/)).toBeInTheDocument();
+    // Guests seated: straight on to their order (P9-20), not back to the floor.
+    expect(await screen.findByRole('button', { name: t('pos.backToTables') })).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 

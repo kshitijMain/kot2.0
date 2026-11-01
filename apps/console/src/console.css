@@ -551,10 +551,16 @@ body {
 .kds-ticket__title {
   display: flex;
   flex: 1;
-  gap: var(--rp-space-3);
+  flex-wrap: wrap;
+  gap: 0 var(--rp-space-3);
   margin: 0;
   font-size: var(--rp-font-size-xl);
   font-weight: var(--rp-font-weight-bold);
+}
+
+/* "Order 7" and "Table 4" each stay whole on a narrow card (P9-20); they wrap as units. */
+.kds-ticket__title > span {
+  white-space: nowrap;
 }
 
 .kds-ticket__meta {

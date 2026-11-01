@@ -170,7 +170,12 @@ export function SetupScreen() {
                   </Badge>
                 </p>
               </div>
-              <div className="staff-row__actions">
+              {/* Each step's buttons say which step they are for (P9-20): "Undo" alone did not. */}
+              <div
+                className="staff-row__actions"
+                role="group"
+                aria-label={t(`setupPage.step.${entry.step}.title`)}
+              >
                 <Link className="console-link" to={STEP_PAGES[entry.step]}>
                   {t(`setupPage.step.${entry.step}.open`)}
                 </Link>

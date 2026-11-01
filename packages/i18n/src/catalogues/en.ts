@@ -158,7 +158,7 @@ export const en = {
       SUPPORT_REQUEST: 'Support asks for diagnostics',
       VENDOR_RESTORE_CODE: 'The vendor can open your cloud backups',
       SIGN_IN_LOCKED: 'Sign-in locked after wrong PINs',
-      OUT_OF_STOCK: 'OUT OF STOCK',
+      OUT_OF_STOCK: 'Dish out of stock',
       PAYMENT_CLAIMED: 'Paid by UPI: check and settle',
     },
     outOfStock:
@@ -497,7 +497,7 @@ export const en = {
         consentNeeded: 'Tick the box to leave your number, or clear the number.',
         rateBoth: 'Choose a rating for the food and the service.',
         send: 'Send',
-        thanks: 'Thank you for your feedback!',
+        thanks: 'Thank you for your feedback.',
       },
       /** Ordering from the table (P3-03c, TAB-005 to TAB-010, TAB-013). */
       ordering: {
@@ -2376,7 +2376,7 @@ until you press Publish.
       updated: 'Updated {time}',
       number: 'Order {number}',
       placed: 'Sent at {time}',
-      SUBMITTED: 'Sending your order to the restaurant...',
+      SUBMITTED: 'Sending your order to the restaurant…',
       RECEIVED: 'Received. Waiting for the restaurant to accept it.',
       SENT_TO_KITCHEN: 'Your order is accepted and has gone to the kitchen.',
       acceptedBanner: 'Your order is accepted. The kitchen is preparing it.',
@@ -3581,7 +3581,7 @@ until you press Publish.
     },
     learned: {
       title: 'Learned from your orders',
-      hint: 'Every morning, the server looks at what your guests ordered together over the last days and suggests the same pairings. Nothing leaves this PC.',
+      hint: 'Every morning, the system looks at what your guests ordered together over the last days and suggests the same pairings. Nothing leaves this PC.',
       never:
         'Nothing learned yet. It starts once there are {minOrders, plural, one {# order} other {# orders}}.',
       waiting:
@@ -4145,7 +4145,7 @@ until you press Publish.
       title: 'New items',
       empty: 'Tap a dish to add it.',
       total: 'Estimated total',
-      estimateNote: 'The server prices the bill; this is an estimate.',
+      estimateNote: 'An estimate. The bill has the final prices.',
       remove: 'Remove {name}',
       customer: 'Customer name (optional)',
       send: 'Send to kitchen',
@@ -4358,6 +4358,7 @@ until you press Publish.
     reference: 'Reference (optional)',
     add: 'Add payment',
     planned: 'Payments to record',
+    leftAfter: 'Left after the payments below',
     remove: 'Remove {mode} payment',
     record: 'Record payment',
     invalidAmount: 'Enter an amount above zero and no more than what is still to pay.',
@@ -4465,6 +4466,7 @@ until you press Publish.
     table: 'Table {table}',
     token: 'Token {token}',
     ageMinutes: '{minutes} min',
+    ageHours: '{hours} h {minutes} min',
     age: {
       fresh: 'On time',
       amber: 'Getting late',
@@ -5074,7 +5076,7 @@ until you press Publish.
           LICENCE_TAMPERED: 'the licence file changed or an older one put back',
           RECORD_TAMPERED: 'the PC’s licence record edited',
           OTHER_PC: 'the licence on another PC',
-          CODE_MODIFIED: 'the server’s program files changed',
+          CODE_MODIFIED: 'this PC’s program files changed',
           CLOCK_ROLLBACK: 'the clock set or held back, again and again',
           CLOCK_SKEW: 'the clock far off, again and again',
           REACTIVATION_CODE_NOT_ISSUED: 'a reactivation code the vendor never issued',
@@ -5290,6 +5292,6 @@ until you press Publish.
   errors: {
     generic: 'Something went wrong. Try again.',
     network: 'Can’t reach the restaurant server. Check the Wi-Fi and try again.',
-    timeout: 'The server took too long to answer. Try again.',
+    timeout: 'The restaurant PC took too long to answer. Try again.',
   },
 } as const;
