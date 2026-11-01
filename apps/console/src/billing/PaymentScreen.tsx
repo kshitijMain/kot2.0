@@ -219,10 +219,20 @@ function PaymentForm({
           <dd>
             <Money paise={view.paid} />
           </dd>
+          {/* What is owed now; lined-up payments are not paid until recorded (P9-20): a refused
+              cash payment had shown "Still to pay ₹0.00". */}
           <dt className="bill__grand">{t('payment.remaining')}</dt>
           <dd className="bill__grand">
-            <Money paise={left} size="lg" strong />
+            <Money paise={view.remaining} size="lg" strong />
           </dd>
+          {planned.length === 0 ? null : (
+            <>
+              <dt>{t('payment.leftAfter')}</dt>
+              <dd>
+                <Money paise={left} />
+              </dd>
+            </>
+          )}
         </dl>
         {planned.length === 0 ? null : (
           <>

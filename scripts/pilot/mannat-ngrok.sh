@@ -102,7 +102,8 @@ for tok in $TOKENS; do
   i=$((i + 1))
 done
 echo
-echo "POS on this Mac: https://$(ipconfig getifaddr en0 2>/dev/null || echo 127.0.0.1):8080/pair  (Manager PIN 2222)"
+echo "POS, dashboard, kitchen: https://$(ipconfig getifaddr en0 2>/dev/null || echo 127.0.0.1):8080  (tap a name, then the PIN)"
+echo "  PINs: Owner 1111 · Manager 2222 · Waiter 1 4444 · Waiter 2 5555 · Kitchen 6666 (pilot only)"
 echo
 if [[ "$PREVIOUS" != "$NGROK" ]]; then
   echo "!! The address changed (was: $PREVIOUS). Tents printed before open the old address:"

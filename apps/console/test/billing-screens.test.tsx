@@ -261,7 +261,13 @@ describe('[BILL-008] taking payment', () => {
       path: `/pos/pay/${B.invoice}`,
     });
     await user.click(await screen.findByRole('button', { name: t('payment.record') }));
-    await user.click(await screen.findByRole('button', { name: t('payment.openShift') }));
+    // Refused, nothing recorded: still all owed, the lined-up cash on its own line (P9-20).
+    await screen.findByRole('button', { name: t('payment.openShift') });
+    expect(screen.getByText(t('payment.remaining')).nextElementSibling).toHaveTextContent(
+      '₹704.00',
+    );
+    expect(screen.getByText(t('payment.leftAfter'))).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: t('payment.openShift') }));
     expect(await screen.findByText(t('shift.none'))).toBeInTheDocument();
   });
 

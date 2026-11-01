@@ -384,7 +384,7 @@ function ExpoOrderCard({ order, ...props }: BoardProps & { order: ExpoOrder }) {
           <span className="kds-ticket__destination">{where}</span>
         </h3>
         <Badge tone={AGE_BADGE[tone]} variant="solid" icon={<Icon name={AGE_ICONS[tone]} />}>
-          {t('kds.ageMinutes', { minutes })}
+          {ageText(minutes, t)}
         </Badge>
         {order.allReady ? (
           <Badge tone="success" variant="solid" icon={<Icon name="check" />}>
@@ -461,7 +461,7 @@ function TicketCard({
           <span className="kds-ticket__destination">{destination(ticket, t)}</span>
         </h3>
         <Badge tone={AGE_BADGE[tone]} variant="solid" icon={<Icon name={AGE_ICONS[tone]} />}>
-          {t('kds.ageMinutes', { minutes })}
+          {ageText(minutes, t)}
           {tone === 'fresh' ? null : ` · ${t(`kds.age.${tone}`)}`}
         </Badge>
         <p className="kds-ticket__meta">
@@ -577,4 +577,11 @@ function TicketCard({
       </footer>
     </article>
   );
+}
+
+/** A ticket's age as the kitchen reads it: "12 min", and from an hour "14 h 33 min" (P9-20). */
+function ageText(minutes: number, t: ReturnType<typeof useT>): string {
+  return minutes < 60
+    ? t('kds.ageMinutes', { minutes })
+    : t('kds.ageHours', { hours: Math.floor(minutes / 60), minutes: minutes % 60 });
 }

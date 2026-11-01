@@ -706,6 +706,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-15 Bill and requests from the tables reach the staff; one type scale on the console
 - [x] P9-16 Audit of every screen and the bill journey; managers take payment on the phone
 - [x] P9-17 The waiter APK builds on this Mac
+- [x] P9-20 Full audit of every screen, link, button and workflow on the live pilot
 
 ## Decisions
 
@@ -4631,6 +4632,91 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-11-01: P9-20 Full audit of every screen, link, button and workflow on the live pilot
+
+Asked by the Business Owner: audit everything (apps, dashboards and workflows: words, buttons,
+links, and whether what one screen does shows on the others) and fix it.
+
+**How:**
+
+- **Probe:** the console's 27 routes as the Manager. It followed every internal link, scanned all
+  visible text for leaked placeholders, raw keys, ISO dates, repeated words and stray punctuation,
+  pressed each button not on a never-press list, and flagged any that did nothing.
+- **Duplicate names:** a read-only scan of each page for buttons with the same accessible name.
+- **Workflows on the pilot:**
+  - POS: open a table, a dish with options and two naan, send, the kitchen starts, readies and
+    picks up exactly that ticket, the bill with the discount dialog, print, cash refused without a
+    shift, open a shift;
+  - QR diner at Table 3 with the staff: order, rejected with a reason, re-order, accepted, Call
+    waiter → On my way → "on the way", Ask for the bill → Open bill → print → the diner's bill → I
+    have paid → its alert → Open bill → UPI → settled.
+- **The text catalogue:** a scan for wording issues.
+- **Screenshots:** every state, and the QR diner pages at 390 px.
+
+**Results:**
+
+- No broken links.
+- No page errors or failed API calls apart from expected answers (wrong PIN, no printer, cash
+  without a shift).
+- The cross-screen journeys pass end to end.
+
+**Found and fixed:**
+
+- **Open table** left the POS on the floor; it now goes straight to the table's order, as the
+  waiter app does.
+- **Payment:** after a refused cash payment, "Still to pay" read ₹0.00 (it subtracted the lined-up
+  payment). It now shows what is owed, with "Left after the payments below" while payments are
+  lined up.
+- **Kitchen display:**
+  - ages over an hour read "14 h 33 min" (they read "873 min");
+  - "Order 7" and "Table 4" no longer break apart on narrow Expo cards.
+- **Set up:** each step's buttons are grouped under the step's name. "Undo" and "We don't need
+  this" did not say which step; screen readers now announce it.
+- **Words:**
+  - the out-of-stock alert's title is "Dish out of stock" (it was the pager's "OUT OF STOCK");
+  - the cart estimate says "An estimate. The bill has the final prices." ("The server prices the
+    bill" read as the waiter);
+  - "Thank you for your feedback." (no exclamation mark);
+  - "Sending your order to the restaurant…";
+  - the timeout error, the recommendations hint and the tamper warning say "restaurant PC",
+    "system" and "this PC", not "server".
+- **Pilot scripts:** they print the PIN-only sign-in and the PINs, not "/pair".
+
+Checked and left as they are:
+
+- the menu, settings, devices, staff, floor and printing rows label their button groups ("Actions
+  for Paneer Tikka"), which is accessible;
+- the file-picker buttons open the system dialog;
+- "See what is sent" downloads the diagnostics file.
+
+**Damage the audit itself did on the pilot, all undone where possible:**
+
+- The probe pressed **Out of stock** for every dish. That greyed the whole QR menu, and it
+  cancelled Table 2's unstarted Dal Makhani (order 6) and Rasmalai (order 5).
+  - Every dish was made available again through the same screen.
+  - The two cancelled dishes cannot be restored.
+- The probe marked the set-up steps INVOICE (done) and DEVICES (skipped). Both are undone.
+- The probe requested a backup (it fails here: no `pg_dump`).
+- Test data from the journeys:
+  - Table 3: orders, an invoice paid by UPI, and the table closed;
+  - Table 5: an invoice paid by UPI, and the table closed;
+  - a cash shift opened with ₹1,000 by the Manager (close it on the POS);
+  - kitchen tickets KOT 1, 2, 3 and 7 bumped.
+- The probe script is not kept in the repository. Any future probe must never press stock, set-up or other state-changing buttons, and should run on a copy of the data, not the live pilot.
+
+**Not checked here:**
+
+- the waiter app and the table tablet on a device (their tests pass: 78 and 35);
+- takeaway's send, whose step failed on the script's own category choice (the screen itself looks
+  right).
+
+Tests:
+
+- console 445 (the open-table test now expects the order screen; the payment test checks what is
+  still owed after a refusal);
+- ordering 99; i18n 37; QR unit 25, e2e 17; waiter app 78; table tablet 35;
+- lint, typecheck and format pass.
 
 ### 2026-10-31: P9-17 The waiter APK builds on this Mac
 
