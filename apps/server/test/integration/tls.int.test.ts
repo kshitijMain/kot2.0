@@ -14,7 +14,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { httpsOptionsFor } from '../../src/app.factory.js';
 import { APP_CONFIG, type AppConfig } from '../../src/config/app-config.js';
 import { createCertificateAuthority, isIssuedBy } from '../../src/tls/certificates.js';
-import { localServerNames } from '../../src/tls/tls-store.js';
+import { lanAddresses, localServerNames } from '../../src/tls/tls-store.js';
 import { TlsService } from '../../src/tls/tls.service.js';
 import {
   authHeaders,
@@ -196,10 +196,12 @@ describe('[SEC-010] pinning the CA while pairing', () => {
     expect(response.status, JSON.stringify(response.body)).toBe(201);
     const code = PairingCodeResponse.parse(response.body);
     expect(code.caSha256).toBe(caSha256);
-    // Every address the server certificate covers except loopback, on the port it listens on.
+    // The PC's real LAN addresses the certificate covers, best first, on the port it listens on.
+    // Virtual adapters (Docker, VPNs) are covered by the certificate but never offered (P9-27).
     const covered = localServerNames().ipAddresses.filter((address) => address !== '127.0.0.1');
+    const offered = lanAddresses().filter((address) => covered.includes(address));
     expect(code.serverUrls).toEqual(
-      covered.slice(0, 8).map((address) => `https://${address}:${String(port)}`),
+      offered.slice(0, 8).map((address) => `https://${address}:${String(port)}`),
     );
     expect(JSON.parse(code.qrPayload)).toEqual({
       v: 1,
