@@ -1,7 +1,9 @@
 import type { TableOverviewEntry, TableSessionView } from '@rp/contracts';
 import { messageOf, Note, useDeviceSession, useT } from '@rp/mobile-shell';
-import { Button, QuantityStepper, Sheet } from '@rp/ui-native';
+import { fontSize, fontWeight } from '@rp/design-tokens';
+import { Button, QuantityStepper, Sheet, Text, useTheme, weight } from '@rp/ui-native';
 import { useState } from 'react';
+import { StyleSheet } from 'react-native';
 
 /** Guests a new table starts with; the waiter changes it with the stepper. */
 const DEFAULT_COVERS = 2;
@@ -22,6 +24,7 @@ export function OpenTableSheet({
 }) {
   const session = useDeviceSession();
   const t = useT();
+  const { colors } = useTheme();
   const [covers, setCovers] = useState(DEFAULT_COVERS);
   const [error, setError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
@@ -76,6 +79,8 @@ export function OpenTableSheet({
       }
     >
       {dirty ? <Note>{t('pos.table.needsCleaning')}</Note> : null}
+      {/* What the number is (P9-21): the stepper alone showed a bare "2". */}
+      <Text style={[styles.label, { color: colors.text }]}>{t('pos.open.guests')}</Text>
       <QuantityStepper
         value={covers}
         onChange={setCovers}
@@ -89,3 +94,7 @@ export function OpenTableSheet({
     </Sheet>
   );
 }
+
+const styles = StyleSheet.create({
+  label: { fontSize: fontSize.md, fontWeight: weight(fontWeight.semibold) },
+});

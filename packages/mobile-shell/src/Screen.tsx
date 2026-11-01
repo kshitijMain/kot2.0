@@ -1,5 +1,5 @@
 import { elevation, fontSize, fontWeight, spacing } from '@rp/design-tokens';
-import { Text, useScreenInsets, useTheme, weight } from '@rp/ui-native';
+import { Text, useKeyboardHeight, useScreenInsets, useTheme, weight } from '@rp/ui-native';
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { BrandLogo } from './brand.js';
@@ -53,12 +53,15 @@ export function Screen({
 }) {
   const { colors } = useTheme();
   const insets = useScreenInsets();
+  // Edge to edge, Android no longer shrinks the screen for the keyboard (P9-21).
+  const keyboard = useKeyboardHeight();
   return (
     <View
       style={[
         styles.screen,
         {
           backgroundColor: colors.background,
+          paddingBottom: keyboard,
           paddingTop: insets.top,
           paddingLeft: insets.left,
           paddingRight: insets.right,

@@ -163,13 +163,16 @@ export function TableScreen({
     };
   }, [onBack, view]);
 
-  if (person === undefined) return null;
   const table: TableOverviewEntry | undefined =
     tables.data.status === 'ready'
       ? tables.data.value.tables.find((candidate) => candidate.session?.id === sessionId)
       : undefined;
+  // The table's name stays in the header once it closes (P9-21): it had read "Table " there.
+  const [lastLabel, setLastLabel] = useState('');
+  if (table !== undefined && table.label !== lastLabel) setLastLabel(table.label);
+  if (person === undefined) return null;
   const closed = tables.data.status === 'ready' && table === undefined;
-  const label = table?.label ?? drafts[0]?.body.tableLabel ?? '';
+  const label = table?.label ?? (lastLabel === '' ? drafts[0]?.body.tableLabel : lastLabel) ?? '';
 
   const add = (line: Omit<CartLine, 'clientLineId' | 'error'>, source?: RecommendationSource) => {
     setNotice(undefined);
@@ -467,7 +470,8 @@ export function TableScreen({
                 {t('pos.table.move')}
               </Button>
             ) : null}
-            {table.state === 'OCCUPIED' ? (
+            {/* Who may print the bill prints it; asking the managers is for the others (P9-21). */}
+            {table.state === 'OCCUPIED' && !mayPrint ? (
               <Button
                 variant="secondary"
                 style={styles.grow}

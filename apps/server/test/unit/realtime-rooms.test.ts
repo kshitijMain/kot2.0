@@ -70,6 +70,28 @@ describe('[AUTH-009] [SEC-003] rooms a connection joins', () => {
     expect(joined).not.toContain(rooms.allStations(rid));
   });
 
+  it('[KDS-001] lets kitchen staff signed in on a browser hear every station live (P9-21)', () => {
+    const browser = device({ type: 'POS' });
+    const kitchen = randomUUID();
+    const joined = roomsForConnection({
+      device: browser,
+      person: { staffId: kitchen, role: 'KITCHEN' },
+    });
+    expect(joined).toContain(rooms.allStations(rid));
+    const created = domainEvent('KotCreated', rid, {
+      kotId: randomUUID(),
+      kotNumber: 6,
+      stationId: stationA,
+      orderId: randomUUID(),
+      kind: 'NEW',
+    });
+    expect(reaches(roomsForEvent(created), new Set(joined))).toBe(true);
+    // A waiter on the same browser does not join the kitchen's rooms.
+    expect(
+      roomsForConnection({ device: browser, person: { staffId: waiter, role: 'WAITER' } }),
+    ).not.toContain(rooms.allStations(rid));
+  });
+
   it('puts a kitchen screen without a station in the all-stations room', () => {
     const kds = device({ type: 'KDS' });
     expect(roomsForConnection({ device: kds })).toContain(rooms.allStations(rid));

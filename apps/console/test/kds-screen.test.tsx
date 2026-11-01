@@ -193,14 +193,15 @@ describe('[KDS-005] [KDS-007] kitchen steps, bump and recall', () => {
     expect(fake.callsTo('GET', '/api/v1/kds/tickets').length).toBeGreaterThanOrEqual(3);
   });
 
-  it('bumps a ready ticket and recalls it from the recently bumped list', async () => {
+  it('picks up ready food, bumps a finished ticket and recalls one (P9-21)', async () => {
     const ready = ticket(1, { lines: [line(11, { state: 'READY', readyAt: minutesAgo(1) })] });
+    const done = ticket(2, { lines: [line(12, { state: 'PICKED_UP', readyAt: minutesAgo(2) })] });
     const fake = kdsServer(
-      board([ready], { recentlyBumped: [ticket(5, { bumpedAt: minutesAgo(3) })] }),
+      board([ready, done], { recentlyBumped: [ticket(5, { bumpedAt: minutesAgo(3) })] }),
     )
-      .on('POST', `/api/v1/kds/tickets/${ready.kotId}/bump`, () => ({
+      .on('POST', `/api/v1/kds/tickets/${done.kotId}/bump`, () => ({
         status: 200,
-        body: { ...ready, bumpedAt: NOW },
+        body: { ...done, bumpedAt: NOW },
       }))
       .on('POST', `/api/v1/kds/tickets/${ticket(5).kotId}/recall`, () => ({
         status: 200,
@@ -212,17 +213,20 @@ describe('[KDS-005] [KDS-007] kitchen steps, bump and recall', () => {
       }));
     const { user } = await renderKds(fake);
     const first = await card(/^KOT 1/);
-    await user.click(
-      within(first).getByRole('button', {
-        name: t('kds.stepFor', { step: t('kds.step.PICK_UP'), item: 'Dish 11' }),
-      }),
-    );
-    expect(postsTo(fake, `/api/v1/order-items/${line(11).orderItemId}/status`)[0]?.body).toEqual({
-      event: 'PICK_UP',
-    });
-    await user.click(within(first).getByRole('button', { name: t('kds.bumpFor', { number: 1 }) }));
+    // Food at the pass is picked up, which serves it, never bumped off the screen while "Ready".
+    expect(
+      within(first).getByRole('button', { name: t('kds.bumpFor', { number: 1 }) }),
+    ).toBeDisabled();
+    await user.click(within(first).getByRole('button', { name: t('kds.pickUpAll') }));
     await waitFor(() => {
-      expect(postsTo(fake, `/api/v1/kds/tickets/${ready.kotId}/bump`)).toHaveLength(1);
+      expect(postsTo(fake, `/api/v1/order-items/${line(11).orderItemId}/status`)[0]?.body).toEqual({
+        event: 'PICK_UP',
+      });
+    });
+    const second = await card(/^KOT 2/);
+    await user.click(within(second).getByRole('button', { name: t('kds.bumpFor', { number: 2 }) }));
+    await waitFor(() => {
+      expect(postsTo(fake, `/api/v1/kds/tickets/${done.kotId}/bump`)).toHaveLength(1);
     });
 
     await user.click(screen.getByRole('button', { name: t('kds.recall') }));
