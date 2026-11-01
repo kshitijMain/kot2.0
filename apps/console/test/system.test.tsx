@@ -4,7 +4,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FakeServer } from './fake-server.js';
 import { expectNoAxeViolations, renderConsole, server, signsInAs, t } from './harness.js';
 import { invoiceView } from './billing-fixture.js';
-import { ownerSecurity, SECOND_FACTOR_REQUIRED } from './staff-fixture.js';
 import { archivesView, backupsView, systemStatus } from './system-fixture.js';
 
 const PATH = '/manage/system';
@@ -999,7 +998,7 @@ describe('[NFR-I02] removing the software keeps the data unless the Owner allows
     expect(panel.queryByRole('button', { name: t('systemPage.uninstall.open') })).toBeNull();
   });
 
-  it('[AUTH-006] lets the Owner allow it for 30 minutes with a reason and the second factor', async () => {
+  it('[NFR-I02] lets the Owner allow it for 30 minutes with a reason, by PIN session alone', async () => {
     const fake = signsInAs(server(), 'OWNER')
       .on(
         'GET',
@@ -1009,17 +1008,10 @@ describe('[NFR-I02] removing the software keeps the data unless the Owner allows
       )
       .on('GET', '/api/v1/backups', () => ({ status: 200, body: backupsView() }))
       .on('GET', '/api/v1/archives', () => ({ status: 200, body: archivesView() }))
-      .on('GET', '/api/v1/auth/owner/security', () => ({ status: 200, body: ownerSecurity() }))
-      .on('POST', '/api/v1/auth/step-up', () => ({
+      .on('POST', '/api/v1/system/data-deletion', () => ({
         status: 200,
-        body: { secondFactorValidUntil: '2026-10-01T09:40:00.000Z' },
-      }))
-      .on(
-        'POST',
-        '/api/v1/system/data-deletion',
-        () => SECOND_FACTOR_REQUIRED,
-        () => ({ status: 200, body: { allowedUntil: UNTIL } }),
-      );
+        body: { allowedUntil: UNTIL },
+      }));
     const { user, container } = await renderConsole({ fake, path: PATH, signedIn: 'OWNER' });
     const panel = await section(t('systemPage.uninstall.title'));
     await user.click(panel.getByRole('button', { name: t('systemPage.uninstall.open') }));
@@ -1037,18 +1029,9 @@ describe('[NFR-I02] removing the software keeps the data unless the Owner allows
     await user.click(dialog.getByRole('checkbox', { name: t('systemPage.uninstall.understood') }));
     await user.click(confirm);
 
-    const factor = within(await screen.findByRole('dialog', { name: t('secondFactor.title') }));
-    await user.type(
-      await factor.findByLabelText(new RegExp(`^${t('secondFactor.password')}`)),
-      'correct horse battery',
-    );
-    await user.type(factor.getByLabelText(new RegExp(`^${t('secondFactor.code')}`)), '123456');
-    await user.click(factor.getByRole('button', { name: t('secondFactor.confirm') }));
-
     const time = displayDateTime(new Date(UNTIL)).time;
     expect(await panel.findByText(t('systemPage.uninstall.allowedUntil', { time }))).toBeVisible();
     expect(fake.callsTo('POST', '/api/v1/system/data-deletion').map((call) => call.body)).toEqual([
-      { reason: 'Closing this branch' },
       { reason: 'Closing this branch' },
     ]);
     expect(

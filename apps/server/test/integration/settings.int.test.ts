@@ -41,14 +41,6 @@ function put(login: LoginResponse, key: string, body: Record<string, unknown>) {
   return request(httpServer(app)).put(`/api/v1/settings/${key}`).set(as(login)).send(body);
 }
 
-/** As if the Owner had just confirmed password + second factor (the flow is in auth-owner tests). */
-async function stepUp(login: LoginResponse): Promise<void> {
-  await prisma.session.update({
-    where: { id: login.session.id },
-    data: { secondFactorAt: new Date() },
-  });
-}
-
 describe('[MGR-007] [UPD-010] settings registry', () => {
   it('lists every setting with its default and who may change it', async () => {
     const response = await list(manager);
@@ -158,13 +150,10 @@ describe('[MGR-007] [UPD-010] settings registry', () => {
     expect(await settings.applyVendorSettings({})).toEqual(['qr.pickupTimeoutSeconds']);
   });
 
-  it('[AUTH-006] [BILL-004] leaves tax, invoice and data settings to the Owner with a fresh second factor', async () => {
+  it('[BILL-004] [AUTH-012] leaves tax, invoice and data settings to the Owner, whose PIN session is enough', async () => {
     const byManager = await put(manager, 'billing.priceMode', { value: 'TAX_INCLUSIVE' });
     expect([byManager.status, codeOf(byManager)]).toEqual([403, 'FORBIDDEN']);
-    const stale = await put(owner, 'billing.priceMode', { value: 'TAX_INCLUSIVE' });
-    expect([stale.status, codeOf(stale)]).toEqual([403, 'SECOND_FACTOR_REQUIRED']);
 
-    await stepUp(owner);
     const changed = await put(owner, 'billing.priceMode', { value: 'TAX_INCLUSIVE' });
     expect(changed.status, JSON.stringify(changed.body)).toBe(200);
     expect(SettingView.parse(changed.body).value).toBe('TAX_INCLUSIVE');

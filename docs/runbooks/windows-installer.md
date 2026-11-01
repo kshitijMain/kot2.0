@@ -257,7 +257,7 @@ devices.
 Deleting the data takes two people's steps:
 
 1. The Owner allows it on the POS: **Manage → System → Removing the software → Allow deleting the
-   data**, with a reason, their password and an authenticator code. This is recorded in the audit
+   data**, with a reason. This is recorded in the audit
    trail as `DATA_DELETION_ALLOWED`. The permission lasts 30 minutes.
 2. Within those 30 minutes, the person uninstalling chooses to delete the data
    (`Uninstall-RestaurantPlatform.ps1 -DeleteData`).

@@ -4,7 +4,6 @@ import type { Role } from '@rp/domain';
 import type { FakeServer } from './fake-server.js';
 import { expectNoAxeViolations, renderConsole, server, signsInAs, t } from './harness.js';
 import { EXEMPT, profileView, seriesViews, TAKEAWAY, taxGroupViews } from './restaurant-fixture.js';
-import { ownerSecurity, SECOND_FACTOR_REQUIRED } from './staff-fixture.js';
 
 const PATH = '/manage/restaurant';
 
@@ -15,11 +14,6 @@ function restaurantServer(role: Role = 'OWNER'): FakeServer {
     .on('GET', '/api/v1/invoice-series', () => ({
       status: 200,
       body: { invoiceSeries: seriesViews() },
-    }))
-    .on('GET', '/api/v1/auth/owner/security', () => ({ status: 200, body: ownerSecurity() }))
-    .on('POST', '/api/v1/auth/step-up', () => ({
-      status: 200,
-      body: { secondFactorValidUntil: '2026-10-01T10:10:00.000Z' },
     }))
     .on('PUT', '/api/v1/restaurant/profile', () => ({ status: 200, body: profileView() }));
 }
@@ -118,13 +112,11 @@ describe('[ONB-004] [BILL-002] [BILL-003] [BILL-004] the restaurant page', () =>
     });
   });
 
-  it('adds a tax group after the Owner confirms the second factor', async () => {
-    const fake = restaurantServer().on(
-      'POST',
-      '/api/v1/tax-groups',
-      () => SECOND_FACTOR_REQUIRED,
-      () => ({ status: 201, body: taxGroupViews()[0] }),
-    );
+  it('[AUTH-012] adds a tax group as the Owner, with no password or authenticator asked', async () => {
+    const fake = restaurantServer().on('POST', '/api/v1/tax-groups', () => ({
+      status: 201,
+      body: taxGroupViews()[0],
+    }));
     const { user } = await renderConsole({ fake, path: PATH, signedIn: 'OWNER' });
     await user.click(
       await screen.findByRole('button', { name: t('restaurantPage.taxGroups.add') }),
@@ -139,26 +131,10 @@ describe('[ONB-004] [BILL-002] [BILL-003] [BILL-004] the restaurant page', () =>
     await user.type(rates[1]!, '9');
     expect(form.getByText(t('restaurantPage.taxGroups.draftTotal', { rate: '18' }))).toBeVisible();
     await user.click(form.getByRole('button', { name: t('restaurantPage.save') }));
-
-    const confirm = within(await dialog(t('secondFactor.title')));
-    await user.type(
-      await confirm.findByLabelText(new RegExp(`^${t('secondFactor.password')}`)),
-      'correct horse battery',
-    );
-    await user.type(confirm.getByLabelText(new RegExp(`^${t('secondFactor.code')}`)), '123456');
-    await user.click(confirm.getByRole('button', { name: t('secondFactor.confirm') }));
     expect(
       await screen.findByText(t('restaurantPage.taxGroups.added', { name: 'GST 18%' })),
     ).toBeVisible();
     expect(fake.callsTo('POST', '/api/v1/tax-groups').map((call) => call.body)).toEqual([
-      {
-        name: 'GST 18%',
-        sacCode: '996331',
-        components: [
-          { code: 'CGST', rateBp: 900 },
-          { code: 'SGST', rateBp: 900 },
-        ],
-      },
       {
         name: 'GST 18%',
         sacCode: '996331',

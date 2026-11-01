@@ -383,10 +383,6 @@ describe('[BILL-012] [BILL-011] [SEC-002] digital bills from the restaurant PC',
     });
     expect(sent.length).toBeGreaterThan(0);
     const owner = await signIn(app, kit, 'OWNER');
-    await prisma.session.update({
-      where: { id: owner.session.id },
-      data: { secondFactorAt: new Date() },
-    });
     const erased = await server()
       .post('/api/v1/diner-contacts/erase')
       .set(authHeaders(kit.deviceId, owner.accessToken))
@@ -435,10 +431,6 @@ describe('[BILL-012] [BILL-011] [SEC-002] digital bills from the restaurant PC',
     expect(await phoneOf()).not.toBeNull();
 
     const owner = await signIn(app, kit, 'OWNER', pos);
-    await prisma.session.update({
-      where: { id: owner.session.id },
-      data: { secondFactorAt: new Date() },
-    });
     const erased = await server()
       .post('/api/v1/diner-contacts/erase')
       .set(authHeaders(pos, owner.accessToken))

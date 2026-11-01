@@ -232,7 +232,7 @@ export class SystemService {
 
   /**
    * The Owner allows the uninstaller to delete the data (NFR-I02, P0-16c). The guard has checked
-   * the fresh second factor (DATA_ADMIN). The permission file is written inside the audit's
+   * it is the Owner (DATA_ADMIN). The permission file is written inside the audit's
    * transaction, so there is never one without its audit entry.
    */
   async allowDataDeletion(

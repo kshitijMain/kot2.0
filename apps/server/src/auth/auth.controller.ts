@@ -5,18 +5,10 @@ import {
   type LoginResponse,
   OverrideRequest,
   type OverrideResponse,
-  OwnerLoginRequest,
-  OwnerPasswordRequest,
-  type OwnerSecurityResponse,
   PinLoginRequest,
   RefreshRequest,
   STAFF_DEVICE_TYPES,
   type StaffTilesResponse,
-  StepUpRequest,
-  type StepUpResponse,
-  TotpConfirmRequest,
-  type TotpConfirmResponse,
-  type TotpEnrollmentResponse,
   UnlockStaffRequest,
 } from '@rp/contracts';
 import { ZodValidationPipe } from '../validation/zod-validation.pipe.js';
@@ -38,7 +30,7 @@ function principalOf(request: AuthenticatedRequest): Principal {
   return request.principal;
 }
 
-/** Sign-in, sessions, step-up and manager overrides (AUTH-001 to AUTH-006, AUTH-011). */
+/** Sign-in, sessions and manager overrides (AUTH-001 to AUTH-005, AUTH-011). */
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -68,16 +60,6 @@ export class AuthController {
     return this.auth.pinLogin(deviceOf(request), body);
   }
 
-  @Post('owner-login')
-  @HttpCode(200)
-  @RequireDevice(STAFF_DEVICE_TYPES)
-  ownerLogin(
-    @Req() request: AuthenticatedRequest,
-    @Body(new ZodValidationPipe(OwnerLoginRequest)) body: OwnerLoginRequest,
-  ): Promise<LoginResponse> {
-    return this.auth.ownerLogin(deviceOf(request), body);
-  }
-
   @Post('refresh')
   @HttpCode(200)
   @RequireDevice(STAFF_DEVICE_TYPES)
@@ -93,16 +75,6 @@ export class AuthController {
   @RequireSession()
   logout(@Req() request: AuthenticatedRequest): Promise<void> {
     return this.auth.logout(principalOf(request));
-  }
-
-  @Post('step-up')
-  @HttpCode(200)
-  @RequireSession()
-  stepUp(
-    @Req() request: AuthenticatedRequest,
-    @Body(new ZodValidationPipe(StepUpRequest)) body: StepUpRequest,
-  ): Promise<StepUpResponse> {
-    return this.auth.stepUp(principalOf(request), deviceOf(request), body);
   }
 
   @Post('override')
@@ -123,38 +95,5 @@ export class AuthController {
     @Body(new ZodValidationPipe(UnlockStaffRequest)) body: UnlockStaffRequest,
   ): Promise<void> {
     return this.auth.unlock(principalOf(request), body.staffId);
-  }
-
-  @Post('owner/totp/enroll')
-  @HttpCode(200)
-  @RequireSession()
-  enrollTotp(@Req() request: AuthenticatedRequest): Promise<TotpEnrollmentResponse> {
-    return this.auth.enrollTotp(principalOf(request));
-  }
-
-  @Post('owner/totp/confirm')
-  @HttpCode(200)
-  @RequireSession()
-  confirmTotp(
-    @Req() request: AuthenticatedRequest,
-    @Body(new ZodValidationPipe(TotpConfirmRequest)) body: TotpConfirmRequest,
-  ): Promise<TotpConfirmResponse> {
-    return this.auth.confirmTotp(principalOf(request), body.code);
-  }
-
-  @Get('owner/security')
-  @RequireSession()
-  ownerSecurity(@Req() request: AuthenticatedRequest): Promise<OwnerSecurityResponse> {
-    return this.auth.ownerSecurity(principalOf(request));
-  }
-
-  @Post('owner/password')
-  @HttpCode(204)
-  @RequireSession()
-  setOwnerPassword(
-    @Req() request: AuthenticatedRequest,
-    @Body(new ZodValidationPipe(OwnerPasswordRequest)) body: OwnerPasswordRequest,
-  ): Promise<void> {
-    return this.auth.setOwnerPassword(principalOf(request), body);
   }
 }

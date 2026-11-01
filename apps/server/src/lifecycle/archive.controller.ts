@@ -79,7 +79,7 @@ export class ArchiveController {
     return this.archives.overview(principalOf(request).restaurantId);
   }
 
-  // DATA_ADMIN is the Owner with a fresh second factor (AUTH-006).
+  // DATA_ADMIN is the Owner's alone.
   @Post()
   @HttpCode(202)
   @RequireCapability('DATA_ADMIN')

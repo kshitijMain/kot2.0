@@ -17,7 +17,7 @@ import {
 import type { FakeServer } from './fake-server.js';
 import { STAFF } from './fakes.js';
 import { expectNoAxeViolations, renderConsole, server, signsInAs, t } from './harness.js';
-import { ownerSecurity, staffList, staffView } from './staff-fixture.js';
+import { staffList, staffView } from './staff-fixture.js';
 
 const uuid = (n: number) => `0199a0e0-0000-7000-8000-${String(n).padStart(12, '0')}`;
 const CAPTAIN = uuid(1201);
@@ -52,8 +52,7 @@ function roles(): RoleView[] {
 function rolesServer(as: 'MANAGER' | 'OWNER'): FakeServer {
   return signsInAs(server(), as)
     .on('GET', '/api/v1/roles', () => ({ status: 200, body: { roles: roles() } }))
-    .on('GET', '/api/v1/staff', () => ({ status: 200, body: staffList() }))
-    .on('GET', '/api/v1/auth/owner/security', () => ({ status: 200, body: ownerSecurity() }));
+    .on('GET', '/api/v1/staff', () => ({ status: 200, body: staffList() }));
 }
 
 beforeEach(() => {

@@ -21,19 +21,6 @@ export const IDLE_HEADER = 'x-rp-idle-seconds';
 /** Numeric PIN, 4 digits by default, 6 when the owner requires it (AUTH-001). */
 export const Pin = z.string().regex(/^\d{4,8}$/, 'PIN must be 4 to 8 digits');
 
-/** Owner password (AUTH-006): at least 12 characters. */
-export const OwnerPassword = z.string().min(12).max(256);
-
-/** Second factor for the Owner: a TOTP code or a one-time recovery code (AUTH-006). */
-export const SecondFactor = z.discriminatedUnion('kind', [
-  z.strictObject({ kind: z.literal('TOTP'), code: z.string().regex(/^\d{6}$/) }),
-  z.strictObject({
-    kind: z.literal('RECOVERY_CODE'),
-    code: z.string().regex(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/),
-  }),
-]);
-export type SecondFactor = z.infer<typeof SecondFactor>;
-
 /** A name/photo tile on the shared-device login screen (AUTH-001). No PIN hints. */
 export const StaffTile = z.object({
   staffId: Id,
@@ -48,13 +35,6 @@ export type StaffTilesResponse = z.infer<typeof StaffTilesResponse>;
 
 export const PinLoginRequest = z.strictObject({ staffId: Id, pin: Pin });
 export type PinLoginRequest = z.infer<typeof PinLoginRequest>;
-
-export const OwnerLoginRequest = z.strictObject({
-  staffId: Id,
-  password: OwnerPassword,
-  secondFactor: SecondFactor,
-});
-export type OwnerLoginRequest = z.infer<typeof OwnerLoginRequest>;
 
 export const RefreshRequest = z.strictObject({ refreshToken: z.string().min(20).max(200) });
 export type RefreshRequest = z.infer<typeof RefreshRequest>;
@@ -81,8 +61,6 @@ export const LoginResponse = z.object({
     /** What the person's custom role adds to `role` (AUTH-012); screens use it to show more. */
     capabilities: z.array(Capability).optional(),
   }),
-  /** Until when the Owner's password + TOTP step-up is valid, if it was done. */
-  secondFactorValidUntil: Timestamp.nullable(),
 });
 export type LoginResponse = z.infer<typeof LoginResponse>;
 
@@ -93,18 +71,8 @@ export type LoginResponse = z.infer<typeof LoginResponse>;
 export const CurrentSessionResponse = LoginResponse.pick({
   session: true,
   staff: true,
-  secondFactorValidUntil: true,
 });
 export type CurrentSessionResponse = z.infer<typeof CurrentSessionResponse>;
-
-export const StepUpRequest = z.strictObject({
-  password: OwnerPassword,
-  secondFactor: SecondFactor,
-});
-export type StepUpRequest = z.infer<typeof StepUpRequest>;
-
-export const StepUpResponse = z.object({ secondFactorValidUntil: Timestamp });
-export type StepUpResponse = z.infer<typeof StepUpResponse>;
 
 /** A manager approves one action on the requester's device with their PIN (AUTH-011). */
 export const OverrideRequest = z.strictObject({
@@ -130,42 +98,3 @@ export type OverrideResponse = z.infer<typeof OverrideResponse>;
 
 export const UnlockStaffRequest = z.strictObject({ staffId: Id });
 export type UnlockStaffRequest = z.infer<typeof UnlockStaffRequest>;
-
-export const TotpEnrollmentResponse = z.object({
-  /** Base32 secret for manual entry. */
-  secret: z.string().regex(/^[A-Z2-7]+$/),
-  /** `otpauth://` URI to show as a QR code in the authenticator app. */
-  otpauthUri: z.string().startsWith('otpauth://totp/'),
-});
-export type TotpEnrollmentResponse = z.infer<typeof TotpEnrollmentResponse>;
-
-export const TotpConfirmRequest = z.strictObject({ code: z.string().regex(/^\d{6}$/) });
-export type TotpConfirmRequest = z.infer<typeof TotpConfirmRequest>;
-
-export const TotpConfirmResponse = z.object({
-  /** Shown once; each works one time instead of a TOTP code. */
-  recoveryCodes: z.array(z.string().regex(/^[A-Z0-9]{4}-[A-Z0-9]{4}$/)).length(10),
-});
-export type TotpConfirmResponse = z.infer<typeof TotpConfirmResponse>;
-
-export const OwnerPasswordRequest = z.strictObject({
-  /** Required when a password is already set. */
-  currentPassword: OwnerPassword.optional(),
-  newPassword: OwnerPassword,
-});
-export type OwnerPasswordRequest = z.infer<typeof OwnerPasswordRequest>;
-
-/**
- * What of the Owner's sign-in security is set up (AUTH-006), never the secrets: the console shows
- * "Set password" or "Change password", and whether the authenticator still has to be added.
- */
-export const OwnerSecurityResponse = z.object({
-  hasPassword: z.boolean(),
-  /** An authenticator app is set up and was confirmed with a code. */
-  hasAuthenticator: z.boolean(),
-  /** One-time recovery codes not yet used. */
-  recoveryCodesLeft: z.int().nonnegative(),
-  /** Until when the last password + second factor confirmation holds, if it still does. */
-  secondFactorValidUntil: Timestamp.nullable(),
-});
-export type OwnerSecurityResponse = z.infer<typeof OwnerSecurityResponse>;

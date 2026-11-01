@@ -246,7 +246,7 @@ export const en = {
     ownerName: 'Owner’s name',
     pin: 'Owner’s PIN',
     pinHint:
-      '{digits} digits, used to sign in on the POS. The Owner sets a password and authenticator next.',
+      '{digits} digits, used to sign in on the POS, and for everything only the Owner may do.',
     repeatPin: 'PIN again',
     pinMismatch: 'The two PINs are not the same.',
     create: 'Create and continue',
@@ -735,11 +735,6 @@ export const en = {
       body: 'Shows what your licence covers and when it ends. Renew before the date to keep working.',
       tip: 'Contact support if the dates look wrong.',
     },
-    security: {
-      title: 'Your sign-in security',
-      body: 'Shows where and when you signed in, and lets you change your PIN. Only the Owner sees this page.',
-      tip: 'Change your PIN if you think anyone has seen it.',
-    },
   },
   /** The manager dashboard (P4-01, MGR-001 to MGR-003, MGR-011). */
   dashboard: {
@@ -763,7 +758,6 @@ export const en = {
       audit: 'Audit trail',
       system: 'System',
       settings: 'Settings',
-      security: 'Security',
       setup: 'Set up',
       licence: 'Licence',
       qrCodes: 'QR codes',
@@ -2715,7 +2709,7 @@ until you press Publish.
       },
       ACCOUNTS: {
         title: 'Owner and managers',
-        hint: 'The Owner’s password and authenticator app (Security), and at least one manager.',
+        hint: 'At least one manager besides the Owner.',
         open: 'Open Staff',
       },
       FLOOR: {
@@ -3233,7 +3227,7 @@ until you press Publish.
   restaurantPage: {
     title: 'Restaurant',
     intro:
-      'How the restaurant appears on screens and bills. The invoice particulars, tax groups and invoice series are the Owner’s, confirmed with the second factor.',
+      'How the restaurant appears on screens and bills. The invoice particulars, tax groups and invoice series are the Owner’s alone.',
     loadFailed: 'The restaurant could not be loaded.',
     ownerOnly: 'Owner only',
     notOwner: 'Only the Owner changes these.',
@@ -3662,7 +3656,6 @@ until you press Publish.
       inactivityMinutes: 'Sign out POS and waiter phones after',
       managerBrowserInactivityMinutes: 'Sign out manager browsers after',
       sessionMaxHours: 'Longest session',
-      stepUpMinutes: 'Owner confirmation lasts',
       overrideSeconds: 'Manager approval lasts',
       kitchenIndividualLogins: 'Kitchen staff sign in one by one',
       pairingCodeMinutes: 'Pairing code lasts',
@@ -3814,7 +3807,7 @@ until you press Publish.
       lockoutMinutes: 'How long a locked login stays locked unless a manager unlocks it.',
       attemptsPerMinutePerDevice: 'Login and override attempts allowed per device per minute.',
       deviceLockoutMaxFailures:
-        'Wrong PINs or passwords on one device, for anyone, within the window that stop it taking any for the lockout time (our default).',
+        'Wrong PINs on one device, for anyone, within the window that stop it taking any for the lockout time (our default).',
       tabletLockoutMaxFailures:
         'Wrong PINs on a table tablet within the window that stop it taking any for the lockout time; they never lock the person (our default).',
       refuseEasyPins:
@@ -3824,8 +3817,6 @@ until you press Publish.
       managerBrowserInactivityMinutes:
         'Inactivity sign-out on manager browsers (personal devices; our default).',
       sessionMaxHours: 'Longest a session lasts, however active (one long shift; our default).',
-      stepUpMinutes:
-        'How long the Owner’s password and second factor stay fresh for Owner-only actions.',
       overrideSeconds: 'How long a manager’s PIN approval can be used for the action it approved.',
       kitchenIndividualLogins:
         'Kitchen staff sign in one by one instead of the screen acting for the station.',
@@ -4013,78 +4004,6 @@ until you press Publish.
     ui: {
       timeFormat: 'Clock format on every screen, bill and report (our default: 12-hour).',
     },
-  },
-  /** The Owner confirms password and authenticator code for Owner-only actions (AUTH-006). */
-  secondFactor: {
-    title: 'Confirm it is you',
-    description:
-      'This needs your Owner password and a code from your authenticator app. It then holds for a few minutes.',
-    password: 'Owner password',
-    code: 'Authenticator code',
-    codeHint: 'The 6-digit code the app shows now.',
-    codeInvalid: 'Enter the 6 digits the app shows.',
-    recoveryCode: 'Recovery code',
-    recoveryHint: 'One of the codes you saved, like ABCD-EFGH. Each works once.',
-    recoveryInvalid: 'Enter a recovery code like ABCD-EFGH.',
-    useRecovery: 'Use a recovery code instead',
-    useCode: 'Use the authenticator app instead',
-    confirm: 'Confirm',
-    cancel: 'Cancel',
-    notSetUp:
-      'Set up your Owner password and authenticator app first. They protect actions such as adding a manager.',
-    openSecurity: 'Open Security',
-  },
-  /** The Owner's own password, authenticator app and recovery codes (AUTH-006). */
-  ownerSecurity: {
-    title: 'Sign-in security',
-    intro:
-      'Your password and authenticator app protect Owner-only actions such as adding a manager. You still sign in here with your PIN.',
-    loadFailed: 'Your sign-in security could not be loaded.',
-    setUp: 'Set up',
-    notSetUp: 'Not set up',
-    password: {
-      title: 'Owner password',
-      set: 'A password is set.',
-      notSet: 'Owner-only actions need a password. Set one first.',
-      setAction: 'Set password',
-      changeAction: 'Change password',
-      current: 'Current password',
-      new: 'New password',
-      newHint:
-        'At least 12 characters. A few unrelated words are easy to remember and hard to guess.',
-      again: 'New password again',
-      tooShort: 'Use at least 12 characters.',
-      mismatch: 'The two passwords are different.',
-      save: 'Save password',
-      cancel: 'Cancel',
-      saved: 'Password saved.',
-      changed: 'Password changed. You were signed out on your other devices.',
-    },
-    authenticator: {
-      title: 'Authenticator app',
-      set: 'Your authenticator app gives the codes.',
-      notSet: 'Add the restaurant to an authenticator app on your phone.',
-      add: 'Set up authenticator',
-      replace: 'Replace authenticator',
-      scan: 'Scan this code with the authenticator app on your phone, then enter the code it shows.',
-      qrLabel: 'QR code for your authenticator app',
-      manual: 'Can’t scan it? Enter this key in the app:',
-      code: 'Code from the app',
-      confirm: 'Confirm',
-      cancel: 'Cancel',
-      done: 'Authenticator added. Owner-only actions now ask for its code.',
-    },
-    recovery: {
-      title: 'Recovery codes',
-      left: '{count, plural, =0 {No recovery codes left.} one {# recovery code left.} other {# recovery codes left.}}',
-      renew: 'Replacing the authenticator gives you ten new codes.',
-      saveTitle: 'Save your recovery codes',
-      saveDescription:
-        'If you lose your phone, each code works once instead of an authenticator code. Write them down or print them and keep them somewhere safe. They are not shown again.',
-      codes: 'Recovery codes',
-      saved: 'I have saved them',
-    },
-    confirmedUntil: 'Confirmed until {time}. Owner-only actions need no password until then.',
   },
 
   pos: {

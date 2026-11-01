@@ -1,5 +1,5 @@
 import { settingDefinition, type SettingView, UNUSED_SETTING_KEYS } from '@rp/contracts';
-import { formatRupees, OWNER_SECOND_FACTOR_CAPABILITIES, parseRupees } from '@rp/domain';
+import { formatRupees, OWNER_ONLY_CAPABILITIES, parseRupees } from '@rp/domain';
 import type { z } from 'zod';
 
 /**
@@ -307,7 +307,7 @@ export function groupSettings(
   return [...groups].map(([area, list]) => ({ area, settings: list }));
 }
 
-/** Whether changing it needs the Owner's fresh second factor (AUTH-006). */
+/** Whether changing it is the Owner's alone (tax, invoice, data and licence settings). */
 export function needsOwner(setting: SettingView): boolean {
-  return OWNER_SECOND_FACTOR_CAPABILITIES.has(setting.capability);
+  return OWNER_ONLY_CAPABILITIES.has(setting.capability);
 }

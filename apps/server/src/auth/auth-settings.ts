@@ -15,7 +15,7 @@ export interface AuthSettings {
   readonly lockoutMinutes: number;
   /** SEC-009: login and override attempts per device per minute. */
   readonly attemptsPerMinutePerDevice: number;
-  /** PC-S5: wrong PINs or passwords on one device within the window that stop it taking any. */
+  /** PC-S5: wrong PINs on one device within the window that stop it taking any. */
   readonly deviceLockoutMaxFailures: number;
   /** MOBILE-S3: the same on a table tablet, where they count against the tablet only. */
   readonly tabletLockoutMaxFailures: number;
@@ -29,8 +29,6 @@ export interface AuthSettings {
   readonly managerBrowserInactivityMinutes: number;
   /** Absolute session length, whatever the activity (one long shift). */
   readonly sessionMaxHours: number;
-  /** AUTH-006: how long a password + TOTP step-up stays valid. */
-  readonly stepUpMinutes: number;
   /** AUTH-011: how long a manager's override approval can be used. */
   readonly overrideSeconds: number;
   /** AUTH-005: kitchen staff sign in individually instead of station mode. */
@@ -70,7 +68,6 @@ export class AuthSettingsService {
       inactivityMinutes: values.get('auth.inactivityMinutes'),
       managerBrowserInactivityMinutes: values.get('auth.managerBrowserInactivityMinutes'),
       sessionMaxHours: values.get('auth.sessionMaxHours'),
-      stepUpMinutes: values.get('auth.stepUpMinutes'),
       overrideSeconds: values.get('auth.overrideSeconds'),
       // PIN-only (ADR-0025): the kitchen signs in with its PIN like everyone else.
       kitchenIndividualLogins:

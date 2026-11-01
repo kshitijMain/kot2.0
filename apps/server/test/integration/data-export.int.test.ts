@@ -46,10 +46,6 @@ describe('[DATA-010] the full data export', () => {
       new AppError(403, 'LICENCE_RESTRICTED', 'Restricted'),
     );
     const owner = await signIn(app, kit, 'OWNER');
-    await prisma.session.update({
-      where: { id: owner.session.id },
-      data: { secondFactorAt: new Date() },
-    });
     const as = () => authHeaders(kit.deviceId, owner.accessToken);
     const started = await request(httpServer(app))
       .post('/api/v1/data-export')
@@ -105,10 +101,6 @@ describe('[DATA-010] the full data export', () => {
     const invoice = await prisma.invoice.findFirstOrThrow({ orderBy: { id: 'asc' } });
     await prisma.invoice.update({ where: { id: invoice.id }, data: { customerName: '+1+2' } });
     const owner = await signIn(app, kit, 'OWNER');
-    await prisma.session.update({
-      where: { id: owner.session.id },
-      data: { secondFactorAt: new Date() },
-    });
     const started = await request(httpServer(app))
       .post('/api/v1/data-export')
       .set(authHeaders(kit.deviceId, owner.accessToken))
@@ -130,10 +122,6 @@ describe('[DATA-010] the full data export', () => {
 
   it('wants the whole path of the folder', async () => {
     const owner = await signIn(app, kit, 'OWNER');
-    await prisma.session.update({
-      where: { id: owner.session.id },
-      data: { secondFactorAt: new Date() },
-    });
     const refused = await request(httpServer(app))
       .post('/api/v1/data-export')
       .set(authHeaders(kit.deviceId, owner.accessToken))

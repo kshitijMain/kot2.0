@@ -55,7 +55,6 @@ export class StockOutService implements OnModuleInit {
       deviceId: markedOutBy.deviceId,
       role: person.role.baseRole,
       sessionId: '',
-      secondFactorAt: null,
       capabilities: [],
     };
     const dish = await tx.item.findUnique({ where: { id: itemId }, select: { name: true } });

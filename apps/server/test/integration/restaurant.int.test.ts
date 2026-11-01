@@ -38,11 +38,6 @@ beforeAll(async () => {
   manager = await signIn(app, kit, 'MANAGER');
   owner = await signIn(app, kit, 'OWNER');
   waiter = await signIn(app, kit, 'WAITER');
-  // As if the Owner had just confirmed password + second factor (that flow is in auth tests).
-  await prisma.session.update({
-    where: { id: owner.session.id },
-    data: { secondFactorAt: new Date() },
-  });
 });
 
 afterAll(async () => {
@@ -203,7 +198,7 @@ describe('[ONB-004] [BILL-002] restaurant profile', () => {
     await expect(prisma.photo.delete({ where: { id: photo.id } })).rejects.toThrow();
   });
 
-  it('[AUTH-006] leaves the invoice particulars to the Owner with a fresh second factor', async () => {
+  it('[BILL-002] [AUTH-012] leaves the invoice particulars to the Owner, whose PIN session is enough', async () => {
     const byManager = await server().put('/api/v1/restaurant/legal').set(as(manager)).send(LEGAL);
     expect([byManager.status, codeOf(byManager)]).toEqual([403, 'FORBIDDEN']);
 
@@ -224,18 +219,6 @@ describe('[ONB-004] [BILL-002] restaurant profile', () => {
       after: { gstin: LEGAL.gstin },
     });
     expect(await setupEvents('LEGAL')).toBe(1);
-
-    // Without the second factor the Owner is asked for it.
-    await prisma.session.update({
-      where: { id: owner.session.id },
-      data: { secondFactorAt: null },
-    });
-    const stale = await server().put('/api/v1/restaurant/legal').set(as(owner)).send(LEGAL);
-    expect([stale.status, codeOf(stale)]).toEqual([403, 'SECOND_FACTOR_REQUIRED']);
-    await prisma.session.update({
-      where: { id: owner.session.id },
-      data: { secondFactorAt: new Date() },
-    });
   });
 
   it('[BILL-002] refuses a mistyped GSTIN or one from another state', async () => {

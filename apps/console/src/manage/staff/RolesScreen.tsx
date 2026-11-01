@@ -19,7 +19,6 @@ import { useConsole, useConsoleState } from '../../app/console-context.js';
 import { useT } from '../../app/i18n.js';
 import { messageOf } from '../../app/messages.js';
 import { useLive } from '../../app/use-live.js';
-import { SecondFactorCancelled, useSecondFactor } from '../../owner/second-factor.js';
 import {
   addable,
   included,
@@ -36,14 +35,13 @@ type Open =
 /**
  * Roles (P4-02e, AUTH-012): the built-in roles of BRD §4.2 and the Owner's custom roles, each a
  * waiter or kitchen role that may do more. Managers see them; only the Owner adds,
- * changes or archives one, confirming password and authenticator (AUTH-006).
+ * changes or archives one.
  */
 export function RolesScreen() {
   const t = useT();
   const controller = useConsole();
   const { person } = useConsoleState();
   const toast = useToast();
-  const { withSecondFactor, dialog: secondFactorDialog } = useSecondFactor();
   const { data, reload } = useLive(
     () => controller.api.listRoles(),
     (type) => type === 'RestaurantChanged',
@@ -63,12 +61,12 @@ export function RolesScreen() {
     setBusy(true);
     setError(undefined);
     try {
-      await withSecondFactor(action);
+      await action();
       toast.show({ title: message, tone: 'success' });
       close();
       reload();
     } catch (failure) {
-      if (!(failure instanceof SecondFactorCancelled)) setError(messageOf(failure, t));
+      setError(messageOf(failure, t));
       setBusy(false);
     }
   };
@@ -229,7 +227,6 @@ export function RolesScreen() {
           onClose={close}
         />
       ) : null}
-      {secondFactorDialog}
     </section>
   );
 }

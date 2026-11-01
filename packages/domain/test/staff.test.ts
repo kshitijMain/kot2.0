@@ -12,9 +12,8 @@ import {
   type StaffTarget,
 } from '../src/index.js';
 
-const owner: StaffActor = { staffId: 'asha', role: 'OWNER', secondFactorFresh: false };
-const confirmedOwner: StaffActor = { ...owner, secondFactorFresh: true };
-const manager: StaffActor = { staffId: 'vikram', role: 'MANAGER', secondFactorFresh: false };
+const owner: StaffActor = { staffId: 'asha', role: 'OWNER' };
+const manager: StaffActor = { staffId: 'vikram', role: 'MANAGER' };
 
 const person = (staffId: string, role: StaffTarget['role'], active = true): StaffTarget => ({
   staffId,
@@ -52,18 +51,18 @@ describe('[MGR-004] staff management rules', () => {
 
   it('refuses everyone who does not manage staff (deny by default)', () => {
     for (const role of ['WAITER', 'KITCHEN'] as const) {
-      const actor: StaffActor = { staffId: 'x', role, secondFactorFresh: true };
+      const actor: StaffActor = { staffId: 'x', role };
       expect(decide(actor, waiter, { kind: 'EDIT' })).toBe('DENIED');
       expect(decide(actor, null, { kind: 'CREATE', role: 'WAITER' })).toBe('DENIED');
     }
   });
 
   it('never deactivates or re-roles the Owner, and only the Owner changes their own record', () => {
-    expect(decide(confirmedOwner, ownerRecord, { kind: 'DEACTIVATE' })).toBe('OWNER_RECORD');
-    expect(decide(confirmedOwner, ownerRecord, { kind: 'CHANGE_ROLE', role: 'MANAGER' })).toBe(
+    expect(decide(owner, ownerRecord, { kind: 'DEACTIVATE' })).toBe('OWNER_RECORD');
+    expect(decide(owner, ownerRecord, { kind: 'CHANGE_ROLE', role: 'MANAGER' })).toBe(
       'OWNER_RECORD',
     );
-    expect(decide(confirmedOwner, ownerRecord, { kind: 'REACTIVATE' })).toBe('OWNER_RECORD');
+    expect(decide(owner, ownerRecord, { kind: 'REACTIVATE' })).toBe('OWNER_RECORD');
     expect(decide(owner, ownerRecord, { kind: 'SET_PIN' })).toBe('ALLOWED');
     expect(decide(owner, ownerRecord, { kind: 'EDIT' })).toBe('ALLOWED');
     expect(decide(manager, ownerRecord, { kind: 'SET_PIN' })).toBe('OWNER_ONLY');
@@ -90,10 +89,9 @@ describe('[MGR-004] staff management rules', () => {
   it('[AUTH-003] lets a manager open a locked login, but not the Owner’s or another manager’s', () => {
     expect(decide(manager, waiter, { kind: 'UNLOCK' })).toBe('ALLOWED');
     expect(decide(manager, managerSelf, { kind: 'UNLOCK' })).toBe('ALLOWED');
-    // The lock on the Owner's password guards Owner-only actions from guessing.
+    // The lock on the Owner's PIN guards Owner-only actions from guessing.
     expect(decide(manager, ownerRecord, { kind: 'UNLOCK' })).toBe('OWNER_ONLY');
     expect(decide(manager, otherManager, { kind: 'UNLOCK' })).toBe('OWNER_ONLY');
-    // No second factor needed: unlocking gives nobody a new role.
     expect(decide(owner, otherManager, { kind: 'UNLOCK' })).toBe('ALLOWED');
     expect(decide(owner, ownerRecord, { kind: 'UNLOCK' })).toBe('ALLOWED');
   });
@@ -123,7 +121,7 @@ describe('[MGR-004] staff management rules', () => {
   });
 });
 
-describe('[AUTH-006] creating or removing managers needs the Owner’s second factor', () => {
+describe('[MGR-004] creating or removing managers is the Owner’s alone', () => {
   const managerChanges: [StaffTarget | null, StaffChange][] = [
     [null, { kind: 'CREATE', role: 'MANAGER' }],
     [waiter, { kind: 'CHANGE_ROLE', role: 'MANAGER' }],
@@ -138,14 +136,13 @@ describe('[AUTH-006] creating or removing managers needs the Owner’s second fa
     }
   });
 
-  it('asks the Owner to confirm password and second factor first', () => {
+  it('lets the Owner do it with their PIN session alone, no password or authenticator (ADR-0026)', () => {
     for (const [target, change] of managerChanges) {
-      expect(decide(owner, target, change)).toBe('SECOND_FACTOR_REQUIRED');
-      expect(decide(confirmedOwner, target, change)).toBe('ALLOWED');
+      expect(decide(owner, target, change)).toBe('ALLOWED');
     }
   });
 
-  it('does not ask for it when a manager keeps their role', () => {
+  it('lets the Owner keep a manager in their role', () => {
     expect(decide(owner, otherManager, { kind: 'CHANGE_ROLE', role: 'MANAGER' })).toBe('ALLOWED');
   });
 });

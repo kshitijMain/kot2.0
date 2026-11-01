@@ -284,7 +284,6 @@ export class OnboardingService {
       restaurant,
       taxGroups,
       defaultSeries,
-      owners,
       managers,
       tables,
       stations,
@@ -297,10 +296,6 @@ export class OnboardingService {
       this.prisma.restaurant.findUnique({ where: { id: restaurantId } }),
       this.prisma.taxGroup.count({ where: live }),
       this.prisma.invoiceSeries.count({ where: { ...live, isDefault: true } }),
-      this.prisma.staff.findMany({
-        where: { ...activeStaff, role: { baseRole: 'OWNER' } },
-        select: { credentials: { select: { kind: true, confirmedAt: true } } },
-      }),
       this.prisma.staff.count({ where: { ...activeStaff, role: { baseRole: 'MANAGER' } } }),
       this.prisma.diningTable.count({ where: live }),
       this.prisma.station.findMany({
@@ -332,13 +327,6 @@ export class OnboardingService {
         hours.length > 0,
       taxGroups,
       defaultInvoiceSeries: defaultSeries > 0,
-      ownerHasSecondFactor: owners.some(
-        (owner) =>
-          owner.credentials.some((credential) => credential.kind === 'PASSWORD') &&
-          owner.credentials.some(
-            (credential) => credential.kind === 'TOTP' && credential.confirmedAt !== null,
-          ),
-      ),
       managers,
       tables,
       stations: stations.length,

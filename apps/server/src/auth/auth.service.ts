@@ -1,19 +1,10 @@
-import { randomInt } from 'node:crypto';
-import { Inject, Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import type {
   LoginResponse,
   OverrideRequest,
   OverrideResponse,
-  OwnerLoginRequest,
-  OwnerPasswordRequest,
-  OwnerSecurityResponse,
   PinLoginRequest,
-  SecondFactor,
   StaffTilesResponse,
-  StepUpRequest,
-  StepUpResponse,
-  TotpConfirmResponse,
-  TotpEnrollmentResponse,
 } from '@rp/contracts';
 import {
   actorGrant,
@@ -35,20 +26,13 @@ import type { CredentialKind } from '../generated/prisma/enums.js';
 import { staffErrors } from '../staff/staff-errors.js';
 import { authErrors } from './auth-errors.js';
 import { type AuthSettings, AuthSettingsService } from './auth-settings.js';
-import { hasFreshStepUp } from './step-up.js';
 import { CredentialHasher } from './credential-hasher.js';
 import type { AuthenticatedDevice } from './device.js';
 import type { ConsumedOverride, Principal } from './principal.js';
 import { RateLimiter } from './rate-limiter.js';
-import { open, seal } from './secret-box.js';
-import { SECRET_STORE, type SecretStore } from './secret-store.js';
 import { roleCapabilities, SessionService, type SessionStaff } from './session.service.js';
 import { SignInLockouts } from './sign-in-lockouts.js';
 import { randomToken, sha256Hex } from './tokens.js';
-import { base32Encode, generateTotpSecret, otpauthUri, verifyTotp } from '@rp/totp';
-
-const RECOVERY_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const RECOVERY_CODES = 10;
 
 interface CredentialRow {
   readonly id: string;
@@ -60,14 +44,9 @@ interface CredentialRow {
 
 type Outcome<T> = { readonly ok: T } | { readonly error: AppError };
 
-function recoveryCode(): string {
-  const pick = () => RECOVERY_ALPHABET[randomInt(RECOVERY_ALPHABET.length)] ?? 'A';
-  const half = () => Array.from({ length: 4 }, pick).join('');
-  return `${half()}-${half()}`;
-}
-
 /**
- * Sign-in and the actions around it (AUTH-001 to AUTH-006, AUTH-011, AUTH-013). Failed attempts,
+ * Sign-in and the actions around it (AUTH-001 to AUTH-005, AUTH-011, AUTH-013). The Owner signs
+ * in with a PIN like everyone else (ADR-0026). Failed attempts,
  * lockouts, sign-ins and overrides are audited in the same transaction as the state they change;
  * failures are committed before the error is returned, so they always count. A wrong secret counts
  * against the person and against the device it was typed on, so guesses spread over many people
@@ -84,7 +63,6 @@ export class AuthService {
     private readonly audit: AuditService,
     private readonly limiter: RateLimiter,
     private readonly lockouts: SignInLockouts,
-    @Inject(SECRET_STORE) private readonly secrets: SecretStore,
   ) {}
 
   /**
@@ -152,7 +130,6 @@ export class AuthService {
           staffId: staff.id,
           device,
           settings,
-          secondFactorAt: null,
           now,
         });
         await this.audit.record(tx, {
@@ -175,104 +152,6 @@ export class AuthService {
       settings,
       now,
     });
-  }
-
-  /** Owner sign-in with password and TOTP (or a recovery code); includes a fresh step-up. */
-  async ownerLogin(
-    device: AuthenticatedDevice,
-    request: OwnerLoginRequest,
-  ): Promise<LoginResponse> {
-    const settings = await this.settings.get(device.restaurantId);
-    this.throttle(`login:${device.deviceId}`, settings);
-    const now = new Date();
-
-    const outcome = await this.prisma.transaction(async (tx) => {
-      const base = { tx, device, staffId: request.staffId, method: 'OWNER_PASSWORD' as const };
-      const blocked = await this.deviceBlocked(base, now);
-      if (blocked !== undefined) return { error: blocked } as const;
-      const staff = await this.activeStaff(tx, device.restaurantId, request.staffId);
-      if (staff?.role !== 'OWNER') {
-        await this.hasher.verifyNothing(request.password);
-        return { error: await this.failure(base, 'Not an owner account') } as const;
-      }
-      if (!maySignInOn(device.type, staff.role)) {
-        await this.hasher.verifyNothing(request.password);
-        return { error: authErrors.notOnThisDevice() } as const;
-      }
-      const verified = await this.verifyOwnerSecrets(tx, base, staff.id, request, settings, now);
-      if ('error' in verified) return verified;
-      const session = await this.sessions.create(tx, {
-        staffId: staff.id,
-        device,
-        settings,
-        secondFactorAt: now,
-        now,
-      });
-      await this.audit.record(tx, {
-        action: 'LOGIN',
-        entityType: 'session',
-        entityId: session.session.id,
-        actorId: staff.id,
-        deviceId: device.deviceId,
-        restaurantId: device.restaurantId,
-        after: { method: 'OWNER_PASSWORD', secondFactor: request.secondFactor.kind },
-      });
-      return { ok: { staff, session } } as const;
-    });
-    if ('error' in outcome) throw outcome.error;
-    return this.sessions.issue({
-      ...outcome.ok.session,
-      staff: outcome.ok.staff,
-      device,
-      settings,
-      now,
-    });
-  }
-
-  /** Confirms the Owner's password and second factor for Owner-only actions (AUTH-006). */
-  async stepUp(
-    principal: Principal,
-    device: AuthenticatedDevice,
-    request: StepUpRequest,
-  ): Promise<StepUpResponse> {
-    if (principal.role !== 'OWNER') throw authErrors.ownerOnly();
-    const settings = await this.settings.get(principal.restaurantId);
-    this.throttle(`login:${device.deviceId}`, settings);
-    const now = new Date();
-    const outcome = await this.prisma.transaction(async (tx) => {
-      const base = { tx, device, staffId: principal.staffId, method: 'STEP_UP' as const };
-      const blocked = await this.deviceBlocked(base, now);
-      if (blocked !== undefined) return { error: blocked } as const;
-      const verified = await this.verifyOwnerSecrets(
-        tx,
-        base,
-        principal.staffId,
-        request,
-        settings,
-        now,
-      );
-      if ('error' in verified) return verified;
-      await tx.session.update({
-        where: { id: principal.sessionId },
-        data: { secondFactorAt: now },
-      });
-      await this.audit.record(tx, {
-        action: 'STEP_UP',
-        entityType: 'session',
-        entityId: principal.sessionId,
-        actorId: principal.staffId,
-        deviceId: device.deviceId,
-        restaurantId: principal.restaurantId,
-        after: { secondFactor: request.secondFactor.kind },
-      });
-      return { ok: true } as const;
-    });
-    if ('error' in outcome) throw outcome.error;
-    return {
-      secondFactorValidUntil: new Date(
-        now.getTime() + settings.stepUpMinutes * 60_000,
-      ).toISOString(),
-    };
   }
 
   async logout(principal: Principal): Promise<void> {
@@ -303,9 +182,9 @@ export class AuthService {
       });
       if (staff === null) throw authErrors.forbidden();
       // A manager opens their own and their team's logins; the Owner's and other managers' locks
-      // (the Owner's password guards Owner-only actions) only the Owner opens (P4-02a).
+      // only the Owner opens (P4-02a).
       const decision = decideStaffChange(
-        { staffId: principal.staffId, role: principal.role, secondFactorFresh: false },
+        { staffId: principal.staffId, role: principal.role },
         { staffId: staff.id, role: staff.role.baseRole, active: staff.active },
         { kind: 'UNLOCK' },
       );
@@ -581,176 +460,6 @@ export class AuthService {
     return { approverId: grant.approverId, entityType: grant.entityType, entityId: grant.entityId };
   }
 
-  /** Starts (or restarts) authenticator setup for the Owner (AUTH-006). */
-  async enrollTotp(principal: Principal, settings?: AuthSettings): Promise<TotpEnrollmentResponse> {
-    if (principal.role !== 'OWNER') throw authErrors.ownerOnly();
-    const resolved = settings ?? (await this.settings.get(principal.restaurantId));
-    const existing = await this.prisma.credential.findUnique({
-      where: { staffId_kind: { staffId: principal.staffId, kind: 'TOTP' } },
-    });
-    if (existing !== null && existing.confirmedAt !== null) {
-      this.requireFreshStepUp(principal, resolved);
-    }
-    const secret = generateTotpSecret();
-    const sealed = seal(await this.secrets.get('totp-encryption-key'), secret);
-    const [staff, restaurant] = await Promise.all([
-      this.prisma.staff.findUniqueOrThrow({ where: { id: principal.staffId } }),
-      this.prisma.restaurant.findUniqueOrThrow({ where: { id: principal.restaurantId } }),
-    ]);
-    await this.prisma.transaction(async (tx) => {
-      await tx.credential.upsert({
-        where: { staffId_kind: { staffId: principal.staffId, kind: 'TOTP' } },
-        create: {
-          restaurantId: principal.restaurantId,
-          staffId: principal.staffId,
-          kind: 'TOTP',
-          secretHash: '',
-          pendingSecret: sealed,
-        },
-        update: { pendingSecret: sealed },
-      });
-      await this.audit.record(tx, {
-        action: 'TOTP_ENROLMENT_STARTED',
-        entityType: 'staff',
-        entityId: principal.staffId,
-        actorId: principal.staffId,
-        deviceId: principal.deviceId,
-        restaurantId: principal.restaurantId,
-      });
-    });
-    return {
-      secret: base32Encode(secret),
-      otpauthUri: otpauthUri(restaurant.displayName, staff.displayName, secret),
-    };
-  }
-
-  /** Confirms setup with a first code and returns ten one-time recovery codes. */
-  async confirmTotp(principal: Principal, code: string): Promise<TotpConfirmResponse> {
-    if (principal.role !== 'OWNER') throw authErrors.ownerOnly();
-    const now = new Date();
-    const key = await this.secrets.get('totp-encryption-key');
-    return this.prisma.transaction(async (tx) => {
-      const credential = await tx.credential.findUnique({
-        where: { staffId_kind: { staffId: principal.staffId, kind: 'TOTP' } },
-      });
-      const pendingSecret = credential?.pendingSecret ?? null;
-      if (credential === null || pendingSecret === null) throw authErrors.totpNotStarted();
-      const step = verifyTotp(open(key, pendingSecret), code, now, null);
-      if (step === null) throw authErrors.invalidCode();
-      await tx.credential.update({
-        where: { id: credential.id },
-        data: {
-          secretHash: pendingSecret,
-          pendingSecret: null,
-          confirmedAt: now,
-          lastTotpStep: BigInt(step),
-          rotatedAt: now,
-        },
-      });
-      const codes = Array.from({ length: RECOVERY_CODES }, recoveryCode);
-      await tx.recoveryCode.deleteMany({ where: { staffId: principal.staffId } });
-      await tx.recoveryCode.createMany({
-        data: codes.map((value) => ({
-          restaurantId: principal.restaurantId,
-          staffId: principal.staffId,
-          codeHash: sha256Hex(value),
-        })),
-      });
-      await this.audit.record(tx, {
-        action: 'TOTP_ENROLLED',
-        entityType: 'staff',
-        entityId: principal.staffId,
-        actorId: principal.staffId,
-        deviceId: principal.deviceId,
-        restaurantId: principal.restaurantId,
-        after: { recoveryCodes: RECOVERY_CODES },
-      });
-      return { recoveryCodes: codes };
-    });
-  }
-
-  /**
-   * Sets the Owner password (first setup) or changes it (needs the current password and a fresh
-   * step-up). A change signs the Owner out everywhere else.
-   */
-  async setOwnerPassword(principal: Principal, request: OwnerPasswordRequest): Promise<void> {
-    if (principal.role !== 'OWNER') throw authErrors.ownerOnly();
-    const settings = await this.settings.get(principal.restaurantId);
-    const existing = await this.prisma.credential.findUnique({
-      where: { staffId_kind: { staffId: principal.staffId, kind: 'PASSWORD' } },
-    });
-    if (existing !== null) {
-      this.requireFreshStepUp(principal, settings);
-      if (request.currentPassword === undefined) throw authErrors.currentPasswordRequired();
-      if (!(await this.hasher.verify(existing.secretHash, request.currentPassword))) {
-        throw authErrors.invalidCredentials();
-      }
-    }
-    const secretHash = await this.hasher.hash(request.newPassword);
-    await this.prisma.transaction(async (tx) => {
-      await tx.credential.upsert({
-        where: { staffId_kind: { staffId: principal.staffId, kind: 'PASSWORD' } },
-        create: {
-          restaurantId: principal.restaurantId,
-          staffId: principal.staffId,
-          kind: 'PASSWORD',
-          secretHash,
-        },
-        update: { secretHash, rotatedAt: new Date(), failedAttempts: 0, lockedUntil: null },
-      });
-      if (existing !== null) {
-        await tx.session.updateMany({
-          where: { staffId: principal.staffId, revokedAt: null, id: { not: principal.sessionId } },
-          data: { revokedAt: new Date(), revokeReason: 'PASSWORD_CHANGED' },
-        });
-      }
-      await this.audit.record(tx, {
-        action: existing === null ? 'OWNER_PASSWORD_SET' : 'OWNER_PASSWORD_CHANGED',
-        entityType: 'staff',
-        entityId: principal.staffId,
-        actorId: principal.staffId,
-        deviceId: principal.deviceId,
-        restaurantId: principal.restaurantId,
-      });
-    });
-  }
-
-  /**
-   * What of the Owner's sign-in security is set up (AUTH-006), never the secrets: the console
-   * offers what is missing, and knows whether the last step-up still holds.
-   */
-  async ownerSecurity(principal: Principal): Promise<OwnerSecurityResponse> {
-    if (principal.role !== 'OWNER') throw authErrors.ownerOnly();
-    const [settings, credentials, recoveryCodesLeft] = await Promise.all([
-      this.settings.get(principal.restaurantId),
-      this.prisma.credential.findMany({
-        where: { staffId: principal.staffId, kind: { in: ['PASSWORD', 'TOTP'] } },
-        select: { kind: true, confirmedAt: true, secretHash: true },
-      }),
-      this.prisma.recoveryCode.count({ where: { staffId: principal.staffId, usedAt: null } }),
-    ]);
-    const totp = credentials.find((credential) => credential.kind === 'TOTP');
-    const confirmedAt = this.hasFreshStepUp(principal, settings) ? principal.secondFactorAt : null;
-    return {
-      hasPassword: credentials.some((credential) => credential.kind === 'PASSWORD'),
-      hasAuthenticator: totp !== undefined && totp.confirmedAt !== null && totp.secretHash !== '',
-      recoveryCodesLeft,
-      secondFactorValidUntil:
-        confirmedAt === null
-          ? null
-          : new Date(confirmedAt.getTime() + settings.stepUpMinutes * 60_000).toISOString(),
-    };
-  }
-
-  /** The Owner confirmed password + second factor recently enough (AUTH-006). */
-  hasFreshStepUp(principal: Principal, settings: AuthSettings, now: Date = new Date()): boolean {
-    return hasFreshStepUp(principal, settings.stepUpMinutes, now);
-  }
-
-  private requireFreshStepUp(principal: Principal, settings: AuthSettings): void {
-    if (!this.hasFreshStepUp(principal, settings)) throw authErrors.secondFactorRequired();
-  }
-
   private throttle(key: string, settings: AuthSettings): void {
     if (!this.limiter.attempt(key, settings.attemptsPerMinutePerDevice, 60_000)) {
       throw authErrors.rateLimited();
@@ -798,62 +507,8 @@ export class AuthService {
     });
   }
 
-  /** Password + second factor of the Owner; failures count against the password credential. */
-  private async verifyOwnerSecrets(
-    tx: TransactionClient,
-    base: FailureContext,
-    staffId: string,
-    request: { password: string; secondFactor: SecondFactor },
-    settings: AuthSettings,
-    now: Date,
-  ): Promise<Outcome<true>> {
-    const credential = await this.lockedCredential(tx, staffId, 'PASSWORD');
-    if (credential === null) {
-      await this.hasher.verifyNothing(request.password);
-      return { error: await this.failure(base, 'No owner password set') };
-    }
-    if (this.isLocked(credential, now)) {
-      return { error: await this.lockedFailure(base, credential.lockedUntil ?? now) };
-    }
-    const passwordOk = await this.hasher.verify(credential.secretHash, request.password);
-    // The second factor is only checked (and a recovery code only used up) after the password.
-    const factorOk =
-      passwordOk && (await this.verifySecondFactor(tx, staffId, request.secondFactor, now));
-    if (!factorOk) {
-      const reason = passwordOk ? 'Wrong second factor' : 'Wrong password';
-      return { error: await this.wrongSecret(base, credential, settings, now, reason) };
-    }
-    await this.clearFailures(tx, credential.id);
-    return { ok: true };
-  }
-
-  private async verifySecondFactor(
-    tx: TransactionClient,
-    staffId: string,
-    factor: SecondFactor,
-    now: Date,
-  ): Promise<boolean> {
-    if (factor.kind === 'RECOVERY_CODE') {
-      const used = await tx.recoveryCode.updateMany({
-        where: { staffId, codeHash: sha256Hex(factor.code), usedAt: null },
-        data: { usedAt: now },
-      });
-      return used.count === 1;
-    }
-    const credential = await this.lockedCredential(tx, staffId, 'TOTP');
-    if (credential === null) return false;
-    const totp = await tx.credential.findUniqueOrThrow({ where: { id: credential.id } });
-    if (totp.confirmedAt === null || totp.secretHash === '') return false;
-    const secret = open(await this.secrets.get('totp-encryption-key'), totp.secretHash);
-    const lastStep = totp.lastTotpStep === null ? null : Number(totp.lastTotpStep);
-    const step = verifyTotp(secret, factor.code, now, lastStep);
-    if (step === null) return false;
-    await tx.credential.update({ where: { id: totp.id }, data: { lastTotpStep: BigInt(step) } });
-    return true;
-  }
-
   /**
-   * The device takes no PINs or passwords for now (PC-S5): the attempt is refused before anything
+   * The device takes no PINs for now (PC-S5): the attempt is refused before anything
    * is checked, and audited.
    */
   private async deviceBlocked(context: FailureContext, now: Date): Promise<AppError | undefined> {
@@ -868,7 +523,7 @@ export class AuthService {
   }
 
   /**
-   * Counts a wrong PIN or password (AUTH-003): against the person, locking their login at the
+   * Counts a wrong PIN (AUTH-003): against the person, locking their login at the
    * limit, and against the device it was typed on, which stops taking any at its own limit
    * (PC-S5). On a table tablet only against the tablet (MOBILE-D1). Each lock is audited and
    * alerts the managers and the Owner.
@@ -950,7 +605,7 @@ export class AuthService {
         deviceId: device.deviceId,
         restaurantId: device.restaurantId,
         after: { pinsLockedUntil: onDevice.lockedUntil, method: context.method },
-        reason: `${String(deviceMax)} wrong PINs or passwords on this device within ${String(settings.lockoutWindowMinutes)} minutes`,
+        reason: `${String(deviceMax)} wrong PINs on this device within ${String(settings.lockoutWindowMinutes)} minutes`,
       });
       await this.lockouts.locked(tx, {
         kind: 'DEVICE',
@@ -1044,7 +699,7 @@ interface FailureContext {
   readonly device: AuthenticatedDevice;
   /** The person whose credential was tried (the approver, for overrides). */
   readonly staffId: string;
-  readonly method: 'PIN' | 'OWNER_PASSWORD' | 'STEP_UP' | 'OVERRIDE' | 'KIOSK' | 'TABLE_APPROVAL';
+  readonly method: 'PIN' | 'OVERRIDE' | 'KIOSK' | 'TABLE_APPROVAL';
   readonly requesterId?: string;
   readonly capability?: string;
 }

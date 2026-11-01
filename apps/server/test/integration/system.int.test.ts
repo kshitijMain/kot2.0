@@ -164,7 +164,7 @@ describe('[UPD-004] [AUD-001] "Install now"', () => {
   });
 });
 
-describe('[NFR-I02] [AUTH-006] [AUD-001] the Owner allows the uninstaller to delete the data', () => {
+describe('[NFR-I02] [AUD-001] the Owner allows the uninstaller to delete the data', () => {
   const body = { reason: 'Closing this branch' };
   const allow = (login: LoginResponse) =>
     server().post('/api/v1/system/data-deletion').set(as(login)).send(body);
@@ -191,14 +191,9 @@ describe('[NFR-I02] [AUTH-006] [AUD-001] the Owner allows the uninstaller to del
     return { code, answer: JSON.parse(lines.join('')) as { allowed: boolean } };
   };
 
-  it('is the Owner’s alone, with a fresh second factor', async () => {
-    const owner = await signIn(app, kit, 'OWNER');
-    expect((await allow(manager)).status).toBe(403);
-    const stale = await allow(owner);
-    expect([stale.status, ApiError.parse(stale.body).code]).toEqual([
-      403,
-      'SECOND_FACTOR_REQUIRED',
-    ]);
+  it('is the Owner’s alone: a manager is refused', async () => {
+    const byManager = await allow(manager);
+    expect([byManager.status, ApiError.parse(byManager.body).code]).toEqual([403, 'FORBIDDEN']);
     expect(await uninstallerSees()).toEqual({
       code: 3,
       answer: { allowed: false, until: null, allowedBy: null },
@@ -208,10 +203,6 @@ describe('[NFR-I02] [AUTH-006] [AUD-001] the Owner allows the uninstaller to del
 
   it('lasts half an hour, audited with the reason, and the uninstaller sees it', async () => {
     const owner = await signIn(app, kit, 'OWNER');
-    await prisma.session.update({
-      where: { id: owner.session.id },
-      data: { secondFactorAt: new Date() },
-    });
     const blank = await server()
       .post('/api/v1/system/data-deletion')
       .set(as(owner))

@@ -50,7 +50,7 @@ export class RestaurantController {
     return this.restaurant.updateProfile(principalOf(request), body);
   }
 
-  // Tax and invoice settings: the guard also asks for the Owner's fresh second factor (AUTH-006).
+  // Tax and invoice settings: the Owner's alone.
   @Put('legal')
   @RequireCapability('TAX_AND_INVOICE_SETTINGS')
   updateLegal(
@@ -61,7 +61,7 @@ export class RestaurantController {
   }
 }
 
-/** Tax groups (P1-01b, BILL-004, ONB-004 step 2). Changes are the Owner's (AUTH-006). */
+/** Tax groups (P1-01b, BILL-004, ONB-004 step 2). Changes are the Owner's. */
 @Controller('tax-groups')
 export class TaxGroupsController {
   constructor(private readonly taxGroups: TaxGroupsService) {}
@@ -103,7 +103,7 @@ export class TaxGroupsController {
   }
 }
 
-/** Invoice series (P1-01b, BILL-003, ONB-004 step 3). Changes are the Owner's (AUTH-006). */
+/** Invoice series (P1-01b, BILL-003, ONB-004 step 3). Changes are the Owner's. */
 @Controller('invoice-series')
 export class InvoiceSeriesController {
   constructor(private readonly series: InvoiceSeriesService) {}

@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   CreateStaffRequest,
   DeactivateStaffRequest,
-  OwnerSecurityResponse,
   SetStaffPinRequest,
   StaffView,
   UpdateStaffRequest,
@@ -66,17 +65,5 @@ describe('[AUTH-001] [AUTH-002] PINs in requests', () => {
     expect(SetStaffPinRequest.safeParse({ pin: '123456' }).success).toBe(true);
     expect(SetStaffPinRequest.safeParse({ pin: '12a4' }).success).toBe(false);
     expect(SetStaffPinRequest.safeParse({ pin: '123' }).success).toBe(false);
-  });
-});
-
-describe('[AUTH-006] the Owner’s sign-in security', () => {
-  it('says what is set up, never a secret', () => {
-    const security = {
-      hasPassword: true,
-      hasAuthenticator: false,
-      recoveryCodesLeft: 0,
-      secondFactorValidUntil: null,
-    };
-    expect(OwnerSecurityResponse.parse({ ...security, secret: 'JBSWY3DP' })).toEqual(security);
   });
 });

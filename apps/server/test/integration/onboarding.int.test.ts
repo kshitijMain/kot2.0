@@ -148,16 +148,12 @@ describe('[ONB-004] the first-run setup', () => {
 });
 
 describe('[ONB-003] activating the PC', () => {
-  it('is the Owner’s, with a fresh second factor; a wrong code is refused', async () => {
+  it('is the Owner’s (their PIN session is enough); a wrong code is refused', async () => {
     const byManager = await server()
       .post('/api/v1/activation')
       .set(as(manager))
       .send({ code: 'ABCD-EFGH-JKLM-NP23' });
     expect(byManager.status).toBe(403);
-    await prisma.session.update({
-      where: { id: owner.session.id },
-      data: { secondFactorAt: new Date() },
-    });
     const wrong = await server()
       .post('/api/v1/activation')
       .set(as(owner))

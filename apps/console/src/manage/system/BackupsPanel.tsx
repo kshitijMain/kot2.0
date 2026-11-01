@@ -54,7 +54,7 @@ export function BackupsPanel() {
   const [busy, setBusy] = useState(false);
   const [restoring, setRestoring] = useState(false);
   const [restarting, setRestarting] = useState<string | undefined>();
-  // DATA-004, AUTH-006: restore and the recovery key are the Owner's.
+  // DATA-004: restore and the recovery key are the Owner's.
   const owner = person !== undefined && grantOf(person, 'DATA_ADMIN') !== 'DENY';
 
   const load = useCallback(() => {

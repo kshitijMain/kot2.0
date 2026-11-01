@@ -35,8 +35,6 @@ export const staffErrors = {
         return authErrors.forbidden();
       case 'OWNER_ONLY':
         return authErrors.ownerOnly();
-      case 'SECOND_FACTOR_REQUIRED':
-        return authErrors.secondFactorRequired();
       case 'OWNER_RECORD':
         return new AppError(
           422,

@@ -16,7 +16,6 @@ import { useT } from '../../app/i18n.js';
 import { messageOf } from '../../app/messages.js';
 import { grantOf } from '../../app/modes.js';
 import { useLive } from '../../app/use-live.js';
-import { SecondFactorCancelled, useSecondFactor } from '../../owner/second-factor.js';
 import { ReasonDialog } from '../menu/ReasonDialog.js';
 import { bpText } from '../settings/settings-view.js';
 import { LegalDialog, ProfileDialog, SeriesDialog, TaxGroupDialog } from './RestaurantDialogs.js';
@@ -77,7 +76,7 @@ function hoursLines(profile: RestaurantProfile, t: Translate): ReactNode {
 
 /**
  * The restaurant (P4-03e, ONB-004 steps 1 to 3, BILL-002 to BILL-004): its profile, which managers
- * keep up to date, and what the Owner alone changes with the second factor: the particulars on
+ * keep up to date, and what the Owner alone changes: the particulars on
  * every tax invoice, the tax groups with their rates, and the invoice series. Everything changed
  * here is audited on the server with the optional reason, and every screen follows.
  */
@@ -86,7 +85,6 @@ export function RestaurantScreen() {
   const controller = useConsole();
   const { person } = useConsoleState();
   const toast = useToast();
-  const { withSecondFactor, dialog: secondFactorDialog } = useSecondFactor();
   const owner = person !== undefined && grantOf(person, 'TAX_AND_INVOICE_SETTINGS') !== 'DENY';
   const { data, reload } = useLive(
     async (): Promise<PageData> => {
@@ -117,17 +115,17 @@ export function RestaurantScreen() {
     setError(undefined);
   }, []);
 
-  /** Runs one change (asking the Owner's second factor when the server wants it). */
+  /** Runs one change. */
   const change = async (action: () => Promise<unknown>, done: string) => {
     setBusy(true);
     setError(undefined);
     try {
-      await withSecondFactor(action);
+      await action();
       toast.show({ title: done, tone: 'success' });
       close();
       reload();
     } catch (failure) {
-      if (!(failure instanceof SecondFactorCancelled)) setError(messageOf(failure, t));
+      setError(messageOf(failure, t));
       setBusy(false);
     }
   };
@@ -580,7 +578,6 @@ export function RestaurantScreen() {
       <p className="dashboard-section__hint">{t('restaurantPage.intro')}</p>
       {content}
       {dialog}
-      {secondFactorDialog}
     </section>
   );
 }

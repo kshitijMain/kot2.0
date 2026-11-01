@@ -66,11 +66,6 @@ beforeAll(async () => {
   waiter = await signIn(app, kit, 'WAITER');
   manager = await signIn(app, kit, 'MANAGER');
   owner = await signIn(app, kit, 'OWNER');
-  // The Owner has confirmed the second factor in this session (AUTH-006, DATA_ADMIN).
-  await prisma.session.update({
-    where: { id: owner.session.id },
-    data: { secondFactorAt: new Date() },
-  });
   const section = await prisma.section.create({
     data: { restaurantId: kit.restaurantId, name: 'Hall' },
   });

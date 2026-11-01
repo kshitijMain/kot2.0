@@ -280,8 +280,8 @@ A diner at a tablet signs in as staff, or acts for another table.
 - Mitigation: sign-in is refused on tablets and a session there counts for nothing; the tablet acts
   only for its own table.
 - Code: `apps/server/src/auth/session.service.ts` (`SessionService`).
-- Tests: `apps/server/test/integration/authorisation-sweep.int.test.ts` "refuses a PIN or Owner
-  sign-in on a table tablet or a pager, and counts no attempt";
+- Tests: `apps/server/test/integration/authorisation-sweep.int.test.ts` "refuses a PIN sign-in
+  on a table tablet or a pager, and counts no attempt";
   `apps/server/test/integration/devices.int.test.ts` "can only act on their own table";
   `apps/server/test/integration/service-requests.int.test.ts` "lets a tablet act only for its own
   table".

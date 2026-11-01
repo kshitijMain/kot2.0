@@ -260,7 +260,6 @@ describe('[AUTH-005] the current session', () => {
         inactivityTimeoutSeconds: 30 * 60,
       },
       staff: session.staff,
-      secondFactorValidUntil: null,
     });
     expect(JSON.stringify(current.body)).not.toMatch(/Token/);
     // Still alive 25 minutes later thanks to that call (manager browsers idle out after 30).

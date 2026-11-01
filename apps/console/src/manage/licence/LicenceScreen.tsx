@@ -7,7 +7,6 @@ import { useConsole } from '../../app/console-context.js';
 import { useT } from '../../app/i18n.js';
 import { messageOf } from '../../app/messages.js';
 import { useLive } from '../../app/use-live.js';
-import { SecondFactorCancelled, useSecondFactor } from '../../owner/second-factor.js';
 
 const TONE = {
   ACTIVE: 'success',
@@ -29,7 +28,6 @@ export function LicenceScreen({ owner }: { owner: boolean }) {
   const controller = useConsole();
   const toast = useToast();
   const { data, reload } = useLive(() => controller.api.getLicence(), affectsLicence);
-  const { withSecondFactor, dialog } = useSecondFactor();
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState<'check' | 'code' | undefined>();
   const [error, setError] = useState<string | undefined>();
@@ -38,12 +36,12 @@ export function LicenceScreen({ owner }: { owner: boolean }) {
     setBusy(kind);
     setError(undefined);
     try {
-      await withSecondFactor(action);
+      await action();
       toast.show({ title: done, tone: 'success' });
       if (kind === 'code') setCode('');
       reload();
     } catch (failure) {
-      if (!(failure instanceof SecondFactorCancelled)) setError(messageOf(failure, t));
+      setError(messageOf(failure, t));
     } finally {
       setBusy(undefined);
     }
@@ -187,7 +185,6 @@ export function LicenceScreen({ owner }: { owner: boolean }) {
       </h2>
       <p className="dashboard-section__hint">{t('licence.page.intro')}</p>
       {content}
-      {dialog}
     </section>
   );
 }

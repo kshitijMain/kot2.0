@@ -6,7 +6,7 @@ import { Id, Role, Timestamp } from './common.js';
 /**
  * Roles (P4-02e, AUTH-012): the built-in roles of BRD §4.2 and the Owner's custom roles, each a
  * waiter or kitchen role with extra capabilities on top. Only the Owner creates, changes
- * or archives a custom role, with a fresh second factor (AUTH-006). Nothing is deleted.
+ * or archives a custom role. Nothing is deleted.
  */
 
 export const CustomRoleBase = z.enum(CUSTOM_ROLE_BASES);
