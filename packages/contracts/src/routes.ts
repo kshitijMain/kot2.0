@@ -1734,6 +1734,27 @@ export const ROUTES = [
     },
   },
   {
+    operationId: 'createPhonePairingCode',
+    method: 'POST',
+    path: '/api/v1/devices/pairing-codes/phone',
+    summary: 'Pairing code a waiter phone asks for by itself, where the server runs PIN-only',
+    description:
+      'Public because the phone has nothing to sign in with yet. Only where the server runs ' +
+      "PIN-only (ADR-0025) and only from the restaurant's network: the waiter app connects by " +
+      'itself and the PIN is what lets anyone in. Rate-limited per address.',
+    tags: ['devices'],
+    requirements: ['AUTH-007'],
+    capability: 'PUBLIC',
+    responses: {
+      201: { description: 'Pairing code for a waiter phone.', schema: PairingCodeResponse },
+      403: {
+        description: "Not PIN-only, or not from the restaurant's network.",
+        schema: ApiError,
+      },
+      429: { description: 'Too many codes from this address.', schema: ApiError },
+    },
+  },
+  {
     operationId: 'pairDevice',
     method: 'POST',
     path: '/api/v1/devices/pair',

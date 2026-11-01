@@ -74,6 +74,37 @@ describe('[AUTH-007] [AUTH-005] PIN-only sign-in for the pilot (ADR-0025)', () =
     }
   });
 
+  it('lets the waiter app connect by itself as a waiter phone, and every phone role sign in', async () => {
+    for (const role of ['WAITER', 'MANAGER'] as const) {
+      const issued = await server().post('/api/v1/devices/pairing-codes/phone');
+      expect(issued.status, JSON.stringify(issued.body)).toBe(201);
+      const { code } = PairingCodeResponse.parse(issued.body);
+      const pair = generateKeyPairSync('ed25519');
+      const paired = await server()
+        .post('/api/v1/devices/pair')
+        .send({
+          code,
+          algorithm: 'Ed25519',
+          publicKey: pair.publicKey.export({ format: 'der', type: 'spki' }).toString('base64'),
+          proof: sign(
+            null,
+            Buffer.from(pairingProofMessage(code), 'utf8'),
+            pair.privateKey,
+          ).toString('base64'),
+        });
+      expect(paired.status, JSON.stringify(paired.body)).toBe(201);
+      const device = PairedDevice.parse(paired.body);
+      expect(device.type).toBe('WAITER_PHONE');
+      await authenticateDevice(app, device.deviceId, pair.privateKey);
+      const login = await signIn(app, kit, role, device.deviceId);
+      expect(login.staff.role).toBe(role);
+    }
+    const devices = app.get(DevicesService);
+    await expect(devices.createPhoneCode('203.0.113.7')).rejects.toMatchObject({
+      code: 'SELF_PAIR_CLOSED',
+    });
+  });
+
   it('never from outside the restaurant’s network, and a few times a minute per address', async () => {
     const devices = app.get(DevicesService);
     await expect(devices.createBootstrapCode(false, '203.0.113.7')).rejects.toMatchObject({
@@ -111,6 +142,10 @@ describe('[AUTH-007] without the flag', () => {
       await expect(
         ownApp.get(DevicesService).createBootstrapCode(false, '192.168.1.20'),
       ).rejects.toMatchObject({ code: 'BOOTSTRAP_CLOSED' });
+      // A phone cannot pair itself either: a manager pairs it (AUTH-007).
+      expect(
+        (await request(httpServer(ownApp)).post('/api/v1/devices/pairing-codes/phone')).status,
+      ).toBe(403);
       await expect(signIn(ownApp, ownKit, 'KITCHEN')).rejects.toThrow(/KITCHEN_STATION_MODE/);
     } finally {
       await ownApp.close();

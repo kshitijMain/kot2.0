@@ -241,6 +241,17 @@ describe('[AUTH-007] [AUTH-009] pairing a device', () => {
     });
   });
 
+  it('offers no pairing where the server is PIN-only: devices connect by themselves', async () => {
+    const fake = devicesServer().on('GET', '/api/v1/first-run', () => ({
+      status: 200,
+      body: { needed: false, pinLength: 4, pinOnly: true },
+    }));
+    await renderConsole({ fake, path: PATH, signedIn: 'MANAGER' });
+    // Business Owner, 2026-11-01: nobody pairs a device for anyone.
+    expect(await screen.findByText(t('devices.introSelf'))).toBeVisible();
+    expect(screen.queryByRole('button', { name: t('devices.pair') })).toBeNull();
+  });
+
   it('replaces an expired code in one press', async () => {
     const fake = devicesServer().on(
       'POST',

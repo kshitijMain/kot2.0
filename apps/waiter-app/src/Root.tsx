@@ -2,7 +2,14 @@ import type { ApkUpdater, DeviceSession, OtaUpdater } from '@rp/mobile-core';
 import { StartupFailed } from '@rp/mobile-shell';
 import { useEffect, useState } from 'react';
 import { App } from './App';
-import { apkUpdater, appUpdater, deviceSession, notifier, translator } from './session';
+import {
+  apkUpdater,
+  appUpdater,
+  deviceSession,
+  notifier,
+  restaurantPc,
+  translator,
+} from './session';
 
 /**
  * The screen of the waiter app. The device session is not the screen's: it goes on when the screen
@@ -51,6 +58,7 @@ export function Root() {
     <App
       session={started.session}
       translator={translator}
+      restaurant={restaurantPc}
       notifications={notifier}
       opener={notifier}
       {...(started.updater !== undefined && { updater: started.updater })}

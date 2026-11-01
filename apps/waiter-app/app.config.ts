@@ -59,6 +59,14 @@ function packageVersion(projectRoot: string): string {
   return pkg.version;
 }
 
+/** `a, b` → `['a', 'b']`; nothing → `[]`. */
+function listOf(value: string | undefined): string[] {
+  return (value ?? '')
+    .split(',')
+    .map((entry) => entry.trim())
+    .filter((entry) => entry !== '');
+}
+
 /** An Inter face vendored in @rp/ui-native (SIL Open Font License, ADR-0022). */
 const INTER = (face: string): string => `../../packages/ui-native/fonts/Inter-${face}.ttf`;
 
@@ -119,6 +127,11 @@ export default ({ config, projectRoot }: ConfigContext): ExpoConfig => {
     extra: {
       appEnv: env,
       clientApi: clientApiVersion(projectRoot),
+      // The restaurant PC the app connects to by itself (ADR-0025, 2026-11-01): its addresses
+      // and its certificate's fingerprint. Neither is secret (SEC-002); both come from the build.
+      restaurantServers: listOf(variables.RP_RESTAURANT_SERVERS),
+      ...(variables.RP_RESTAURANT_CA !== undefined &&
+        variables.RP_RESTAURANT_CA !== '' && { restaurantCa: variables.RP_RESTAURANT_CA }),
       ...(projectId !== undefined && { eas: { projectId } }),
     },
     plugins: [

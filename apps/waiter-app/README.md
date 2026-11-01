@@ -65,7 +65,13 @@ the reminders on the pager and the phone; Resolve clears the request, as Cancel 
 
 Where things are:
 
-- `src/App.tsx`: pairing → login → signed in, from the device session's state.
+- `src/App.tsx`: connecting → login → signed in, from the device session's state. Nobody pairs a
+  phone (ADR-0025, Business Owner 2026-11-01): `@rp/mobile-shell` `ConnectScreen` connects to the
+  restaurant PC the build names (`RP_RESTAURANT_SERVERS`, comma-separated addresses, and
+  `RP_RESTAURANT_CA`, the PC's certificate fingerprint; neither is secret) with
+  `DeviceSession.connectByItself`, which asks the PC for its own waiter phone's code. The PC
+  answers only where it runs `RP_AUTH_PIN_ONLY`. When the PC does not answer, the screen says
+  what to check and takes its address.
 - `src/SignedIn.tsx`: the tables and one table's screen, the new items of every table kept while
   the waiter is signed in (`src/carts.tsx`), a note when a kept order reaches the kitchen later,
   and the table a tapped notification asks for (`AlertTableOpener` from `@rp/mobile-native`).
@@ -131,11 +137,11 @@ build; `manual-tasks/37-waiter-phone-feedback.md` says what to check on it.
 
 ## Running the smoke flow (Maestro)
 
-1. Start the local server (`pnpm --filter @rp/server dev`) and seed it; create a pairing code for a
-   waiter phone in the console (Manage → Devices).
+1. Start the local server with `RP_AUTH_PIN_ONLY=1` (`pnpm --filter @rp/server dev`) and seed it;
+   the phone connects by itself, with no code.
 2. Install the debug APK from CI (or `pnpm --filter @rp/waiter-app android`) on an emulator and
    start Metro: `pnpm --filter @rp/waiter-app start`.
-3. `maestro test -e PAIRING_CODE=ABCD-EFGH -e TABLE=T1 -e TABLE2=T2 -e "DISH=Dal Makhani" apps/waiter-app/.maestro`,
+3. `maestro test -e TABLE=T1 -e TABLE2=T2 -e "DISH=Dal Makhani" apps/waiter-app/.maestro`,
    where `TABLE` and `TABLE2` are free tables and `DISH` a dish without options on the waiter-app
    menu (each flow opens its table, sends that dish to the kitchen and asks for the bill). Each
    time a flow waits for the dish, mark it Ready and then Picked up on the kitchen screen (the

@@ -23,6 +23,23 @@ import { alertNotificationText } from './notifications';
 
 export const translator = createTranslator();
 
+/** The restaurant PC the app connects to by itself, as the build named it (ADR-0025). */
+export interface RestaurantPc {
+  readonly servers: readonly string[];
+  readonly caSha256?: string;
+}
+
+/** Reads `extra.restaurantServers` and `extra.restaurantCa` from the app's configuration. */
+export function restaurantPcOf(extra: Record<string, unknown> | undefined): RestaurantPc {
+  const servers = Array.isArray(extra?.restaurantServers)
+    ? extra.restaurantServers.filter((entry): entry is string => typeof entry === 'string')
+    : [];
+  const ca = extra?.restaurantCa;
+  return typeof ca === 'string' && ca !== '' ? { servers, caSha256: ca } : { servers };
+}
+
+export const restaurantPc = restaurantPcOf(Constants.expoConfig?.extra);
+
 /**
  * The phone's alerts as notifications (P2-06b, WTR-005): the service that keeps it listening with
  * the screen off, a notification per alert that comes and goes, and the table a tapped one opens.
@@ -31,7 +48,7 @@ export const notifier = new AndroidAlertNotifier(alertNotificationText(translato
 
 /**
  * Wires the device session to the Keystore, the secure store and AsyncStorage (P2-01c), and to the
- * restaurant's LAN certificate pinned at pairing (P2-01d, ADR-0011). Secure random values first:
+ * restaurant's LAN certificate pinned as it connects (P2-01d, ADR-0011). Secure random values first:
  * every request carries a random correlation id, and every order a random idempotency key
  * (ORD-013).
  */

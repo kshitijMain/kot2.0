@@ -100,6 +100,12 @@ const errors = {
       'CANNOT_REVOKE_OWN_DEVICE',
       'You cannot unpair the device you are using. Unpair it from another device.',
     ),
+  phoneSelfPairClosed: () =>
+    new AppError(
+      403,
+      'SELF_PAIR_CLOSED',
+      'The restaurant PC does not let phones connect by themselves. Check that this phone is on the restaurant Wi-Fi.',
+    ),
   bootstrapClosed: () =>
     new AppError(
       403,
@@ -231,21 +237,8 @@ export class DevicesService {
   async createBootstrapCode(loopback: boolean, address?: string): Promise<PairingCodeResponse> {
     // PIN-only (ADR-0025): any browser on the restaurant's network pairs itself as a POS, and the
     // PIN is what lets anyone in. Never from the internet; a few a minute per address.
-    if (this.config.authPinOnly && onLocalNetwork(address)) {
-      this.throttle(`self-pair:${address ?? ''}`, 5);
-      return this.prisma.transaction(async (tx) => {
-        const restaurant = await tx.restaurant.findFirst({ orderBy: { createdAt: 'asc' } });
-        if (restaurant === null) throw errors.notSetUp();
-        const count = await tx.device.count({ where: { type: 'POS' } });
-        return this.issueCode(
-          tx,
-          restaurant.id,
-          { type: 'POS', name: `Browser ${String(count + 1)}` },
-          null,
-          null,
-        );
-      });
-    }
+    if (this.config.authPinOnly && onLocalNetwork(address))
+      return this.selfPairCode('POS', address);
     if (!loopback) throw errors.bootstrapClosed();
     return this.prisma.transaction(async (tx) => {
       await tx.$queryRaw`SELECT 1 AS locked FROM pg_advisory_xact_lock(${ADVISORY_LOCKS.pairingBootstrap})`;
@@ -255,6 +248,31 @@ export class DevicesService {
       const restaurant = await tx.restaurant.findFirst({ orderBy: { createdAt: 'asc' } });
       if (restaurant === null) throw errors.notSetUp();
       return this.issueCode(tx, restaurant.id, { type: 'POS', name: 'Server POS' }, null, null);
+    });
+  }
+
+  /**
+   * The waiter app connects by itself (ADR-0025, Business Owner 2026-11-01): where the server
+   * runs PIN-only, a phone on the restaurant's network gets a waiter phone's code with nobody
+   * pairing it, and the PIN is what lets anyone in. Refused otherwise, as for a browser.
+   */
+  async createPhoneCode(address?: string): Promise<PairingCodeResponse> {
+    if (!this.config.authPinOnly || !onLocalNetwork(address)) throw errors.phoneSelfPairClosed();
+    return this.selfPairCode('WAITER_PHONE', address);
+  }
+
+  /** A code a device on the restaurant's network pairs itself with: "Browser 3", "Phone 2". */
+  private selfPairCode(
+    type: 'POS' | 'WAITER_PHONE',
+    address: string | undefined,
+  ): Promise<PairingCodeResponse> {
+    this.throttle(`self-pair:${type}:${address ?? ''}`, 5);
+    return this.prisma.transaction(async (tx) => {
+      const restaurant = await tx.restaurant.findFirst({ orderBy: { createdAt: 'asc' } });
+      if (restaurant === null) throw errors.notSetUp();
+      const count = await tx.device.count({ where: { type } });
+      const name = `${type === 'POS' ? 'Browser' : 'Phone'} ${String(count + 1)}`;
+      return this.issueCode(tx, restaurant.id, { type, name }, null, null);
     });
   }
 

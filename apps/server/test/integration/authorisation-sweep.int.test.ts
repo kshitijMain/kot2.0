@@ -62,6 +62,7 @@ const PUBLIC_ROUTES = [
   'POST /api/v1/first-run',
   'GET /api/v1/tls/ca',
   'POST /api/v1/devices/pairing-codes/bootstrap',
+  'POST /api/v1/devices/pairing-codes/phone',
   'POST /api/v1/devices/pair',
   'POST /api/v1/devices/challenge',
   'POST /api/v1/devices/token',

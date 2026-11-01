@@ -284,6 +284,47 @@ describe('[SEC-010] [AUTH-007] pairing over the restaurant LAN certificate (ADR-
   });
 });
 
+describe('[AUTH-007] the waiter app connects by itself (ADR-0025, 2026-11-01)', () => {
+  it('pins the PC it was built for, asks for its own code and pairs, nobody involved', async () => {
+    const trust = new FakeTrust().serve(LAN, LAN_CA);
+    const fake = server();
+    let pinnedAtFirstRequest: FakeTrust['pinned'] | 'no request' = 'no request';
+    const recording: typeof fetch = (input, init) => {
+      if (pinnedAtFirstRequest === 'no request') pinnedAtFirstRequest = trust.pinned;
+      return fake.fetch(input, init);
+    };
+    const { session } = setup({ fetch: recording }, newDevice(), trust);
+    await session.start();
+    await session.connectByItself({ servers: [ELSEWHERE, LAN], caSha256: LAN_CA.sha256 });
+    // Its code only ever goes to the PC whose certificate was pinned first.
+    expect(pinnedAtFirstRequest).toEqual({ certificate: LAN_CA.certificate, serverUrl: LAN });
+    expect(session.getSnapshot()).toMatchObject({ phase: 'paired', serverUrl: LAN });
+    expect(fake.callsTo('POST', '/api/v1/devices/pairing-codes/phone')).toHaveLength(1);
+    expect(fake.callsTo('POST', '/api/v1/devices/pair')).toHaveLength(1);
+  });
+
+  it('trusts the PC on first use when the app was built without its fingerprint', async () => {
+    const trust = new FakeTrust().serve(LAN, LAN_CA);
+    const { session } = setup(server(), newDevice(), trust);
+    await session.start();
+    await session.connectByItself({ servers: [LAN] });
+    expect(trust.pinned).toEqual({ certificate: LAN_CA.certificate, serverUrl: LAN });
+    expect(session.getSnapshot().phase).toBe('paired');
+  });
+
+  it('refuses a PC whose certificate is not the one the app was built for', async () => {
+    const trust = new FakeTrust().serve(LAN, OTHER_CA);
+    const fake = server();
+    const { session } = setup(fake, newDevice(), trust);
+    await session.start();
+    await expect(
+      session.connectByItself({ servers: [LAN], caSha256: LAN_CA.sha256 }),
+    ).rejects.toBeInstanceOf(ServerMismatchError);
+    expect(fake.callsTo('POST', '/api/v1/devices/pairing-codes/phone')).toHaveLength(0);
+    expect(session.getSnapshot().phase).toBe('unpaired');
+  });
+});
+
 describe('[AUTH-007] finding a development server without TLS', () => {
   it('asks every address at once and takes the first that answers', async () => {
     const fake = server();

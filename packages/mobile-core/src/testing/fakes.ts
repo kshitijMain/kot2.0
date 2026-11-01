@@ -279,43 +279,56 @@ export function fakeLocalServer(
   device: Partial<DeviceSummary> = { type: 'WAITER_PHONE', name: 'Waiter phone 1' },
 ): FakeServer {
   const summary = deviceSummary(device);
-  return new FakeServer()
-    .on('POST', '/api/v1/devices/pair', () => ({
-      status: 201,
-      body: {
-        deviceId: DEVICE_ID,
-        restaurantId: RESTAURANT_ID,
-        type: summary.type,
-        name: summary.name,
-        tableId: summary.tableId,
-        stationId: null,
-        stationIds: [],
-        staffId: null,
-      },
-    }))
-    .on('POST', '/api/v1/devices/challenge', () => ({
-      status: 200,
-      body: { challenge: 'challenge-0123456789', expiresAt: inMinutes(1) },
-    }))
-    .on('POST', '/api/v1/devices/token', () => ({
-      status: 200,
-      body: { deviceToken: 'device-token-1', expiresAt: inMinutes(60) },
-    }))
-    .on('GET', '/api/v1/devices/current', () => ({ status: 200, body: summary }))
-    .on('GET', '/api/v1/auth/staff-tiles', () => ({
-      status: 200,
-      body: { staff: Object.values(STAFF) },
-    }))
-    .on('POST', '/api/v1/auth/pin-login', () => ({ status: 200, body: login('WAITER') }))
-    .on('POST', '/api/v1/auth/logout', () => ({ status: 204 }))
-    .on('GET', '/api/v1/auth/session', () => {
-      const { session, staff, secondFactorValidUntil } = login('WAITER');
-      return { status: 200, body: { session, staff, secondFactorValidUntil } };
-    })
-    .on('GET', '/api/v1/devices/current/alerts', () => ({
-      status: 200,
-      body: { holder: null, alerts: [] },
-    }));
+  return (
+    new FakeServer()
+      // The waiter app asks for its own code where the PC runs PIN-only (ADR-0025).
+      .on('POST', '/api/v1/devices/pairing-codes/phone', () => ({
+        status: 201,
+        body: {
+          code: 'ABCD-EFGH',
+          expiresAt: inMinutes(10),
+          caSha256: null,
+          serverUrls: [],
+          qrPayload: '{}',
+        },
+      }))
+      .on('POST', '/api/v1/devices/pair', () => ({
+        status: 201,
+        body: {
+          deviceId: DEVICE_ID,
+          restaurantId: RESTAURANT_ID,
+          type: summary.type,
+          name: summary.name,
+          tableId: summary.tableId,
+          stationId: null,
+          stationIds: [],
+          staffId: null,
+        },
+      }))
+      .on('POST', '/api/v1/devices/challenge', () => ({
+        status: 200,
+        body: { challenge: 'challenge-0123456789', expiresAt: inMinutes(1) },
+      }))
+      .on('POST', '/api/v1/devices/token', () => ({
+        status: 200,
+        body: { deviceToken: 'device-token-1', expiresAt: inMinutes(60) },
+      }))
+      .on('GET', '/api/v1/devices/current', () => ({ status: 200, body: summary }))
+      .on('GET', '/api/v1/auth/staff-tiles', () => ({
+        status: 200,
+        body: { staff: Object.values(STAFF) },
+      }))
+      .on('POST', '/api/v1/auth/pin-login', () => ({ status: 200, body: login('WAITER') }))
+      .on('POST', '/api/v1/auth/logout', () => ({ status: 204 }))
+      .on('GET', '/api/v1/auth/session', () => {
+        const { session, staff, secondFactorValidUntil } = login('WAITER');
+        return { status: 200, body: { session, staff, secondFactorValidUntil } };
+      })
+      .on('GET', '/api/v1/devices/current/alerts', () => ({
+        status: 200,
+        body: { holder: null, alerts: [] },
+      }))
+  );
 }
 
 /** A valid `event` frame for tests of live updates; its payload must match the event's contract. */

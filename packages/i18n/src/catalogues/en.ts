@@ -251,6 +251,24 @@ export const en = {
     pairIntro: 'This is the restaurant PC. Pair it as the first POS to sign in.',
     pair: 'Pair this PC',
   },
+  connect: {
+    title: 'Connecting to the restaurant',
+    working: 'Connecting to the restaurant PC…',
+    failed: 'This phone could not connect to the restaurant PC.',
+    wifi: 'Check that this phone is on the restaurant’s Wi-Fi and that the restaurant PC is on.',
+    address: 'Restaurant PC address',
+    addressHint: 'Only if the restaurant PC moved, for example 192.168.1.20:8080.',
+    retry: 'Try again',
+    removed: 'This phone was removed from the restaurant PC. Connect it again to carry on.',
+    connectAgain: 'Connect',
+    mismatch:
+      'The restaurant PC’s certificate is not the one this app was made for. Do not use this phone; tell a manager.',
+    browserFailed: 'This browser could not connect to the restaurant PC.',
+    browserWifi:
+      'Check that this computer or tablet is on the restaurant’s Wi-Fi and that the restaurant PC is on, then try again.',
+    browserRemoved:
+      'This browser was removed from the restaurant PC. Connect it again to carry on.',
+  },
   pairing: {
     title: 'Pair this device',
     intro: 'Ask a manager for a pairing code (Manage → Devices → Pair a device) and enter it here.',
@@ -997,6 +1015,8 @@ export const en = {
     title: 'Devices',
     intro:
       'Every screen, phone and tablet that talks to this restaurant’s server. Pair a new one here; register pagers on the Pagers page.',
+    introSelf:
+      'Every screen and phone that talks to this restaurant’s PC. They connect by themselves on the restaurant’s Wi-Fi and staff sign in with their PIN; unpair one you no longer use.',
     pair: 'Pair a device',
     loadFailed: 'The devices could not be loaded.',
     none: 'No devices yet. Pair the screens, phones and tablets the restaurant uses.',

@@ -214,9 +214,35 @@ export class DeviceSession {
   async pair(serverAddress: string, code: string, authority?: ServerAuthority): Promise<void> {
     const serverUrl = normalizeServerUrl(serverAddress);
     await this.trustServer(serverUrl, authority);
+    const key = await this.newKey(serverUrl);
+    await this.completePairing(serverUrl, key, code);
+  }
+
+  /**
+   * The waiter app connects by itself, with nobody pairing it (ADR-0025, Business Owner
+   * 2026-11-01): it finds the restaurant PC among `target`'s addresses, pins its certificate
+   * (checked against the fingerprint the app was built with, else trusted on first use, on the
+   * restaurant's Wi-Fi), asks the PC for a waiter phone's code and pairs with a new Keystore key.
+   * The PC answers only where it runs PIN-only, and the PIN is what lets anyone in.
+   */
+  async connectByItself(target: PairingTarget): Promise<void> {
+    const found = await this.findServer(target);
+    await this.trustServer(found.serverUrl, found.authority);
+    const key = await this.newKey(found.serverUrl);
+    const { code } = await this.requireClient().api.createPhonePairingCode();
+    await this.completePairing(found.serverUrl, key, code);
+  }
+
+  /** A new Keystore key, and a client for `serverUrl` that signs with it. */
+  private async newKey(serverUrl: string): Promise<DeviceKey> {
     const key = await this.options.keys.create();
     await this.options.secureStore.removeItem(CREDENTIALS_KEY);
     await this.replaceClient(serverUrl, key);
+    return key;
+  }
+
+  /** Pairs with `code` (AUTH-007) and starts working with the server. */
+  private async completePairing(serverUrl: string, key: DeviceKey, code: string): Promise<void> {
     const client = this.requireClient();
     await client.pair({
       code: code.trim().toUpperCase(),
