@@ -52,14 +52,15 @@ be removed at all, it asks before removing the program files anyway.
 
 Options, for silent installs (`/S`), the update agent (P7-04c) and support:
 
-| Installer option            | Meaning                                                                                      |
-| --------------------------- | -------------------------------------------------------------------------------------------- |
-| `/S`                        | no pages                                                                                     |
-| `/DATADIR=<folder>`         | the data folder of a new installation (default: the default drive's)                         |
-| `/STAFFSUBNET=<cidr>[,...]` | the staff network the firewall admits (SEC-008; default: the PC's networks)                  |
-| `/MINFREEGB=<n>`            | the free space the data drive needs (default: 20)                                            |
-| Uninstaller: `/S`           | no pages; keeps the data                                                                     |
-| Uninstaller: `/DELETEDATA`  | deletes the data too, only while the Owner's permission holds (exit code 3 when it does not) |
+| Installer option            | Meaning                                                                                        |
+| --------------------------- | ---------------------------------------------------------------------------------------------- |
+| `/S`                        | no pages                                                                                       |
+| `/DATADIR=<folder>`         | the data folder of a new installation (default: the default drive's)                           |
+| `/STAFFSUBNET=<cidr>[,...]` | the staff network the firewall admits (SEC-008; default: the PC's networks)                    |
+| `/LANINTERFACE=<name>`      | the adapter staff phones use, like `Wi-Fi` (P9-27; default: the one with the internet gateway) |
+| `/MINFREEGB=<n>`            | the free space the data drive needs (default: 20)                                              |
+| Uninstaller: `/S`           | no pages; keeps the data                                                                       |
+| Uninstaller: `/DELETEDATA`  | deletes the data too, only while the Owner's permission holds (exit code 3 when it does not)   |
 
 The vendor's addresses (Control Plane, relay, QR site, error reporting) are fixed when the
 installer is built and passed to `Install-RestaurantPlatform.ps1`.

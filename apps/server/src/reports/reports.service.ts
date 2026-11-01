@@ -1,16 +1,26 @@
 import { Injectable } from '@nestjs/common';
-import type {
-  GstSummaryResponse,
-  InvoiceRegisterResponse,
-  ItemSalesResponse,
-  PaymentModesResponse,
-  ReportRangeQuery,
-  SalesSummaryResponse,
-  ShiftReportResponse,
+import {
+  type GstSummaryResponse,
+  type InvoiceRegisterResponse,
+  type ItemSalesResponse,
+  PaymentMode,
+  type PaymentModesResponse,
+  type ReportRangeQuery,
+  type SalesSummaryResponse,
+  type ShiftReportResponse,
 } from '@rp/contracts';
 import { expectedCash } from '@rp/domain';
 import { dbDate, isoDateOf } from '../common/business-dates.js';
 import { PrismaService } from '../database/prisma.service.js';
+import {
+  type ItemDayRow,
+  itemsByDay,
+  type PaymentDayRow,
+  paymentsByDay,
+  type SalesHourRow,
+  salesByHour,
+} from './daily-figures.js';
+import { DailySummariesService } from './daily-summaries.service.js';
 
 type Totals = SalesSummaryResponse['totals'];
 
@@ -27,15 +37,7 @@ function emptyTotals(): Totals {
 }
 
 /** Sums PostgreSQL gives for a group of invoices (bigint for counts and sums). */
-interface SumRow {
-  invoices: bigint;
-  gross: bigint;
-  discounts: bigint;
-  service: bigint;
-  tax: bigint;
-  round_off: bigint;
-  net: bigint;
-}
+type SumRow = Omit<SalesHourRow, 'business_date' | 'hour'>;
 
 function addSums(totals: Totals, row: SumRow): Totals {
   totals.invoices += Number(row.invoices);
@@ -48,6 +50,16 @@ function addSums(totals: Totals, row: SumRow): Totals {
   return totals;
 }
 
+/** The totals kept under `key`, started empty. */
+function bucket<K>(map: Map<K, Totals>, key: K): Totals {
+  let totals = map.get(key);
+  if (totals === undefined) {
+    totals = emptyTotals();
+    map.set(key, totals);
+  }
+  return totals;
+}
+
 /**
  * Core reports v1 (P1-13a). Figures come from invoices as issued (at their current version,
  * P1-10c), never from the menu, so a report of any past date shows what was billed. Voided
@@ -55,111 +67,101 @@ function addSums(totals: Totals, row: SumRow): Totals {
  */
 @Injectable()
 export class ReportsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly summaries: DailySummariesService,
+  ) {}
 
-  /** RPT-001: sales by business date and by hour (restaurant time), summed in PostgreSQL. */
+  /**
+   * RPT-001: sales by business date and by hour (restaurant time). Closed dates come from their
+   * daily summary, the rest from the invoices, summed in PostgreSQL either way (P9-27).
+   */
   async sales(restaurantId: string, range: ReportRangeQuery): Promise<SalesSummaryResponse> {
-    const restaurant = await this.prisma.restaurant.findUniqueOrThrow({
-      where: { id: restaurantId },
-      select: { timeZone: true },
-    });
-    const figures = `count(*) AS invoices, coalesce(sum(subtotal), 0) AS gross,
-      coalesce(sum(discount_total), 0) AS discounts, coalesce(sum(service_charge), 0) AS service,
-      coalesce(sum(tax_total), 0) AS tax, coalesce(sum(round_off), 0) AS round_off,
-      coalesce(sum(grand_total), 0) AS net`;
-    const [byDay, byHour] = await Promise.all([
-      this.prisma.$queryRawUnsafe<(SumRow & { business_date: Date })[]>(
-        `SELECT business_date, ${figures} FROM invoices
-         WHERE restaurant_id = $1::uuid AND status <> 'VOIDED'
-           AND business_date BETWEEN $2::date AND $3::date
-         GROUP BY 1 ORDER BY 1`,
-        restaurantId,
-        range.from,
-        range.to,
-      ),
-      this.prisma.$queryRawUnsafe<(SumRow & { hour: number })[]>(
-        `SELECT extract(hour FROM issued_at AT TIME ZONE $4)::int AS hour, ${figures}
-         FROM invoices
-         WHERE restaurant_id = $1::uuid AND status <> 'VOIDED'
-           AND business_date BETWEEN $2::date AND $3::date
-         GROUP BY 1 ORDER BY 1`,
-        restaurantId,
-        range.from,
-        range.to,
-        restaurant.timeZone,
-      ),
+    const [restaurant, split] = await Promise.all([
+      this.prisma.restaurant.findUniqueOrThrow({
+        where: { id: restaurantId },
+        select: { timeZone: true },
+      }),
+      this.summaries.split(restaurantId, range),
     ]);
+    const [summed, live] = await Promise.all([
+      split.summed.length === 0
+        ? []
+        : this.prisma.$queryRaw<SalesHourRow[]>`
+            SELECT business_date, hour, invoices::bigint AS invoices, gross_sales AS gross,
+                   discounts, service_charge AS service, tax, round_off, net_sales AS net
+            FROM daily_sales_hours
+            WHERE restaurant_id = ${restaurantId}::uuid
+              AND business_date = ANY(${split.summed}::date[])`,
+      salesByHour(this.prisma, restaurantId, restaurant.timeZone, split.live),
+    ]);
+    const byDay = new Map<string, Totals>();
+    const byHour = new Map<number, Totals>();
     const totals = emptyTotals();
-    for (const row of byDay) addSums(totals, row);
+    for (const row of [...summed, ...live]) {
+      addSums(bucket(byDay, isoDateOf(row.business_date)), row);
+      addSums(bucket(byHour, row.hour), row);
+      addSums(totals, row);
+    }
     return {
       ...range,
       totals,
-      byDay: byDay.map((row) => ({
-        businessDate: isoDateOf(row.business_date),
-        ...addSums(emptyTotals(), row),
-      })),
-      byHour: byHour.map((row) => ({ hour: row.hour, ...addSums(emptyTotals(), row) })),
+      byDay: [...byDay.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([businessDate, figures]) => ({ businessDate, ...figures })),
+      byHour: [...byHour.entries()]
+        .sort(([a], [b]) => a - b)
+        .map(([hour, figures]) => ({ hour, ...figures })),
     };
   }
 
   /**
-   * RPT-002: item-wise and category-wise sales, summed in PostgreSQL from each line's dish and
-   * tax share as issued (P4-05c), so a year at design capacity stays within RPT-018. A dish split
-   * into equal parts appears on every part at its full quantity: it counts once.
+   * RPT-002: item-wise and category-wise sales from each line's dish and tax share as issued
+   * (P4-05c): closed dates from their daily summary, the rest from the invoice lines (P9-27), so a
+   * year at design capacity stays well within RPT-018. A dish's category is its current one.
    */
   async items(restaurantId: string, range: ReportRangeQuery): Promise<ItemSalesResponse> {
-    const rows = await this.prisma.$queryRaw<
-      {
-        item_id: string;
-        name: string;
-        category_id: string;
-        category: string;
-        quantity: bigint;
-        gross: bigint;
-        discounts: bigint;
-        net: bigint;
-        tax: bigint;
-      }[]
-    >`
-      WITH live AS NOT MATERIALIZED (
-        SELECT id, version FROM invoices
-        WHERE restaurant_id = ${restaurantId}::uuid AND status <> 'VOIDED'
-          AND business_date BETWEEN ${range.from}::date AND ${range.to}::date
-      ), lines AS MATERIALIZED (
-        SELECT il.item_id, il.order_item_id, il.quantity, il.line_total, il.discount,
-               il.taxable_value, il.tax_share
-        FROM invoice_lines il JOIN live l ON l.id = il.invoice_id AND il.version = l.version
-        WHERE il.order_item_id IS NOT NULL
-      ), money AS (
-        SELECT item_id, sum(quantity) AS quantity, sum(line_total) AS gross,
-               sum(discount) AS discounts, sum(taxable_value) AS net,
-               coalesce(sum(tax_share), 0) AS tax
-        FROM lines GROUP BY 1
-      ), repeats AS (
-        SELECT r.item_id, sum(r.billed - least(oi.quantity, r.billed)) AS excess
-        FROM (
-          SELECT order_item_id, item_id, sum(quantity) AS billed
-          FROM lines GROUP BY 1, 2 HAVING count(*) > 1
-        ) r JOIN order_items oi ON oi.id = r.order_item_id
-        GROUP BY 1
-      )
-      SELECT it.id AS item_id, it.name, c.id AS category_id, c.name AS category,
-             m.quantity - coalesce(r.excess, 0) AS quantity, m.gross, m.discounts, m.net, m.tax
-      FROM money m
-      JOIN items it ON it.id = m.item_id
-      JOIN categories c ON c.id = it.category_id
-      LEFT JOIN repeats r ON r.item_id = m.item_id`;
+    const split = await this.summaries.split(restaurantId, range);
+    const [summed, live] = await Promise.all([
+      split.summed.length === 0
+        ? []
+        : this.prisma.$queryRaw<Omit<ItemDayRow, 'business_date'>[]>`
+            SELECT item_id, sum(quantity)::bigint AS quantity, sum(gross)::bigint AS gross,
+                   sum(discounts)::bigint AS discounts, sum(net)::bigint AS net,
+                   sum(tax)::bigint AS tax
+            FROM daily_item_sales
+            WHERE restaurant_id = ${restaurantId}::uuid
+              AND business_date = ANY(${split.summed}::date[])
+            GROUP BY 1`,
+      itemsByDay(this.prisma, restaurantId, split.live),
+    ]);
     type Figures = ItemSalesResponse['items'][number];
-    const items: Figures[] = rows.map((row) => ({
-      itemId: row.item_id,
-      name: row.name,
-      categoryId: row.category_id,
-      category: row.category,
-      quantity: Number(row.quantity),
-      gross: Number(row.gross),
-      discounts: Number(row.discounts),
-      net: Number(row.net),
-      tax: Number(row.tax),
+    const money = new Map<string, Omit<Figures, 'itemId' | 'name' | 'categoryId' | 'category'>>();
+    for (const row of [...summed, ...live]) {
+      const entry = money.get(row.item_id) ?? {
+        quantity: 0,
+        gross: 0,
+        discounts: 0,
+        net: 0,
+        tax: 0,
+      };
+      entry.quantity += Number(row.quantity);
+      entry.gross += Number(row.gross);
+      entry.discounts += Number(row.discounts);
+      entry.net += Number(row.net);
+      entry.tax += Number(row.tax);
+      money.set(row.item_id, entry);
+    }
+    const dishes = await this.prisma.item.findMany({
+      where: { id: { in: [...money.keys()] } },
+      select: { id: true, name: true, category: { select: { id: true, name: true } } },
+    });
+    const items: Figures[] = dishes.map((dish) => ({
+      itemId: dish.id,
+      name: dish.name,
+      categoryId: dish.category.id,
+      category: dish.category.name,
+      ...(money.get(dish.id) ?? { quantity: 0, gross: 0, discounts: 0, net: 0, tax: 0 }),
     }));
     const categories = new Map<string, ItemSalesResponse['categories'][number]>();
     for (const item of items) {
@@ -188,26 +190,50 @@ export class ReportsService {
     };
   }
 
-  /** RPT-005: payments per mode, by the business date they were taken. */
+  /**
+   * RPT-005: payments per mode, by the business date they were taken: closed dates from their
+   * daily summary, the rest from the payments (P9-27).
+   */
   async payments(restaurantId: string, range: ReportRangeQuery): Promise<PaymentModesResponse> {
-    const groups = await this.prisma.payment.groupBy({
-      by: ['mode', 'modeLabel'],
-      where: {
-        restaurantId,
-        status: 'CAPTURED',
-        businessDate: { gte: dbDate(range.from), lte: dbDate(range.to) },
-      },
-      _count: { _all: true },
-      _sum: { amount: true },
-      orderBy: [{ mode: 'asc' }, { modeLabel: 'asc' }],
-    });
-    const modes = groups.map((group) => ({
-      mode: group.mode,
-      label: group.modeLabel,
-      count: group._count._all,
-      amount: group._sum.amount ?? 0,
-    }));
-    return { ...range, modes, total: modes.reduce((total, mode) => total + mode.amount, 0) };
+    const split = await this.summaries.split(restaurantId, range);
+    const [summed, live] = await Promise.all([
+      split.summed.length === 0
+        ? []
+        : this.prisma.$queryRaw<Omit<PaymentDayRow, 'business_date'>[]>`
+            SELECT mode::text AS mode, mode_label, sum(payments)::bigint AS payments,
+                   sum(amount)::bigint AS amount
+            FROM daily_payment_modes
+            WHERE restaurant_id = ${restaurantId}::uuid
+              AND business_date = ANY(${split.summed}::date[])
+            GROUP BY 1, 2`,
+      paymentsByDay(this.prisma, restaurantId, split.live),
+    ]);
+    const modes = new Map<string, PaymentModesResponse['modes'][number]>();
+    for (const row of [...summed, ...live]) {
+      const key = `${row.mode}|${row.mode_label ?? ''}|${String(row.mode_label === null)}`;
+      const entry = modes.get(key) ?? {
+        mode: row.mode,
+        label: row.mode_label,
+        count: 0,
+        amount: 0,
+      };
+      entry.count += Number(row.payments);
+      entry.amount += Number(row.amount);
+      modes.set(key, entry);
+    }
+    // As PostgreSQL orders them: modes as declared, then names, no name last.
+    const order = PaymentMode.options;
+    const sorted = [...modes.values()].sort(
+      (a, b) =>
+        order.indexOf(a.mode) - order.indexOf(b.mode) ||
+        (a.label === null ? 1 : 0) - (b.label === null ? 1 : 0) ||
+        (a.label ?? '').localeCompare(b.label ?? ''),
+    );
+    return {
+      ...range,
+      modes: sorted,
+      total: sorted.reduce((total, mode) => total + mode.amount, 0),
+    };
   }
 
   /**

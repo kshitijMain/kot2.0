@@ -2,6 +2,7 @@ import type { DeviceKey } from '@rp/api-client';
 import type { AlertView, DeviceSummary, LoginResponse, StaffTile } from '@rp/contracts';
 import type { AlertHolder, AlertNotifier } from '../alert-center.js';
 import type { DeviceKeyStore } from '../device-session.js';
+import type { LanDiscovery, LanService, WifiRoute } from '../lan-discovery.js';
 import type { ServerAuthority, ServerTrust } from '../server-trust.js';
 import { FakeServer } from './fake-server.js';
 
@@ -206,6 +207,97 @@ export class FakeTrust implements ServerTrust {
     this.clears += 1;
     this.pinned = undefined;
     return Promise.resolve();
+  }
+
+  pinnedFingerprint(): Promise<string | undefined> {
+    const pinned = this.pinned;
+    if (pinned === undefined) return Promise.resolve(undefined);
+    const known = [LAN_CA, OTHER_CA, ...this.servers.values()].find(
+      (authority) => authority.certificate === pinned.certificate,
+    );
+    return Promise.resolve(known?.sha256);
+  }
+
+  /** The PC moved: it answers at `to` from now on, and no longer at `from`. */
+  move(from: string, to: string): this {
+    const authority = this.servers.get(from);
+    this.servers.delete(from);
+    if (authority !== undefined) this.servers.set(to, authority);
+    return this;
+  }
+}
+
+/**
+ * A PC's mDNS answer (P9-27): `_parossa-pos._tcp` at `host:port`, over TLS with `ca`, or without
+ * TLS for `null`.
+ */
+export function lanService(
+  host: string,
+  port: number,
+  authority: ServerAuthority | null = LAN_CA,
+  name = 'Mannat',
+): LanService {
+  return {
+    name,
+    host,
+    port,
+    txt:
+      authority === null
+        ? { v: '1', tls: '0' }
+        : { v: '1', tls: '1', ca: authority.sha256.replaceAll(':', '') },
+  };
+}
+
+/** The Android mDNS module's stand-in: the PCs that answer, and how often it was asked. */
+export class FakeDiscovery implements LanDiscovery {
+  services: LanService[] = [];
+  calls = 0;
+  /** Fails every discovery, as on a phone without Wi-Fi. */
+  failure: Error | undefined;
+
+  answer(...services: LanService[]): this {
+    this.services = services;
+    return this;
+  }
+
+  discover(): Promise<readonly LanService[]> {
+    this.calls += 1;
+    return this.failure === undefined
+      ? Promise.resolve([...this.services])
+      : Promise.reject(this.failure);
+  }
+}
+
+/** The Android Wi-Fi route's stand-in: whether the Wi-Fi has internet, and what it was asked. */
+export class FakeWifiRoute implements WifiRoute {
+  readonly routed: (readonly string[])[] = [];
+  private withoutInternet = false;
+  private readonly listeners = new Set<() => void>();
+
+  constructor(withoutInternet = false) {
+    this.withoutInternet = withoutInternet;
+  }
+
+  routeTo(serverUrls: readonly string[]): Promise<void> {
+    this.routed.push([...serverUrls]);
+    return Promise.resolve();
+  }
+
+  wifiWithoutInternet(): boolean {
+    return this.withoutInternet;
+  }
+
+  subscribe(listener: () => void): () => void {
+    this.listeners.add(listener);
+    return () => {
+      this.listeners.delete(listener);
+    };
+  }
+
+  /** The phone joined (or left) a Wi-Fi without internet. */
+  set(withoutInternet: boolean): void {
+    this.withoutInternet = withoutInternet;
+    for (const listener of this.listeners) listener();
   }
 }
 

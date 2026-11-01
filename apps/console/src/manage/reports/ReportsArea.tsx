@@ -5,6 +5,7 @@ import { useConsole } from '../../app/console-context.js';
 import { useT } from '../../app/i18n.js';
 import { messageOf } from '../../app/messages.js';
 import { useLive } from '../../app/use-live.js';
+import { BillHistory } from './BillHistory.js';
 import { ControlReport } from './ControlReports.js';
 import { OperationsReport } from './OperationsReports.js';
 import { OrderDrillDownScreen } from './OrderDrillDownScreen.js';
@@ -29,7 +30,8 @@ export type ReportSlug = (typeof REPORT_GROUPS)[ReportGroup][number];
  * The Reports area (P4-05d, RPT-016): one range for every report in a row above them, the
  * reports in their groups, each as headline figures, a chart where one helps and the table with
  * every figure, and drill-down from any order to everything that happened to it (RPT-015). The
- * range lives in the address, so a report can be bookmarked or sent.
+ * range lives in the address, so a report can be bookmarked or sent. History lists past bills
+ * (P9-27).
  */
 export function ReportsArea() {
   const t = useT();
@@ -83,6 +85,12 @@ export function ReportsArea() {
             ))}
           </div>
         ))}
+        <div className="report-nav__group">
+          <span className="report-nav__heading">{t('history.nav')}</span>
+          <NavLink to={`/manage/reports/bills${query}`} className="staff-pages__link">
+            {t('history.link')}
+          </NavLink>
+        </div>
       </nav>
       <Routes>
         <Route index element={<Navigate to={pathOf('sales')} replace />} />
@@ -101,6 +109,7 @@ export function ReportsArea() {
         {REPORT_GROUPS.operations.map((slug) => (
           <Route key={slug} path={slug} element={<OperationsReport slug={slug} range={range} />} />
         ))}
+        <Route path="bills" element={<BillHistory range={range} />} />
         <Route path="orders/:orderId" element={<OrderDrillDownScreen />} />
         <Route path="*" element={<Navigate to={pathOf('sales')} replace />} />
       </Routes>

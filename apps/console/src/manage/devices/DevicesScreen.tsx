@@ -3,6 +3,7 @@ import { displayDateTime, timeOfDayOf } from '@rp/domain';
 import { Badge, Button, EmptyState, ErrorState, Icon, LoadingState, useToast } from '@rp/ui-web';
 import { type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useConsole, useConsoleState } from '../../app/console-context.js';
+import { ConnectPhonePanel } from './ConnectPhonePanel.js';
 import { useT } from '../../app/i18n.js';
 import { messageOf } from '../../app/messages.js';
 import { useLive } from '../../app/use-live.js';
@@ -198,6 +199,8 @@ export function DevicesScreen() {
       <p className="dashboard-section__hint">
         {pinOnly ? t('devices.introSelf') : t('devices.intro')}
       </p>
+      {/* P9-27: where phones find this PC, for when they cannot by themselves. */}
+      {pinOnly ? <ConnectPhonePanel /> : null}
       {content}
       {open?.kind === 'PAIR' && data.status === 'ready' ? (
         <PairDeviceDialog
@@ -440,8 +443,9 @@ function DeviceRow({
               {t('devices.locate')}
             </Button>
           ) : null}
+          {/* Quiet on every row; the confirmation is where it turns red (P9-27). */}
           {isThisDevice ? null : (
-            <Button variant="danger" onClick={onUnpair}>
+            <Button variant="secondary" onClick={onUnpair}>
               {t('devices.unpair')}
             </Button>
           )}

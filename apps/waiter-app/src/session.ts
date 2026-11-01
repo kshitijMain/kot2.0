@@ -10,7 +10,9 @@ import {
   AndroidScreenGuard,
   AndroidAlertNotifier,
   AndroidApkInstaller,
+  AndroidLanDiscovery,
   AndroidServerTrust,
+  AndroidWifiRoute,
   ExpoOtaUpdates,
   installRandomValues,
   KeystoreDeviceKeys,
@@ -23,7 +25,11 @@ import { alertNotificationText } from './notifications';
 
 export const translator = createTranslator();
 
-/** The restaurant PC the app connects to by itself, as the build named it (ADR-0025). */
+/**
+ * The restaurant PC as a pilot build named it (ADR-0025): optional since P9-27, when the app finds
+ * the PC on the Wi-Fi by mDNS or by the Connect QR code. A build without it is the same for every
+ * restaurant.
+ */
 export interface RestaurantPc {
   readonly servers: readonly string[];
   readonly caSha256?: string;
@@ -56,11 +62,16 @@ async function createSession(): Promise<DeviceSession> {
   await installRandomValues();
   // No screenshots or recent-apps preview of a PIN pad (MOBILE-I4); a device without it still works.
   await AndroidScreenGuard.load().then(setScreenGuard, () => undefined);
+  // The app's traffic over a Wi-Fi without internet (P9-27); a device without it still works.
+  const wifi = await AndroidWifiRoute.load().catch(() => undefined);
   const session = new DeviceSession({
     secureStore: await secureStore(),
     plainStore: await plainStore(),
     keys: new KeystoreDeviceKeys(),
     trust: new AndroidServerTrust(),
+    // Finds the restaurant PC on the Wi-Fi, also after the router gives it a new address (P9-27).
+    discovery: new AndroidLanDiscovery(),
+    ...(wifi !== undefined && { wifi }),
     // The phone alerts the person who last signed in on it, like their pager (P2-06a, WTR-006),
     // also with the screen off or the app closed (P2-06b, WTR-005).
     followAlerts: true,

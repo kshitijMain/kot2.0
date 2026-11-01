@@ -12,6 +12,7 @@ import { currentBusinessDate, dayEndLockKey, dbDate } from '../common/business-d
 import { PrismaService, type TransactionClient } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import { ShiftsService } from '../payments/shifts.service.js';
+import { DailySummariesService } from '../reports/daily-summaries.service.js';
 
 type Client = PrismaService | TransactionClient;
 
@@ -21,6 +22,7 @@ type Client = PrismaService | TransactionClient;
  * `buildZReport`. Closing the date keeps the report (`day_ends`) and marks the date CLOSED
  * (`business_days`), after which everything recorded belongs to the next business date. Open
  * shifts and unpaid takeaway bills block the close; open tables block it unless carried forward.
+ * The close also sums the date into the daily summaries the reports read (P9-27).
  */
 @Injectable()
 export class DayEndService {
@@ -28,6 +30,7 @@ export class DayEndService {
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
     private readonly shifts: ShiftsService,
+    private readonly summaries: DailySummariesService,
   ) {}
 
   async preview(restaurantId: string): Promise<DayEndPreview> {
@@ -125,6 +128,8 @@ export class DayEndService {
             report: { ...report, carriedForward: carried },
           },
         });
+        // The date's report figures, summed once for the reports of past dates (P9-27).
+        await this.summaries.build(tx, restaurantId, businessDate);
         await this.audit.record(tx, {
           action: 'DAY_CLOSED',
           entityType: 'business_day',

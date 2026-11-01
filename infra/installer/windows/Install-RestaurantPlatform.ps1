@@ -28,6 +28,8 @@ param(
     # Several are given with commas.
     [string[]] $StaffSubnet,
     [string[]] $TlsHostnames,
+    # The adapter staff phones use, like Wi-Fi (P9-27); without one, the one with the gateway.
+    [string] $LanInterface,
     [string] $ControlPlaneUrl,
     [string] $RelayUrl,
     [string] $QrSiteUrl,

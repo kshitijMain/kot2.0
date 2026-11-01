@@ -1,8 +1,11 @@
 import { Module } from '@nestjs/common';
+import { BillingModule } from '../billing/billing.module.js';
 import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
 import { FeedbackModule } from '../feedback/feedback.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
 import { SettingsModule } from '../settings/settings.module.js';
+import { BillHistoryService } from './bill-history.service.js';
+import { DailySummariesModule } from './daily-summaries.module.js';
 import { OrderDrillDownService } from './order-drill-down.service.js';
 import { ReportDocumentsService } from './report-documents.service.js';
 import { ReportExportService } from './report-export.service.js';
@@ -19,13 +22,20 @@ import { SuspiciousActivityService } from './suspicious-activity.service.js';
 
 /**
  * Reports (P1-13, P4-05 to P4-07): reports, exports, the order drill-down and the suspicious-activity
- * report with its daily job.
+ * report with its daily job; the bill history (P9-27).
  */
 @Module({
-  imports: [SettingsModule, NotificationsModule, FeedbackModule],
+  imports: [
+    SettingsModule,
+    NotificationsModule,
+    FeedbackModule,
+    DailySummariesModule,
+    BillingModule,
+  ],
   controllers: [ReportsController],
   providers: [
     ReportsService,
+    BillHistoryService,
     ReportSuiteService,
     ReportDocumentsService,
     ReportExportService,

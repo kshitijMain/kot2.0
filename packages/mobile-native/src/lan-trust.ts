@@ -36,6 +36,11 @@ export class AndroidServerTrust implements ServerTrust {
     return (await (await this.native()).pinned()) ?? undefined;
   }
 
+  /** The same, as `ServerTrust`: how a device paired earlier recognises its PC (P9-27). */
+  pinnedFingerprint(): Promise<string | undefined> {
+    return this.pinned();
+  }
+
   async clear(): Promise<void> {
     await (await this.native()).clear();
   }

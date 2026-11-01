@@ -6,6 +6,8 @@
 #
 #   scripts/pilot/build-waiter-apk.sh            # the address in .pilot/server.env (RP_TLS_HOSTNAMES)
 #   scripts/pilot/build-waiter-apk.sh 192.168.1.20   # another address (comma-separate several)
+#   scripts/pilot/build-waiter-apk.sh --discover     # no address: the app finds the PC on the
+#                                                    # Wi-Fi (mDNS) or by its Connect QR (P9-27)
 #
 # The APK lands in .pilot/apk/parossa-waiter-preview.apk. To put it on a phone over USB:
 #   ~/Library/Android/sdk/platform-tools/adb install -r .pilot/apk/parossa-waiter-preview.apk
@@ -17,15 +19,20 @@ export PATH="$HOME/.nvm/versions/node/v24.22.0/bin:$PATH"
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Library/Android/sdk}"
 
 PORT="$(grep '^PORT=' "$STATE/server.env" | cut -d= -f2)"
-HOSTS="${1:-$(grep '^RP_TLS_HOSTNAMES=' "$STATE/server.env" | cut -d= -f2)}"
 SERVERS=""
-IFS=',' read -ra NAMES <<<"$HOSTS"
-for name in "${NAMES[@]}"; do
-  name="$(echo "$name" | tr -d ' ')"
-  [ -z "$name" ] && continue
-  SERVERS="${SERVERS:+$SERVERS,}https://$name:$PORT"
-done
-[ -z "$SERVERS" ] && { echo "No address: pass one, e.g. $0 192.168.1.20"; exit 1; }
+if [ "${1:-}" = "--discover" ]; then
+  # P9-27: nothing built in but the PC's certificate fingerprint, so the app only accepts this PC.
+  echo "== No address built in: the app finds the PC by itself"
+else
+  HOSTS="${1:-$(grep '^RP_TLS_HOSTNAMES=' "$STATE/server.env" | cut -d= -f2)}"
+  IFS=',' read -ra NAMES <<<"$HOSTS"
+  for name in "${NAMES[@]}"; do
+    name="$(echo "$name" | tr -d ' ')"
+    [ -z "$name" ] && continue
+    SERVERS="${SERVERS:+$SERVERS,}https://$name:$PORT"
+  done
+  [ -z "$SERVERS" ] && { echo "No address: pass one, e.g. $0 192.168.1.20, or --discover"; exit 1; }
+fi
 
 # The certificate's fingerprint, read from the running server (public, not a secret).
 CA="$(curl -sk "https://127.0.0.1:$PORT/api/v1/tls/ca" | node -e '

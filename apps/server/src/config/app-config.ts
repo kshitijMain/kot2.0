@@ -108,6 +108,13 @@ export const AppConfigSchema = z.object({
    */
   printToFolder: z.string().min(1).optional(),
   /**
+   * The network adapter staff phones use (P9-27), chosen by the installer (`RP_LAN_INTERFACE`,
+   * like "Wi-Fi" or "Ethernet"): its address is offered first to phones and in the Connect QR.
+   */
+  lanInterface: z.string().min(1).max(100).optional(),
+  /** Announce the PC on the Wi-Fi with mDNS so phones find it by themselves (P9-27). */
+  mdns: z.enum(['on', 'off']).default('on'),
+  /**
    * The nightly backup (DATA-002): always on in production; development and the end-to-end tests
    * may turn it off (`RP_BACKUPS=off`) where `pg_dump` is not installed. "Back up now" still works.
    */
@@ -267,6 +274,8 @@ export function loadConfig(
     errorDsn: env.RP_ERROR_DSN === '' ? undefined : env.RP_ERROR_DSN,
     pgBin: env.RP_PG_BIN === '' ? undefined : env.RP_PG_BIN,
     printToFolder: env.RP_PRINT_TO_FOLDER === '' ? undefined : env.RP_PRINT_TO_FOLDER,
+    lanInterface: env.RP_LAN_INTERFACE === '' ? undefined : env.RP_LAN_INTERFACE,
+    mdns: env.RP_MDNS === '' ? undefined : env.RP_MDNS,
     backups: env.RP_BACKUPS,
     adminDatabaseUrl: env.RP_ADMIN_DATABASE_URL === '' ? undefined : env.RP_ADMIN_DATABASE_URL,
     backupDatabaseUrl: env.RP_BACKUP_DATABASE_URL === '' ? undefined : env.RP_BACKUP_DATABASE_URL,

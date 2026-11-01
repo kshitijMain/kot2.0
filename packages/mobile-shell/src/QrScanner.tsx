@@ -7,16 +7,23 @@ import { useT } from './context.js';
 import { Note } from './Screen.js';
 
 /**
- * The camera reading the manager's pairing QR code (AUTH-007). It looks for QR codes only and hands
- * on the first one it reads, once. The pairing screen loads it only when a person chooses to scan,
- * so no other screen needs the camera module.
+ * The camera reading the manager's pairing QR code (AUTH-007), or the PC's Connect QR code
+ * (P9-27). It looks for QR codes only and hands on the first one it reads, once. The pairing and
+ * connect screens load it only when a person chooses to scan, so no other screen needs the camera
+ * module.
  */
 export function QrScanner({
   onScanned,
   onCancel,
+  hint,
+  cancelLabel,
 }: {
   onScanned: (data: string) => void;
   onCancel: () => void;
+  /** What to point the camera at; the pairing QR code's by default. */
+  hint?: string;
+  /** The button that leaves the camera; "Type the code instead" by default. */
+  cancelLabel?: string;
 }) {
   const t = useT();
   const [permission, requestPermission] = useCameraPermissions({ request: true });
@@ -26,7 +33,7 @@ export function QrScanner({
 
   return (
     <View style={styles.scanner}>
-      <Note tone="text">{t('pairing.scanHint')}</Note>
+      <Note tone="text">{hint ?? t('pairing.scanHint')}</Note>
       {permission === null ? <Note>{t('pairing.cameraStarting')}</Note> : null}
       {permission !== null && !permission.granted ? (
         <>
@@ -71,7 +78,7 @@ export function QrScanner({
         </>
       ) : null}
       <Button variant="ghost" fullWidth testID="pairing-type-instead" onPress={onCancel}>
-        {t('pairing.typeInstead')}
+        {cancelLabel ?? t('pairing.typeInstead')}
       </Button>
     </View>
   );

@@ -1,0 +1,35 @@
+{
+  "input": {
+    "type": "object",
+    "properties": {
+      "v": { "type": "number", "const": 1 },
+      "kind": { "type": "string", "const": "connect" },
+      "urls": {
+        "minItems": 1,
+        "maxItems": 8,
+        "type": "array",
+        "items": { "type": "string", "maxLength": 200, "format": "uri" }
+      },
+      "ca": { "type": "string", "pattern": "^([0-9A-F]{2}:){31}[0-9A-F]{2}$" },
+      "name": { "type": "string", "maxLength": 80 }
+    },
+    "required": ["v", "kind", "urls"]
+  },
+  "output": {
+    "type": "object",
+    "properties": {
+      "v": { "type": "number", "const": 1 },
+      "kind": { "type": "string", "const": "connect" },
+      "urls": {
+        "minItems": 1,
+        "maxItems": 8,
+        "type": "array",
+        "items": { "type": "string", "maxLength": 200, "format": "uri" }
+      },
+      "ca": { "type": "string", "pattern": "^([0-9A-F]{2}:){31}[0-9A-F]{2}$" },
+      "name": { "type": "string", "maxLength": 80 }
+    },
+    "required": ["v", "kind", "urls"],
+    "additionalProperties": false
+  }
+}

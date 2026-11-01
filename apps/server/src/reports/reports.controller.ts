@@ -1,5 +1,9 @@
 import { Body, Controller, Get, HttpCode, Param, Post, Query, Req } from '@nestjs/common';
 import {
+  type BillHistoryInvoiceResponse,
+  BillHistoryParams,
+  BillHistoryQuery,
+  type BillHistoryResponse,
   type CancellationReportResponse,
   type DiscountReportResponse,
   type FeedbackReportResponse,
@@ -28,6 +32,7 @@ import { authErrors } from '../auth/auth-errors.js';
 import { RequireCapability } from '../auth/decorators.js';
 import type { AuthenticatedRequest, Principal } from '../auth/principal.js';
 import { ZodValidationPipe } from '../validation/zod-validation.pipe.js';
+import { BillHistoryService } from './bill-history.service.js';
 import { OrderDrillDownService } from './order-drill-down.service.js';
 import { ReportExportService } from './report-export.service.js';
 import { ReportSuiteService } from './report-suite.service.js';
@@ -58,6 +63,7 @@ export class ReportsController {
     private readonly suite: ReportSuiteService,
     private readonly suspicious: SuspiciousActivityService,
     private readonly feedback: FeedbackService,
+    private readonly history: BillHistoryService,
   ) {}
 
   @Get('sources')
@@ -214,6 +220,26 @@ export class ReportsController {
   ): Promise<InvoiceRegisterResponse> {
     const { from, to, offset, limit } = query;
     return this.reports.register(restaurantOf(request), { from, to }, { offset, limit });
+  }
+
+  /** P9-27: past bills by dates, number or guest phone, newest first, a page at a time. */
+  @Get('bills')
+  @RequireCapability('REPORTS_VIEW_EXPORT')
+  bills(
+    @Req() request: AuthenticatedRequest,
+    @Query(new ZodValidationPipe(BillHistoryQuery)) query: BillHistoryQuery,
+  ): Promise<BillHistoryResponse> {
+    return this.history.find(restaurantOf(request), query);
+  }
+
+  /** P9-27: one past invoice and its text as printed. */
+  @Get('bills/:id')
+  @RequireCapability('REPORTS_VIEW_EXPORT')
+  bill(
+    @Req() request: AuthenticatedRequest,
+    @Param(new ZodValidationPipe(BillHistoryParams)) params: BillHistoryParams,
+  ): Promise<BillHistoryInvoiceResponse> {
+    return this.history.invoice(restaurantOf(request), params.id);
   }
 
   /** RPT-017: a stamped, audited CSV. An OWN grant exports its own shift report only. */

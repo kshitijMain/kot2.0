@@ -10,9 +10,15 @@ import type {
 import type { DeviceSummary, DomainEvent, LoginResponse, StaffTile } from '@rp/contracts';
 import { AlertCenter, type AlertNotifier } from './alert-center.js';
 import { createMobileClient, CREDENTIALS_KEY, loadCredentials } from './client.js';
+import {
+  DISCOVERY_TIMEOUT_MS,
+  discoveredUrls,
+  type LanDiscovery,
+  type WifiRoute,
+} from './lan-discovery.js';
 import { MenuCache } from './menu-cache.js';
 import { OrderOutbox } from './order-outbox.js';
-import { normalizeServerUrl } from './server-url.js';
+import { InvalidServerAddressError, normalizeServerUrl } from './server-url.js';
 import {
   findServer,
   type FoundServer,
@@ -20,6 +26,7 @@ import {
   type ServerAuthority,
   ServerMismatchError,
   type ServerTrust,
+  ServerUnreachableError,
   UnverifiedServerError,
 } from './server-trust.js';
 import { type KeyValueStore, readJson } from './storage.js';
@@ -48,6 +55,11 @@ export interface DeviceSessionSnapshot {
    * works until it is updated, so the app says so instead of failing screen by screen.
    */
   readonly clientTooOld: boolean;
+  /**
+   * The phone is on a Wi-Fi without internet (P9-27): the app talks to the PC over it while the
+   * rest of the phone needs mobile data, so the connect screen says to keep both on.
+   */
+  readonly wifiWithoutInternet: boolean;
 }
 
 export interface DeviceSessionOptions {
@@ -78,10 +90,35 @@ export interface DeviceSessionOptions {
   readonly onError?: (error: unknown) => void;
   /** The time, for how long the person has been idle; tests pass a fake. */
   readonly now?: () => number;
+  /**
+   * Finding the restaurant PC on the Wi-Fi by mDNS (P9-27): the Android module in the apps. Without
+   * it the device only knows the addresses it remembers, scans or was built with.
+   */
+  readonly discovery?: LanDiscovery;
+  /** The app's route over a Wi-Fi without internet (P9-27): the Android module in the apps. */
+  readonly wifi?: WifiRoute;
+  /** How long the PC may stay unreachable before the device looks for it elsewhere; 15 s. */
+  readonly relocateAfterMs?: number;
+  /** How long mDNS discovery listens for the PC; 4 s. */
+  readonly discoveryTimeoutMs?: number;
+}
+
+/**
+ * Where the device may find the restaurant PC besides the address it remembers and mDNS (P9-27):
+ * the Connect QR code a person scanned, then the addresses the app was built with.
+ */
+export interface ConnectTargets {
+  /** From the Connect QR code (`ConnectQrPayload`): its addresses and the PC's CA fingerprint. */
+  readonly scanned?: PairingTarget;
+  /** Built into the app (`extra.restaurantServers`, pilot builds), or typed: the last fallback. */
+  readonly builtIn?: PairingTarget;
 }
 
 const SERVER_KEY = 'rp.server.v1';
 const RESUME_KEY = 'rp.resume.v1';
+/** The fingerprint of the CA pinned for the PC, so a PC at a new address can be recognised. */
+const SERVER_CA_KEY = 'rp.server-ca.v1';
+const RELOCATE_AFTER_MS = 15_000;
 
 const INITIAL: DeviceSessionSnapshot = {
   phase: 'loading',
@@ -92,6 +129,7 @@ const INITIAL: DeviceSessionSnapshot = {
   connection: 'stopped',
   notice: undefined,
   clientTooOld: false,
+  wifiWithoutInternet: false,
 };
 
 /**
@@ -119,9 +157,22 @@ export class DeviceSession {
   private generation = 0;
   /** When the person last touched the app (MOBILE-E3); the app's start until then. */
   private touchedAt: number;
+  /** Looking for the PC at a new address after it stopped answering (P9-27). */
+  private relocateTimer: ReturnType<typeof setTimeout> | undefined;
+  private relocating = false;
 
   constructor(private readonly options: DeviceSessionOptions) {
     this.touchedAt = this.now();
+    const wifi = options.wifi;
+    if (wifi !== undefined) {
+      this.snapshot = { ...INITIAL, wifiWithoutInternet: wifi.wifiWithoutInternet() };
+      wifi.subscribe(() => {
+        const wifiWithoutInternet = wifi.wifiWithoutInternet();
+        if (wifiWithoutInternet !== this.snapshot.wifiWithoutInternet) {
+          this.update({ wifiWithoutInternet });
+        }
+      });
+    }
     this.menu = new MenuCache(options.plainStore);
     this.orders = new OrderOutbox({
       store: options.plainStore,
@@ -166,9 +217,12 @@ export class DeviceSession {
     const key = await this.options.keys.load();
     const credentials = await loadCredentials(this.options.secureStore);
     if (serverUrl === undefined || key === undefined || credentials?.device === undefined) {
+      await this.routeTo(serverUrl === undefined ? [] : [serverUrl]);
       this.update({ phase: 'unpaired' });
       return;
     }
+    // On a Wi-Fi without internet, the app's traffic goes over it while the PC answers there.
+    await this.routeTo([serverUrl]);
     const generation = await this.replaceClient(serverUrl, key);
     const client = this.requireClient();
     let device: DeviceSummary | undefined;
@@ -215,22 +269,74 @@ export class DeviceSession {
     const serverUrl = normalizeServerUrl(serverAddress);
     await this.trustServer(serverUrl, authority);
     const key = await this.newKey(serverUrl);
-    await this.completePairing(serverUrl, key, code);
+    await this.completePairing(serverUrl, key, code, authority);
   }
 
   /**
    * The waiter app connects by itself, with nobody pairing it (ADR-0025, Business Owner
-   * 2026-11-01): it finds the restaurant PC among `target`'s addresses, pins its certificate
-   * (checked against the fingerprint the app was built with, else trusted on first use, on the
-   * restaurant's Wi-Fi), asks the PC for a waiter phone's code and pairs with a new Keystore key.
-   * The PC answers only where it runs PIN-only, and the PIN is what lets anyone in.
+   * 2026-11-01): it finds the restaurant PC (`locate`), pins its certificate (checked against the
+   * Connect QR's or the built-in fingerprint, else trusted on first use, on the restaurant's
+   * Wi-Fi), asks the PC for a waiter phone's code and pairs with a new Keystore key. The PC
+   * answers only where it runs PIN-only, and the PIN is what lets anyone in.
    */
-  async connectByItself(target: PairingTarget): Promise<void> {
-    const found = await this.findServer(target);
+  async connectByItself(targets: ConnectTargets = {}): Promise<void> {
+    const found = await this.locate(targets);
     await this.trustServer(found.serverUrl, found.authority);
     const key = await this.newKey(found.serverUrl);
     const { code } = await this.requireClient().api.createPhonePairingCode();
-    await this.completePairing(found.serverUrl, key, code);
+    await this.completePairing(found.serverUrl, key, code, found.authority);
+  }
+
+  /**
+   * Finds the restaurant PC with no address built into the app (P9-27, AUTH-007, NFR-A01), in
+   * this order: the address that worked last, the PCs that answer mDNS on the Wi-Fi, the Connect
+   * QR code's addresses, then those the app was built with. Every PC over TLS must present the CA
+   * the QR code (or the build) names; mDNS answers that announce another CA are not even tried.
+   * Discovery listens while the remembered address is tried, so a PC that moved costs no extra wait.
+   */
+  async locate(targets: ConnectTargets = {}): Promise<FoundServer> {
+    const { scanned, builtIn } = targets;
+    const expected = scanned?.caSha256 ?? builtIn?.caSha256;
+    const remembered = await this.options.plainStore.getItem(SERVER_KEY);
+    const discovered = this.discoverUrls(expected);
+    const stages: (() => Promise<readonly string[]>)[] = [
+      () => Promise.resolve(remembered === null ? [] : [remembered]),
+      () => discovered,
+      () => Promise.resolve(scanned?.servers ?? []),
+      () => Promise.resolve(builtIn?.servers ?? []),
+    ];
+    const tried = new Set<string>();
+    let invalid = false;
+    let mismatch = false;
+    for (const stage of stages) {
+      const urls: string[] = [];
+      for (const given of await stage()) {
+        let url: string;
+        try {
+          url = normalizeServerUrl(given);
+        } catch {
+          invalid = true;
+          continue;
+        }
+        if (tried.has(url)) continue;
+        tried.add(url);
+        urls.push(url);
+      }
+      if (urls.length === 0) continue;
+      await this.routeTo(urls);
+      try {
+        return await this.findServer({
+          servers: urls,
+          ...(expected !== undefined && { caSha256: expected }),
+        });
+      } catch (error) {
+        if (error instanceof ServerMismatchError) mismatch = true;
+        else if (error instanceof InvalidServerAddressError) invalid = true;
+      }
+    }
+    if (mismatch) throw new ServerMismatchError();
+    if (tried.size === 0 && invalid) throw new InvalidServerAddressError();
+    throw new ServerUnreachableError([...tried]);
   }
 
   /** A new Keystore key, and a client for `serverUrl` that signs with it. */
@@ -242,7 +348,12 @@ export class DeviceSession {
   }
 
   /** Pairs with `code` (AUTH-007) and starts working with the server. */
-  private async completePairing(serverUrl: string, key: DeviceKey, code: string): Promise<void> {
+  private async completePairing(
+    serverUrl: string,
+    key: DeviceKey,
+    code: string,
+    authority?: ServerAuthority,
+  ): Promise<void> {
     const client = this.requireClient();
     await client.pair({
       code: code.trim().toUpperCase(),
@@ -251,6 +362,12 @@ export class DeviceSession {
     });
     const device = await client.api.getCurrentDevice();
     await this.options.plainStore.setItem(SERVER_KEY, serverUrl);
+    // The PC's CA, to recognise it when the router gives it a new address (P9-27).
+    if (authority !== undefined && serverUrl.startsWith('https:')) {
+      await this.options.plainStore.setItem(SERVER_CA_KEY, authority.sha256);
+    } else {
+      await this.options.plainStore.removeItem(SERVER_CA_KEY);
+    }
     await this.options.plainStore.removeItem(RESUME_KEY);
     // Another restaurant's menu and alerts are no use here.
     await this.menu.clear();
@@ -321,6 +438,7 @@ export class DeviceSession {
   }
 
   stop(): void {
+    this.cancelRelocate();
     this.connection?.stop();
     this.connection = undefined;
   }
@@ -407,6 +525,7 @@ export class DeviceSession {
     try {
       await this.options.keys.remove();
       await this.options.plainStore.removeItem(RESUME_KEY);
+      await this.options.plainStore.removeItem(SERVER_CA_KEY);
       await this.options.trust?.clear();
     } catch (error) {
       this.options.onError?.(error);
@@ -443,6 +562,9 @@ export class DeviceSession {
         if (this.connection !== connection) return;
         const cameOnline = status === 'online' && this.snapshot.connection !== 'online';
         this.update({ connection: status });
+        // The PC stopped answering: it may be at a new address (P9-27).
+        if (status === 'online' || status === 'stopped') this.cancelRelocate();
+        else this.scheduleRelocate();
         if (cameOnline) {
           this.refreshMenu({ force: true });
           this.orders.flush().catch((error: unknown) => this.options.onError?.(error));
@@ -456,6 +578,104 @@ export class DeviceSession {
     });
     this.connection = connection;
     connection.start();
+  }
+
+  /** The PC's addresses that answer mDNS with the CA `expected` (any CA when undefined). */
+  private async discoverUrls(expected: string | undefined): Promise<string[]> {
+    const discovery = this.options.discovery;
+    if (discovery === undefined) return [];
+    try {
+      const services = await discovery.discover(
+        this.options.discoveryTimeoutMs ?? DISCOVERY_TIMEOUT_MS,
+      );
+      return discoveredUrls(services, expected);
+    } catch (error) {
+      this.options.onError?.(error);
+      return [];
+    }
+  }
+
+  /** On a Wi-Fi without internet, routes the app over it when the PC answers there (P9-27). */
+  private async routeTo(serverUrls: readonly string[]): Promise<void> {
+    try {
+      await this.options.wifi?.routeTo(serverUrls);
+    } catch (error) {
+      this.options.onError?.(error);
+    }
+  }
+
+  private scheduleRelocate(): void {
+    if (this.options.discovery === undefined || this.relocateTimer !== undefined) return;
+    this.relocateTimer = setTimeout(() => {
+      this.relocateTimer = undefined;
+      void this.relocate();
+    }, this.options.relocateAfterMs ?? RELOCATE_AFTER_MS);
+  }
+
+  private cancelRelocate(): void {
+    if (this.relocateTimer === undefined) return;
+    clearTimeout(this.relocateTimer);
+    this.relocateTimer = undefined;
+  }
+
+  /**
+   * The PC has not answered for a while (P9-27): the router may have given it a new address. The
+   * device asks mDNS again and, when the PC with the same CA answers elsewhere, pins that CA for
+   * the new address, remembers it and reconnects there, with its device key and the person's
+   * session as they were. Nothing changes when another CA answers, or when the old address comes
+   * back first. A PC over TLS whose CA the device does not know is never followed.
+   */
+  private async relocate(): Promise<void> {
+    if (this.relocating) return;
+    this.relocating = true;
+    try {
+      const current = this.snapshot.serverUrl;
+      if (this.snapshot.phase !== 'paired' || current === undefined) return;
+      const generation = this.generation;
+      const expected = await this.pinnedFingerprint();
+      if (expected === undefined && current.startsWith('https:')) return;
+      const urls = (await this.discoverUrls(expected)).filter((url) => url !== current);
+      if (urls.length === 0) return;
+      await this.routeTo(urls);
+      let found: FoundServer;
+      try {
+        found = await this.findServer({
+          servers: urls,
+          ...(expected !== undefined && { caSha256: expected }),
+        });
+      } catch {
+        return; // Nothing usable answered; the next attempt asks again.
+      }
+      const key = await this.options.keys.load();
+      if (
+        key === undefined ||
+        generation !== this.generation ||
+        this.snapshot.connection === 'online'
+      ) {
+        return;
+      }
+      await this.trustServer(found.serverUrl, found.authority);
+      await this.options.plainStore.setItem(SERVER_KEY, found.serverUrl);
+      await this.replaceClient(found.serverUrl, key);
+      this.update({ serverUrl: found.serverUrl });
+      this.connect(await this.loadResume());
+    } catch (error) {
+      this.options.onError?.(error);
+    } finally {
+      this.relocating = false;
+      // Still lost: look again after a while.
+      if (this.snapshot.phase === 'paired' && this.snapshot.connection !== 'online') {
+        if (this.connection !== undefined) this.scheduleRelocate();
+      }
+    }
+  }
+
+  /** The fingerprint of the CA the device trusts for its PC, if it knows one. */
+  private async pinnedFingerprint(): Promise<string | undefined> {
+    const stored = await this.options.plainStore.getItem(SERVER_CA_KEY);
+    if (stored !== null && stored !== '') return stored;
+    // Paired before the fingerprint was remembered: ask the trust module.
+    return (await this.options.trust?.pinnedFingerprint?.()) ?? undefined;
   }
 
   /** A newer menu is fetched; availability changes apply to the stored one (MENU-006). */
