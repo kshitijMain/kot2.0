@@ -18,7 +18,7 @@ import { SignInLockouts } from './sign-in-lockouts.js';
 import { TokenService } from './tokens.js';
 
 /**
- * Authentication and authorisation for every route (AUTH-001 to AUTH-006, AUTH-010, AUTH-011,
+ * Authentication and authorisation for every route (AUTH-001 to AUTH-005, AUTH-010, AUTH-011,
  * SEC-003). Devices prove themselves with device tokens (P0-11); the secret store is replaced by
  * the Windows DPAPI store in the installer (P0-16).
  */

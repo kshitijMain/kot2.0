@@ -100,14 +100,16 @@ describe('[SEC-006] the DPAPI secret store', () => {
 
   it("protects the development store's plain files and removes them", async () => {
     const directory = folder();
-    const plain = await new FileSecretStore(directory, {}).get('totp-encryption-key');
-    expect(existsSync(join(directory, 'totp-encryption-key.key'))).toBe(true);
+    const plain = await new FileSecretStore(directory, {}).get('relay-credential-key');
+    expect(existsSync(join(directory, 'relay-credential-key.key'))).toBe(true);
     const store = new DpapiSecretStore(directory, fakeDpapi());
-    expect((await store.get('totp-encryption-key')).equals(plain)).toBe(true);
-    expect(existsSync(join(directory, 'totp-encryption-key.key'))).toBe(false);
-    expect(existsSync(join(directory, 'totp-encryption-key.dpapi'))).toBe(true);
+    expect((await store.get('relay-credential-key')).equals(plain)).toBe(true);
+    expect(existsSync(join(directory, 'relay-credential-key.key'))).toBe(false);
+    expect(existsSync(join(directory, 'relay-credential-key.dpapi'))).toBe(true);
     expect(
-      (await new DpapiSecretStore(directory, fakeDpapi()).get('totp-encryption-key')).equals(plain),
+      (await new DpapiSecretStore(directory, fakeDpapi()).get('relay-credential-key')).equals(
+        plain,
+      ),
     ).toBe(true);
   });
 

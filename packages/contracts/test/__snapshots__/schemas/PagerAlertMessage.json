@@ -30,7 +30,8 @@
           "VENDOR_RESTORE_CODE",
           "SIGN_IN_LOCKED",
           "OUT_OF_STOCK",
-          "PAYMENT_CLAIMED"
+          "PAYMENT_CLAIMED",
+          "GUEST_WAITING"
         ]
       },
       "lines": {
@@ -83,7 +84,8 @@
           "VENDOR_RESTORE_CODE",
           "SIGN_IN_LOCKED",
           "OUT_OF_STOCK",
-          "PAYMENT_CLAIMED"
+          "PAYMENT_CLAIMED",
+          "GUEST_WAITING"
         ]
       },
       "lines": {

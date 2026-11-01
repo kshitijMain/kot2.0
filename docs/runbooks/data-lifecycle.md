@@ -48,8 +48,7 @@ payments and the audit log stay protected from it (AUD-004).
 
 Orders, bills, invoices, payments, cash, shifts, day ends and the audit log never leave by
 themselves. The Owner removes a whole financial year when the drive needs the room (DATA-008):
-System, then "Old years", then "Archive 2023-24…". It needs the Owner with a fresh second factor
-and a reason.
+System, then "Old years", then "Archive 2023-24…". It needs the Owner and a reason.
 
 - **Oldest first.** Only whole years that have ended, and only the oldest one still on the PC, so
   what stays is always one stretch of time and the audit chain keeps its tail.
@@ -125,8 +124,7 @@ checks an archive end to end.
 
 The restaurant's data belongs to the restaurant (DATA-010). The Owner exports all of it in open
 formats at any time, also while the licence restricts ordering (LIC-005 gates ordering only):
-System, then "Old years", then "Export all data…". It needs the Owner with a fresh second factor;
-it is audited (`DATA_EXPORTED`).
+System, then "Old years", then "Export all data…". It needs the Owner; it is audited (`DATA_EXPORTED`).
 
 It writes `rp-export-<time>` into the folder typed in (a whole path, like `E:\Exports`), or into
 the second backup location's `rp-exports` folder:

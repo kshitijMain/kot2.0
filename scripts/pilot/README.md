@@ -107,6 +107,13 @@ uses the wrappers in `pg-bin/`: they run the same commands inside the pilot's da
 (`rp-pilot-pg`, or `RP_PG_CONTAINER`). Both pilot scripts pass `RP_PG_BIN=scripts/pilot/pg-bin` to
 the server, so Manage → System → "Back up now" works with only Docker.
 
+## Prints saved in a folder (test only)
+
+With no printer on this Mac, the pilot saves every print (KOT, bill, reprint, test page) in
+`.pilot/printouts/` instead: a `.txt` with what the slip says and a `.bin` with the printer's own
+bytes. `RP_PRINT_TO_FOLDER` in `.pilot/server.env` turns it on. To use a real printer, delete that
+line, restart, and set the printer in Manage → Kitchen and printers.
+
 ## A diner's orders follow their number
 
 "My orders" and the bill's estimate come from the diner's mobile number, not the browser: scan

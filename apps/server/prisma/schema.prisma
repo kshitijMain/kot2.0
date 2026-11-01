@@ -448,6 +448,9 @@ model Session {
   tokenHash         String    @unique @map("token_hash")
   /// SHA-256 of the refresh token this one replaced; presenting it again revokes the session.
   previousTokenHash String?   @unique @map("previous_token_hash")
+  /// When the refresh token last rotated: the same device may present the one before for a few
+  /// seconds after, as when the reply was lost to a restart (P9-25).
+  rotatedAt         DateTime? @map("rotated_at") @db.Timestamptz(3)
   /// When the Owner last confirmed password + second factor in this session (AUTH-006 step-up).
   secondFactorAt    DateTime? @map("second_factor_at") @db.Timestamptz(3)
   expiresAt         DateTime  @map("expires_at") @db.Timestamptz(3)
@@ -1282,8 +1285,9 @@ model ServiceRequest {
   id               String               @id @default(uuid(7)) @db.Uuid
   restaurantId     String               @map("restaurant_id") @db.Uuid
   businessDate     DateTime             @map("business_date") @db.Date
-  tableSessionId   String               @map("table_session_id") @db.Uuid
-  tableSession     TableSession         @relation(fields: [tableSessionId], references: [id])
+  /// Null when a diner called at a table nobody had opened yet (P9-25): seating them ends it.
+  tableSessionId   String?              @map("table_session_id") @db.Uuid
+  tableSession     TableSession?        @relation(fields: [tableSessionId], references: [id], onDelete: Restrict)
   /// The table it was raised at; the guests are wherever the session is now.
   tableId          String               @map("table_id") @db.Uuid
   type             ServiceRequestType

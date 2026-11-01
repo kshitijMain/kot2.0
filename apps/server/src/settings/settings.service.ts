@@ -12,16 +12,10 @@ import {
   settingDefinition,
   type UpdateSettingRequest,
 } from '@rp/contracts';
-import {
-  businessDateOf,
-  canonicalJson,
-  actorGrant,
-  OWNER_SECOND_FACTOR_CAPABILITIES,
-} from '@rp/domain';
+import { businessDateOf, canonicalJson, actorGrant } from '@rp/domain';
 import { AuditService } from '../audit/audit.service.js';
 import { authErrors } from '../auth/auth-errors.js';
 import type { Principal } from '../auth/principal.js';
-import { hasFreshStepUp } from '../auth/step-up.js';
 import { newId } from '../common/ids.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
@@ -78,7 +72,7 @@ export class SettingsSnapshot {
 
 /**
  * The settings registry (P1-01a, MGR-007): reads with a short cache, and changes with validation,
- * the capability each setting names (the Owner's second factor where AUTH-006 asks for it), an
+ * the capability each setting names (tax, invoice and data settings are the Owner's alone), an
  * audit entry with before and after (AUD-001) and a `SettingsChanged` event, in one transaction.
  * Vendor-controlled settings (UPD-010) are read-only here.
  */
@@ -137,12 +131,6 @@ export class SettingsService {
       ) !== 'ALLOW'
     )
       throw authErrors.forbidden();
-    if (
-      OWNER_SECOND_FACTOR_CAPABILITIES.has(definition.capability) &&
-      !hasFreshStepUp(principal, snapshot.get('auth.stepUpMinutes'))
-    ) {
-      throw authErrors.secondFactorRequired();
-    }
 
     const parsed = definition.schema.safeParse(request.value);
     if (!parsed.success) {
@@ -232,7 +220,7 @@ export class SettingsService {
   /**
    * Applies settings from an export (ONB-010), each checked as a change by hand would be: a
    * setting that is unknown, the vendor's, not valid or not this person's to change is skipped
-   * and listed; tax, invoice and data settings need the Owner's fresh second factor. Audited.
+   * and listed; tax, invoice and data settings are the Owner's alone. Audited.
    */
   async importValues(
     principal: Principal,
@@ -269,12 +257,6 @@ export class SettingsService {
       if (same(before, parsed.data)) {
         skipped.push({ key, reason: 'UNCHANGED' });
         continue;
-      }
-      if (
-        OWNER_SECOND_FACTOR_CAPABILITIES.has(definition.capability) &&
-        !hasFreshStepUp(principal, snapshot.get('auth.stepUpMinutes'))
-      ) {
-        throw authErrors.secondFactorRequired();
       }
       changes.push({ key, before, after: parsed.data });
     }

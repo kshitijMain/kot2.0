@@ -15,6 +15,7 @@ import {
   PrinterDiscoveryService,
 } from './printer-discovery.js';
 import { PrinterStatusService } from './printer-status.service.js';
+import { FolderTransport } from './folder-transport.js';
 import { NetworkAndUsbTransport, PrinterTransport } from './printer-transport.js';
 import {
   KotsController,
@@ -37,7 +38,15 @@ import { StationsService } from './stations.service.js';
     PrintQueueService,
     PrinterDiscoveryService,
     { provide: PRINTER_NETWORKS, useFactory: () => new LocalPrinterNetworks() },
-    { provide: PrinterTransport, useFactory: () => new NetworkAndUsbTransport() },
+    {
+      provide: PrinterTransport,
+      inject: [APP_CONFIG],
+      // RP_PRINT_TO_FOLDER (test only, P9-25): every job is saved in a folder, not printed.
+      useFactory: (config: AppConfig) =>
+        config.printToFolder === undefined
+          ? new NetworkAndUsbTransport()
+          : new FolderTransport(config.printToFolder),
+    },
     {
       provide: PRINT_QUEUE_OPTIONS,
       inject: [APP_CONFIG],

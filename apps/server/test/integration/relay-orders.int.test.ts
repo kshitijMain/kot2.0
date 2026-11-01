@@ -568,12 +568,20 @@ describe('[QR-011] call waiter and request bill from the QR page', () => {
     expect(table.state).toBe('BILL_REQUESTED');
   });
 
-  it('says a table that is not open cannot take a request, as at the tablet', async () => {
-    const relayRequestId = await dinerAsks('T4', 'WAITER');
+  it('takes a call for a waiter at a table nobody opened, but not a bill (P9-25)', async () => {
+    const call = await dinerAsks('T4', 'WAITER');
+    const bill = await dinerAsks('T4', 'BILL');
     await qr.run();
-    const seen = await dinerSeesRequest('T4', relayRequestId);
-    expect(seen.status).toBe('REJECTED');
-    expect(seen.rejectionReason).toContain('not open');
+    expect((await dinerSeesRequest('T4', call)).status).toBe('RECEIVED');
+    const local = await prisma.relayServiceRequest.findUniqueOrThrow({
+      where: { relayRequestId: call },
+      include: { serviceRequest: true },
+    });
+    expect(local.serviceRequest?.tableSessionId).toBeNull();
+    expect(['ACTIVE', 'ESCALATED']).toContain(local.serviceRequest?.state);
+    const refused = await dinerSeesRequest('T4', bill);
+    expect(refused.status).toBe('REJECTED');
+    expect(refused.rejectionReason).toContain('not open');
   });
 });
 

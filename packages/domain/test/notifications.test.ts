@@ -61,6 +61,8 @@ describe('[NTF-002] [NTF-003] the Appendix C matrix', () => {
     ['OUT_OF_STOCK', ['sunita'], 'T7 OUT OF STOCK', false, 'NONE'],
     // ADR-0024: "I have paid" from the QR page, like the bill request.
     ['PAYMENT_CLAIMED', ['ravi', 'sunita', 'arjun', 'vikram'], 'T7 PAID UPI', true, 'NONE'],
+    // P9-25: a diner calls at a table nobody opened: every waiter and the managers.
+    ['GUEST_WAITING', ['ravi', 'sunita', 'arjun', 'vikram'], 'T7 NEW GUEST', true, 'NONE'],
   ];
 
   it('covers every event type', () => {

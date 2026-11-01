@@ -20,7 +20,6 @@ export const HELP_TOPICS = [
   'settings',
   'system',
   'licence',
-  'security',
 ] as const;
 
 export type HelpTopic = (typeof HELP_TOPICS)[number];
@@ -43,7 +42,6 @@ const PATH_TOPICS: Readonly<Record<string, HelpTopic>> = {
   settings: 'settings',
   system: 'system',
   licence: 'licence',
-  security: 'security',
 };
 
 /** The topic of a dashboard path such as `/manage/menu/photos`, or none for an unknown page. */

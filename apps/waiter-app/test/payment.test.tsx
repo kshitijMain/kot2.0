@@ -25,8 +25,8 @@ function printedTable(role: 'MANAGER' | 'WAITER') {
     .server()
     .on('POST', '/api/v1/auth/pin-login', () => ({ status: 200, body: login(role) }))
     .on('GET', '/api/v1/auth/session', () => {
-      const { session, staff, secondFactorValidUntil } = login(role);
-      return { status: 200, body: { session, staff, secondFactorValidUntil } };
+      const { session, staff } = login(role);
+      return { status: 200, body: { session, staff } };
     })
     .on('POST', '/api/v1/bills', () => ({
       status: 200,

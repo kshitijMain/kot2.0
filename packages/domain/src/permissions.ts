@@ -99,10 +99,11 @@ export const DEFAULT_PERMISSION_MATRIX: Readonly<Record<Capability, Row>> = {
 };
 
 /**
- * Capabilities that additionally need the Owner's password + TOTP second factor (AUTH-006).
+ * Capabilities only the Owner has, never grantable to a custom role (AUTH-012). The Owner's PIN
+ * session is enough for them: no password or authenticator is asked (ADR-0026).
  * "Creating or removing managers" is enforced inside STAFF_MANAGE by the server.
  */
-export const OWNER_SECOND_FACTOR_CAPABILITIES: ReadonlySet<Capability> = new Set<Capability>([
+export const OWNER_ONLY_CAPABILITIES: ReadonlySet<Capability> = new Set<Capability>([
   'DATA_ADMIN',
   'LICENSE_MANAGE',
   'TAX_AND_INVOICE_SETTINGS',
@@ -138,7 +139,7 @@ export const CUSTOM_ROLE_GRANTABLE: readonly Capability[] = CAPABILITIES.filter(
   (capability) =>
     DEFAULT_PERMISSION_MATRIX[capability].MANAGER === 'ALLOW' &&
     capability !== 'STAFF_MANAGE' &&
-    !OWNER_SECOND_FACTOR_CAPABILITIES.has(capability),
+    !OWNER_ONLY_CAPABILITIES.has(capability),
 );
 
 const GRANTABLE = new Set<string>(CUSTOM_ROLE_GRANTABLE);

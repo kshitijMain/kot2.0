@@ -46,7 +46,7 @@ export class SettingsController {
   }
 
   // The route needs OPERATIONS_CONFIGURE; the service also checks the capability the setting
-  // itself names (and the Owner's second factor for tax, invoice and data settings).
+  // itself names (tax, invoice and data settings are the Owner's alone).
   @Put(':key')
   @RequireCapability('OPERATIONS_CONFIGURE')
   update(

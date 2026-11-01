@@ -43,7 +43,7 @@ Primary user:
 Secondary users:
 
 - Owner: reports, audit trail, suspicious-activity report, tax and invoice settings, backups
-  (password + TOTP).
+  (PIN sign-in like everyone; no password or authenticator, ADR-0026).
 - Vendor staff (Super Admin, Onboarding, Support, Finance): tenants, licences, releases, fleet
   health in the Control Plane. No standing access to a restaurant's system (AUTH-014).
 

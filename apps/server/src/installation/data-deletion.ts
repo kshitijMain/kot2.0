@@ -5,8 +5,8 @@ import { z } from 'zod';
 /**
  * The Owner's permission for the uninstaller to delete the data (NFR-I02, P0-16c). Uninstalling
  * keeps the folder on the data drive, so a reinstall carries on where it left off. The uninstaller
- * deletes it only while this permission holds: the Owner gives it on the System page with their
- * password and second factor (AUTH-006), it is audited, and it lasts `DATA_DELETION_MINUTES`.
+ * deletes it only while this permission holds: the Owner gives it on the System page (DATA_ADMIN,
+ * the Owner's alone), it is audited, and it lasts `DATA_DELETION_MINUTES`.
  *
  * The server writes it to `<dataDir>/run/data-deletion.json`; `setup-cli data-deletion` reads it
  * for the uninstall script. It keeps the data from being deleted by mistake or by someone without

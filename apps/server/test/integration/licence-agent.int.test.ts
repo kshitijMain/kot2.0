@@ -108,10 +108,6 @@ beforeAll(async () => {
   owner = await signIn(app, kit, 'OWNER');
   manager = await signIn(app, kit, 'MANAGER');
   waiter = await signIn(app, kit, 'WAITER');
-  await prisma.session.update({
-    where: { id: owner.session.id },
-    data: { secondFactorAt: new Date() },
-  });
   await saveEnrolment(prisma, {
     installationId: INSTALLATION,
     tenantId: randomUUID(),
@@ -374,7 +370,6 @@ describe('[LIC-003] [LIC-005] the licence on this PC', () => {
           restaurantId: kit.restaurantId,
           deviceId: kit.deviceId,
           sessionId: owner.session.id,
-          secondFactorAt: new Date(),
           capabilities: [],
         },
         reactivationCode(SECRET, INSTALLATION, until, 1),
@@ -393,7 +388,6 @@ describe('[LIC-007] [LIC-004] [LIC-006] tampering offline (P8-03b3a)', () => {
     restaurantId: kit.restaurantId,
     deviceId: kit.deviceId,
     sessionId: owner.session.id,
-    secondFactorAt: new Date(),
     capabilities: [],
   });
   const idOf = (file: { payload: string }) =>

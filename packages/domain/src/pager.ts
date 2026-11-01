@@ -59,6 +59,7 @@ export const DEFAULT_VIBRATION: Readonly<Record<NotificationEvent, VibrationPatt
   OUT_OF_STOCK: 'THREE',
   // ADR-0024: a diner says they paid by UPI; someone checks and settles.
   PAYMENT_CLAIMED: 'TWO_SHORT',
+  GUEST_WAITING: 'TWO_SHORT',
 };
 
 /** An escalated alert always buzzes three times: it has come to the manager. */

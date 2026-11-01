@@ -170,11 +170,6 @@ async function now(at: Date): Promise<void> {
   vi.setSystemTime(at);
   await renewDeviceToken(pc, kit.deviceId);
   const owner = await signIn(pc, kit, 'OWNER');
-  // The Owner has just answered the second factor (AUTH-006), as the console asks first.
-  await pc.get(PrismaService).session.update({
-    where: { id: owner.session.id },
-    data: { secondFactorAt: new Date() },
-  });
   staff = {
     owner,
     manager: await signIn(pc, kit, 'MANAGER'),

@@ -1,7 +1,7 @@
 import { grantFor, type Role } from './permissions.js';
 
 /**
- * Staff management rules (P4-02a, MGR-004, AUTH-001, AUTH-006): who may add, change, deactivate
+ * Staff management rules (P4-02a, MGR-004, AUTH-001): who may add, change, deactivate
  * and reactivate whom, and what a PIN must look like. Pure: the server applies them to every staff
  * route, and the console uses them to offer only what will be allowed.
  */
@@ -32,8 +32,6 @@ export type StaffChange =
 export interface StaffActor {
   readonly staffId: string;
   readonly role: Role;
-  /** The Owner confirmed password + second factor within `auth.stepUpMinutes` (AUTH-006). */
-  readonly secondFactorFresh: boolean;
 }
 
 export interface StaffTarget {
@@ -48,17 +46,10 @@ export interface StaffTarget {
  * - OWNER_RECORD: the Owner is never given another role or deactivated;
  * - OWN_RECORD: nobody deactivates themselves or changes their own role;
  * - OWNER_ONLY: only the Owner may do it (anything about a manager, or the Owner's own record);
- * - SECOND_FACTOR_REQUIRED: the Owner must first confirm password + second factor (AUTH-006);
  * - ALREADY_ACTIVE / ALREADY_INACTIVE: nothing to reactivate or deactivate.
  */
 export type StaffRefusal =
-  | 'DENIED'
-  | 'OWNER_RECORD'
-  | 'OWN_RECORD'
-  | 'OWNER_ONLY'
-  | 'SECOND_FACTOR_REQUIRED'
-  | 'ALREADY_ACTIVE'
-  | 'ALREADY_INACTIVE';
+  'DENIED' | 'OWNER_RECORD' | 'OWN_RECORD' | 'OWNER_ONLY' | 'ALREADY_ACTIVE' | 'ALREADY_INACTIVE';
 
 export type StaffDecision =
   { readonly allowed: true } | { readonly allowed: false; readonly reason: StaffRefusal };
@@ -67,7 +58,7 @@ const ALLOWED: StaffDecision = { allowed: true };
 const refuse = (reason: StaffRefusal): StaffDecision => ({ allowed: false, reason });
 
 /**
- * Creating or removing a manager (AUTH-006): adding one, making someone one or no longer one, and
+ * Creating or removing a manager (Owner only): adding one, making someone one or no longer one, and
  * deactivating or reactivating one.
  */
 function changesManagers(change: StaffChange, target: StaffTarget | null): boolean {
@@ -92,8 +83,8 @@ function changesManagers(change: StaffChange, target: StaffTarget | null): boole
 
 /**
  * May `actor` make `change` to `target` (null when creating)? Managers look after waiters and
- * kitchen staff. Anything that creates or removes a manager needs the Owner with a
- * fresh second factor (AUTH-006); a manager's other details, PIN and lock are changed by the Owner
+ * kitchen staff. Anything that creates or removes a manager needs the Owner (signed in with
+ * their PIN, ADR-0026); a manager's other details, PIN and lock are changed by the Owner
  * or by that manager, and the Owner's own record only by the Owner. Permission comes before state, so a
  * refused person learns nothing about the record.
  */
@@ -114,7 +105,6 @@ export function decideStaffChange(
   if (self && structural) return refuse('OWN_RECORD');
   if (changesManagers(change, target)) {
     if (actor.role !== 'OWNER') return refuse('OWNER_ONLY');
-    if (!actor.secondFactorFresh) return refuse('SECOND_FACTOR_REQUIRED');
   } else if (target?.role === 'MANAGER' && actor.role !== 'OWNER' && !self) {
     return refuse('OWNER_ONLY');
   }
@@ -125,19 +115,16 @@ export function decideStaffChange(
 
 /**
  * The roles `actor` can give a new person or `target` (the Owner offers Manager too; a manager
- * does not). With `secondFactorFresh` assumed, so the Owner is offered what the second-factor
- * dialog then allows.
+ * does not).
  */
 export function rolesOffered(
-  actor: Pick<StaffActor, 'staffId' | 'role'>,
+  actor: StaffActor,
   target: StaffTarget | null = null,
 ): readonly AssignableRole[] {
-  const confirmed = { ...actor, secondFactorFresh: true };
   return ASSIGNABLE_ROLES.filter((role) => {
-    if (target === null)
-      return decideStaffChange(confirmed, null, { kind: 'CREATE', role }).allowed;
+    if (target === null) return decideStaffChange(actor, null, { kind: 'CREATE', role }).allowed;
     if (role === target.role) return true;
-    return decideStaffChange(confirmed, target, { kind: 'CHANGE_ROLE', role }).allowed;
+    return decideStaffChange(actor, target, { kind: 'CHANGE_ROLE', role }).allowed;
   });
 }
 

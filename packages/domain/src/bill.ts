@@ -256,6 +256,43 @@ export function computeBill(input: BillInput): BillResult {
   };
 }
 
+/** A tax amount as a bill shows it: its code and rate, and what it is charged on when known. */
+export interface TaxAmountLine {
+  readonly code: string;
+  readonly rateBp: BasisPoints;
+  readonly amount: Paise;
+  readonly taxableValue?: Paise;
+}
+
+/**
+ * One line per tax and rate, in the order first seen (P9-25): with a service charge, CGST 2.5% on
+ * the dishes and CGST 2.5% on the service charge read as one "CGST 2.5%" on the bill, not twice.
+ * The taxable values add up when every line has one.
+ */
+export function taxByCodeAndRate(lines: readonly TaxAmountLine[]): TaxAmountLine[] {
+  const merged = new Map<
+    string,
+    { code: string; rateBp: BasisPoints; amount: Paise; taxable: Paise | null }
+  >();
+  for (const line of lines) {
+    const key = `${line.code}@${String(line.rateBp)}`;
+    const seen = merged.get(key);
+    const taxable = line.taxableValue ?? null;
+    if (seen === undefined) {
+      merged.set(key, { code: line.code, rateBp: line.rateBp, amount: line.amount, taxable });
+    } else {
+      seen.amount += line.amount;
+      seen.taxable = seen.taxable === null || taxable === null ? null : seen.taxable + taxable;
+    }
+  }
+  return [...merged.values()].map(({ code, rateBp, amount, taxable }) => ({
+    code,
+    rateBp,
+    amount,
+    ...(taxable !== null && { taxableValue: taxable }),
+  }));
+}
+
 /** Totals per tax component code across a bill, e.g. { CGST: 1250, SGST: 1250 } (RPT-006). */
 export function taxTotalsByComponent(taxLines: readonly TaxLineResult[]): Record<string, Paise> {
   const totals: Record<string, Paise> = {};

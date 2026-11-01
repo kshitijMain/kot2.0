@@ -204,7 +204,6 @@ describe('[AUTH-007] [SEC-010] credentials in the secure store', () => {
       inactivityTimeoutSeconds: 600,
     },
     staff: { id: STAFF_ID, displayName: 'Ravi', role: 'WAITER' },
-    secondFactorValidUntil: null,
   };
 
   it('restores the pairing, and writes every change back', async () => {

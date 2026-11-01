@@ -9,8 +9,8 @@ and the phones have their own models; this one covers what they all reach. Writt
 
 - HTTPS and WSS on the staff LAN with the installation's own CA: every REST endpoint, the
   Socket.io gateway, the console's static files and `/ca.crt`.
-- Devices: pairing, device keys and tokens; people: PINs, the Owner's password and authenticator,
-  sessions, manager approvals; the permission guard and the route registry.
+- Devices: pairing, device keys and tokens; people: PINs (the Owner's too, ADR-0026), sessions,
+  manager approvals; the permission guard and the route registry.
 - Money and records: orders, bills, invoices, payments, cash, day-ends, the audit log, the
   database roles and triggers.
 - Data on the PC: the secrets under DPAPI, backups and the continuous WAL archive, logs,
@@ -23,7 +23,7 @@ and the phones have their own models; this one covers what they all reach. Writt
 - The audit log and its hash chain.
 - Device keys (non-extractable in browsers, Android Keystore on phones), device tokens (60
   minutes), access tokens (15 minutes), rotating refresh tokens, override tokens (2 minutes).
-- PINs and the Owner's password, authenticator secret and recovery codes.
+- PINs, the Owner's among them (the Owner has no password or authenticator, ADR-0026).
 - The secrets in the DPAPI store: the pepper, the token keys, the TLS key-encryption key, the
   installation key, the relay credential, the licence record key, the backup key; and the
   database logins' passwords.
@@ -51,7 +51,7 @@ and the phones have their own models; this one covers what they all reach. Writt
 2. The staff network ↔ the server: TLS, then the device credential.
 3. A paired device ↔ the person using it: a PIN session bound to that device.
 4. A person ↔ a capability: the permission guard and the §4.2 matrix, a manager's approval, the
-   Owner's second factor.
+   Owner-only capabilities.
 5. The PC's loopback ↔ the network: first run and the bootstrap code.
 6. The console's JavaScript ↔ the credentials it holds (the console's CSP).
 7. The server's account (`NT SERVICE\RPServer`, database login in `rp_app`) ↔ PostgreSQL's roles
@@ -161,8 +161,8 @@ change the traffic or to collect PINs.
 Someone at a paired device tries PINs, or tries a few PINs for every person in turn.
 
 - Mitigation: PINs work only on a paired staff device; they are hashed with Argon2id and a pepper;
-  five failures in ten minutes lock that person for 15 minutes (audited); every wrong PIN or
-  password also counts against the device it was typed on, which takes none for 15 minutes after
+  five failures in ten minutes lock that person for 15 minutes (audited); every wrong PIN also
+  counts against the device it was typed on, which takes none for 15 minutes after
   ten in ten minutes whoever they were for, so spreading guesses over people gains nothing
   (`auth.deviceLockoutMaxFailures`); each device may try ten times a minute; the PINs guessed
   first (one digit or block repeated, runs, pairs, years, keypad lines) are refused when a PIN is
@@ -353,11 +353,10 @@ Concurrent bills, a crash or a rollback leave a gap in the series or give one nu
 
 Someone restores last week's backup to remove the bills, voids or payments since.
 
-- Mitigation: a restore needs the Owner with a fresh second factor, is audited and restarts the
-  server; the Control Plane sees the chain go back and reports it.
+- Mitigation: a restore needs the Owner, is audited with a reason and restarts the server; the Control Plane sees the chain go back and reports it.
 - Code: `apps/server/src/backups/backup.service.ts` (`auditRestore`).
-- Tests: `apps/server/test/integration/restore.int.test.ts` "needs the Owner with a fresh second
-  factor, restarts, and restores before starting"; `packages/domain/test/fleet-health.test.ts`
+- Tests: `apps/server/test/integration/restore.int.test.ts` "needs the Owner (their PIN session is
+  enough), restarts, and restores before starting"; `packages/domain/test/fleet-health.test.ts`
   "detects a chain cut back, rewritten or emptied".
 - Risk: likelihood Low, impact High: Medium.
 - Status: Partly mitigated. Accepted: a Windows administrator can run `pg_restore` by hand without
@@ -473,7 +472,7 @@ not a person's.
 The Owner, or someone with their account, purges a financial year to remove the records of
 what happened in it.
 
-- Mitigation: purge is the Owner's with a password and second factor, by whole financial year, only
+- Mitigation: purge is the Owner's alone, with a reason, by whole financial year, only
   after the year is archived; the chain's hash at the cut is kept, so the chain still verifies.
 - Code: `apps/server/src/lifecycle/archive.service.ts` (`ArchiveService`).
 - Tests: `apps/server/test/integration/archive-purge.int.test.ts` "archives, exports, reads back
@@ -878,8 +877,8 @@ signed-in staff may do.
 - Code: `apps/server/src/auth/session.service.ts` (`SessionService`);
   `apps/server/src/auth/permission.guard.ts` (`PermissionGuard`).
 - Tests: `apps/server/test/integration/authorisation-sweep.int.test.ts` "gives a session on a
-  table tablet nothing, however it was made", "refuses a PIN or Owner sign-in on a table tablet or
-  a pager, and counts no attempt", "lets a kitchen screen with nobody signed in reach only its
+  table tablet nothing, however it was made", "refuses a PIN sign-in on a table tablet or a pager,
+  and counts no attempt", "lets a kitchen screen with nobody signed in reach only its
   station"; `apps/server/test/integration/tablet.int.test.ts` "still refuses the tablet another
   table".
 - Risk: likelihood Low, impact High: Medium.
@@ -889,16 +888,22 @@ signed-in staff may do.
 
 A manager, or someone with the Owner's PIN, changes tax groups, invoice series or purges data.
 
-- Mitigation: Owner-only actions need a fresh password and authenticator code (5 minutes), each
-  code used once; recovery codes work once.
-- Code: `apps/server/src/auth/step-up.ts` (`hasFreshStepUp`); `apps/server/src/auth/auth.service.ts`
-  (`verifyOwnerSecrets`).
-- Tests: `apps/server/test/integration/auth-owner.int.test.ts` "requires a fresh password + TOTP
-  step-up, valid for 5 minutes", "accepts each recovery code once";
-  `apps/server/test/unit/auth-primitives.test.ts` "accepts the current and adjacent steps, and
-  never the same step twice".
+- Mitigation: Owner-only capabilities (`OWNER_ONLY_CAPABILITIES`) and creating or removing managers
+  and custom roles are granted to the Owner alone, never to a manager or a custom role; the
+  Owner's PIN locks after five wrong tries, counts against the device and alerts on lockout
+  (PC-S5); `auth.pinLength` can ask for 6 digits; every Owner action is audited with who, where
+  and why. There is no password or authenticator step-up: the Business Owner chose PIN-only
+  sign-in for the Owner (ADR-0026, overriding AUTH-006).
+- Code: `packages/domain/src/permissions.ts` (`OWNER_ONLY_CAPABILITIES`, `CUSTOM_ROLE_GRANTABLE`);
+  `apps/server/src/auth/permission.guard.ts` (`PermissionGuard`);
+  `packages/domain/src/staff.ts` (`decideStaffChange`).
+- Tests: `apps/server/test/integration/auth-owner.int.test.ts` "does every Owner-only action with
+  the PIN session alone; a manager is refused"; `apps/server/test/integration/staff.int.test.ts`
+  "refuses managers, and lets the Owner do it with their PIN session alone (ADR-0026)".
 - Risk: likelihood Low, impact High: Medium.
-- Status: Mitigated.
+- Status: Accepted: the Business Owner chose PIN-only sign-in for the Owner (ADR-0026); someone who
+  learns the Owner's PIN can act as the Owner until it is changed, which lockouts, alerts and the
+  audit trail limit and expose.
 
 #### PC-E5 Approving one's own override
 

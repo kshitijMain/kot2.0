@@ -43,7 +43,6 @@ interface SessionRow {
   readonly id: string;
   readonly restaurantId: string;
   readonly expiresAt: Date;
-  readonly secondFactorAt: Date | null;
 }
 
 export type AccessResult = { readonly principal: Principal } | { readonly failure: AppError };
@@ -76,6 +75,12 @@ async function holdPhone(
  * Staff sessions on a device (AUTH-005): a refresh token (stored hashed, rotated on every use), a
  * short-lived access token, an absolute lifetime and an inactivity timeout renewed by activity.
  */
+/**
+ * How long after a rotation the same device may present the refresh token it replaced (P9-25): a
+ * reply lost to a server restart, not a leak. Industry practice for rotating tokens is ~30 s.
+ */
+const REFRESH_REPLAY_GRACE_MS = 30_000;
+
 @Injectable()
 export class SessionService {
   constructor(
@@ -105,7 +110,6 @@ export class SessionService {
       staffId: string;
       device: AuthenticatedDevice;
       settings: AuthSettings;
-      secondFactorAt: Date | null;
       now: Date;
     },
   ): Promise<{ session: SessionRow; refreshToken: string }> {
@@ -120,9 +124,8 @@ export class SessionService {
         tokenHash: sha256Hex(refreshToken),
         expiresAt: new Date(input.now.getTime() + input.settings.sessionMaxHours * 3_600_000),
         lastActiveAt: input.now,
-        secondFactorAt: input.secondFactorAt,
       },
-      select: { id: true, restaurantId: true, expiresAt: true, secondFactorAt: true },
+      select: { id: true, restaurantId: true, expiresAt: true },
     });
     if (input.device.type === 'WAITER_PHONE') await holdPhone(tx, input.device, input.staffId);
     return { session, refreshToken };
@@ -172,7 +175,6 @@ export class SessionService {
         role: input.staff.role,
         capabilities: [...input.staff.capabilities],
       },
-      secondFactorValidUntil: this.stepUpValidUntil(session.secondFactorAt, settings, now),
     };
   }
 
@@ -180,7 +182,6 @@ export class SessionService {
   async describe(
     principal: Principal,
     device: AuthenticatedDevice,
-    now: Date = new Date(),
   ): Promise<CurrentSessionResponse> {
     const session = await this.prisma.session.findUniqueOrThrow({
       where: { id: principal.sessionId },
@@ -200,19 +201,7 @@ export class SessionService {
         role: session.staff.role.baseRole,
         capabilities: roleCapabilities(session.staff.role),
       },
-      secondFactorValidUntil: this.stepUpValidUntil(session.secondFactorAt, settings, now),
     };
-  }
-
-  /** Until when an Owner's password + TOTP step-up counts (AUTH-006), if it still does. */
-  private stepUpValidUntil(
-    secondFactorAt: Date | null,
-    settings: AuthSettings,
-    now: Date,
-  ): string | null {
-    if (secondFactorAt === null) return null;
-    const until = new Date(secondFactorAt.getTime() + settings.stepUpMinutes * 60_000);
-    return until > now ? until.toISOString() : null;
   }
 
   /**
@@ -259,7 +248,6 @@ export class SessionService {
         restaurantId: session.restaurantId,
         deviceId: session.deviceId,
         sessionId: session.id,
-        secondFactorAt: session.secondFactorAt,
         // Read with the session on every request, so a changed custom role applies at once.
         capabilities: roleCapabilities(session.staff.role),
       },
@@ -340,30 +328,46 @@ export class SessionService {
   ): Promise<LoginResponse> {
     const now = new Date();
     const hash = sha256Hex(refreshToken);
-    const session = await this.prisma.session.findUnique({
+    let session = await this.prisma.session.findUnique({
       where: { tokenHash: hash },
       include: { staff: { include: { role: true } } },
     });
     if (session === null) {
-      const reused = await this.prisma.session.findUnique({ where: { previousTokenHash: hash } });
-      if (reused !== null && reused.revokedAt === null) {
-        await this.prisma.transaction(async (tx) => {
-          await tx.session.update({
-            where: { id: reused.id },
-            data: { revokedAt: now, revokeReason: 'REFRESH_TOKEN_REUSED' },
+      const reused = await this.prisma.session.findUnique({
+        where: { previousTokenHash: hash },
+        include: { staff: { include: { role: true } } },
+      });
+      // The same device presenting the token it has just replaced, within a few seconds, lost the
+      // reply (the server restarted under it, P9-25): it gets a new token, and the one it never
+      // received stops working. Anything else is a leaked token: the session ends (AUTH-005).
+      const lostReply =
+        reused !== null &&
+        reused.revokedAt === null &&
+        reused.deviceId === device.deviceId &&
+        reused.rotatedAt !== null &&
+        now.getTime() - reused.rotatedAt.getTime() <= REFRESH_REPLAY_GRACE_MS;
+      if (reused !== null && lostReply) {
+        session = reused;
+      } else {
+        if (reused !== null && reused.revokedAt === null) {
+          await this.prisma.transaction(async (tx) => {
+            await tx.session.update({
+              where: { id: reused.id },
+              data: { revokedAt: now, revokeReason: 'REFRESH_TOKEN_REUSED' },
+            });
+            await this.audit.record(tx, {
+              action: 'REFRESH_TOKEN_REUSED',
+              entityType: 'session',
+              entityId: reused.id,
+              actorId: reused.staffId,
+              deviceId: device.deviceId,
+              restaurantId: reused.restaurantId,
+              reason: 'A replaced refresh token was presented again; the session was revoked.',
+            });
           });
-          await this.audit.record(tx, {
-            action: 'REFRESH_TOKEN_REUSED',
-            entityType: 'session',
-            entityId: reused.id,
-            actorId: reused.staffId,
-            deviceId: device.deviceId,
-            restaurantId: reused.restaurantId,
-            reason: 'A replaced refresh token was presented again; the session was revoked.',
-          });
-        });
+        }
+        throw authErrors.sessionRevoked();
       }
-      throw authErrors.sessionRevoked();
     }
     if (session.deviceId !== device.deviceId) throw authErrors.deviceMismatch();
     if (session.revokedAt !== null) throw authErrors.sessionRevoked();
@@ -385,10 +389,11 @@ export class SessionService {
     const activeAt = Math.max(session.lastActiveAt.getTime(), now.getTime() - idleMs);
     // Conditional on the old hash, so two concurrent refreshes cannot both succeed.
     const rotated = await this.prisma.session.updateMany({
-      where: { id: session.id, tokenHash: hash, revokedAt: null },
+      where: { id: session.id, tokenHash: session.tokenHash, revokedAt: null },
       data: {
         tokenHash: sha256Hex(nextToken),
         previousTokenHash: hash,
+        rotatedAt: now,
         lastActiveAt: new Date(activeAt),
       },
     });

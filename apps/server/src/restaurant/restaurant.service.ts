@@ -73,7 +73,7 @@ export function toRestaurantProfile(row: Restaurant): RestaurantProfile {
 /**
  * The restaurant profile (P1-01b, ONB-004 step 1). Managers keep the display name, contact,
  * opening hours, logo and business-day cut-off up to date; the invoice particulars (BILL-002) are
- * the Owner's, behind the second factor the route asks for (AUTH-006). Every change is audited
+ * the Owner's alone (TAX_AND_INVOICE_SETTINGS). Every change is audited
  * with before and after (AUD-001) and announced with `RestaurantChanged`.
  */
 @Injectable()

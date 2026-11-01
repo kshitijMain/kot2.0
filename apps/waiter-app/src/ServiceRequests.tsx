@@ -28,6 +28,8 @@ export function requestTitle(request: ServiceRequestView, t: Translator): string
 /** How long it has waited, and whether someone is on the way or the managers were alerted. */
 function requestFacts(request: ServiceRequestView, now: number, t: Translator): string {
   const facts = [alertAge(request.createdAt, now, t)];
+  // A call at a table nobody has opened yet (P9-25): someone goes and seats them.
+  if (request.tableSessionId === null) facts.push(t('pos.tableRequests.notOpened'));
   if (request.state === 'ACKNOWLEDGED') {
     facts.push(
       request.acknowledgedByName === null

@@ -38,8 +38,8 @@ export interface SettingDefinition<
   readonly defaultValue: z.output<Schema>;
   readonly scope: SettingScope;
   /**
-   * Who may change it. Capabilities that need the Owner's second factor (AUTH-006) need it here
-   * too; VENDOR settings cannot be changed locally at all.
+   * Who may change it. Owner-only capabilities (`@rp/domain` `OWNER_ONLY_CAPABILITIES`) make the
+   * setting the Owner's alone; VENDOR settings cannot be changed locally at all.
    */
   readonly capability: z.infer<typeof Capability>;
   readonly description: string;
@@ -170,7 +170,7 @@ export const SETTINGS = [
     scope: 'RESTAURANT',
     capability: 'STAFF_MANAGE',
     description:
-      'Wrong PINs or passwords on one device, for anyone, within the window that stop it taking any for the lockout time (our default).',
+      'Wrong PINs on one device, for anyone, within the window that stop it taking any for the lockout time (our default).',
     requirements: ['AUTH-003', 'SEC-009'],
   }),
   setting({
@@ -232,17 +232,6 @@ export const SETTINGS = [
     description: 'Longest a session lasts, however active (one long shift; our default).',
     requirements: ['AUTH-005'],
     unit: 'hours',
-  }),
-  setting({
-    key: 'auth.stepUpMinutes',
-    schema: int(1, 60),
-    defaultValue: 5,
-    scope: 'RESTAURANT',
-    capability: 'STAFF_MANAGE',
-    description:
-      "How long the Owner's password and second factor stay fresh for Owner-only actions.",
-    requirements: ['AUTH-006'],
-    unit: 'minutes',
   }),
   setting({
     key: 'auth.overrideSeconds',
@@ -381,7 +370,7 @@ export const SETTINGS = [
     schema: z.boolean(),
     defaultValue: false,
     scope: 'RESTAURANT',
-    // An invoice setting (ONB-004 step 3), so the Owner's (AUTH-006).
+    // An invoice setting (ONB-004 step 3), so the Owner's alone.
     capability: 'TAX_AND_INVOICE_SETTINGS',
     description: 'Add a voluntary service charge to bills (off by default; removable on request).',
     requirements: ['BILL-006', 'OI-12'],
@@ -1230,7 +1219,7 @@ export const SettingView = z.object({
   isDefault: z.boolean(),
   scope: SettingScope,
   capability: Capability,
-  /** Whether the person asking may change it now (vendor settings never; AUTH-006 aside). */
+  /** Whether the person asking may change it now (vendor settings never). */
   editable: z.boolean(),
   description: z.string(),
   requirements: z.array(z.string()),

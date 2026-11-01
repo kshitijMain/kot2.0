@@ -279,8 +279,8 @@ export class BackupService implements OnApplicationBootstrap, OnModuleDestroy {
 
   /**
    * "Restore" (DATA-004, P7-05b): checks the backup is there and opens with this PC's key, saves
-   * the request and restarts the server, which restores before it starts again. The Owner only,
-   * with a fresh second factor (the route's DATA_ADMIN); audited with the reason.
+   * the request and restarts the server, which restores before it starts again. The Owner only
+   * (the route's DATA_ADMIN); audited with the reason.
    */
   async requestRestore(
     principal: Principal,

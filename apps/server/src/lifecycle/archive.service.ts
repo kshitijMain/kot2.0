@@ -107,7 +107,7 @@ function viewOf(run: ArchiveRun): ArchiveRunView {
 }
 
 /**
- * Archive-then-purge (DATA-008, AUD-004, P7-06b), for the Owner with a fresh second factor:
+ * Archive-then-purge (DATA-008, AUD-004, P7-06b), for the Owner only (DATA_ADMIN):
  *
  * 1. only the oldest whole financial year still in the database, so what stays is always one
  *    stretch of time and the audit chain keeps its tail;

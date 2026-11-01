@@ -55,7 +55,6 @@ export function login(role: Role, inactivityTimeoutSeconds = 600): LoginResponse
       inactivityTimeoutSeconds,
     },
     staff: { id: person.staffId, displayName: person.displayName, role },
-    secondFactorValidUntil: null,
   };
 }
 
@@ -321,8 +320,8 @@ export function fakeLocalServer(
       .on('POST', '/api/v1/auth/pin-login', () => ({ status: 200, body: login('WAITER') }))
       .on('POST', '/api/v1/auth/logout', () => ({ status: 204 }))
       .on('GET', '/api/v1/auth/session', () => {
-        const { session, staff, secondFactorValidUntil } = login('WAITER');
-        return { status: 200, body: { session, staff, secondFactorValidUntil } };
+        const { session, staff } = login('WAITER');
+        return { status: 200, body: { session, staff } };
       })
       .on('GET', '/api/v1/devices/current/alerts', () => ({
         status: 200,

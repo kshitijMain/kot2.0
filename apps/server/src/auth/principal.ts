@@ -10,8 +10,6 @@ export interface Principal {
   readonly restaurantId: string;
   readonly deviceId: string;
   readonly sessionId: string;
-  /** When the Owner last confirmed password + second factor in this session (AUTH-006). */
-  readonly secondFactorAt: Date | null;
   /**
    * What the person's custom role adds to `role` (AUTH-012), already limited to what may be added;
    * empty for a built-in role. Use `@rp/domain` `actorGrant` with it, never `grantFor` alone.

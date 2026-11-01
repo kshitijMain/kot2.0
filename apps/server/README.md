@@ -75,8 +75,8 @@ of truth for the restaurant.
 - `src/auth/permission.guard.ts`: the global guard (deny by default, AUTH-010, SEC-003). Every route
   declares its access with `@Public()`, `@RequireDevice()` (paired device, nobody signed in),
   `@RequireSession()` (any signed-in person; the service checks more) or `@RequireCapability(c)`;
-  undeclared routes answer 403. For capabilities: ALLOW passes (Owner-only capabilities also need
-  a fresh step-up), OWN passes with `request.ownershipRequired` for the service to check, OVERRIDE
+  undeclared routes answer 403. For capabilities: ALLOW passes (Owner-only capabilities are the
+  Owner's alone; their PIN session is enough, ADR-0026), OWN passes with `request.ownershipRequired` for the service to check, OVERRIDE
   needs a manager override token in `x-override-token`, DENY answers 403.
 - `src/common/request-context.ts`: per-request values (correlation ID) via AsyncLocalStorage.
 
@@ -94,23 +94,19 @@ of truth for the restaurant.
   bound to staff, role, restaurant, device and session; checked on every request together with the
   session (revoked, absolute expiry 16 h, inactivity 10 min on POS/waiter devices, 30 min on manager
   browsers, person still active). The current role applies at once.
-- Owner (AUTH-006): password (Argon2id, 12+ characters) + TOTP (RFC 6238, secret sealed with
-  AES-256-GCM, codes never reusable) or one-time recovery codes. `owner-login` and `step-up` give a
-  5-minute step-up required for `OWNER_SECOND_FACTOR_CAPABILITIES`. The first password and TOTP
-  can be set from the Owner's PIN session (setup); replacing them needs a fresh step-up, and a
-  password change signs the Owner out elsewhere.
+- Owner: signs in with a PIN like everyone else; `OWNER_ONLY_CAPABILITIES` need nothing more
+  (ADR-0026, overriding AUTH-006: no password, authenticator, recovery codes or step-up).
 - Manager override (AUTH-011): `POST /api/v1/auth/override` with a manager's PIN returns a
   single-use token for one capability (and entity) of the requester's session on this device,
   valid 2 minutes; the guard consumes it and exposes `request.override` (approver) for the audit
   entry of the action.
-- Secrets (`SecretStore`): pepper, token signing key and TOTP key. `FileSecretStore` keeps them in
+- Secrets (`SecretStore`): pepper and token signing keys, among others. `FileSecretStore` keeps them in
   `<RP_DATA_DIR>/secrets` (or `RP_SECRET_*` variables); the installer swaps in DPAPI (P0-16).
 - Settings (`AuthSettingsService`, keys `auth.*` in the settings table, defaults in
   `auth-settings.ts`): PIN length, lockout, rate limit, token and inactivity times, session length,
-  step-up and override validity, kitchen logins. Since P1-01a they are settings registry keys.
-- Audit (AUTH-013): LOGIN, LOGIN_FAILED, LOGIN_LOCKED, LOGOUT, STAFF_UNLOCKED, STEP_UP,
-  OVERRIDE_GRANTED, OVERRIDE_DENIED, REFRESH_TOKEN_REUSED, OWNER_PASSWORD_SET/CHANGED,
-  TOTP_ENROLMENT_STARTED, TOTP_ENROLLED. PINs, passwords, codes and tokens are redacted from logs.
+  override validity, kitchen logins. Since P1-01a they are settings registry keys.
+- Audit (AUTH-013): LOGIN, LOGIN_FAILED, LOGIN_LOCKED, LOGOUT, STAFF_UNLOCKED, OVERRIDE_GRANTED,
+  OVERRIDE_DENIED, REFRESH_TOKEN_REUSED. PINs, passwords, codes and tokens are redacted from logs.
 - Development PINs from `db:seed`: Owner 1111, managers 2222 and 3333, waiters 4444 and 5555,
   kitchen 6666 (development only).
 
@@ -257,8 +253,8 @@ backup, updates and diagnostics.
   - `snapshot(restaurantId).get('kds.ageAmberMinutes')` gives the typed effective value: the
     stored value when valid, otherwise the default. Snapshots are cached 30 s; `invalidate()`
     clears the cache.
-  - `update()` checks the setting's capability. The Owner's second factor is needed for
-    `TAX_AND_INVOICE_SETTINGS` and `DATA_ADMIN`; `VENDOR` settings are refused.
+  - `update()` checks the setting's capability (`TAX_AND_INVOICE_SETTINGS` and `DATA_ADMIN` are
+    the Owner's alone); `VENDOR` settings are refused.
   - `update()` also validates the value and the rules between settings, then writes the row, a
     `SETTING_CHANGED` audit entry (before and after) and a `SettingsChanged` event with the keys,
     in one transaction.
@@ -285,8 +281,7 @@ backup, updates and diagnostics.
   - `example` shows the first number of the current financial year.
 - Every change takes the `restaurantSetup` advisory lock, writes an audit entry with before and
   after, and appends `RestaurantChanged { part }` in the same transaction.
-- Routes: the Owner-only ones declare `TAX_AND_INVOICE_SETTINGS`, so the permission guard asks
-  for the second factor. Reads are for any signed-in person, and the profile for any paired device.
+- Routes: the Owner-only ones declare `TAX_AND_INVOICE_SETTINGS`, which only the Owner has. Reads are for any signed-in person, and the profile for any paired device.
 
 ## Floor and waiter assignment (P1-02a)
 
@@ -546,8 +541,8 @@ bill in `test/unit/virtual-printer.test.ts`.
 - `src/staff/staff.service.ts` serves `/api/v1/staff` (STAFF_MANAGE): list (active first, never a
   secret: `hasPin` and `lockedUntil` only), add with a PIN, edit name, role and contact, set a
   PIN, deactivate with a reason and reactivate; never delete (AUD-004). Who may change whom is
-  `@rp/domain` `decideStaffChange`: anything that creates or removes a manager needs the Owner with
-  a fresh second factor (AUTH-006), a manager's other details only the Owner or that manager, the
+  `@rp/domain` `decideStaffChange`: anything that creates or removes a manager is the Owner's
+  alone, a manager's other details only the Owner or that manager, the
   Owner's record only the Owner, and nobody deactivates themselves or changes their own role.
   `POST /api/v1/auth/unlock` applies the same rules.
 - A PIN has exactly `auth.pinLength` digits (PIN_LENGTH otherwise), is hashed with the pepper and
@@ -558,8 +553,7 @@ bill in `test/unit/virtual-printer.test.ts`.
 - Every change is audited (STAFF_CREATED, STAFF_UPDATED, STAFF_PIN_SET, STAFF_DEACTIVATED,
   STAFF_REACTIVATED; contact values and PINs never, only what changed) and announced as
   `RestaurantChanged` `STAFF`, which the staff list and the sign-in tiles follow.
-- `GET /api/v1/auth/owner/security` tells the Owner what of password, authenticator and recovery
-  codes is set up, never a secret. See `test/integration/staff.int.test.ts`.
+- See `test/integration/staff.int.test.ts`.
 
 ## Pagers (P2-04a)
 

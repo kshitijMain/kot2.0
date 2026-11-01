@@ -34,7 +34,7 @@ signed-in desktop.
 
 ## Restoring a backup (PC-T7)
 
-The server restores only for the Owner with a fresh second factor; it audits the restore and
+The server restores only for the Owner; it audits the restore and
 restarts, and the Control Plane sees the audit chain go back and raises an alert (`fleet-health`).
 `pg_restore` by hand needs the administrator account, and leaves no audit entry; the heartbeat
 shows the chain going back all the same. So:

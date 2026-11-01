@@ -3,8 +3,9 @@ import { createCipheriv, createDecipheriv, randomBytes } from 'node:crypto';
 const VERSION = 'v1';
 
 /**
- * AES-256-GCM encryption for small secrets stored in the database (the Owner's TOTP secret), with
- * a key from the SecretStore. Format: `v1.<iv>.<tag>.<ciphertext>` in base64url.
+ * AES-256-GCM encryption for small secrets stored in the database or on disk (the QR relay
+ * credential, the licence record, the LAN TLS keys), with a key from the SecretStore. Format:
+ * `v1.<iv>.<tag>.<ciphertext>` in base64url.
  */
 export function seal(key: Buffer, plaintext: Buffer): string {
   const iv = randomBytes(12);

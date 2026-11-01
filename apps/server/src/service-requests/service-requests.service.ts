@@ -77,12 +77,18 @@ type EventInput = {
   [T in RequestEvent['type']]: { type: T; payload: Extract<RequestEvent, { type: T }>['payload'] };
 }[RequestEvent['type']];
 
-/** A request with what its view needs: the session's table now and who acknowledged it. */
+/**
+ * A request with what its view needs: the session's table now and who acknowledged it. A call at a
+ * table nobody had opened (P9-25) has no session; its table is the one it was raised at.
+ */
 type RequestRow = ServiceRequest & {
-  tableSession: { table: { id: string; label: string } };
+  tableSession: { table: { id: string; label: string } } | null;
 };
 
 const WITH_TABLE = { tableSession: { select: { table: { select: { id: true, label: true } } } } };
+
+/** What a diner may ask for at a table nobody has opened yet (P9-25): a waiter, or water. */
+const BEFORE_SEATING: ReadonlySet<ServiceRequestType> = new Set(['WAITER', 'WATER']);
 
 /**
  * Service requests (P2-06d; TAB-004, WTR-005, BILL-015, NTF-003 to NTF-005, SEC-009): a diner's
@@ -179,9 +185,14 @@ export class ServiceRequestsService {
         where: { restaurantId, tableId, status: 'OPEN' },
         include: { table: true },
       });
-      if (session === null) throw errors.tableNotOpen();
+      // Nobody has opened the table (P9-25): a call for a waiter still reaches every waiter on duty
+      // and the managers; there is nothing to bill or pay yet.
+      if (session === null && !BEFORE_SEATING.has(type)) throw errors.tableNotOpen();
       const open = await tx.serviceRequest.findMany({
-        where: { tableSessionId: session.id, state: { in: OPEN_STATES } },
+        where:
+          session === null
+            ? { restaurantId, tableId, tableSessionId: null, state: { in: OPEN_STATES } }
+            : { tableSessionId: session.id, state: { in: OPEN_STATES } },
         select: { id: true, type: true, state: true },
       });
       if (!canRaiseServiceRequest(type, open)) {
@@ -195,7 +206,7 @@ export class ServiceRequestsService {
           id,
           restaurantId,
           businessDate: dbDate(businessDate),
-          tableSessionId: session.id,
+          tableSessionId: session?.id ?? null,
           tableId,
           type,
           source: input.source,
@@ -206,7 +217,7 @@ export class ServiceRequestsService {
       const events: EventInput[] = [
         { type: 'ServiceRequestRaised', payload: { serviceRequestId: id, tableId, type } },
       ];
-      if (type === 'BILL') {
+      if (type === 'BILL' && session !== null) {
         if (canTransition(tableMachine, session.table.state, 'REQUEST_BILL')) {
           const state = transition(tableMachine, session.table.state, 'REQUEST_BILL').to;
           await tx.diningTable.update({ where: { id: tableId }, data: { state } });
@@ -219,9 +230,9 @@ export class ServiceRequestsService {
       }
       const { alertId } = await this.notifications.raise(tx, {
         restaurantId,
-        type: SERVICE_REQUEST_ALERTS[type],
+        type: session === null ? 'GUEST_WAITING' : SERVICE_REQUEST_ALERTS[type],
         tableId,
-        tableSessionId: session.id,
+        tableSessionId: session?.id ?? null,
         dedupeKey: `service:${id}`,
         payload: { serviceRequestId: id, requestedFrom: input.source },
         raisedByDeviceId: input.deviceId,
@@ -273,6 +284,7 @@ export class ServiceRequestsService {
     return this.prisma.transaction(async (tx) => {
       const row = await this.lock(tx, device.restaurantId, requestId);
       if (row === null) throw errors.notFound();
+      if (row.tableSessionId === null) throw errors.notFound();
       const session = await tx.tableSession.findUnique({
         where: { id: row.tableSessionId },
         select: { tableId: true, status: true },
@@ -326,6 +338,27 @@ export class ServiceRequestsService {
     for (const { id, restaurantId } of open) {
       const row = await this.lock(tx, restaurantId, id);
       if (row !== null) await this.apply(tx, row, resolveEvents(row.state), {});
+    }
+  }
+
+  /**
+   * The table was opened (P9-25): a call made before anyone opened it is dealt with, since a waiter
+   * came and seated the guests; its alert goes with it.
+   */
+  async tableOpened(
+    tx: TransactionClient,
+    tableId: string,
+    openedById: string | null,
+  ): Promise<void> {
+    const open = await tx.serviceRequest.findMany({
+      where: { tableId, tableSessionId: null, state: { in: OPEN_STATES } },
+      select: { id: true, restaurantId: true },
+    });
+    for (const { id, restaurantId } of open) {
+      const row = await this.lock(tx, restaurantId, id);
+      if (row !== null) {
+        await this.apply(tx, row, resolveEvents(row.state), { staffId: openedById });
+      }
     }
   }
 
@@ -459,7 +492,7 @@ export class ServiceRequestsService {
         {
           aggregate: { type: 'service_request', id: row.id },
           // The tablet at the guests' table hears what happened to its call (AUTH-009).
-          audience: { tableIds: [row.tableSession.table.id] },
+          audience: { tableIds: [row.tableSession?.table.id ?? row.tableId] },
         },
       );
     }
@@ -472,9 +505,21 @@ export class ServiceRequestsService {
   }
 
   private async views(
-    db: Pick<TransactionClient, 'staff'>,
+    db: Pick<TransactionClient, 'staff' | 'diningTable'>,
     rows: readonly RequestRow[],
   ): Promise<ServiceRequestView[]> {
+    // A call at a table nobody had opened has no session: its table is where it was raised.
+    const unseated = [
+      ...new Set(rows.flatMap((row) => (row.tableSession === null ? [row.tableId] : []))),
+    ];
+    const tables =
+      unseated.length === 0
+        ? []
+        : await db.diningTable.findMany({
+            where: { id: { in: unseated } },
+            select: { id: true, label: true },
+          });
+    const labels = new Map(tables.map((table) => [table.id, table.label]));
     const staffIds = [...new Set(rows.flatMap((row) => row.acknowledgedById ?? []))];
     const people =
       staffIds.length === 0
@@ -489,8 +534,8 @@ export class ServiceRequestsService {
       type: row.type,
       state: row.state,
       source: row.source,
-      tableId: row.tableSession.table.id,
-      tableLabel: row.tableSession.table.label,
+      tableId: row.tableSession?.table.id ?? row.tableId,
+      tableLabel: row.tableSession?.table.label ?? labels.get(row.tableId) ?? '?',
       tableSessionId: row.tableSessionId,
       createdAt: row.createdAt.toISOString(),
       escalatedAt: row.escalatedAt?.toISOString() ?? null,

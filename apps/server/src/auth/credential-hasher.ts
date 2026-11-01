@@ -3,7 +3,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { SECRET_STORE, type SecretStore } from './secret-store.js';
 
 /**
- * Argon2id hashing of PINs and passwords with the server-side pepper (AUTH-002, AUTH-006).
+ * Argon2id hashing of PINs with the server-side pepper (AUTH-002).
  *
  * The pepper is Argon2's secret input and is kept outside the database (SecretStore; DPAPI on the
  * restaurant PC), so a stolen database alone cannot be brute-forced even for 4-digit PINs.

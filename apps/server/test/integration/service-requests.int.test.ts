@@ -478,15 +478,54 @@ describe('[AUTH-009] [SEC-009] who may call and how often', () => {
       },
     });
     const tablet = await addDevice(app, kit, 'TABLE_TABLET', { tableId: free.id });
+    // Nothing to bill at a table nobody opened (a call for a waiter is taken, P9-25, below).
     const closed = await server()
       .post('/api/v1/devices/current/service-requests')
       .set(authHeaders(tablet))
-      .send({ type: 'WATER' });
+      .send({ type: 'BILL' });
     expect([closed.status, codeOf(closed)]).toEqual([409, 'TABLE_NOT_OPEN']);
     expect((await tabletView('9')).requests).toHaveLength(1);
     // The kitchen takes no orders, so it has no inbox either.
     const refused = await server().get('/api/v1/service-requests').set(as(kitchen));
     expect(refused.status).toBe(403);
+  });
+
+  it('[NTF-003] calls every waiter and the managers to a table nobody has opened (P9-25)', async () => {
+    const table = await prisma.diningTable.create({
+      data: {
+        restaurantId: kit.restaurantId,
+        sectionId: (await prisma.section.findFirstOrThrow()).id,
+        label: '12',
+      },
+    });
+    tables['12'] = table.id;
+    tablets['12'] = await addDevice(app, kit, 'TABLE_TABLET', { tableId: table.id });
+    const call = await press('12', 'WAITER');
+    expect(call).toMatchObject({ tableSessionId: null, tableLabel: '12', state: 'ACTIVE' });
+    const alert = await alertOf(call.id);
+    expect(alert.type).toBe('GUEST_WAITING');
+    expect(alert.recipientIds).toEqual(
+      expect.arrayContaining([kit.staff.WAITER, kit.staff.MANAGER]),
+    );
+    expect(alert.recipientIds).not.toContain(kit.staff.KITCHEN);
+    // On every waiter's and manager's list, saying where.
+    expect((await inbox(manager)).find((entry) => entry.id === call.id)?.tableLabel).toBe('12');
+    // Pressed again, it is the same call.
+    const again = await server()
+      .post('/api/v1/devices/current/service-requests')
+      .set(tabletOf('12'))
+      .send({ type: 'WAITER' });
+    expect([again.status, codeOf(again)]).toEqual([409, 'SERVICE_REQUEST_ACTIVE']);
+
+    // The waiter seats the guests: the call is dealt with, and its alert goes.
+    await openTable('12');
+    await settled('service-requests.alerts');
+    const done = await rowOf(call.id);
+    expect(done.state).toBe('RESOLVED');
+    expect(done.closedById).toBe(kit.staff.WAITER);
+    // Off every list: the waiter who seated them dealt with it.
+    expect((await alertOf(call.id)).status).not.toBe('OPEN');
+    expect((await inbox(manager)).map((entry) => entry.id)).not.toContain(call.id);
   });
 
   it('refuses a tablet that raises more than its limit in a minute', async () => {

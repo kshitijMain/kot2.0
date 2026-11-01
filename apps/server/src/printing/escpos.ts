@@ -1,5 +1,5 @@
 import type { InvoiceView } from '@rp/contracts';
-import { amountInWords, formatRupees, toLocalDateTime } from '@rp/domain';
+import { amountInWords, formatRupees, taxByCodeAndRate, toLocalDateTime } from '@rp/domain';
 
 /**
  * ESC/POS rendering for kitchen tickets and test pages (P1-07a, KDS-008). Pure: it turns a ticket
@@ -435,10 +435,11 @@ function buildBill(
   if (invoice.serviceCharge > 0) {
     receipt.line(spread('Service charge (voluntary)', money(invoice.serviceCharge), width));
   }
-  for (const tax of invoice.taxLines) {
+  // One line per tax and rate (P9-25): the service charge's tax joins the dishes'.
+  for (const tax of taxByCodeAndRate(invoice.taxLines)) {
     receipt.line(
       spread(
-        `${tax.code} @ ${percent(tax.rateBp)} on ${money(tax.taxableValue)}`,
+        `${tax.code} @ ${percent(tax.rateBp)} on ${money(tax.taxableValue ?? 0)}`,
         money(tax.amount),
         width,
       ),
