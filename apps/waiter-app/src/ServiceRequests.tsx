@@ -127,13 +127,13 @@ export function ServiceRequests({ show }: { show?: (request: ServiceRequestView)
                   style={styles.grow}
                   loading={busy === 'acknowledge'}
                   disabled={busy !== undefined}
-                  accessibilityLabel={t('alerts.acknowledgeOf', { title })}
+                  accessibilityLabel={t('pos.tableRequests.onMyWayOf', { title })}
                   testID={`request-${request.id}-acknowledge`}
                   onPress={() => {
                     act(request, 'acknowledge');
                   }}
                 >
-                  {t('alerts.acknowledge')}
+                  {t('pos.tableRequests.onMyWay')}
                 </Button>
               )}
               <Button
@@ -141,13 +141,13 @@ export function ServiceRequests({ show }: { show?: (request: ServiceRequestView)
                 style={styles.grow}
                 loading={busy === 'resolve'}
                 disabled={busy !== undefined}
-                accessibilityLabel={t('mobile.requests.resolveOf', { title })}
+                accessibilityLabel={t('pos.tableRequests.doneOf', { title })}
                 testID={`request-${request.id}-resolve`}
                 onPress={() => {
                   act(request, 'resolve');
                 }}
               >
-                {t('mobile.requests.resolve')}
+                {t('pos.tableRequests.done')}
               </Button>
             </View>
           </View>

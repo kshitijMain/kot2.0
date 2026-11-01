@@ -62,7 +62,15 @@ const BUILT_IN_ROLE_NAMES: Readonly<Record<AssignableRole, string>> = {
   KITCHEN: 'Kitchen',
 };
 
-function view(person: StaffRow, now: Date): StaffView {
+/** Signed in and active within this long counts as signed in now (P9-26). */
+const SIGNED_IN_WINDOW_MS = 30 * 60_000;
+
+interface Seen {
+  readonly lastSeenAt: Date | null;
+  readonly signedIn: boolean;
+}
+
+function view(person: StaffRow, now: Date, seen?: Seen): StaffView {
   const locks = person.credentials
     .map((credential) => credential.lockedUntil)
     .filter((until): until is Date => until !== null && until > now)
@@ -79,6 +87,10 @@ function view(person: StaffRow, now: Date): StaffView {
     photoId: person.photoId,
     hasPin: person.credentials.some((credential) => credential.kind === 'PIN'),
     lockedUntil: locks[0]?.toISOString() ?? null,
+    ...(seen !== undefined && {
+      lastSeenAt: seen.lastSeenAt?.toISOString() ?? null,
+      signedIn: seen.signedIn,
+    }),
     createdAt: person.createdAt.toISOString(),
     updatedAt: person.updatedAt.toISOString(),
   };
@@ -105,16 +117,42 @@ export class StaffService {
 
   /** Everyone not archived, active first, by name (MGR-004). */
   async list(principal: Principal): Promise<StaffListResponse> {
-    const [staff, settings] = await Promise.all([
+    const now = new Date();
+    const [staff, settings, lastSeen, open] = await Promise.all([
       this.prisma.staff.findMany({
         where: { restaurantId: principal.restaurantId, archivedAt: null },
         include: STAFF_INCLUDE,
         orderBy: [{ active: 'desc' }, { displayName: 'asc' }],
       }),
       this.settings.get(principal.restaurantId),
+      // When each person last used the system, and who is signed in now (P9-26): what an Owner
+      // looks for on the Staff page.
+      this.prisma.session.groupBy({
+        by: ['staffId'],
+        where: { restaurantId: principal.restaurantId },
+        _max: { lastActiveAt: true },
+      }),
+      this.prisma.session.findMany({
+        where: {
+          restaurantId: principal.restaurantId,
+          revokedAt: null,
+          expiresAt: { gt: now },
+          lastActiveAt: { gt: new Date(now.getTime() - SIGNED_IN_WINDOW_MS) },
+        },
+        select: { staffId: true },
+      }),
     ]);
-    const now = new Date();
-    return { staff: staff.map((person) => view(person, now)), pinLength: settings.pinLength };
+    const seenAt = new Map(lastSeen.map((row) => [row.staffId, row._max.lastActiveAt]));
+    const signedIn = new Set(open.map((row) => row.staffId));
+    return {
+      staff: staff.map((person) =>
+        view(person, now, {
+          lastSeenAt: seenAt.get(person.id) ?? null,
+          signedIn: signedIn.has(person.id),
+        }),
+      ),
+      pinLength: settings.pinLength,
+    };
   }
 
   async create(principal: Principal, request: CreateStaffRequest): Promise<StaffView> {

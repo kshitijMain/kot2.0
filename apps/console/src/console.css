@@ -1175,46 +1175,105 @@ body {
   font-weight: var(--rp-font-weight-semibold);
 }
 
-/* Staff (P4-02a, MGR-004): one row per person, the actions wrapping under them on a phone. */
+/* Staff (P4-02a; P9-26): people grouped by what they do, one compact row each in a shared card. */
 .staff-header {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: var(--rp-space-3);
 }
 
-.staff-list {
+.staff-header__summary {
+  margin: var(--rp-space-1) 0 0;
+  color: var(--rp-color-text-muted);
+}
+
+.staff-group {
   display: flex;
   flex-direction: column;
-  gap: var(--rp-space-3);
+  gap: var(--rp-space-2);
+}
+
+.staff-group__title {
+  display: flex;
+  align-items: center;
+  gap: var(--rp-space-2);
+  margin: 0;
+  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-sm);
+  font-weight: var(--rp-font-weight-semibold);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.staff-group--inactive > .staff-group__title {
+  cursor: pointer;
+}
+
+.staff-group__count {
+  min-width: 1.5rem;
+  padding: 0 var(--rp-space-2);
+  border-radius: 999px;
+  background: var(--rp-color-surface-sunken);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.staff-list {
   margin: 0;
   padding: 0;
+  overflow: hidden;
+  border: 1px solid var(--rp-color-border);
+  border-radius: var(--rp-radius-lg);
+  background: var(--rp-color-surface);
   list-style: none;
 }
 
 .staff-row {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--rp-space-3);
-  padding: var(--rp-space-4);
-  border: 1px solid var(--rp-color-border);
-  border-radius: var(--rp-radius-lg);
-  background: var(--rp-color-surface);
-  box-shadow: var(--rp-elevation-1);
+  padding: var(--rp-space-3) var(--rp-space-4);
+}
+
+.staff-row + .staff-row {
+  border-top: 1px solid var(--rp-color-border);
 }
 
 .staff-row[data-inactive] {
+  color: var(--rp-color-text-muted);
+}
+
+.staff-row__avatar {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
   background: var(--rp-color-surface-sunken);
+  color: var(--rp-color-text);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+.staff-row__avatar[data-role='OWNER'],
+.staff-row__avatar[data-role='MANAGER'] {
+  background: var(--rp-color-primary);
+  color: var(--rp-color-on-primary, #ffffff);
+}
+
+.staff-row[data-inactive] .staff-row__avatar {
+  background: var(--rp-color-surface-sunken);
+  color: var(--rp-color-text-muted);
 }
 
 .staff-row__who {
   display: flex;
-  flex: 1 1 16rem;
+  flex: 1 1 14rem;
   flex-direction: column;
-  gap: var(--rp-space-1);
+  gap: 2px;
   min-width: 0;
 }
 
@@ -1224,7 +1283,6 @@ body {
   align-items: center;
   gap: var(--rp-space-2);
   margin: 0;
-  font-size: var(--rp-font-size-lg);
   font-weight: var(--rp-font-weight-semibold);
   overflow-wrap: anywhere;
 }
@@ -1233,20 +1291,39 @@ body {
 .staff-row__contact {
   margin: 0;
   color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-sm);
   overflow-wrap: anywhere;
 }
 
-.staff-row__states {
+.staff-row__meta {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--rp-space-2);
+  gap: 0 var(--rp-space-2);
   margin: 0;
+  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-sm);
+}
+
+.staff-row__meta > span + span::before {
+  margin-inline-end: var(--rp-space-2);
+  content: '·';
+}
+
+.staff-row__seen[data-now]::before {
+  display: inline-block;
+  width: 0.5rem;
+  height: 0.5rem;
+  margin-inline-end: var(--rp-space-1);
+  border-radius: 50%;
+  background: var(--rp-color-success, #1a7f37);
+  content: '';
 }
 
 .staff-row__actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--rp-space-2);
+  margin-inline-start: auto;
 }
 
 /* P9-07: each table's code beside it, and its link, on the QR codes page. */
@@ -2747,4 +2824,17 @@ body {
   .screen-help__tip {
     font-size: var(--rp-font-size-sm);
   }
+}
+
+/* P9-26: today's takings on the overview. */
+.glance-card__value--money {
+  font-size: var(--rp-font-size-2xl, 1.75rem);
+  font-variant-numeric: tabular-nums;
+}
+
+.glance-card__modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--rp-space-1) var(--rp-space-3);
+  color: var(--rp-color-text-muted);
 }

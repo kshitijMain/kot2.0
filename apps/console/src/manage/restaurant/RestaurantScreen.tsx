@@ -228,7 +228,6 @@ export function RestaurantScreen() {
             {t('restaurantPage.legal.hint')}{' '}
             <Badge tone="warning">{t('restaurantPage.ownerOnly')}</Badge>
           </p>
-          {owner ? null : <p className="dashboard-section__hint">{t('restaurantPage.notOwner')}</p>}
           {profile.legalName === null ? (
             <p className="console-notice">{t('restaurantPage.legal.notSet')}</p>
           ) : (

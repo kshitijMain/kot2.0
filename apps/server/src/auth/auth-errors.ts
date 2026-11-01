@@ -38,15 +38,15 @@ export const authErrors = {
       401,
       'INVALID_CREDENTIALS',
       attemptsRemaining === undefined
-        ? 'That did not match. Check and try again.'
-        : `That did not match. ${String(attemptsRemaining)} ${attemptsRemaining === 1 ? 'try' : 'tries'} left before ${device ? 'this device stops taking PINs for a while' : 'the login is locked'}.`,
+        ? 'Wrong PIN. Try again.'
+        : `Wrong PIN. ${String(attemptsRemaining)} ${attemptsRemaining === 1 ? 'try' : 'tries'} left before ${device ? 'this device stops taking PINs for a while' : 'you are locked out'}.`,
       attemptsRemaining === undefined ? undefined : { attemptsRemaining },
     ),
   locked: (lockedUntil: Date) =>
     new AppError(
       423,
       'ACCOUNT_LOCKED',
-      'This login is locked after too many wrong attempts. Wait, or ask a manager to unlock it.',
+      'Locked after too many wrong PINs. Wait, or ask a manager to unlock you.',
       { lockedUntil: lockedUntil.toISOString() },
     ),
   /** PC-S5: too many wrong PINs or passwords on this device, for anyone. */

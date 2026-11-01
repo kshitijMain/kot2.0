@@ -361,12 +361,25 @@ describe('[AUTH-008] [MGR-004] deactivating', () => {
   });
 });
 
-describe('[MGR-004] creating or removing managers is the Owner’s alone', () => {
-  it('refuses managers, and lets the Owner do it with their PIN session alone (ADR-0026)', async () => {
-    const byManager = await create(manager, { displayName: 'Rohit', role: 'MANAGER', pin: '1357' });
-    expect(byManager.status).toBe(403);
-    expect(codeOf(byManager)).toBe('OWNER_ONLY');
+describe('[MGR-004] removing or changing managers is the Owner’s alone', () => {
+  it('lets a manager add another manager, audited in their name (P9-26)', async () => {
+    const byManager = await create(manager, { displayName: 'Sana', role: 'MANAGER', pin: '2468' });
+    expect(byManager.status, JSON.stringify(byManager.body)).toBe(201);
+    const sana = StaffView.parse(byManager.body);
+    expect(sana.role).toBe('MANAGER');
+    const entry = await prisma.auditLog.findFirstOrThrow({
+      where: { action: 'STAFF_CREATED', entityId: sana.id },
+    });
+    expect(entry.actorId).toBe(kit.staff.MANAGER);
+    // Taking one away stays with the Owner.
+    const removed = await server()
+      .post(`/api/v1/staff/${sana.id}/deactivate`)
+      .set(as(manager))
+      .send({ reason: 'Added by mistake' });
+    expect([removed.status, codeOf(removed)]).toEqual([403, 'OWNER_ONLY']);
+  });
 
+  it('lets the Owner add, change and demote managers with their PIN session alone (ADR-0026)', async () => {
     const confirmed = await create(owner, { displayName: 'Rohit', role: 'MANAGER', pin: '1357' });
     expect(confirmed.status).toBe(201);
     const rohit = StaffView.parse(confirmed.body);

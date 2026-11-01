@@ -87,10 +87,12 @@ describe('[MGR-004] the Staff page', () => {
     ).toBeNull();
 
     expect(screen.getByText(/^Locked until \d\d:\d\d$/)).toBeVisible();
-    expect(screen.getByText(t('staff.inactive'))).toBeVisible();
-    expect(screen.getByText(t('staff.phone', { phone: '+91 98765 43210' }))).toBeVisible();
+    // P9-26: grouped by what people do; the people who left folded away under them.
+    for (const group of ['LEADS', 'WAITERS', 'INACTIVE'] as const) {
+      expect(screen.getByText(t(`staff.groups.${group}`))).toBeVisible();
+    }
+    expect(screen.getByText('+91 98765 43210')).toBeVisible();
     expect(screen.getByText(t('staff.you'))).toBeVisible();
-    expect(screen.getByText(new RegExp(t('staff.managersByOwner')))).toBeVisible();
     await expectNoAxeViolations(container);
   });
 
@@ -118,13 +120,13 @@ describe('[MGR-004] the Staff page', () => {
     const { user } = await renderConsole({ fake, path: '/manage/staff', signedIn: 'MANAGER' });
     await user.click(await screen.findByRole('button', { name: t('staff.add') }));
     const add = await dialog(t('staff.form.addTitle'));
-    // A manager gives the team's roles, never Manager (AUTH-006).
+    // A manager may add a manager too (P9-26); Waiter stays the default.
     const role = within(add).getByRole('combobox', { name: t('staff.form.role') });
     expect(
       within(role)
         .getAllByRole('option')
         .map((option) => option.textContent),
-    ).toEqual([t('roles.WAITER'), t('roles.KITCHEN')]);
+    ).toEqual([t('roles.MANAGER'), t('roles.WAITER'), t('roles.KITCHEN')]);
     expect(role).toHaveValue('WAITER');
 
     await user.click(within(add).getByRole('button', { name: t('staff.form.add') }));

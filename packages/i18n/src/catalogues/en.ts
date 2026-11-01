@@ -12,9 +12,8 @@ export const en = {
   console: {
     outdated: {
       title: 'This screen is out of date',
-      description:
-        'The restaurant’s server was updated. Load the page again to use the new version.',
-      reload: 'Load again',
+      description: 'The restaurant PC was updated. Reload to continue.',
+      reload: 'Reload',
     },
   },
   roles: {
@@ -46,8 +45,7 @@ export const en = {
   },
   licence: {
     banner: {
-      paymentDue:
-        'A subscription payment is due. Please arrange it with your vendor; nothing changes here.',
+      paymentDue: 'Subscription payment due. Everything keeps working; contact your vendor.',
       remindTomorrow: 'Remind me tomorrow',
       grace:
         '{count, plural, =0 {The subscription’s grace period ends today.} one {# day left to renew the subscription.} other {# days left to renew the subscription.}} After that, new tables and orders pause.',
@@ -60,8 +58,7 @@ export const en = {
     },
     page: {
       title: 'Licence',
-      intro:
-        'Your subscription as this restaurant PC knows it. It is renewed automatically while the PC is online; nothing is ever deleted or withheld in any state.',
+      intro: 'Renews itself while this PC is online.',
       loadFailed: 'The licence could not be read.',
       state: {
         ACTIVE: 'Active',
@@ -118,15 +115,15 @@ export const en = {
     },
   },
   connection: {
-    online: 'Connected to the restaurant server',
-    connecting: 'Connecting to the restaurant server…',
-    offline: 'Can’t reach the restaurant server. Retrying…',
+    online: 'Connected to the restaurant PC',
+    connecting: 'Connecting to the restaurant PC…',
+    offline: 'Can’t reach the restaurant PC. Retrying…',
     restored: 'Connection restored',
   },
   alerts: {
     title: 'Alerts',
     for: 'For {name}',
-    none: 'No open alerts. New ones ring here and on the pager.',
+    none: 'No open alerts.',
     bellLabel:
       '{count, plural, =0 {Alerts, none open} one {Alerts, # open} other {Alerts, # open}}',
     button: '{count, plural, =0 {Alerts} other {Alerts · #}}',
@@ -134,9 +131,9 @@ export const en = {
     openTable: 'Opens the table',
     atTable: 'Table {table} · {what}',
     atToken: 'Token {token} · {what}',
-    acknowledge: 'Acknowledge',
-    acknowledgeOf: 'Acknowledge {title}',
-    acknowledgeFailed: 'Not acknowledged: {message}',
+    acknowledge: 'Got it',
+    acknowledgeOf: 'Got it: {title}',
+    acknowledgeFailed: 'Didn’t go through: {message}',
     age: '{minutes, plural, =0 {Just now} other {# min ago}}',
     ageHours: '{hours} h {minutes} min ago',
     reminded: '{count, plural, one {Reminded once} other {Reminded # times}}',
@@ -207,7 +204,7 @@ export const en = {
     /** The console's alert centre, on the POS and the manager dashboard (P2-06c, MGR-008). */
     centre: {
       button: '{count, plural, =0 {Alerts} one {Alerts, # needs you} other {Alerts, # need you}}',
-      none: 'No open alerts. New ones show here as they come in.',
+      none: 'No open alerts.',
       loadFailed: 'The alerts could not be loaded.',
       show: 'Show',
       escalated: 'Escalated',
@@ -225,7 +222,7 @@ export const en = {
     nudge: {
       open: 'Nudge waiters',
       title: 'Nudge waiters',
-      description: 'Their pagers and phones buzz with your message until they acknowledge it.',
+      description: 'Their pagers and phones buzz until they tap Got it.',
       waiters: 'Waiters',
       waitersHint: 'Choose one or more.',
       noWaiters: 'No waiters can sign in yet.',
@@ -239,14 +236,12 @@ export const en = {
   },
   firstRun: {
     title: 'Set up this restaurant PC',
-    intro:
-      'This is a new installation. Enter the restaurant’s name and the Owner’s, and choose the Owner’s PIN. Everything else comes next, step by step.',
+    intro: 'Name the restaurant and its Owner, and choose the Owner’s PIN.',
     restaurantName: 'Restaurant name',
     restaurantNameHint: 'As guests know it; the legal name comes later.',
     ownerName: 'Owner’s name',
     pin: 'Owner’s PIN',
-    pinHint:
-      '{digits} digits, used to sign in on the POS, and for everything only the Owner may do.',
+    pinHint: '{digits} digits. The Owner signs in with it everywhere.',
     repeatPin: 'PIN again',
     pinMismatch: 'The two PINs are not the same.',
     create: 'Create and continue',
@@ -261,23 +256,19 @@ export const en = {
     address: 'Restaurant PC address',
     addressHint: 'Only if the restaurant PC moved, for example 192.168.1.20:8080.',
     retry: 'Try again',
-    removed: 'This phone was removed from the restaurant PC. Connect it again to carry on.',
+    removed: 'This phone was unpaired. Connect it again to carry on.',
     connectAgain: 'Connect',
-    mismatch:
-      'The restaurant PC’s certificate is not the one this app was made for. Do not use this phone; tell a manager.',
+    mismatch: 'This restaurant PC can’t be verified. Don’t use this phone; tell a manager.',
     browserFailed: 'This browser could not connect to the restaurant PC.',
-    browserWifi:
-      'Check that this computer or tablet is on the restaurant’s Wi-Fi and that the restaurant PC is on, then try again.',
-    browserRemoved:
-      'This browser was removed from the restaurant PC. Connect it again to carry on.',
+    browserWifi: 'Check this device is on the restaurant Wi-Fi and the restaurant PC is on.',
+    browserRemoved: 'This browser was unpaired. Connect it again to carry on.',
   },
   pairing: {
     title: 'Pair this device',
     intro: 'Ask a manager for a pairing code (Manage → Devices → Pair a device) and enter it here.',
     codeLabel: 'Pairing code',
     codeFormat: 'Enter the 8-character pairing code, like ABCD-EFGH.',
-    notAPin:
-      'That looks like a PIN. Pair this screen first with an 8-character pairing code (like ABCD-EFGH); you sign in with your PIN after that.',
+    notAPin: 'That looks like a PIN. Enter the 8-character pairing code first, like ABCD-EFGH.',
     firstScreen:
       'No screen is paired yet? The first one is paired on the restaurant PC itself: open https://localhost:8080 there and press Pair this PC. Then make codes for every other screen in Manage → Devices.',
     submit: 'Pair device',
@@ -286,8 +277,7 @@ export const en = {
     insecureContext:
       'This browser can only be paired over a secure connection. Open the console on the restaurant PC, or use the secure address.',
     revoked: 'This device was unpaired by a manager. Pair it again to continue.',
-    scanIntro:
-      'Ask a manager to pair a device in Manage → Devices. Scan the QR code they show, or type the server address and code.',
+    scanIntro: 'Scan the QR code a manager shows in Manage → Devices.',
     scan: 'Scan QR code',
     scanTitle: 'Scan the pairing QR code',
     scanHint: 'Point the camera at the QR code a manager shows in Manage → Devices.',
@@ -298,17 +288,16 @@ export const en = {
     cameraDenied:
       'The camera is not allowed. Allow it in the device’s settings, or type the address and code.',
     notPairingCode: 'That is not a pairing QR code. Scan the code shown in Manage → Devices.',
-    enterServer: 'Code scanned. Enter the server address shown with it, then pair.',
-    checkTitle: 'Check the server’s certificate',
+    enterServer: 'Code scanned. Now enter the restaurant PC address shown with it.',
+    checkTitle: 'Check the security fingerprint',
     checkBody:
-      'The server at {server} has this certificate fingerprint. Compare it with the fingerprint shown on the server PC and pair only if every character is the same.',
+      'Pair only if this matches the fingerprint on the restaurant PC, character for character.',
     checkConfirm: 'They match, pair',
     checkCancel: 'Cancel',
     unreachable:
-      'The server did not answer. Check the address and that this device is on the restaurant Wi-Fi.',
-    mismatch:
-      'The server’s certificate does not match the pairing code. Do not pair this device; tell a manager.',
-    unverified: 'Check the server’s certificate before pairing.',
+      'The restaurant PC did not answer. Check the address and that this device is on the restaurant Wi-Fi.',
+    mismatch: 'The security fingerprint doesn’t match. Don’t pair this device; tell a manager.',
+    unverified: 'Check the security fingerprint before pairing.',
   },
   mobile: {
     startupFailed: {
@@ -318,14 +307,11 @@ export const en = {
     },
     update: {
       title: 'Update this app',
-      staff:
-        'The restaurant’s server no longer works with this version of the app. Ask a manager to update it, then open it again.',
+      staff: 'This app is out of date. Ask a manager to update it.',
       guestsTitle: 'This tablet needs an update',
       guests: 'Please call a waiter to order.',
-      onItsWay:
-        'The restaurant’s server no longer works with this version of the app. An update is on its way: the app restarts by itself in a moment.',
-      fromPc:
-        'The restaurant’s server no longer works with this version of the app. The restaurant PC has the new version: install it below.',
+      onItsWay: 'This app is out of date. The update is on its way; the app restarts by itself.',
+      fromPc: 'This app is out of date. Install the new version below.',
     },
     apk: {
       available: 'Version {version} of this app is on the restaurant PC ({megabytes} MB).',
@@ -345,9 +331,9 @@ export const en = {
       },
       tryAgain: 'Try again',
     },
-    serverLabel: 'Server address',
-    serverHint: 'Shown on the POS in Manage → Devices, for example 192.168.1.20:8443.',
-    invalidServer: 'Enter the server address shown on the POS, for example 192.168.1.20:8443.',
+    serverLabel: 'Restaurant PC address',
+    serverHint: 'Shown in Manage → Devices, like 192.168.1.20:8443.',
+    invalidServer: 'Enter the address shown in Manage → Devices, like 192.168.1.20:8443.',
     staffTitle: 'Tap your name',
     signedInAs: 'Signed in as {name}',
     takeaway: {
@@ -368,14 +354,14 @@ export const en = {
       backLabel: 'Back to tables',
       empty: 'No tables yet. A manager adds them in Manage → Floor.',
       view: 'Which tables to show',
-      mine: 'Tables I sent KOTs to today',
+      mine: 'My tables',
       all: 'All tables',
-      noneMine: 'You have not sent a KOT to any table today. Show all tables.',
+      noneMine: 'No tables of yours today.',
       requestBill: 'Request bill',
       printBill: 'Print bill',
       billPrinted: 'Bill {number} printed: {total}',
       billNotPrinted: 'Bill {number} issued but not printed: {error}',
-      billRequested: 'The managers have been asked for the bill for {table}.',
+      billRequested: 'Bill requested for {table}.',
       moveTo: 'Move {table} to',
       noFreeTables: 'There is no free table to move to.',
       moved: '{from} moved to {to}',
@@ -385,11 +371,11 @@ export const en = {
       start: 'Go on break',
       end: 'I’m back',
       onBreak: 'On break since {time}. Your alerts go to the manager on duty.',
-      hint: 'On a break, your alerts go to the manager until you are back.',
+      hint: 'Your alerts go to the manager while you’re on break.',
     },
     pager: {
       title: 'My pager',
-      none: 'No pager is given to you.',
+      none: 'You have no pager.',
       connected: 'Connected',
       notConnected: 'Not connected',
       battery: 'Battery {percent}%',
@@ -411,7 +397,7 @@ export const en = {
       onTheWaySomeone: 'Someone is on the way',
       resolve: 'Resolve',
       resolveOf: 'Resolve {title}',
-      resolveFailed: 'Not resolved: {message}',
+      resolveFailed: 'Not done: {message}',
       unavailable: 'The requests from tables could not be read.',
     },
     order: {
@@ -425,18 +411,17 @@ export const en = {
       summary: '{count, plural, one {# new item} other {# new items}} · {total}',
       send: 'Send KOT',
       blocked: 'Remove or change the marked items to send.',
-      queued: 'No connection. The order is kept on this phone and sent when it reconnects.',
+      queued: 'No connection. Saved on this phone; it sends when you reconnect.',
       sentLater: 'Order {number} for {table} sent to the kitchen',
       again: 'Again',
       againOf: 'Order {name} again',
-      menuEmpty:
-        'The menu has no dishes for the waiter app yet. A manager publishes the menu in Manage → Menu.',
+      menuEmpty: 'No dishes yet. A manager publishes the menu in Manage → Menu.',
       menuWaiting: 'The menu appears when this phone reaches the restaurant server.',
       unsent: {
         title: 'Not sent yet',
         sending: 'Sending…',
-        waiting: 'Kept on this phone. It is sent when the phone reconnects.',
-        otherWaiter: 'Taken by someone else on this phone. It is sent when they sign in.',
+        waiting: 'Saved on this phone. Sends when you reconnect.',
+        otherWaiter: 'Another waiter’s order. Sends when they sign in.',
         linesRejected: 'Not sent: some items cannot be made.',
         refused: 'Not sent: {message}',
         sendNow: 'Send now',
@@ -463,10 +448,9 @@ export const en = {
       voidOf: 'Void {name}',
       cancelTitle: 'Cancel {name}?',
       voidTitle: 'Void {name}?',
-      cancelNote:
-        'The kitchen has not started it. It comes off the bill and the kitchen gets a cancellation slip.',
-      voidNote: 'The kitchen has started it. It comes off the bill and shows in the voids report.',
-      managerNote: 'A manager approves it with their PIN on this phone.',
+      cancelNote: 'Not started yet. It comes off the bill and the kitchen is told.',
+      voidNote: 'Already started. It comes off the bill and shows in the voids report.',
+      managerNote: 'Needs a manager’s PIN on this phone.',
       quickReasons: 'Common reasons',
       quick: {
         changedMind: 'Guest changed their mind',
@@ -478,7 +462,7 @@ export const en = {
         spilled: 'Dropped or spilled',
       },
       reason: 'Reason',
-      reasonHint: 'At least 3 characters. It is kept in the audit log.',
+      reasonHint: 'At least 3 characters.',
       cancelConfirm: 'Cancel item',
       voidConfirm: 'Void item',
       keep: 'Keep it',
@@ -501,7 +485,7 @@ export const en = {
       loading: 'Getting this table ready…',
       cannotReach: 'This tablet cannot reach the restaurant server. It keeps trying.',
       unbound: 'This tablet has no table yet.',
-      unboundHint: 'A manager chooses its table on the dashboard: Devices, then Move.',
+      unboundHint: 'A manager sets it in Manage → Devices.',
       locating: 'Here I am: {name}',
       /** Feedback after the bill (P3-05b, TAB-014, BILL-011). */
       feedback: {
@@ -615,7 +599,7 @@ export const en = {
         lockAgain: 'Lock the tablet again',
         device: 'Tablet: {name}',
         tableLine: 'Table: {table}',
-        serverLine: 'Server: {server}',
+        serverLine: 'Restaurant PC: {server}',
         versionLine: 'App version: {version}',
         batteryLine: 'Battery: {percent}%{charging, select, yes {, charging} other {}}',
         modeLine:
@@ -627,14 +611,15 @@ export const en = {
   },
   login: {
     title: 'Who is signing in?',
-    noStaff: 'No staff are set up yet. The owner adds staff in Manage → Staff.',
+    noStaff: 'No staff yet. The Owner adds them in Manage → Staff.',
     pinFor: 'Enter the PIN for {name}',
     notYou: 'Not you?',
     working: 'Signing in…',
-    attemptsLeft: '{count, plural, one {# try} other {# tries}} left before this login is locked.',
+    attemptsLeft:
+      'Wrong PIN. {count, plural, one {# try} other {# tries}} left before you are locked out.',
     signOut: 'Sign out',
-    signedOutInactive: 'You were signed out after a period of inactivity. Sign in again.',
-    signedOut: 'You have been signed out. Sign in again.',
+    signedOutInactive: 'Signed out after inactivity.',
+    signedOut: 'Signed out.',
   },
   session: {
     inactivityWarning:
@@ -654,7 +639,7 @@ export const en = {
     button: 'Help',
     gotIt: 'Got it',
     tipLabel: 'Tip for this page',
-    tryThis: 'Try this:',
+    tryThis: 'Tip:',
     overview: {
       title: 'Your restaurant at a glance',
       body: 'The cards show tables, dishes in the kitchen and open alerts. Below them, every table is a tile that changes colour as guests order, eat and ask for the bill.',
@@ -663,12 +648,12 @@ export const en = {
     orders: {
       title: 'Orders as they happen',
       body: 'This is the live feed of every order in progress, newest activity first. Late dishes are marked so you can act before the guest asks.',
-      tip: 'Use the filters to show only one table, station or late dishes.',
+      tip: 'Filter by station, waiter, source or delayed dishes.',
     },
     alerts: {
       title: 'Things that need a person',
-      body: 'Alerts appear when a guest calls, a dish is late or something needs approval. They stay here until someone resolves them.',
-      tip: 'Select Acknowledge once you have dealt with an alert, so nobody else does it again.',
+      body: 'Guest calls, late dishes and approvals wait here until someone takes them.',
+      tip: 'Press Got it when you take an alert, so no one else goes.',
     },
     reports: {
       title: 'Sales and service reports',
@@ -676,13 +661,13 @@ export const en = {
       tip: 'Use Export to take a report into a spreadsheet.',
     },
     audit: {
-      title: 'The audit trail',
+      title: 'Audit trail',
       body: 'Every sensitive action is recorded here with who did it, who approved it and why. Records cannot be changed or deleted.',
       tip: 'Filter by person or action to find one event.',
     },
     staff: {
       title: 'Your team',
-      body: 'Add people, give each a role and a PIN, and hand out the pagers. A person who leaves is deactivated, never deleted.',
+      body: 'Add people, give each a role and PIN, and hand out pagers. Leavers are deactivated, never deleted.',
       tip: 'Deactivate a leaver the same day so their PIN stops working.',
     },
     floor: {
@@ -697,8 +682,8 @@ export const en = {
     },
     menu: {
       title: 'Your menu',
-      body: 'Add dishes, prices, tax groups and photos. A dish switched off disappears from every screen at once.',
-      tip: 'Mark a dish as unavailable when it runs out instead of deleting it.',
+      body: 'Add dishes, prices, tax groups and photos. Changes reach devices when you publish.',
+      tip: 'When a dish runs out, mark it out of stock in Menu availability.',
     },
     devices: {
       title: 'Paired devices',
@@ -722,25 +707,25 @@ export const en = {
     },
     settings: {
       title: 'Settings',
-      body: 'Each setting has a sensible starting value. Change one only when your restaurant works differently.',
+      body: 'Every setting starts at a sensible default. Change only what your restaurant does differently.',
       tip: 'Read the line under a setting before you change it.',
     },
     system: {
-      title: 'Your server’s health',
-      body: 'Backups, updates and the state of the server. A green page means everything is fine.',
-      tip: 'Check that last night’s backup says Done.',
+      title: 'System health',
+      body: 'Backups, updates and the restaurant PC. Fix anything shown in red.',
+      tip: 'Check that the backup says Backed up.',
     },
     licence: {
       title: 'Your licence',
-      body: 'Shows what your licence covers and when it ends. Renew before the date to keep working.',
-      tip: 'Contact support if the dates look wrong.',
+      body: 'What your licence covers and until when. It renews itself while the PC is online.',
+      tip: 'Call your vendor if the dates look wrong.',
     },
   },
   /** The manager dashboard (P4-01, MGR-001 to MGR-003, MGR-011). */
   dashboard: {
     /** P9-16: diners pay by UPI from the QR menu only once the UPI ID is set. */
     upi: {
-      missing: 'Diners cannot pay by UPI from the QR menu yet: the restaurant’s UPI ID is not set.',
+      missing: 'Guests can’t pay by UPI from the QR menu: no UPI ID is set.',
       add: 'Add the UPI ID',
     },
     navigation: 'Dashboard',
@@ -758,15 +743,22 @@ export const en = {
       audit: 'Audit trail',
       system: 'System',
       settings: 'Settings',
-      setup: 'Set up',
+      setup: 'Setup',
       licence: 'Licence',
       qrCodes: 'QR codes',
       floor: 'Floor',
     },
     overview: {
       glance: 'At a glance',
+      /** P9-26: today's takings, first thing an owner looks for. */
+      today: 'Today',
+      todaySales: 'Sales so far',
+      todayBills:
+        '{count, plural, =0 {No bills yet} one {# bill} other {# bills}}{count, plural, =0 {} other { · average {average}}}',
+      todayModes: '{mode} {amount}',
+      seeReports: 'See reports',
       tables: 'Tables',
-      occupied: '{occupied} of {total} tables occupied',
+      occupied: '{occupied} of {total} occupied',
       guests: '{count, plural, one {# guest seated} other {# guests seated}}',
       orders:
         '{count, plural, =0 {No orders in progress} one {# order in progress} other {# orders in progress}}',
@@ -783,8 +775,7 @@ export const en = {
       seeDelayed: 'See delayed dishes',
       seeAlerts: 'See alerts',
       floor: 'Floor',
-      noTables: 'No tables yet. They are added in the floor settings.',
-      tableHint: 'Select a table to see its orders.',
+      noTables: 'No tables yet. Add them in Floor.',
     },
     orders: {
       title: 'Orders in progress',
@@ -801,7 +792,7 @@ export const en = {
       table: 'Showing table {table}',
       allTables: 'All tables',
       clear: 'Clear filters',
-      none: 'Nothing in the kitchen right now. New orders show here as they come in.',
+      none: 'Nothing in the kitchen.',
       noneMatch: 'No orders in progress match these filters.',
       order: 'Order {number}',
       orderReady: 'Ready to serve',
@@ -825,9 +816,24 @@ export const en = {
   /** Staff administration (P4-02a, MGR-004, AUTH-001, AUTH-003). */
   staff: {
     title: 'Staff',
-    intro: 'Everyone who signs in here, with their role and PIN.',
-    add: 'Add a person',
-    none: 'Nobody else is set up yet. Add the people who work here.',
+    /** P9-26: a line under the title, instead of an intro that restated it. */
+    summary:
+      '{count, plural, one {# person} other {# people}}{signedIn, plural, =0 {} other { · # signed in now}}',
+    groups: {
+      LEADS: 'Owner and managers',
+      WAITERS: 'Waiters',
+      KITCHEN: 'Kitchen',
+      INACTIVE: 'Deactivated',
+    },
+    seen: {
+      now: 'Signed in now',
+      today: 'Last seen today, {time}',
+      yesterday: 'Last seen yesterday, {time}',
+      on: 'Last seen {date}',
+      never: 'Never signed in',
+    },
+    add: 'Add person',
+    none: 'No one else yet.',
     loadFailed: 'The staff list could not be loaded.',
     you: 'You',
     active: 'Active',
@@ -835,53 +841,51 @@ export const en = {
     noPin: 'No PIN yet',
     lockedUntil: 'Locked until {time}',
     phone: 'Phone {phone}',
-    email: 'E-mail {email}',
+    email: 'Email {email}',
     actionsFor: 'Actions for {name}',
-    customRole: '{name} (on {role})',
+    customRole: '{name} · {role}',
     edit: 'Edit',
     setPin: 'Set PIN',
     changePin: 'Change PIN',
     unlock: 'Unlock',
-    added: '{name} is added and can sign in with their PIN.',
-    saved: 'Changes to {name} are saved.',
-    pinSaved: 'The new PIN for {name} is saved.',
-    unlocked: '{name} can sign in again.',
-    deactivated: '{name} is deactivated and signed out everywhere.',
-    reactivated: '{name} is active again and can sign in.',
+    added: '{name} can now sign in with their PIN.',
+    saved: '{name} is updated.',
+    pinSaved: 'PIN changed for {name}.',
+    unlocked: '{name} is unlocked.',
+    deactivated: '{name} is deactivated and signed out.',
+    reactivated: '{name} is active again.',
     deactivate: 'Deactivate',
     reactivate: 'Reactivate',
-    managersByOwner: 'Only the Owner adds, changes or deactivates managers.',
     form: {
-      addTitle: 'Add a person',
+      addTitle: 'Add person',
       editTitle: 'Edit {name}',
       name: 'Name',
-      nameHint: 'As it shows on the sign-in screen.',
+      nameHint: 'Shown on the sign-in screen.',
       nameRequired: 'Enter a name.',
       role: 'Role',
       phone: 'Phone (optional)',
-      phoneInvalid: 'Enter a phone number of digits, with the country code if you like.',
-      email: 'E-mail (optional)',
-      emailInvalid: 'Enter an e-mail address like name@example.com.',
+      phoneInvalid: 'Use digits only, with the country code if you like.',
+      email: 'Email (optional)',
+      emailInvalid: 'Enter an email like name@example.com.',
       pin: 'PIN',
-      pinHint: '{length} digits. They sign in with it on every device.',
+      pinHint: '{length} digits, not easy to guess.',
       pinAgain: 'PIN again',
       pinInvalid: 'The PIN must have exactly {length} digits.',
-      pinMismatch: 'The two PINs are different. Type the same PIN twice.',
+      pinMismatch: 'The PINs don’t match.',
       add: 'Add person',
       save: 'Save',
       cancel: 'Cancel',
     },
     pin: {
       title: 'New PIN for {name}',
-      description: 'Their other sign-ins end, and a locked login opens again.',
-      descriptionSelf: 'Your sign-ins on other devices end.',
+      description: 'They are signed out on every device.',
+      descriptionSelf: 'You stay signed in here; other devices sign out.',
       save: 'Save PIN',
     },
     deactivateDialog: {
       title: 'Deactivate {name}?',
-      description:
-        '{name} is signed out everywhere and cannot sign in. Their pager and phone are freed. You can reactivate them later.',
-      reason: 'Why? This goes in the audit log.',
+      description: '{name} is signed out and their pager is freed. You can reactivate them later.',
+      reason: 'Reason',
       confirm: 'Deactivate',
     },
     reactivateDialog: {
@@ -901,8 +905,7 @@ export const en = {
   /** Wrist pagers: register, give, take back, new credential (P4-02b, PGR-012 to PGR-014). */
   pagers: {
     title: 'Pagers',
-    intro:
-      'Give each person their pager at the start of the shift. A person wears one pager: giving them another takes the first back.',
+    intro: 'Give each person a pager at the start of the shift.',
     register: 'Register a pager',
     loadFailed: 'The pagers could not be loaded.',
     none: 'No pagers yet. Register one with the serial on its label.',
@@ -941,15 +944,14 @@ export const en = {
     give: 'Give',
     giveOther: 'Give to someone else',
     takeBack: 'Take back',
-    newCredential: 'New credential',
+    newCredential: 'New password',
     given: '{pager} is with {name} now.',
     takenBack: 'Nobody wears {pager} now.',
     registered: '{pager} is registered.',
     form: {
       title: 'Register a pager',
       serial: 'Serial',
-      serialHint:
-        'On the pager’s label or its pairing screen. Scan its QR code, or type it; a barcode scanner can type it here.',
+      serialHint: 'On the pager’s label. Scan its QR code or type it.',
       serialInvalid: 'Use 4 to 32 letters, digits or dashes.',
       name: 'Name',
       nameHint: 'What people call it, like “Pager 3”.',
@@ -992,14 +994,12 @@ export const en = {
       cancel: 'Cancel',
     },
     credentialDialog: {
-      confirmTitle: 'Issue a new credential for {pager}?',
-      confirmDescription:
-        '{pager} disconnects until the new credential is entered in it. Use this when a pager is set up again or its credential may be known.',
-      confirm: 'Issue credential',
+      confirmTitle: 'New password for {pager}?',
+      confirmDescription: '{pager} disconnects until you enter the new password in it.',
+      confirm: 'Make new password',
       cancel: 'Cancel',
-      title: 'Credential for {pager}',
-      description:
-        'Enter these in the pager’s set-up now. The password is shown only this once; if it is lost, issue a new credential.',
+      title: 'Password for {pager}',
+      description: 'Enter these in the pager now. The password is shown only once.',
       pagerId: 'Pager ID',
       password: 'Password',
       port: 'Server port',
@@ -1009,8 +1009,7 @@ export const en = {
   /** The paired devices (P4-02c, MGR-006). */
   devices: {
     title: 'Devices',
-    intro:
-      'Every screen, phone and tablet that talks to this restaurant’s server. Pair a new one here; register pagers on the Pagers page.',
+    intro: 'Pagers are under Staff → Pagers.',
     introSelf:
       'Every screen and phone that talks to this restaurant’s PC. They connect by themselves on the restaurant’s Wi-Fi and staff sign in with their PIN; unpair one you no longer use.',
     pair: 'Pair a device',
@@ -1071,11 +1070,11 @@ export const en = {
     compatibility: {
       PREVIOUS: 'Update soon',
       TOO_OLD: 'Update needed',
-      NEWER: 'Newer than the server',
+      NEWER: 'Newer than the restaurant PC',
     },
     compatibilityHint: {
       PREVIOUS: 'This app works now but stops at the next update of the restaurant PC.',
-      TOO_OLD: 'The restaurant’s server no longer works with this app until it is updated.',
+      TOO_OLD: 'Too old to connect. Update the app.',
       NEWER: 'This app is newer than the restaurant PC. Install the update on the System page.',
     },
     firmware: 'Firmware {version}',
@@ -1110,26 +1109,23 @@ export const en = {
       station: 'Station',
       stationHint: 'The kitchen screen shows only this station’s tickets.',
       stations: 'Stations',
-      stationsHint:
-        'The screen shows only these stations’ tickets. Choose none for every station: the Expo/Pass screen.',
+      stationsHint: 'Choose none to show every station (the pass screen).',
       person: 'Keep alerts for',
-      personHint: 'Until someone signs in on the phone, its alerts go to this person.',
+      personHint: 'Alerts go to this person until someone signs in.',
       create: 'Show pairing code',
       cancel: 'Cancel',
     },
     codeDialog: {
       title: 'Pair {name}',
-      steps:
-        'On the device, open the app or the console and scan this code. If it cannot scan, type the address and the code.',
+      steps: 'On the device, scan this code, or type the address and code.',
       qrLabel: 'QR code to pair {name}',
       code: 'Pairing code',
       validFor: 'Valid for {time}',
       expired: 'This code has expired.',
       newCode: 'Get a new code',
-      addresses: 'Server address',
+      addresses: 'Restaurant PC address',
       fingerprint: 'Security fingerprint',
-      fingerprintHint:
-        'A phone or tablet whose address was typed shows this fingerprint. Check it matches before you go on.',
+      fingerprintHint: 'If you typed the address, check the device shows this fingerprint.',
       done: 'Done',
     },
     renameDialog: {
@@ -1140,7 +1136,7 @@ export const en = {
     },
     moveDialog: {
       title: 'Move {name} to another table',
-      description: 'The tablet then shows only the new table. It restarts its screen to switch.',
+      description: 'The tablet switches to the new table.',
       table: 'Table',
       move: 'Move tablet',
       cancel: 'Cancel',
@@ -1150,7 +1146,7 @@ export const en = {
       description:
         'It stops working at once and anyone signed in on it is signed out. To use it again, pair it with a new code.',
       reason: 'Reason',
-      reasonHint: 'For the audit trail, like “Phone lost” or “Screen replaced”.',
+      reasonHint: 'Like “Phone lost” or “Screen replaced”.',
       reasonRequired: 'Give a reason of at least 3 characters.',
       confirm: 'Unpair',
       cancel: 'Cancel',
@@ -1194,7 +1190,7 @@ export const en = {
     title: 'Menu file',
     back: 'Back to the menu',
     intro:
-      'A menu file is one .zip with the menu sheet (menu.xlsx), the dishes’ photos and a README. Fill it in on any computer, then load it here. Nothing is saved until you confirm, and nothing reaches the devices until you publish.',
+      'One .zip with the menu sheet and photos. Fill it in, then load it here. Nothing reaches devices until you publish.',
     step1: '1. Download the empty menu file',
     step1Text:
       'menu.xlsx has a sheet for dishes, one for sizes (Half and Full), one for add-on groups and one for combos; the second row of each sheet says what goes in each column. Put the photos in the photos folder, each named after the dish’s short code or exact name, like PT01.jpg or Paneer Tikka.jpg.',
@@ -1333,7 +1329,7 @@ until you press Publish.
       close: 'Done',
     },
     reason: 'Reason',
-    reasonHint: 'For the audit trail, like “Off the menu for the season”.',
+    reasonHint: 'Like “Off the menu for the season”.',
     reasonRequired: 'Give a reason of at least 3 characters.',
     archived: 'Archived',
     archive: 'Archive',
@@ -1455,7 +1451,7 @@ until you press Publish.
       externalId: 'External ID',
       externalIdHint: 'Optional. The dish’s code in another system.',
       reason: 'Why the price changes',
-      reasonHint: 'Optional, kept with the price change in the audit trail.',
+      reasonHint: 'Optional.',
       isCombo: 'This dish is a combo of other dishes',
       comboHint: 'Its price above is the combo price. Kitchen tickets show each part.',
       add: 'Add dish',
@@ -1583,7 +1579,7 @@ until you press Publish.
     ORDER_CREATE: 'Open tables, take orders and send KOTs',
     ORDER_APPROVE_CUSTOMER: 'Approve tablet and QR orders for any table',
     ITEM_CANCEL_BEFORE_PREP: 'Cancel dishes before the kitchen starts them, on any table',
-    ITEM_VOID_AFTER_PREP: 'Void dishes after the kitchen started them, without a manager',
+    ITEM_VOID_AFTER_PREP: 'Void started dishes without a manager',
     ITEM_MARK_PREPARING_READY: 'Mark dishes cooking and ready',
     ITEM_MARK_PICKED_UP: 'Mark dishes picked up',
     ITEM_MARK_SERVED: 'Mark dishes served',
@@ -1592,20 +1588,20 @@ until you press Publish.
     BILL_REQUEST: 'Ask for the bill',
     BILL_PRINT_AND_PAYMENT: 'Print bills and record payments',
     DISCOUNT_WITHIN_LIMIT: 'Give discounts within the limit',
-    DISCOUNT_ABOVE_LIMIT: 'Give discounts above the limit and free dishes, without a manager',
+    DISCOUNT_ABOVE_LIMIT: 'Give larger discounts and free dishes without a manager',
     SERVICE_CHARGE_REMOVE: 'Remove the service charge',
     BILL_REPRINT: 'Reprint bills (marked DUPLICATE)',
-    BILL_EDIT_AFTER_PRINT: 'Edit a printed bill, without a manager',
-    INVOICE_VOID: 'Void an invoice, without a manager',
+    BILL_EDIT_AFTER_PRINT: 'Edit printed bills without a manager',
+    INVOICE_VOID: 'Cancel invoices without a manager',
     CASH_MOVEMENT_AND_SHIFT_CLOSE: 'Record cash in and out and close any shift',
     DAY_END_CLOSE: 'Close the day',
     MENU_MANAGE: 'Edit and publish the menu',
-    STAFF_MANAGE: 'Manage staff, PINs, sections and pagers',
+    STAFF_MANAGE: 'Manage staff, PINs and pagers',
     DEVICE_PAIR: 'Pair and unpair devices',
     OPERATIONS_CONFIGURE: 'Set up notifications, suggestions, printers and stations',
     TAX_AND_INVOICE_SETTINGS: 'Tax, invoice series and legal details',
     REPORTS_VIEW_EXPORT: 'See and export all reports',
-    AUDIT_VIEW: 'See the audit log',
+    AUDIT_VIEW: 'See the audit trail',
     DATA_ADMIN: 'Restore backups, archive and purge data, export everything',
     LICENSE_VIEW: 'See the licence',
     LICENSE_MANAGE: 'Manage the licence and subscription',
@@ -1624,7 +1620,7 @@ until you press Publish.
     none: 'No custom roles yet.',
     builtIn: 'Built in',
     archived: 'Archived',
-    onBase: 'Built on {role}',
+    onBase: 'Based on {role}',
     people: '{count, plural, =0 {Nobody has it} one {# person} other {# people}}',
     adds: 'Can also: {list}',
     actionsFor: 'Actions for {name}',
@@ -1640,10 +1636,10 @@ until you press Publish.
       nameHint: 'Like “Senior captain” or “Head chef”.',
       nameRequired: 'Give the role a name.',
       nameTaken: 'Another role has this name. Choose another one.',
-      base: 'Built on',
-      baseHint: 'People with the role can do everything this role can, and what you add below.',
-      baseLocked: 'Built on {role}. People have this role, so this stays the same.',
-      add: 'They may also',
+      base: 'Based on',
+      baseHint: 'They can do everything this role does, plus what you tick below.',
+      baseLocked: 'Based on {role}. Can’t change while people have this role.',
+      add: 'Also allowed to',
       addHint: 'Managing staff and the Owner’s own settings are never given to a custom role.',
       already: 'Already allowed by {role}: {list}',
       nothingAdded: 'Choose at least one thing to add.',
@@ -1724,7 +1720,7 @@ until you press Publish.
     changed: 'Changed',
     vendor: 'Set by the vendor',
     ownerOnly: 'Owner only',
-    notYours: 'Someone with more rights changes this.',
+    notYours: 'You can’t change this.',
     edit: 'Change',
     actionsFor: 'Actions for {name}',
     on: 'On',
@@ -1872,8 +1868,7 @@ until you press Publish.
   /** The audit trail (P4-07a, AUD-003, AUD-005). */
   auditPage: {
     title: 'Audit trail',
-    intro:
-      'Every change to money, people, the menu and the settings: who did it, who approved it, on which device, why, and what it was before and after. Nothing here can be changed or deleted.',
+    intro: 'Every change to money, staff, menu and settings. Entries can’t be changed or deleted.',
     loadFailed: 'The audit trail could not be loaded.',
     entries: 'Entries',
     filters: 'Filters',
@@ -1892,7 +1887,7 @@ until you press Publish.
     more: 'Show more',
     verify: {
       title: 'Check the trail',
-      hint: 'Each entry carries a fingerprint of the one before it, so a changed or removed entry breaks the chain. The check reads the whole trail and can take a minute.',
+      hint: 'Checks that no entry was changed or removed. Can take a minute.',
       run: 'Check now',
       intact: 'Intact',
       intactDetail:
@@ -2297,8 +2292,7 @@ until you press Publish.
       title: 'The menu is not available yet',
       body: 'Please ask a waiter for help.',
     },
-    readOnly:
-      'We can’t reach the restaurant right now, so ordering here is paused. You can still look at the menu. Please call a waiter to order.',
+    readOnly: 'Ordering is paused: we can’t reach the restaurant. Please call a waiter.',
     /** P9-11: the page's designed states. */
     loading: 'Loading the menu…',
     browse: 'Browse the menu',
@@ -2378,7 +2372,7 @@ until you press Publish.
     errors: {
       rateLimited:
         'Too many orders from this table just now. Please wait {seconds, plural, one {# second} other {# seconds}} or call a waiter.',
-      offline: 'We couldn’t reach the restaurant right now. Please call a waiter.',
+      offline: 'We can’t reach the restaurant. Please call a waiter.',
       network: 'That didn’t go through. Check your connection and try again.',
       generic: 'Something went wrong. Please try again or call a waiter.',
       phoneRequired: 'Please add your mobile number. The restaurant prints it on your bill.',
@@ -2386,7 +2380,7 @@ until you press Publish.
     orders: {
       title: 'Your orders',
       emptyTitle: 'No orders yet',
-      empty: 'Pick dishes from the menu and send your order. You can follow it here.',
+      empty: 'Your orders show here once you send them.',
       loading: 'Looking up your orders…',
       refresh: 'Refresh',
       updated: 'Updated {time}',
@@ -2400,7 +2394,7 @@ until you press Publish.
       stage: {
         preparing: 'The kitchen is cooking your order.',
         ready: 'Your food is ready and on its way to you.',
-        served: 'Everything is served. Enjoy your meal!',
+        served: 'Everything is served. Enjoy your meal.',
       },
       again: 'Order again',
       againOne: 'Add {name} again',
@@ -2408,7 +2402,7 @@ until you press Publish.
         '{count, plural, one {# dish} other {# dishes}} added to your cart. Check it and send.',
       againSome: 'Some dishes can’t be ordered right now and were left out.',
       againNone: 'These dishes can’t be ordered right now.',
-      EXPIRED: 'We couldn’t reach the restaurant right now. Please call a waiter.',
+      EXPIRED: 'We can’t reach the restaurant. Please call a waiter.',
       REJECTED: 'The restaurant could not take this order.',
       reason: 'Reason: {reason}',
       line: '{quantity} × {name}',
@@ -2530,8 +2524,7 @@ until you press Publish.
   },
   floorPage: {
     title: 'Floor',
-    intro:
-      'Sections and their tables, as every screen shows them. Tables are archived, never deleted: a busy table or one with a tablet paired cannot be.',
+    intro: 'Busy tables and tables with a tablet can’t be archived.',
     loadFailed: 'The floor could not be read.',
     view: 'Show',
     list: 'Tables',
@@ -2613,7 +2606,7 @@ until you press Publish.
   qrCodes: {
     title: 'Table QR codes',
     intro:
-      'Each table has its own code that opens the QR menu for that table. Print them as table tents. If a printed code is copied or photographed, give the table a new one: the old one stops working.',
+      'Print a code for each table. If a code is copied, make a new one; the old one stops working.',
     loadFailed: 'The table QR codes could not be loaded.',
     noTables: 'There are no tables yet. Add them on the floor first.',
     noSite:
@@ -2637,7 +2630,7 @@ until you press Publish.
     newOf: 'New code for table {label}',
     newWarning:
       'The printed code on table {label} will stop working within seconds. Print the new one and replace it.',
-    reason: 'Why? (kept in the audit trail)',
+    reason: 'Reason',
     newConfirm: 'Make a new code',
     regenerated: 'Table {label} has a new code. Print it and replace the old one.',
     cancel: 'Cancel',
@@ -2663,9 +2656,8 @@ until you press Publish.
       upload: 'Load the filled menu file',
       photos: 'Then add any missing photos in bulk',
     },
-    title: 'Set up',
-    intro:
-      'Everything this restaurant needs before its first guest, in order. Each step opens the page that does it; you can stop at any time and carry on later.',
+    title: 'Setup',
+    intro: 'Steps before your first guest. Stop any time and carry on later.',
     loadFailed: 'Couldn’t load the setup.',
     steps: 'Setup steps',
     stepTitle: '{number}. {title}',
@@ -2977,7 +2969,7 @@ until you press Publish.
   },
   desktop: {
     title: 'Parossa',
-    starting: 'Starting the restaurant’s server. This takes up to a minute after the PC starts.',
+    starting: 'Starting Parossa. This can take a minute.',
   },
   readiness: {
     title: 'Site-readiness checklist',
@@ -3060,7 +3052,7 @@ until you press Publish.
       database: 'Database',
       databaseUp: 'Running ({latency} ms)',
       databaseDown: 'Not answering',
-      uptime: 'Server running for',
+      uptime: 'Running for',
       vendor: 'Vendor connection',
       vendorOff: 'Not set up (the restaurant works without it)',
       vendorNotEnrolled: 'Not activated yet',
@@ -3069,7 +3061,7 @@ until you press Publish.
       vendorError: 'Cannot reach the vendor ({code}); the restaurant works without it',
       qrRelay: 'QR menu online',
       qrRelayOff: 'Not set up (no QR ordering)',
-      qrRelayNoCredential: 'Waiting for the vendor’s relay credential',
+      qrRelayNoCredential: 'QR menu not set up by the vendor yet',
       qrRelayNever: 'No contact yet',
       qrRelayOk: 'In step, menu version {version}, last contact {date} {time}',
       qrRelayRealtime: 'New QR orders arrive instantly',
@@ -3197,7 +3189,7 @@ until you press Publish.
     diagnostics: {
       title: 'Support',
       intro:
-        'When support asks, send them diagnostics: versions, settings, devices, the status above and the end of the server’s logs. Passwords, keys, and guests’ phone numbers and email addresses are removed on this PC first.',
+        'Send diagnostics when support asks. Passwords, keys and guest contacts are removed first.',
       preview: 'See what is sent',
       send: 'Send diagnostics to support',
       unavailable:
@@ -3226,8 +3218,7 @@ until you press Publish.
   /** The restaurant's profile, invoice particulars, tax groups and series (P4-03e, ONB-004). */
   restaurantPage: {
     title: 'Restaurant',
-    intro:
-      'How the restaurant appears on screens and bills. The invoice particulars, tax groups and invoice series are the Owner’s alone.',
+    intro: 'How the restaurant appears on screens and bills.',
     loadFailed: 'The restaurant could not be loaded.',
     ownerOnly: 'Owner only',
     notOwner: 'Only the Owner changes these.',
@@ -3280,7 +3271,7 @@ until you press Publish.
     },
     legal: {
       title: 'Invoice particulars',
-      hint: 'Printed on every tax invoice (BILL-002).',
+      hint: 'Printed on every tax invoice.',
       notSet: 'Not entered yet. Tax invoices need them.',
       legalName: 'Legal name',
       address: 'Address',
@@ -3301,7 +3292,7 @@ until you press Publish.
     },
     taxGroups: {
       title: 'Tax groups',
-      hint: 'Each dish uses one. The rates are the restaurant’s, as its CA advises (BILL-004).',
+      hint: 'Each dish uses one. Set the rates your CA advises.',
       add: 'Add a tax group',
       empty: 'No tax groups yet',
       noTax: 'No tax (exempt or nil-rated)',
@@ -3333,7 +3324,7 @@ until you press Publish.
     },
     series: {
       title: 'Invoice series',
-      hint: 'How invoice numbers look (BILL-003). New bills use the default series.',
+      hint: 'How invoice numbers look. New bills use the default series.',
       add: 'Add a series',
       empty: 'No invoice series yet',
       example: 'Numbers like {example}',
@@ -3401,8 +3392,7 @@ until you press Publish.
   /** Stations and printers (P4-03d, KDS-008, ONB-004 step 6). */
   printing: {
     title: 'Kitchen stations and printers',
-    intro:
-      'Each station shows its tickets on a kitchen screen, prints them, or both. Print a test page after adding a printer; while one is broken, send its tickets to another.',
+    intro: 'Print a test page after adding a printer. If one breaks, send its tickets to another.',
     loadFailed: 'The stations and printers could not be loaded.',
     printers: {
       title: 'Printers',
@@ -3521,7 +3511,7 @@ until you press Publish.
       description:
         'Dishes must move to another station first. It stays in the records and cannot be brought back.',
     },
-    reasonHint: 'For the audit trail, like “Paper jam” or “Moved the grill”.',
+    reasonHint: 'Like “Paper jam”.',
     problems: {
       NAME_REQUIRED: 'Give it a name.',
       HOST_INVALID: 'Use an IP address or host name, like 192.168.1.50.',
@@ -3645,21 +3635,21 @@ until you press Publish.
   settingLabels: {
     auth: {
       pinLength: 'PIN length',
-      lockoutMaxFailures: 'Wrong PINs before a login locks',
+      lockoutMaxFailures: 'Wrong PINs before lock-out',
       lockoutWindowMinutes: 'Wrong PINs counted within',
-      lockoutMinutes: 'Locked login stays locked for',
+      lockoutMinutes: 'Lock-out lasts',
       attemptsPerMinutePerDevice: 'Sign-in attempts per device per minute',
       deviceLockoutMaxFailures: 'Wrong PINs before a device stops taking them',
       tabletLockoutMaxFailures: 'Wrong PINs before a table tablet stops taking them',
       refuseEasyPins: 'Refuse easily guessed PINs',
-      accessTokenMinutes: 'Access token lifetime',
+      accessTokenMinutes: 'Re-check sign-in every',
       inactivityMinutes: 'Sign out POS and waiter phones after',
       managerBrowserInactivityMinutes: 'Sign out manager browsers after',
       sessionMaxHours: 'Longest session',
       overrideSeconds: 'Manager approval lasts',
       kitchenIndividualLogins: 'Kitchen staff sign in one by one',
       pairingCodeMinutes: 'Pairing code lasts',
-      deviceTokenMinutes: 'Device token lasts',
+      deviceTokenMinutes: 'Re-check devices every',
     },
     stock: {
       kitchenMayManage: 'Kitchen may mark dishes out of stock',
@@ -3669,7 +3659,7 @@ until you press Publish.
       offlineAlertSeconds: 'Tablet or kitchen screen offline alert after',
     },
     orders: {
-      holdAndFire: 'Hold and fire',
+      holdAndFire: 'Hold dishes to send later',
       specialInstructionsMaxLength: 'Longest special instruction',
     },
     tables: {
@@ -3701,8 +3691,8 @@ until you press Publish.
       upiPayeeName: 'Name shown in diners’ UPI apps',
     },
     notifications: {
-      escalationSeconds: 'Escalate to the manager after (N)',
-      repeatSeconds: 'Alert again every (R)',
+      escalationSeconds: 'Escalate to a manager after',
+      repeatSeconds: 'Repeat alerts every',
       autoCloseMinutes: 'Messages close themselves after',
       rules: 'Notification rules',
       nudgePresets: 'Manager nudge messages',
@@ -3733,8 +3723,8 @@ until you press Publish.
     qr: {
       submissionsPerWindow: 'QR orders per table and browser',
       rateLimitWindowMinutes: 'QR order limit window',
-      pickupTimeoutSeconds: 'QR order expires after (T)',
-      presenceIntervalSeconds: 'Presence signal every',
+      pickupTimeoutSeconds: 'Unconfirmed QR orders expire after',
+      presenceIntervalSeconds: 'QR menu check-in every',
       readOnlyAfterSeconds: 'QR menu read-only after',
       serviceRequests: 'Call waiter and Request bill on the QR menu',
       askPhone: 'Ask diners for their mobile number',
@@ -3802,26 +3792,25 @@ until you press Publish.
   settingHints: {
     auth: {
       pinLength: 'Digits in a staff PIN; the Owner may require 6.',
-      lockoutMaxFailures: 'Wrong PINs within the window that lock the login.',
-      lockoutWindowMinutes: 'Window in which wrong PINs are counted.',
-      lockoutMinutes: 'How long a locked login stays locked unless a manager unlocks it.',
-      attemptsPerMinutePerDevice: 'Login and override attempts allowed per device per minute.',
+      lockoutMaxFailures: 'Wrong PINs that lock a person out.',
+      lockoutWindowMinutes: 'Wrong PINs older than this are forgotten.',
+      lockoutMinutes: 'Unless a manager unlocks them sooner.',
+      attemptsPerMinutePerDevice: 'Sign-in and approval tries allowed per device each minute.',
       deviceLockoutMaxFailures:
-        'Wrong PINs on one device, for anyone, within the window that stop it taking any for the lockout time (our default).',
-      tabletLockoutMaxFailures:
-        'Wrong PINs on a table tablet within the window that stop it taking any for the lockout time; they never lock the person (our default).',
-      refuseEasyPins:
-        'Refuse PINs that are guessed first, such as 1234, 1111, 1212 or a year, when a PIN is set (our default).',
-      accessTokenMinutes: 'Lifetime of an access token (at most 15 minutes).',
+        'Wrong PINs from anyone on one device before it stops taking PINs for a while.',
+      tabletLockoutMaxFailures: 'The same for table tablets. It never locks the person.',
+      refuseEasyPins: 'Refuse PINs like 1234, 1111 or a year.',
+      accessTokenMinutes:
+        'How often a signed-in screen re-confirms with the restaurant PC. Up to 15 minutes.',
       inactivityMinutes: 'Inactivity after which a POS or waiter device signs the person out.',
       managerBrowserInactivityMinutes:
-        'Inactivity sign-out on manager browsers (personal devices; our default).',
-      sessionMaxHours: 'Longest a session lasts, however active (one long shift; our default).',
+        'Sign out manager laptops and phones after this much inactivity.',
+      sessionMaxHours: 'Sign out after this long, even if active.',
       overrideSeconds: 'How long a manager’s PIN approval can be used for the action it approved.',
       kitchenIndividualLogins:
-        'Kitchen staff sign in one by one instead of the screen acting for the station.',
+        'Each cook signs in with their own PIN instead of sharing the kitchen screen.',
       pairingCodeMinutes: 'How long a device pairing code can be used.',
-      deviceTokenMinutes: 'How long a device token lasts before the device signs a new challenge.',
+      deviceTokenMinutes: 'How often a paired device proves itself again.',
     },
     stock: {
       kitchenMayManage: 'Kitchen staff may mark items out of stock and set stock counts.',
@@ -3830,7 +3819,7 @@ until you press Publish.
       lowBatteryAlertPercent:
         'Battery level at or below which a table tablet or kitchen screen raises a low-battery alert.',
       offlineAlertSeconds:
-        'A table tablet or kitchen screen not connected for this long alerts the managers (0: never; our default).',
+        'Alert the managers when a table tablet or kitchen screen is offline this long. 0 means never.',
     },
     printers: {
       discoveryPorts:
@@ -3841,29 +3830,24 @@ until you press Publish.
         'A table the guests have left (paid, closed, moved or merged) shows “Needs cleaning” and cannot be opened until someone marks it clean.',
     },
     orders: {
-      holdAndFire: 'Waiters may hold items, such as the mains, and fire them to the kitchen later.',
+      holdAndFire: 'Waiters can hold dishes and send them to the kitchen later.',
       specialInstructionsMaxLength:
         'Longest special instruction a guest or waiter may write on an item.',
     },
     billing: {
-      priceMode: 'Whether menu prices exclude or include GST (our default: exclusive).',
-      roundingUnitPaise:
-        'Grand totals round to the nearest multiple of this (0: no rounding; our default: ₹1).',
-      discountLimitBp:
-        'Largest discount staff allowed to discount within a limit (a custom role) may give without a manager PIN.',
-      serviceChargeEnabled:
-        'Add a voluntary service charge to bills (off by default; removable on request).',
-      serviceChargeRateBp:
-        'Service charge rate on the taxable value of items when enabled (our default: 5 %).',
+      priceMode: 'Whether menu prices include GST.',
+      roundingUnitPaise: 'Bills round to the nearest multiple of this. 0 means no rounding.',
+      discountLimitBp: 'Largest discount staff can give without a manager’s PIN.',
+      serviceChargeEnabled: 'Add a service charge to bills. Guests may ask to remove it.',
+      serviceChargeRateBp: 'Charged on the dishes’ value before tax.',
     },
     bills: {
-      headerLines:
-        'Lines printed on every bill under the restaurant particulars (48 characters each).',
+      headerLines: 'Printed under the restaurant details, up to 48 characters a line.',
       footerLines: 'Lines printed at the foot of every bill, e.g. a thank-you note.',
       amountInWords:
         'Bills also write the total in words, like “Rupees Six Hundred Seventy-Two Only”.',
       waiterMayPrint:
-        'Waiters may print the bill of their own tables at the bill printer from the app. Off: they ask for the bill and a manager prints it.',
+        'Waiters print bills for their tables from the app. Off: a manager prints them.',
       printerId:
         'The printer bills print on, usually the one at the cash counter (none: choose each time).',
       cashDrawerKick:
@@ -3875,17 +3859,15 @@ until you press Publish.
     payments: {
       otherModes: 'Names of payment modes offered besides cash, card and UPI.',
       upiId:
-        'Diners pay the printed bill from the QR menu by UPI, with the amount filled in. Use a business (merchant) UPI ID: UPI apps may decline links to a personal one. Staff check their UPI app and settle the bill as UPI. Empty: no Pay button.',
-      upiPayeeName: 'Empty: the restaurant’s name.',
+        'Lets guests pay from the QR menu. Use a business UPI ID; personal ones may be declined.',
+      upiPayeeName: 'Leave empty to use the restaurant name.',
     },
     notifications: {
-      escalationSeconds:
-        'N: an alert not acknowledged within this time goes to the manager on duty.',
-      repeatSeconds: 'R: an unacknowledged alert or service request alerts again this often.',
+      escalationSeconds: 'An alert nobody takes goes to the manager on duty.',
+      repeatSeconds: 'Unanswered alerts and table calls ring again this often.',
       autoCloseMinutes:
         'A message that needs no answer, such as a manager nudge, closes itself after this long.',
-      rules:
-        'Changes to the factory notification rules (Appendix C), per event: recipients, channels, pager text, escalation and repeat.',
+      rules: 'Who gets each alert, how, and what the pager shows.',
       nudgePresets:
         'Messages a manager can send to waiters with one tap (up to 40 characters each).',
       diskAlertPercent: 'The data drive this full raises a disk alert for the Owner and managers.',
@@ -3903,48 +3885,43 @@ until you press Publish.
       autoEscalateNotCollected: 'Alert the manager without the kitchen pressing "Notify manager".',
       pickupMarksServed:
         'When the kitchen marks a dish picked up, it is served too, so waiters have nothing to mark.',
-      soundVolumePercent:
-        'Volume of the new-ticket chime and the cancellation sound (our default).',
+      soundVolumePercent: 'Volume of the new-ticket chime and the cancellation sound.',
       theme:
         'Light suits a bright kitchen and is easiest to read from a distance. Dark suits a dim kitchen.',
     },
     tablet: {
       idleShowsPromotions: 'The idle screen of a table tablet shows promotions.',
-      serviceRequestsPerMinute:
-        'Water, Waiter and Bill requests one table tablet may raise in a minute; more are refused until the minute has passed (anti-spam, our default).',
+      serviceRequestsPerMinute: 'Water, waiter and bill calls one tablet can send per minute.',
     },
     pager: {
       vibrationPatterns: 'How the pager vibrates for each kind of alert.',
       lowBatteryPercent:
         'Battery level at or below which a pager alerts its wearer and the manager, and the waiter app warns.',
       heartbeatSeconds:
-        'How often a pager reports battery and signal; tuned with battery life (PGR-002).',
+        'How often a pager reports battery and signal. More often drains the battery faster.',
     },
     qr: {
       submissionsPerWindow: 'QR orders allowed per table and per browser in the rate-limit window.',
       rateLimitWindowMinutes: 'Window of the QR order rate limit.',
-      pickupTimeoutSeconds: 'T: a QR order the restaurant has not picked up by then expires.',
-      presenceIntervalSeconds: 'How often the local server tells the QR relay it is present.',
+      pickupTimeoutSeconds: 'A QR order not picked up by then expires.',
+      presenceIntervalSeconds: 'How often this PC tells the QR menu it is online.',
       serviceRequests:
         'For tables without a tablet: diners can call a waiter or ask for the bill from the QR menu, like the tablet’s buttons.',
-      readOnlyAfterSeconds:
-        'Without a presence signal for this long, the QR menu becomes read-only.',
+      readOnlyAfterSeconds: 'If the QR menu hears nothing for this long, ordering pauses.',
       askPhone:
         'Before the first order the QR menu asks for the diner’s mobile number, printed on their bill and used for nothing else. Required: no order without it.',
     },
     menu: {
-      bestSellerCount:
-        'How many of the most ordered dishes carry the bestseller badge on the tablet and QR menu (0: none; our default).',
+      bestSellerCount: 'How many top dishes get the Bestseller badge. 0 means none.',
     },
     reco: {
-      learningWindowDays: 'Orders the "frequently ordered together" rules learn from.',
-      minSupportBp:
-        'Minimum share of orders containing a pair for a learned rule (our default: 0.5 %).',
-      minConfidenceBp: 'Minimum confidence of a learned rule (our default: 20 %).',
-      minLiftPercent: 'Minimum lift of a learned rule, in percent (120 = 1.2×; our default).',
+      learningWindowDays: 'Days of orders the suggestions learn from.',
+      minSupportBp: 'How often a pair must be ordered together to be suggested.',
+      minConfidenceBp: 'How often the second dish follows the first.',
+      minLiftPercent: 'How much more often than chance (120 = 1.2×).',
       minOrders: 'Orders needed before learned rules are used.',
       bestSellerDays: 'Days of orders that rank best sellers.',
-      dayparts: 'Time-of-day windows best sellers are counted in (our defaults).',
+      dayparts: 'Times of day best sellers are counted in.',
       courseSequence:
         'Course order recommendations favour next (menu categories are tagged with a course).',
       itemPreferences:
@@ -3952,15 +3929,14 @@ until you press Publish.
     },
     audit: {
       dailyReportEnabled: 'Send the Owner a daily suspicious-activity report.',
-      discountFlagBp: 'Discounts above this rate appear in the daily report (our default: 20 %).',
-      cashVarianceFlagPaise:
-        'Cash variances above this appear in the daily report (our default: ₹200).',
+      discountFlagBp: 'Discounts above this rate appear in the daily report.',
+      cashVarianceFlagPaise: 'Cash differences above this appear in the daily report.',
       reprintFlagCount:
         'A kitchen ticket or bill printed again this many times or more appears in the daily report.',
     },
     backups: {
       walMode:
-        'How often the database log is archived: continuous (every 5 minutes) or hourly. It is the most a restore can lose while the data drive survives.',
+        'How often changes are backed up: every 5 minutes or hourly. That is the most a restore can lose.',
       pointInTimeDays:
         'How many days back the restaurant can be restored to any minute. Older days use the nightly backups. More days take more room on the drives.',
       nightlyAt:
@@ -3975,8 +3951,7 @@ until you press Publish.
       criticalPercent: 'Data-drive use that raises a critical alert (above the warning).',
     },
     retention: {
-      operationalDays:
-        'Notifications, heartbeats, debug logs and temporary files are removed after this.',
+      operationalDays: 'Old alerts, logs and temporary files are removed after this.',
       dinerContactMonths:
         'A diner’s contact details are anonymised after this long without a visit.',
       feedbackMonths: 'Feedback is anonymised after this long.',
@@ -3992,7 +3967,7 @@ until you press Publish.
       graceDays: 'Days of grace, shown on every staff screen, before the licence is restricted.',
     },
     controlPlane: {
-      heartbeatSeconds: 'How often this PC reports to the vendor (each answer sets it).',
+      heartbeatSeconds: 'How often this PC checks in with the vendor.',
     },
     onboarding: {
       minFreeDiskGb: 'Free space the installer requires on the data drive.',
@@ -4002,7 +3977,7 @@ until you press Publish.
         'The vendor’s AI service reads a printed menu from photos. The vendor may switch it off for a while.',
     },
     ui: {
-      timeFormat: 'Clock format on every screen, bill and report (our default: 12-hour).',
+      timeFormat: 'Clock format on every screen, bill and report.',
     },
   },
 
@@ -4011,7 +3986,7 @@ until you press Publish.
     tableState: {
       FREE: 'Free',
       OCCUPIED: 'Occupied',
-      BILL_REQUESTED: 'Bill asked',
+      BILL_REQUESTED: 'Bill requested',
       BILL_PRINTED: 'Bill printed',
       NEEDS_CLEANING: 'Needs cleaning',
     },
@@ -4041,8 +4016,7 @@ until you press Publish.
       free: 'Free the table',
       clean: 'Mark clean',
       cleaned: '{table} is clean',
-      needsCleaning:
-        'The guests have left. Mark the table clean when it is ready for the next ones.',
+      needsCleaning: 'Guests have left. Mark clean when it’s ready.',
     },
     takeaway: 'Takeaway',
     shift: 'Shift',
@@ -4053,8 +4027,9 @@ until you press Publish.
       onMyWay: 'On my way',
       onMyWayOf: 'On my way: {title}',
       done: 'Done',
+      doneOf: 'Done: {title}',
       /** P9-25: a diner called before anyone opened the table. */
-      notOpened: 'Table not opened yet: seat the guests',
+      notOpened: 'Table not open yet',
     },
     billOrder: 'Bill order {number}',
     backToTables: 'Back to tables',
@@ -4075,8 +4050,7 @@ until you press Publish.
       categories: 'Menu categories',
       all: 'All',
       noResults: 'No dishes match “{query}”.',
-      empty:
-        'The menu has no dishes for the POS yet. A manager publishes the menu in Manage → Menu.',
+      empty: 'No dishes yet. A manager publishes the menu in Manage → Menu.',
       foodType: {
         VEG: 'Veg',
         NON_VEG: 'Non-veg',
@@ -4095,7 +4069,7 @@ until you press Publish.
       quantityOf: 'Quantity of {name}',
       fewer: 'One fewer',
       more: 'One more',
-      instructions: 'Instructions for the kitchen',
+      instructions: 'Note for the kitchen',
       variant: 'Size',
       none: 'None',
       ruleOptional: 'Optional, up to {max}',
@@ -4112,7 +4086,7 @@ until you press Publish.
     },
     cart: {
       hold: 'Hold',
-      held: 'Held: fire later',
+      held: 'Held',
       holdOf: 'Hold {name} for later',
       sendNowOf: 'Send {name} with the order',
       title: 'New items',
@@ -4126,7 +4100,7 @@ until you press Publish.
       onlyLeft: 'Only {count} left',
     },
     sent: {
-      fire: 'Fire held items',
+      fire: 'Send held items',
       fired: 'Held items sent to the kitchen',
       title: 'Sent to the kitchen',
       none: 'Nothing sent yet.',
@@ -4146,34 +4120,31 @@ until you press Publish.
       sent: 'Order {number} sent to the kitchen',
       takeaway: 'Token {token}: order {number} sent to the kitchen',
       rejected: 'Nothing was sent. Fix the marked items and send again.',
-      notSent: 'Not sent: {message} Your items are kept; send again.',
+      notSent: 'Not sent: {message} Your items are kept.',
     },
     /** A table opened by mistake, freed before anything is ordered (TBL-004, ADR-0006). */
     free: {
       title: 'Free table {table}',
-      description:
-        'For a table opened by mistake, or one whose dishes were all cancelled: there is nothing to bill, and the table shows as free again.',
-      reason: 'Why it was opened by mistake',
+      description: 'For a table opened by mistake. Nothing is billed.',
+      reason: 'Reason',
       confirm: 'Free the table',
       freed: 'Table {table} is free again.',
     },
     move: {
       title: 'Move {table} to another table',
-      description: 'Choose a free table. Kitchen tickets follow the guests.',
+      description: 'Choose a free table. The order moves too.',
       noFreeTable: 'There is no free table to move to.',
       moved: 'Moved {from} to {to}',
     },
     merge: {
       title: 'Merge {table} into another table',
-      description:
-        'Choose the table its guests join: one bill for both. Orders and kitchen tickets go with them, and {table} is then free.',
+      description: 'Choose the table to join. They share one bill and {table} is freed.',
       noTable: 'There is no other open table without a printed bill.',
       merged: '{from} merged into {to}',
     },
     transfer: {
       title: 'Move dishes from {table}',
-      description:
-        'Choose the dishes and the table whose bill they go on. Kitchen tickets stay as they are and show where each dish goes now.',
+      description: 'Choose dishes and the table whose bill they move to.',
       dishes: 'Dishes',
       noDishes: 'There are no dishes to move.',
       to: 'To table',
@@ -4226,23 +4197,24 @@ until you press Publish.
       invalid: 'Enter a discount above zero.',
       revoke: 'Remove discount',
       revokeFor: 'Remove discount: {reason}',
-      revokeReason: 'Why is it removed?',
+      revokeReason: 'Reason',
       line: '{reason}',
     },
     removeServiceCharge: 'Remove service charge',
     restoreServiceCharge: 'Add service charge back',
-    serviceChargeReason: 'Why? (for example, the guest asked)',
+    serviceChargeReason: 'Reason, like “Guest asked”',
     customer: {
       title: 'Customer',
       edit: 'Customer details',
       name: 'Name',
       phone: 'Phone',
-      consent: 'The customer agrees to keep this number',
+      consent: 'Customer agrees we keep this number',
       gstin: 'GSTIN (for a B2B invoice)',
       save: 'Save customer',
     },
     reason: 'Reason',
     confirm: 'Confirm',
+    cancel: 'Cancel',
     printBill: 'Print bill',
     printed: 'Invoice {number} printed',
     notPrinted: 'Invoice {number} issued, but it did not print: {error}',
@@ -4256,11 +4228,11 @@ until you press Publish.
     back: 'Back',
     void: 'Cancel invoice',
     voidFor: 'Cancel invoice {number}',
-    voidReason: 'Why is the invoice cancelled?',
+    voidReason: 'Reason',
     voidedToast: 'Invoice {number} cancelled. Correct the bill and print it again.',
     edit: 'Edit bill',
     editFor: 'Edit invoice {number}',
-    editReason: 'Why does the printed bill change?',
+    editReason: 'Reason',
     editing: 'Editing invoice {number}: printing again keeps its number.',
     split: {
       open: 'Split bill',
@@ -4282,13 +4254,13 @@ until you press Publish.
     title: 'Day-end for {date}',
     closed: 'This day is closed.',
     blockers: 'Before closing',
-    noBlockers: 'Nothing stands in the way. The day can be closed.',
+    noBlockers: 'Ready to close.',
     openShifts:
-      '{count, plural, one {A shift is} other {# shifts are}} still open: {names}. Each person closes their own on the POS (Shift).',
+      '{count, plural, one {A shift is} other {# shifts are}} still open: {names}. Each person closes their own.',
     someone: 'someone',
     openTables: 'Tables still open: {tables}',
     unsettled: 'Unpaid bills: {invoices}',
-    carryForward: 'Carry the open tables forward to the next business day',
+    carryForward: 'Move open tables to the next business day',
     close: 'Close the day',
     closedToast: 'Business day {date} closed',
     report: 'Z-report',
@@ -4306,8 +4278,7 @@ until you press Publish.
   },
   override: {
     title: 'Manager approval',
-    description:
-      'A manager must approve this. The manager chooses their name and enters their PIN.',
+    description: 'A manager approves with their PIN.',
     manager: 'Manager',
     pin: 'Manager PIN',
     approved: 'Approved by {name}',
@@ -4331,11 +4302,11 @@ until you press Publish.
     change: 'Change to give',
     reference: 'Reference (optional)',
     add: 'Add payment',
-    planned: 'Payments to record',
-    leftAfter: 'Left after the payments below',
+    planned: 'Payments',
+    leftAfter: 'Still to pay after these',
     remove: 'Remove {mode} payment',
     record: 'Record payment',
-    invalidAmount: 'Enter an amount above zero and no more than what is still to pay.',
+    invalidAmount: 'Enter an amount up to what is still to pay.',
     tenderedTooLow: 'The cash received is less than the amount.',
     settled: 'Invoice {number} is paid',
     recorded: 'Payment recorded. {amount} still to pay.',
@@ -4357,12 +4328,12 @@ until you press Publish.
     reject: 'Reject',
     rejectOf: 'Reject {title}',
     quantityOf: 'Quantity of {name}',
-    agreement: 'The diner’s agreement',
-    dinerAgreed: 'The diner agreed to these changes',
+    agreement: 'Guest’s agreement',
+    dinerAgreed: 'Guest agreed to these changes',
     approveChanges: 'Approve with changes',
-    keepAsOrdered: 'Back to the order as placed',
+    keepAsOrdered: 'Undo changes',
     nothingLeft: 'Nothing would be left. Reject the order instead.',
-    reason: 'Why (the diner sees this)',
+    reason: 'Reason (the guest sees it)',
     rejectConfirm: 'Reject the order',
     cancel: 'Back',
     approved: 'Order {number} sent to the kitchen',
@@ -4372,7 +4343,7 @@ until you press Publish.
   },
   shift: {
     title: 'Shift',
-    none: 'No shift is open on your name.',
+    none: 'You have no open shift.',
     openingFloat: 'Opening cash in the drawer (₹)',
     open: 'Open shift',
     opened: 'Shift opened',
@@ -4401,10 +4372,10 @@ until you press Publish.
     invalidAmount: 'Enter an amount in rupees, for example 1500 or 1500.50.',
     /** BILL-016 (P4-07b). */
     noSale: 'Open the drawer (no sale)',
-    noSaleNote: 'Every opening without a sale is recorded with your name and the reason.',
+    noSaleNote: 'Recorded with your name and reason.',
     noSaleReason: 'Reason for opening',
     noSaleOpen: 'Open drawer',
-    noSaleOpened: 'Drawer opened. The opening is recorded.',
+    noSaleOpened: 'Drawer opened.',
     noSaleFailed: 'The drawer did not open: {error}',
   },
   stock: {
@@ -4416,8 +4387,8 @@ until you press Publish.
     category: 'Category',
     allCategories: 'All categories',
     none: 'No dish matches. Try another word or category.',
-    markOut: 'Out of stock',
-    markAvailable: 'Mark as available',
+    markOut: 'Mark out of stock',
+    markAvailable: 'Mark available',
     markOutOf: 'Mark {name} out of stock',
     markAvailableOf: 'Mark {name} as available',
     markedOut: '{name} is out of stock on every device.',
@@ -4430,13 +4401,13 @@ until you press Publish.
     allStations: 'All stations',
     view: 'Show',
     viewTickets: 'Tickets',
-    viewOrders: 'Orders (Expo)',
+    viewOrders: 'Orders',
     order: 'Order {number}',
     orderReady: 'Ready to serve',
-    pickUpAll: 'Picked up, all of it',
-    pickUpReady: 'Picked up what is ready',
+    pickUpAll: 'All picked up',
+    pickUpReady: 'Ready ones picked up',
     pickUpOrder: 'Picked up: {order}',
-    noTickets: 'No tickets. New orders appear here.',
+    noTickets: 'No tickets.',
     ticket: 'KOT {number}',
     table: 'Table {table}',
     token: 'Token {token}',
@@ -4474,15 +4445,14 @@ until you press Publish.
     recallFor: 'Recall KOT {number}',
     recallTitle: 'Recently bumped',
     recallNone: 'Nothing bumped in the last hour.',
-    notCollected: 'Ready and waiting to be collected',
+    notCollected: 'Waiting at the pass',
     notifyManager: 'Notify manager',
     managerNotified: 'Manager notified',
     summary: 'All-day summary',
     summaryNone: 'Nothing waiting to be cooked.',
     enableSound: 'Tap to turn on sound',
     disconnectedTitle: 'Disconnected',
-    disconnected:
-      'This screen lost the restaurant server. Tickets will come back when it reconnects; keep cooking from the printed tickets.',
+    disconnected: 'Lost the restaurant PC. Cook from printed tickets until it reconnects.',
     reconnecting: 'Reconnecting…',
   },
   reco: {

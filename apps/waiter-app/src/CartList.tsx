@@ -108,9 +108,6 @@ export function CartList({
             <Text style={[styles.name, { color: colors.text }]}>{t('pos.cart.total')}</Text>
             <Money paise={cartTotal(lines)} size="lg" strong />
           </View>
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
-            {t('pos.cart.estimateNote')}
-          </Text>
         </View>
       )}
     </View>

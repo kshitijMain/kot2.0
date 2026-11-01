@@ -100,7 +100,7 @@ describe('[WTR-006] [NFR-U03] the alert bell on the waiter app', () => {
     await phoneShowing(serverWith(held()), tables());
     await fireEvent.press(await screen.findByRole('button', { name: 'Alerts, none open' }));
     expect(screen.getByTestId('alerts-none')).toHaveTextContent(
-      'No open alerts. New ones ring here and on the pager.',
+      'No open alerts.',
     );
   });
 

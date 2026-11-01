@@ -289,7 +289,7 @@ describe('[MENU-013] [MENU-006] table tablet smoke flow', () => {
     await session.start();
     await render(<App session={session} translator={translator} device={device} />);
 
-    await fireEvent.changeText(screen.getByLabelText('Server address'), 'http://pos.test:3000');
+    await fireEvent.changeText(screen.getByLabelText('Restaurant PC address'), 'http://pos.test:3000');
     await fireEvent.changeText(screen.getByLabelText('Pairing code'), 'ABCDEFGH');
     await fireEvent.press(screen.getByTestId('pairing-submit'));
 

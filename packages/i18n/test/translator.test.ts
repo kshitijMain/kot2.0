@@ -14,7 +14,7 @@ describe('[NFR-L02] translator and catalogues', () => {
   it('translates keys with values, using en-IN by default', () => {
     expect(t.locale).toBe('en-IN');
     expect(t('login.pinFor', { name: 'Ravi' })).toBe('Enter the PIN for Ravi');
-    expect(t('login.attemptsLeft', { count: 1 })).toBe('1 try left before this login is locked.');
+    expect(t('login.attemptsLeft', { count: 1 })).toBe('Wrong PIN. 1 try left before you are locked out.');
     expect(t('ui.pinPad.progress', { entered: 2, length: 4 })).toBe('2 of 4 digits entered');
     expect(t('session.inactivityWarning', { seconds: 1 })).toMatch(/^Signing out in 1 second\./);
     expect(t('roles.KITCHEN')).toBe('Kitchen');

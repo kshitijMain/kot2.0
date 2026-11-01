@@ -315,7 +315,6 @@ export function SettingsScreen() {
       <h2 id="dashboard-settings" className="dashboard-section__heading">
         {t('settingsPage.title')}
       </h2>
-      <p className="dashboard-section__hint">{t('settingsPage.intro')}</p>
       <div className="menu-toolbar">
         <TextField
           label={t('settingsPage.search')}
@@ -424,7 +423,6 @@ function SettingDialog({
         />
         <TextField
           label={t('settingsPage.dialog.reason')}
-          hint={t('settingsPage.dialog.reasonHint')}
           value={reason}
           maxLength={200}
           autoComplete="off"

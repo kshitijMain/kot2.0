@@ -376,7 +376,6 @@ function Cart({
         <div className="pos-cart__total">
           <span>{t('pos.cart.total')}</span>
           <Money paise={cartTotal(lines)} size="lg" strong />
-          <span className="pos-cart__summary">{t('pos.cart.estimateNote')}</span>
         </div>
       )}
     </div>

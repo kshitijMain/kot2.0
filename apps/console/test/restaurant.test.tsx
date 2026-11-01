@@ -69,7 +69,6 @@ describe('[ONB-004] [BILL-002] [BILL-003] [BILL-004] the restaurant page', () =>
     const fake = restaurantServer('MANAGER');
     const { user } = await renderConsole({ fake, path: PATH, signedIn: 'MANAGER' });
     const legal = within(await section(t('restaurantPage.legal.title')));
-    expect(legal.getByText(t('restaurantPage.notOwner'))).toBeVisible();
     expect(legal.queryByRole('button', { name: t('restaurantPage.change') })).toBeNull();
     expect(screen.queryByRole('button', { name: t('restaurantPage.taxGroups.add') })).toBeNull();
     expect(screen.queryByRole('button', { name: t('restaurantPage.series.add') })).toBeNull();

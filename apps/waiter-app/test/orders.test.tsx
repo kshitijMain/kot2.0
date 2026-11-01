@@ -7,7 +7,7 @@ jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 
 const id = (n: number) => `0199a0e0-0000-7000-8000-${String(n).padStart(12, '0')}`;
 const button = (name: RegExp | string) => screen.getByRole('button', { name });
-const QUEUED = 'No connection. The order is kept on this phone and sent when it reconnects.';
+const QUEUED = 'No connection. Saved on this phone; it sends when you reconnect.';
 
 async function openTable(label: string) {
   await fireEvent.press(await screen.findByRole('button', { name: new RegExp(`^${label}, `) }));
@@ -99,7 +99,7 @@ describe('[WTR-003] [ORD-013] taking an order', () => {
     await fireEvent.press(screen.getByRole('radio', { name: 'Full, ₹280.00' }));
     await fireEvent.press(screen.getByRole('checkbox', { name: 'Cheese, +₹40.00' }));
     await fireEvent.press(screen.getByRole('button', { name: 'One more' }));
-    await fireEvent.changeText(screen.getByLabelText('Instructions for the kitchen'), 'Less spicy');
+    await fireEvent.changeText(screen.getByLabelText('Note for the kitchen'), 'Less spicy');
     expect(screen.getByText('₹640.00')).toBeOnTheScreen();
     await fireEvent.press(screen.getByTestId('item-add'));
     expect(screen.queryByRole('header', { name: 'Paneer Tikka' })).toBeNull();
@@ -186,7 +186,7 @@ describe('[WTR-003] [ORD-013] taking an order', () => {
     expect(within(dal).getByTestId('stepper-value')).toHaveTextContent('2');
     await fireEvent.press(within(dal).getByRole('button', { name: 'One more' }));
     await fireEvent.changeText(
-      within(dal).getByLabelText('Instructions for the kitchen'),
+      within(dal).getByLabelText('Note for the kitchen'),
       'No cream',
     );
     await fireEvent.press(button('Remove Paneer Tikka'));
@@ -278,7 +278,7 @@ describe('[WTR-012] [ORD-013] orders without a connection', () => {
     expect(await screen.findByText(QUEUED)).toBeOnTheScreen();
     const draft = await screen.findByTestId('unsent-orders');
     expect(
-      within(draft).getByText('Kept on this phone. It is sent when the phone reconnects.'),
+      within(draft).getByText('Saved on this phone. Sends when you reconnect.'),
     ).toBeOnTheScreen();
     expect(within(draft).getByText('1 × Dal Makhani')).toBeOnTheScreen();
     expect(restaurant.allOrders()).toHaveLength(0);
@@ -358,7 +358,7 @@ describe('[WTR-012] [ORD-013] orders without a connection', () => {
     expect(await screen.findByText('1 order is not sent yet')).toBeOnTheScreen();
     await openTable('T2');
     expect(
-      screen.getByText('Taken by someone else on this phone. It is sent when they sign in.'),
+      screen.getByText('Another waiter’s order. Sends when they sign in.'),
     ).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Send now' })).toBeNull();
     restaurant.network = 'up';
@@ -437,7 +437,7 @@ describe('[ORD-017] [WTR-010] items the kitchen cannot make', () => {
     await fireEvent.press(screen.getByTestId('send-kot'));
     expect(
       await screen.findByText(
-        'Not sent: This table has been closed. Your items are kept; send again.',
+        'Not sent: This table has been closed. Your items are kept.',
       ),
     ).toBeOnTheScreen();
     expect(screen.getByText('1 new item · ₹240.00')).toBeOnTheScreen();
