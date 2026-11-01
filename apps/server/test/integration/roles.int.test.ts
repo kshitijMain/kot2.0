@@ -1,22 +1,13 @@
 import type { INestApplication } from '@nestjs/common';
-import {
-  ApiError,
-  LoginResponse,
-  RoleListResponse,
-  RoleView,
-  StaffView,
-  TotpEnrollmentResponse,
-} from '@rp/contracts';
+import { ApiError, LoginResponse, RoleListResponse, RoleView, StaffView } from '@rp/contracts';
 import request from 'supertest';
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { AuthSettingsService } from '../../src/auth/auth-settings.js';
-import { base32Decode, hotp, totpStep } from '@rp/totp';
 import { PrismaService } from '../../src/database/prisma.service.js';
 import { authHeaders, type AuthKit, createAuthKit, signIn } from '../helpers/auth-kit.js';
 import { createTestApp, httpServer } from '../helpers/test-app.js';
 import { createTestDatabase, type TestDatabase } from '../helpers/test-database.js';
 
-const PASSWORD = 'correct horse battery';
 const CAPTAIN_PIN = '5170';
 
 let database: TestDatabase;
@@ -26,11 +17,8 @@ let kit: AuthKit;
 let manager: LoginResponse;
 let owner: LoginResponse;
 let waiter: LoginResponse;
-let secret: Buffer;
 
 beforeAll(async () => {
-  // One clock that only moves forward, so authenticator codes never repeat.
-  vi.useFakeTimers({ toFake: ['Date'] });
   database = await createTestDatabase();
   app = await createTestApp({ databaseUrl: database.url });
   prisma = app.get(PrismaService);
@@ -42,20 +30,9 @@ beforeAll(async () => {
   manager = await signIn(app, kit, 'MANAGER');
   owner = await signIn(app, kit, 'OWNER');
   waiter = await signIn(app, kit, 'WAITER');
-  await server().post('/api/v1/auth/owner/password').set(as(owner)).send({ newPassword: PASSWORD });
-  const enrolment = TotpEnrollmentResponse.parse(
-    (await server().post('/api/v1/auth/owner/totp/enroll').set(as(owner))).body,
-  );
-  secret = base32Decode(enrolment.secret);
-  await server()
-    .post('/api/v1/auth/owner/totp/confirm')
-    .set(as(owner))
-    .send({ code: hotp(secret, totpStep(new Date())) })
-    .expect(200);
 });
 
 afterAll(async () => {
-  vi.useRealTimers();
   await app.close();
   await database.drop();
 });
@@ -63,18 +40,6 @@ afterAll(async () => {
 const server = () => request(httpServer(app));
 const as = (session: LoginResponse) => authHeaders(kit.deviceId, session.accessToken);
 const codeOf = (response: request.Response) => ApiError.parse(response.body).code;
-
-async function stepUp(): Promise<void> {
-  vi.setSystemTime(Date.now() + 30_000);
-  await server()
-    .post('/api/v1/auth/step-up')
-    .set(as(owner))
-    .send({
-      password: PASSWORD,
-      secondFactor: { kind: 'TOTP', code: hotp(secret, totpStep(new Date())) },
-    })
-    .expect(200);
-}
 
 const captain = () => ({
   name: 'Senior captain',
@@ -88,16 +53,13 @@ const salesReport = (session: LoginResponse) =>
 let captainRoleId = '';
 let captainStaffId = '';
 
-describe('[AUTH-012] [AUTH-006] custom roles are the Owner’s', () => {
-  it('lets only the Owner, with a fresh second factor, create one; audited', async () => {
+describe('[AUTH-012] custom roles are the Owner’s', () => {
+  it('lets only the Owner create one, with their PIN session alone (ADR-0024); audited', async () => {
     const byManager = await server().post('/api/v1/roles').set(as(manager)).send(captain());
     expect([byManager.status, codeOf(byManager)]).toEqual([403, 'OWNER_ONLY']);
     const byWaiter = await server().post('/api/v1/roles').set(as(waiter)).send(captain());
     expect(byWaiter.status).toBe(403);
-    const withoutStepUp = await server().post('/api/v1/roles').set(as(owner)).send(captain());
-    expect(codeOf(withoutStepUp)).toBe('SECOND_FACTOR_REQUIRED');
 
-    await stepUp();
     const created = await server().post('/api/v1/roles').set(as(owner)).send(captain());
     expect(created.status, JSON.stringify(created.body)).toBe(201);
     const role = RoleView.parse(created.body);
@@ -122,7 +84,6 @@ describe('[AUTH-012] [AUTH-006] custom roles are the Owner’s', () => {
   });
 
   it('refuses a name in use, a manager base, staff or Owner-only powers, and adding nothing', async () => {
-    await stepUp();
     const send = (body: object) => server().post('/api/v1/roles').set(as(owner)).send(body);
     expect(codeOf(await send({ ...captain(), name: 'senior CAPTAIN' }))).toBe('ROLE_NAME_TAKEN');
     expect(codeOf(await send({ ...captain(), name: 'Manager' }))).toBe('ROLE_NAME_TAKEN');
@@ -184,7 +145,6 @@ describe('[AUTH-012] [AUTH-010] a person with a custom role', () => {
     expect((await salesReport(session)).status).toBe(200);
 
     // The Owner takes the reports away: it applies on the captain's very next request.
-    await stepUp();
     const changed = await server()
       .put(`/api/v1/roles/${captainRoleId}`)
       .set(as(owner))
@@ -220,7 +180,6 @@ describe('[AUTH-012] [AUTH-010] a person with a custom role', () => {
 
 describe('[AUTH-012] [MENU-010] archiving and changing custom roles', () => {
   it('keeps the base role while people have it, and archives only an unused role', async () => {
-    await stepUp();
     const rebase = await server()
       .put(`/api/v1/roles/${captainRoleId}`)
       .set(as(owner))
@@ -252,7 +211,6 @@ describe('[AUTH-012] [MENU-010] archiving and changing custom roles', () => {
   });
 
   it('never changes a built-in role', async () => {
-    await stepUp();
     const roles = RoleListResponse.parse((await server().get('/api/v1/roles').set(as(owner))).body);
     const waiterRole = roles.roles.find((entry) => entry.builtIn && entry.baseRole === 'WAITER');
     const response = await server()

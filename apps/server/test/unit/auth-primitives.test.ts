@@ -8,7 +8,6 @@ import { RateLimiter } from '../../src/auth/rate-limiter.js';
 import { open, seal } from '../../src/auth/secret-box.js';
 import { FileSecretStore, type SecretName, type SecretStore } from '../../src/auth/secret-store.js';
 import { AccessTokenError, randomToken, sha256Hex, TokenService } from '../../src/auth/tokens.js';
-import { base32Decode, base32Encode, hotp, otpauthUri, totpStep, verifyTotp } from '@rp/totp';
 
 function memoryStore(seed = 1): SecretStore {
   return {
@@ -16,72 +15,17 @@ function memoryStore(seed = 1): SecretStore {
   };
 }
 
-describe('[AUTH-006] TOTP (RFC 6238)', () => {
-  // RFC 6238 appendix B, SHA-1 secret "12345678901234567890", 8 digits.
-  const secret = Buffer.from('12345678901234567890', 'ascii');
-  it.each([
-    [59, '94287082'],
-    [1_111_111_109, '07081804'],
-    [1_111_111_111, '14050471'],
-    [1_234_567_890, '89005924'],
-    [2_000_000_000, '69279037'],
-    [20_000_000_000, '65353130'],
-  ])('matches the RFC test vector at T=%i', (seconds, expected) => {
-    expect(hotp(secret, totpStep(new Date(seconds * 1000)), 8)).toBe(expected);
-  });
-
-  it('accepts the current and adjacent steps, and never the same step twice', () => {
-    const now = new Date('2026-09-25T10:00:15Z');
-    const step = totpStep(now);
-    const code = hotp(secret, step);
-    expect(verifyTotp(secret, code, now, null)).toBe(step);
-    expect(verifyTotp(secret, hotp(secret, step - 1), now, null)).toBe(step - 1);
-    expect(verifyTotp(secret, hotp(secret, step + 1), now, null)).toBe(step + 1);
-    expect(verifyTotp(secret, hotp(secret, step + 2), now, null)).toBeNull();
-    expect(verifyTotp(secret, code, now, step)).toBeNull();
-    expect(verifyTotp(secret, '12345', now, null)).toBeNull();
-    expect(verifyTotp(secret, 'abcdef', now, null)).toBeNull();
-  });
-
-  it('encodes base32 like RFC 4648 (without padding) and decodes it back', () => {
-    const vectors: [string, string][] = [
-      ['', ''],
-      ['f', 'MY'],
-      ['fo', 'MZXQ'],
-      ['foo', 'MZXW6'],
-      ['foob', 'MZXW6YQ'],
-      ['fooba', 'MZXW6YTB'],
-      ['foobar', 'MZXW6YTBOI'],
-    ];
-    for (const [plain, encoded] of vectors) {
-      expect(base32Encode(Buffer.from(plain))).toBe(encoded);
-      expect(base32Decode(encoded).toString()).toBe(plain);
-    }
-    expect(base32Decode('mzxw6===').toString()).toBe('foo');
-    expect(() => base32Decode('MZ1')).toThrow(RangeError);
-  });
-
-  it('builds an otpauth URI for authenticator apps', () => {
-    const uri = otpauthUri('Demo Dhaba', 'Owner', secret);
-    expect(uri).toMatch(
-      /^otpauth:\/\/totp\/Demo%20Dhaba%3AOwner\?secret=[A-Z2-7]+&issuer=Demo\+Dhaba/,
-    );
-    expect(uri).toContain('digits=6');
-    expect(uri).toContain('period=30');
-  });
-});
-
 describe('[SEC-006] secret box', () => {
   const key = Buffer.alloc(32, 7);
 
   it('round-trips and uses a fresh IV every time', () => {
-    const sealed = seal(key, Buffer.from('totp-secret'));
-    expect(open(key, sealed).toString()).toBe('totp-secret');
-    expect(seal(key, Buffer.from('totp-secret'))).not.toBe(sealed);
+    const sealed = seal(key, Buffer.from('small-secret'));
+    expect(open(key, sealed).toString()).toBe('small-secret');
+    expect(seal(key, Buffer.from('small-secret'))).not.toBe(sealed);
   });
 
   it('rejects a tampered ciphertext or the wrong key', () => {
-    const sealed = seal(key, Buffer.from('totp-secret'));
+    const sealed = seal(key, Buffer.from('small-secret'));
     const parts = sealed.split('.');
     parts[3] = Buffer.from('tampered').toString('base64url');
     expect(() => open(key, parts.join('.'))).toThrow();

@@ -8,7 +8,7 @@ import { PhoneNumber } from './restaurant.js';
  * Staff administration (P4-02a, MGR-004): the people who work here, their roles and PINs. Nobody
  * is deleted, only deactivated, so their history stays theirs (AUD-004). Who may change whom is
  * `decideStaffChange` in `@rp/domain`: managers look after waiters and kitchen staff;
- * creating or removing a manager needs the Owner with a fresh second factor (AUTH-006).
+ * creating or removing a manager is the Owner's alone.
  */
 
 /** Roles a person can be given; the one Owner is set up at installation. */

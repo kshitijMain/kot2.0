@@ -115,11 +115,6 @@ interface Shift {
 async function onDuty(app: INestApplication): Promise<Shift> {
   await renewDeviceToken(app, kit.deviceId);
   const owner = await signIn(app, kit, 'OWNER');
-  // The Owner has just answered the second factor (AUTH-006), as the console asks first.
-  await app.get(PrismaService).session.update({
-    where: { id: owner.session.id },
-    data: { secondFactorAt: new Date() },
-  });
   return {
     owner,
     manager: await signIn(app, kit, 'MANAGER'),

@@ -5,7 +5,6 @@ import { useId, useState } from 'react';
 import { useConsole } from '../../app/console-context.js';
 import { useT } from '../../app/i18n.js';
 import { messageOf } from '../../app/messages.js';
-import { SecondFactorCancelled, type WithSecondFactor } from '../../owner/second-factor.js';
 import {
   checkPerson,
   checkPin,
@@ -62,15 +61,14 @@ function PinField({
 
 /**
  * Adds a person (name, role, contact, PIN) or edits one (name, role, contact), offering only the
- * roles the signed-in person may give (MGR-004). Adding, promoting or demoting a manager asks the
- * Owner for the second factor first (AUTH-006).
+ * roles the signed-in person may give (MGR-004). Only the Owner adds, promotes or demotes a
+ * manager.
  */
 export function PersonDialog({
   actor,
   person,
   customRoles,
   pinLength,
-  withSecondFactor,
   onSaved,
   onClose,
 }: {
@@ -80,7 +78,6 @@ export function PersonDialog({
   /** The Owner's custom roles (AUTH-012), offered under their base role. */
   customRoles: readonly RoleView[];
   pinLength: number;
-  withSecondFactor: WithSecondFactor;
   onSaved: (saved: StaffView) => void;
   onClose: () => void;
 }) {
@@ -121,7 +118,7 @@ export function PersonDialog({
       let saved: StaffView;
       if (person === undefined) {
         const body = createRequestOf(form);
-        saved = await withSecondFactor(() => controller.api.createStaff({ body }));
+        saved = await controller.api.createStaff({ body });
       } else {
         const body = updateRequestOf(person, form);
         if (body === undefined) {
@@ -129,11 +126,11 @@ export function PersonDialog({
           return;
         }
         const params = { staffId: person.id };
-        saved = await withSecondFactor(() => controller.api.updateStaff({ params, body }));
+        saved = await controller.api.updateStaff({ params, body });
       }
       onSaved(saved);
     } catch (failure) {
-      if (!(failure instanceof SecondFactorCancelled)) setError(messageOf(failure, t));
+      setError(messageOf(failure, t));
       setBusy(false);
     }
   };

@@ -49,7 +49,7 @@ function archived(): AppError {
 /**
  * Invoice series (P1-01b, BILL-003, ONB-004 step 3): prefix and format of the invoice numbers,
  * which the billing module allocates gap-free per series and financial year (ADR-0005, ADR-0007).
- * The routes need the Owner with a fresh second factor (AUTH-006).
+ * The routes need the Owner (TAX_AND_INVOICE_SETTINGS).
  *
  * - Numbers are at most 16 characters (`@rp/domain` `validateInvoiceSeries`).
  * - A prefix is never used by two series, archived ones included, so numbers stay unique.

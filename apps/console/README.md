@@ -109,17 +109,9 @@ screens come with P1-08, P1-09, P1-12 and P4-01 to P4-07.
   file. `BulkPhotosScreen.tsx` matches many photos, or a whole folder's, to dishes. Set up step 7
   offers typing it in and the menu file side by side. The AI menu reading is not offered (decided
   2026-10-25). The POS (`src/pos/OrderEntry.tsx`) shows each dish's photo or the placeholder.
-- The Owner's second factor (`src/owner/second-factor.tsx`, AUTH-006): `useSecondFactor` tries an
-  action and, when the server answers SECOND_FACTOR_REQUIRED, asks for the Owner password and an
-  authenticator code (or a recovery code, typed like a pairing code), confirms them with
-  `stepUp` and sends the action again. Cancelling leaves the action untaken and the form as it
-  was; with no password or authenticator yet it sends the Owner to Security instead.
-- Security (`/manage/security`, the Owner only): `src/owner/OwnerSecurityScreen.tsx` sets the
-  first password and authenticator without more ado and changes them behind the second factor.
-  The authenticator is added from a QR code (`QrCode`, ADR-0014) or its key in groups of four,
-  confirmed with a code, then the ten recovery codes show once, in a dialog only "I have saved
-  them" closes. It shows how many recovery codes are left and until when the last confirmation
-  holds.
+- Owner-only actions (tax and invoice settings, data, the licence, managers and custom roles)
+  simply run for the Owner, who signs in with their PIN: there is no password, authenticator or
+  Security page (ADR-0024).
 - The sign-in tiles follow `RestaurantChanged` too, so a person added on another screen can sign
   in at once and a deactivated one disappears.
 - `src/app/console-controller.ts` holds the state and actions outside React (tested on its own);
@@ -142,8 +134,7 @@ offline banner; then they walk through the floor, orders, the kitchen display, t
 dashboard on a desktop and a 360 px phone (no sideways scrolling, and axe-core's WCAG 2.2 A and
 AA rules, colour contrast included, on each page), billing, a manager's nudge acknowledged in
 the alert centre, a manager adding a waiter who signs in on a second tab and is signed out there
-within 5 s of being deactivated, the Owner setting up password and authenticator (the test
-computes the authenticator's code from the key shown) and adding a manager with a recovery code,
+within 5 s of being deactivated, the Owner adding a manager with their PIN session alone,
 a manager handing out pagers at shift start (no sections to give, ADR-0023) (registered, its credential
 shown once, then handed to another waiter well within 30 s), and a waiter refused the Staff
 page. The tabs share one browser context, so they share the

@@ -107,7 +107,6 @@ describe('[AUTH-001] [AUTH-002] [AUTH-005] PIN login', () => {
     const expiresIn = Date.parse(body.accessTokenExpiresAt) - Date.now();
     expect(expiresIn).toBeGreaterThan(14 * 60_000);
     expect(expiresIn).toBeLessThanOrEqual(15 * 60_000);
-    expect(body.secondFactorValidUntil).toBeNull();
 
     const me = await server()
       .get('/api/v1/probe-auth/me')

@@ -224,8 +224,8 @@ describe('[DATA-004] restore onto a new PC', () => {
   });
 });
 
-describe('[DATA-004] [AUTH-006] the Owner restores this PC from the System page', () => {
-  it('needs the Owner with a fresh second factor, restarts, and restores before starting', async () => {
+describe('[DATA-004] the Owner restores this PC from the System page', () => {
+  it('needs the Owner (their PIN session is enough), restarts, and restores before starting', async () => {
     const app = originalApp!;
     const prisma = app.get(PrismaService);
     const server = () => request(httpServer(app));
@@ -239,18 +239,6 @@ describe('[DATA-004] [AUTH-006] the Owner restores this PC from the System page'
       .set(authHeaders(kit.deviceId, manager.accessToken))
       .send(body);
     expect(byManager.status).toBe(403);
-    const stale = await server()
-      .post('/api/v1/backups/restore')
-      .set(authHeaders(kit.deviceId, owner.accessToken))
-      .send(body);
-    expect([stale.status, ApiError.parse(stale.body).code]).toEqual([
-      403,
-      'SECOND_FACTOR_REQUIRED',
-    ]);
-    await prisma.session.update({
-      where: { id: owner.session.id },
-      data: { secondFactorAt: new Date() },
-    });
     const missing = await server()
       .post('/api/v1/backups/restore')
       .set(authHeaders(kit.deviceId, owner.accessToken))

@@ -11,7 +11,7 @@ import {
   extraCapabilitiesOf,
   grantFor,
   OVERRIDE_RECORD_TYPES,
-  OWNER_SECOND_FACTOR_CAPABILITIES,
+  OWNER_ONLY_CAPABILITIES,
   type PermissionMatrix,
   ROLES,
   maySignInOn,
@@ -77,9 +77,13 @@ describe('[AUTH-010] role permission matrix (BRD §4.2)', () => {
     }
   });
 
-  it('[AUTH-006] marks owner second-factor capabilities', () => {
-    expect(OWNER_SECOND_FACTOR_CAPABILITIES.has('DATA_ADMIN')).toBe(true);
-    expect(OWNER_SECOND_FACTOR_CAPABILITIES.has('MENU_MANAGE')).toBe(false);
+  it('[AUTH-012] marks the Owner-only capabilities, granted to the Owner alone', () => {
+    expect(OWNER_ONLY_CAPABILITIES.has('DATA_ADMIN')).toBe(true);
+    expect(OWNER_ONLY_CAPABILITIES.has('MENU_MANAGE')).toBe(false);
+    for (const capability of OWNER_ONLY_CAPABILITIES) {
+      expect(grantFor('OWNER', capability)).toBe('ALLOW');
+      expect(grantFor('MANAGER', capability)).toBe('DENY');
+    }
   });
 });
 

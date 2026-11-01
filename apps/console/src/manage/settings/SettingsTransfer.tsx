@@ -5,7 +5,6 @@ import { useConsole } from '../../app/console-context.js';
 import { downloadFile } from '../../app/download.js';
 import { useT } from '../../app/i18n.js';
 import { messageOf } from '../../app/messages.js';
-import { SecondFactorCancelled, useSecondFactor } from '../../owner/second-factor.js';
 import { parseSettingsFile, settingsFile } from './settings-transfer.js';
 
 /**
@@ -16,7 +15,6 @@ export function SettingsTransfer({ onImported }: { onImported: () => void }) {
   const t = useT();
   const controller = useConsole();
   const toast = useToast();
-  const { withSecondFactor, dialog: secondFactorDialog } = useSecondFactor();
   const input = useRef<HTMLInputElement>(null);
   const [exporting, setExporting] = useState(false);
   const [chosen, setChosen] = useState<SettingsExport | undefined>();
@@ -113,7 +111,7 @@ export function SettingsTransfer({ onImported }: { onImported: () => void }) {
                   onClick={() => {
                     setBusy(true);
                     setError(undefined);
-                    withSecondFactor(() => controller.api.importSettings({ body: chosen })).then(
+                    controller.api.importSettings({ body: chosen }).then(
                       (imported) => {
                         setBusy(false);
                         setResult(imported);
@@ -121,9 +119,7 @@ export function SettingsTransfer({ onImported }: { onImported: () => void }) {
                       },
                       (failure: unknown) => {
                         setBusy(false);
-                        if (!(failure instanceof SecondFactorCancelled)) {
-                          setError(messageOf(failure, t));
-                        }
+                        setError(messageOf(failure, t));
                       },
                     );
                   }}
@@ -177,7 +173,6 @@ export function SettingsTransfer({ onImported }: { onImported: () => void }) {
           )}
         </Dialog>
       )}
-      {secondFactorDialog}
     </>
   );
 }

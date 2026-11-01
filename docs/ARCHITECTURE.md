@@ -46,7 +46,7 @@ RESTAURANT PC (Windows 11; staff network separate from guest Wi-Fi)
 | Database          | PostgreSQL 16 + Prisma 7 (pg adapter)                                                            | Local, transactional, parameterised queries; least-privilege roles `rp_app` / `rp_purge`                |
 | Validation        | Zod 4 schemas in `@rp/contracts`                                                                 | One definition for server, apps and generated OpenAPI/AsyncAPI docs (INT-002, ADR-0010)                 |
 | Real time         | Socket.io (apps), Aedes MQTT over TLS (pagers)                                                   | Rooms per table/section/station/role; QoS 1 acks for pagers                                             |
-| Auth              | Own: name tile + PIN, Argon2id + DPAPI pepper, `jose` tokens, Owner password + TOTP, device keys | Offline-capable; no external identity provider in the restaurant (AUTH-001 to AUTH-007)                 |
+| Auth              | Own: name tiles + PIN (Owner too, ADR-0024), Argon2id + DPAPI pepper, `jose` tokens, device keys | Offline-capable; no external identity provider in the restaurant (AUTH-001 to AUTH-007)                 |
 | LAN TLS           | Per-installation private CA, pinned by every app                                                 | ADR-0011 (OI-07)                                                                                        |
 | Web console       | React 19, React Router 8, Vite 8                                                                 | One codebase for POS, dashboard and KDS modes (MGR-001, KDS-001)                                        |
 | Styling           | Plain CSS with `rp-` classes in cascade layers + token variables                                 | No runtime CSS-in-JS for the long-running KDS; tokens shared with native (ADR-0009)                     |
@@ -143,7 +143,7 @@ Auth:
 
 - A device must be paired before anything else works (AUTH-007). Staff sign in on a paired device
   (name tile + PIN). Manager overrides are single-use approvals for one capability and one entity.
-  Owner-only actions need a fresh second factor. Services receive the actor from the guard and never
+  Owner-only actions are the Owner's alone, by PIN session (ADR-0024). Services receive the actor from the guard and never
   read headers themselves.
 
 Errors:

@@ -443,9 +443,6 @@ importers:
       '@rp/ordering':
         specifier: workspace:*
         version: link:../../packages/ordering
-      '@rp/totp':
-        specifier: workspace:*
-        version: link:../../packages/totp
       aedes:
         specifier: ^1.2.0
         version: 1.2.0

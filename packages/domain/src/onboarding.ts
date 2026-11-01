@@ -33,8 +33,6 @@ export interface OnboardingFacts {
   readonly profileComplete: boolean;
   readonly taxGroups: number;
   readonly defaultInvoiceSeries: boolean;
-  /** The Owner has a password and a confirmed authenticator (AUTH-006). */
-  readonly ownerHasSecondFactor: boolean;
   readonly managers: number;
   readonly tables: number;
   readonly stations: number;
@@ -67,7 +65,7 @@ export function stepReady(step: OnboardingStep, facts: OnboardingFacts): boolean
     case 'INVOICE':
       return facts.defaultInvoiceSeries;
     case 'ACCOUNTS':
-      return facts.ownerHasSecondFactor && facts.managers > 0;
+      return facts.managers > 0;
     case 'FLOOR':
       return facts.tables > 0;
     case 'STATIONS':

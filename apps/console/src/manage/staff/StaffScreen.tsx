@@ -17,7 +17,6 @@ import { messageOf } from '../../app/messages.js';
 import { useLive } from '../../app/use-live.js';
 import { useNow } from '../../app/use-now.js';
 import { ReasonDialog } from '../../billing/ReasonDialog.js';
-import { SecondFactorCancelled, useSecondFactor } from '../../owner/second-factor.js';
 import { PersonDialog, PinDialog } from './StaffDialogs.js';
 import { isLocked, type StaffAction, type StaffActorView, staffActions } from './staff-view.js';
 
@@ -41,7 +40,6 @@ export function StaffScreen() {
   const { person: me } = useConsoleState();
   const toast = useToast();
   const now = useNow(CLOCK_MS);
-  const { withSecondFactor, dialog: secondFactorDialog } = useSecondFactor();
   const { data, reload } = useLive(
     async () => {
       const [list, roles] = await Promise.all([
@@ -69,15 +67,14 @@ export function StaffScreen() {
     reload();
   };
 
-  /** Deactivating and reactivating may ask the Owner for the second factor first. */
   const run = async (action: () => Promise<unknown>, message: string) => {
     setBusy(true);
     setError(undefined);
     try {
-      await withSecondFactor(action);
+      await action();
       done(message);
     } catch (failure) {
-      if (!(failure instanceof SecondFactorCancelled)) setError(messageOf(failure, t));
+      setError(messageOf(failure, t));
       setBusy(false);
     }
   };
@@ -159,7 +156,6 @@ export function StaffScreen() {
           person={open.kind === 'EDIT' ? open.person : undefined}
           customRoles={data.status === 'ready' ? data.value.roles : []}
           pinLength={pinLength}
-          withSecondFactor={withSecondFactor}
           onSaved={(saved) => {
             done(
               t(open.kind === 'ADD' ? 'staff.added' : 'staff.saved', { name: saved.displayName }),
@@ -227,7 +223,6 @@ export function StaffScreen() {
           )}
         </ConfirmDialog>
       ) : null}
-      {secondFactorDialog}
     </section>
   );
 }

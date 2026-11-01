@@ -57,17 +57,9 @@ import {
   LoginResponse,
   OverrideRequest,
   OverrideResponse,
-  OwnerLoginRequest,
-  OwnerPasswordRequest,
-  OwnerSecurityResponse,
   PinLoginRequest,
   RefreshRequest,
   StaffTilesResponse,
-  StepUpRequest,
-  StepUpResponse,
-  TotpConfirmRequest,
-  TotpConfirmResponse,
-  TotpEnrollmentResponse,
   UnlockStaffRequest,
 } from './auth.js';
 import { CurrentAppBuildResponse } from './app-builds.js';
@@ -704,11 +696,10 @@ export const ROUTES = [
     path: '/api/v1/system/data-deletion',
     summary: 'Allow the uninstaller to delete the data for 30 minutes',
     description:
-      'NFR-I02: uninstalling keeps the data on the data drive unless the Owner, with a fresh ' +
-      'second factor and a reason, allows deleting it; the uninstaller may then delete it for 30 ' +
-      'minutes. Audited.',
+      'NFR-I02: uninstalling keeps the data on the data drive unless the Owner, with a reason, ' +
+      'allows deleting it; the uninstaller may then delete it for 30 minutes. Audited.',
     tags: ['system'],
-    requirements: ['NFR-I02', 'AUTH-006', 'AUD-001'],
+    requirements: ['NFR-I02', 'AUD-001'],
     capability: 'DATA_ADMIN',
     request: { body: AllowDataDeletionRequest },
     responses: {
@@ -784,10 +775,10 @@ export const ROUTES = [
     path: '/api/v1/backups/restore',
     summary: 'Restore this PC from one of its backups',
     description:
-      'DATA-004: the Owner, with a fresh second factor and a reason. The backup is checked, the ' +
+      'DATA-004: the Owner, with a reason. The backup is checked, the ' +
       'request saved and the server restarts; the restore runs before it starts again. Audited.',
     tags: ['system'],
-    requirements: ['DATA-004', 'AUTH-006', 'AUD-001'],
+    requirements: ['DATA-004', 'AUD-001'],
     capability: 'DATA_ADMIN',
     request: { body: RestoreBackupRequest },
     responses: {
@@ -823,13 +814,13 @@ export const ROUTES = [
     path: '/api/v1/archives',
     summary: 'Archive a financial year, read the archive back, then purge the year',
     description:
-      'DATA-008, AUD-004: the Owner with a fresh second factor and a reason. Only the oldest ' +
+      'DATA-008, AUD-004: the Owner with a reason. Only the oldest ' +
       'year; within the statutory period only once the Owner acknowledges the warning. The ' +
       'archive and a human-readable export (invoice register CSV, invoice PDFs) go to the folder ' +
       'given or the second backup location; the purge runs through the separate purge login. ' +
       'Runs in the background; audited.',
     tags: ['system'],
-    requirements: ['DATA-008', 'AUD-004', 'AUTH-006', 'AUD-001'],
+    requirements: ['DATA-008', 'AUD-004', 'AUD-001'],
     capability: 'DATA_ADMIN',
     request: { body: StartArchiveRequest },
     responses: {
@@ -935,9 +926,9 @@ export const ROUTES = [
     summary: 'The backup recovery key, for the Owner to keep',
     description:
       'DATA-004: the key that reads this PC’s backups, written out to keep on paper away from ' +
-      'the PC. The Owner, with a fresh second factor. Audited.',
+      'the PC. The Owner only. Audited.',
     tags: ['system'],
-    requirements: ['DATA-004', 'AUTH-006', 'AUD-001'],
+    requirements: ['DATA-004', 'AUD-001'],
     capability: 'DATA_ADMIN',
     responses: {
       200: { description: 'The recovery key.', schema: RecoveryKeyResponse },
@@ -1072,8 +1063,8 @@ export const ROUTES = [
     description:
       'Public because nothing exists yet; only from the server PC itself and only while no ' +
       'restaurant exists (ONB-001). Creates the built-in roles, a default invoice series and ' +
-      'the Owner with their PIN, which must not be easily guessed (PC-S5); the Owner sets a ' +
-      'password and authenticator next (AUTH-006). Audited.',
+      'the Owner with their PIN, which must not be easily guessed (PC-S5); the Owner signs in ' +
+      'with that PIN like everyone else (ADR-0024). Audited.',
     tags: ['onboarding'],
     requirements: ['ONB-001', 'ONB-004', 'AUD-001'],
     capability: 'PUBLIC',
@@ -1158,7 +1149,7 @@ export const ROUTES = [
     description:
       'ONB-010: each setting is checked as if changed by hand: unknown, vendor-controlled, ' +
       'invalid or not allowed for this person are skipped and listed; tax, invoice and data ' +
-      'settings need the Owner with a fresh second factor. Audited.',
+      'settings are the Owner’s alone. Audited.',
     tags: ['settings'],
     requirements: ['ONB-010', 'AUD-001'],
     capability: 'OPERATIONS_CONFIGURE',
@@ -1244,11 +1235,11 @@ export const ROUTES = [
     summary: 'Change one setting',
     description:
       'The value must match the setting (and the rules between settings). Each setting names the ' +
-      'capability needed: tax and invoice, data and licence settings need the Owner with a fresh ' +
-      'second factor (AUTH-006); vendor-controlled settings cannot be changed here. Audited with ' +
+      'capability needed: tax and invoice, data and licence settings are the Owner’s alone; ' +
+      'vendor-controlled settings cannot be changed here. Audited with ' +
       'before and after, and announced with `SettingsChanged`.',
     tags: ['settings'],
-    requirements: ['MGR-007', 'AUD-001', 'AUTH-006', 'BILL-006'],
+    requirements: ['MGR-007', 'AUD-001', 'BILL-006'],
     capability: 'OPERATIONS_CONFIGURE',
     request: { params: SettingKeyParams, body: UpdateSettingRequest },
     responses: {
@@ -1313,7 +1304,7 @@ export const ROUTES = [
     summary: 'Sign in on this device with a staff PIN',
     description:
       'Locks the staff login for 15 min after 5 failures in 10 min and rate-limits attempts per ' +
-      'device (AUTH-003, SEC-009). Every wrong PIN or password on a device also counts against the ' +
+      'device (AUTH-003, SEC-009). Every wrong PIN on a device also counts against the ' +
       'device: at `auth.deviceLockoutMaxFailures` within the window it takes none for the lockout ' +
       'time (423 `DEVICE_LOCKED`) until a manager lets it again (PC-S5). Managers and the Owner are ' +
       'alerted to each lockout (`SIGN_IN_LOCKED`). Kitchen staff sign in only when individual ' +
@@ -1328,30 +1319,6 @@ export const ROUTES = [
       ...deviceErrors,
       423: {
         description: 'The login is locked, or this device takes no PINs for now.',
-        schema: ApiError,
-      },
-      429: { description: 'Too many attempts from this device.', schema: ApiError },
-    },
-  },
-  {
-    operationId: 'ownerLogin',
-    method: 'POST',
-    path: '/api/v1/auth/owner-login',
-    summary: 'Sign in as the Owner with password and second factor',
-    description:
-      'Password + TOTP (or a recovery code) sign-in; the session carries a fresh step-up for ' +
-      'Owner-only actions (AUTH-006). A wrong password also counts against the device, as at ' +
-      '`pinLogin`.',
-    tags: ['auth'],
-    requirements: ['AUTH-006', 'AUTH-013'],
-    capability: 'DEVICE',
-    devices: STAFF_DEVICE_TYPES,
-    request: { body: OwnerLoginRequest },
-    responses: {
-      200: { description: 'Signed in.', schema: LoginResponse },
-      ...deviceErrors,
-      423: {
-        description: 'The login is locked, or this device takes no passwords for now.',
         schema: ApiError,
       },
       429: { description: 'Too many attempts from this device.', schema: ApiError },
@@ -1403,17 +1370,6 @@ export const ROUTES = [
     },
   },
   {
-    operationId: 'stepUp',
-    method: 'POST',
-    path: '/api/v1/auth/step-up',
-    summary: 'Confirm the Owner password and second factor for Owner-only actions',
-    tags: ['auth'],
-    requirements: ['AUTH-006'],
-    capability: 'SESSION',
-    request: { body: StepUpRequest },
-    responses: { 200: { description: 'Step-up done.', schema: StepUpResponse }, ...standardErrors },
-  },
-  {
     operationId: 'grantOverride',
     method: 'POST',
     path: '/api/v1/auth/override',
@@ -1458,62 +1414,6 @@ export const ROUTES = [
     responses: { 204: { description: 'Unlocked.' }, ...standardErrors },
   },
   {
-    operationId: 'enrollOwnerTotp',
-    method: 'POST',
-    path: '/api/v1/auth/owner/totp/enroll',
-    summary: 'Start (or restart) TOTP enrolment for the Owner',
-    description: 'Replacing a confirmed TOTP needs a fresh step-up (AUTH-006).',
-    tags: ['auth'],
-    requirements: ['AUTH-006'],
-    capability: 'SESSION',
-    responses: {
-      200: { description: 'New secret to add to the app.', schema: TotpEnrollmentResponse },
-      ...standardErrors,
-    },
-  },
-  {
-    operationId: 'confirmOwnerTotp',
-    method: 'POST',
-    path: '/api/v1/auth/owner/totp/confirm',
-    summary: 'Confirm TOTP enrolment with a code and receive recovery codes',
-    tags: ['auth'],
-    requirements: ['AUTH-006'],
-    capability: 'SESSION',
-    request: { body: TotpConfirmRequest },
-    responses: {
-      200: { description: 'Enrolled; recovery codes shown once.', schema: TotpConfirmResponse },
-      ...standardErrors,
-    },
-  },
-  {
-    operationId: 'setOwnerPassword',
-    method: 'POST',
-    path: '/api/v1/auth/owner/password',
-    summary: 'Set or change the Owner password',
-    description: 'Changing an existing password needs the current one and a fresh step-up.',
-    tags: ['auth'],
-    requirements: ['AUTH-006'],
-    capability: 'SESSION',
-    request: { body: OwnerPasswordRequest },
-    responses: { 204: { description: 'Password saved.' }, ...standardErrors },
-  },
-  {
-    operationId: 'getOwnerSecurity',
-    method: 'GET',
-    path: '/api/v1/auth/owner/security',
-    summary: "What of the Owner's password, authenticator and recovery codes is set up",
-    description:
-      'Owner only. Never returns a secret: the console shows what is still to set up and whether ' +
-      'the last password + second factor confirmation still holds (AUTH-006).',
-    tags: ['auth'],
-    requirements: ['AUTH-006'],
-    capability: 'SESSION',
-    responses: {
-      200: { description: 'What is set up.', schema: OwnerSecurityResponse },
-      ...standardErrors,
-    },
-  },
-  {
     operationId: 'listRoles',
     method: 'GET',
     path: '/api/v1/roles',
@@ -1529,10 +1429,9 @@ export const ROUTES = [
     path: '/api/v1/roles',
     summary: 'Create a custom role: a waiter or kitchen role with extra capabilities',
     description:
-      'Owner only, with a fresh second factor (AUTH-006). Staff management and the Owner-only ' +
-      'actions can never be added. Audited.',
+      'Owner only. Staff management and the Owner-only ' + 'actions can never be added. Audited.',
     tags: ['staff'],
-    requirements: ['AUTH-012', 'AUTH-006', 'AUD-001'],
+    requirements: ['AUTH-012', 'AUD-001'],
     capability: 'STAFF_MANAGE',
     request: { body: RoleRequest },
     responses: {
@@ -1546,9 +1445,9 @@ export const ROUTES = [
     method: 'PUT',
     path: '/api/v1/roles/:roleId',
     summary: 'Change a custom role; people with it get the change on their next request',
-    description: 'Owner only, with a fresh second factor (AUTH-006). Audited.',
+    description: 'Owner only. Audited.',
     tags: ['staff'],
-    requirements: ['AUTH-012', 'AUTH-006', 'AUD-001'],
+    requirements: ['AUTH-012', 'AUD-001'],
     capability: 'STAFF_MANAGE',
     request: { params: RoleParams, body: RoleRequest },
     responses: {
@@ -1567,7 +1466,7 @@ export const ROUTES = [
     method: 'POST',
     path: '/api/v1/roles/:roleId/archive',
     summary: 'Archive a custom role nobody active has',
-    description: 'Owner only, with a fresh second factor (AUTH-006). Audited with the reason.',
+    description: 'Owner only. Audited with the reason.',
     tags: ['staff'],
     requirements: ['AUTH-012', 'AUD-001'],
     capability: 'STAFF_MANAGE',
@@ -1601,13 +1500,13 @@ export const ROUTES = [
     path: '/api/v1/staff',
     summary: 'Add a person with a role and a PIN',
     description:
-      'MGR-004. Managers add waiters and kitchen staff; adding a manager needs the Owner ' +
-      'with a fresh second factor (403 `SECOND_FACTOR_REQUIRED` until then, AUTH-006). The PIN ' +
+      'MGR-004. Managers add waiters and kitchen staff; only the Owner adds a manager (403 ' +
+      '`OWNER_ONLY` otherwise). The PIN ' +
       'has exactly `auth.pinLength` digits, is not easily guessed while `auth.refuseEasyPins` is ' +
       'on (422 `PIN_TOO_EASY`, PC-S5), is hashed with the pepper and never stored or logged ' +
       '(AUTH-002). Audited.',
     tags: ['staff'],
-    requirements: ['MGR-004', 'AUTH-001', 'AUTH-002', 'AUTH-006', 'AUD-001'],
+    requirements: ['MGR-004', 'AUTH-001', 'AUTH-002', 'AUD-001'],
     capability: 'STAFF_MANAGE',
     request: { body: CreateStaffRequest },
     responses: {
@@ -1623,11 +1522,11 @@ export const ROUTES = [
     summary: "Change a person's name, role, phone or e-mail",
     description:
       "MGR-004. A new role applies to the person's next request (AUTH-010). Making someone a " +
-      "manager or no longer one needs the Owner's second factor (AUTH-006); a manager's details " +
+      "manager or no longer one is the Owner's alone; a manager's details " +
       'are changed by the Owner or themselves; nobody changes their own role. Audited with ' +
       'before and after.',
     tags: ['staff'],
-    requirements: ['MGR-004', 'AUTH-006', 'AUD-001'],
+    requirements: ['MGR-004', 'AUD-001'],
     capability: 'STAFF_MANAGE',
     request: { params: StaffParams, body: UpdateStaffRequest },
     responses: {
@@ -1645,9 +1544,9 @@ export const ROUTES = [
     description:
       'MGR-004, AUTH-008: never deleted. Their sessions end and live connections close within 5 ' +
       "s; their pager and waiter phone are taken back and they leave today's sections. " +
-      "Deactivating a manager needs the Owner's second factor (AUTH-006). Audited with the reason.",
+      'Only the Owner deactivates a manager. Audited with the reason.',
     tags: ['staff'],
-    requirements: ['MGR-004', 'AUTH-006', 'AUTH-008', 'AUD-001'],
+    requirements: ['MGR-004', 'AUTH-008', 'AUD-001'],
     capability: 'STAFF_MANAGE',
     request: { params: StaffParams, body: DeactivateStaffRequest },
     responses: {
@@ -1663,10 +1562,9 @@ export const ROUTES = [
     method: 'POST',
     path: '/api/v1/staff/:staffId/reactivate',
     summary: 'Let a deactivated person sign in again',
-    description:
-      "MGR-004. Reactivating a manager needs the Owner's second factor (AUTH-006). Audited.",
+    description: 'MGR-004. Only the Owner reactivates a manager. Audited.',
     tags: ['staff'],
-    requirements: ['MGR-004', 'AUTH-006', 'AUD-001'],
+    requirements: ['MGR-004', 'AUD-001'],
     capability: 'STAFF_MANAGE',
     request: { params: StaffParams },
     responses: {
@@ -1870,7 +1768,7 @@ export const ROUTES = [
     path: '/api/v1/devices/:deviceId/pins/unlock',
     summary: 'Let a device take PINs again after too many wrong ones',
     description:
-      'PC-S5, MOBILE-S3: a device that stopped taking PINs and passwords after too many wrong ' +
+      'PC-S5, MOBILE-S3: a device that stopped taking PINs after too many wrong ' +
       'ones takes them again at once; the lockout alert clears. Audited.',
     tags: ['devices'],
     requirements: ['AUTH-003', 'SEC-009', 'AUD-001'],
@@ -1956,10 +1854,10 @@ export const ROUTES = [
     path: '/api/v1/restaurant/legal',
     summary: 'Change the invoice particulars: legal name, address, state, GSTIN and FSSAI number',
     description:
-      'Tax and invoice settings: the Owner with a fresh second factor (AUTH-006). The GSTIN must ' +
+      'Tax and invoice settings: the Owner only. The GSTIN must ' +
       'pass its checksum and belong to the restaurant state (BILL-002). Audited.',
     tags: ['restaurant'],
-    requirements: ['ONB-004', 'BILL-002', 'AUTH-006', 'AUD-001'],
+    requirements: ['ONB-004', 'BILL-002', 'AUD-001'],
     capability: 'TAX_AND_INVOICE_SETTINGS',
     request: { body: UpdateRestaurantLegalRequest },
     responses: {
@@ -1987,10 +1885,9 @@ export const ROUTES = [
     path: '/api/v1/tax-groups',
     summary: 'Add a tax group, e.g. "GST 5 %" = CGST 2.5 % + SGST 2.5 %',
     description:
-      'Rates are entered by the restaurant, never built in (BILL-004). The Owner with a fresh ' +
-      'second factor (AUTH-006). Audited.',
+      'Rates are entered by the restaurant, never built in (BILL-004). The Owner only. Audited.',
     tags: ['restaurant'],
-    requirements: ['BILL-004', 'ONB-004', 'AUTH-006', 'AUD-001'],
+    requirements: ['BILL-004', 'ONB-004', 'AUD-001'],
     capability: 'TAX_AND_INVOICE_SETTINGS',
     request: { body: TaxGroupRequest },
     responses: {
@@ -2006,9 +1903,9 @@ export const ROUTES = [
     summary: 'Change a tax group: name, SAC code or rates',
     description:
       'New rates apply to bills issued from now on; issued invoices keep their own tax lines. ' +
-      'The Owner with a fresh second factor (AUTH-006). Audited with before and after.',
+      'The Owner only. Audited with before and after.',
     tags: ['restaurant'],
-    requirements: ['BILL-004', 'AUTH-006', 'AUD-001'],
+    requirements: ['BILL-004', 'AUD-001'],
     capability: 'TAX_AND_INVOICE_SETTINGS',
     request: { params: TaxGroupParams, body: TaxGroupRequest },
     responses: {
@@ -2023,9 +1920,9 @@ export const ROUTES = [
     method: 'POST',
     path: '/api/v1/tax-groups/:taxGroupId/archive',
     summary: 'Archive a tax group no menu item uses',
-    description: 'Master data is archived, never deleted (BRD §9.4). Owner with second factor.',
+    description: 'Master data is archived, never deleted (BRD §9.4). The Owner only.',
     tags: ['restaurant'],
-    requirements: ['BILL-004', 'AUTH-006', 'AUD-001'],
+    requirements: ['BILL-004', 'AUD-001'],
     capability: 'TAX_AND_INVOICE_SETTINGS',
     request: { params: TaxGroupParams, body: ArchiveRequest },
     responses: {
@@ -2055,9 +1952,9 @@ export const ROUTES = [
     summary: 'Add an invoice series',
     description:
       'Numbers are at most 16 characters (BILL-003). The first series becomes the default. The ' +
-      'Owner with a fresh second factor (AUTH-006). Audited.',
+      'Owner only. Audited.',
     tags: ['restaurant'],
-    requirements: ['BILL-003', 'ONB-004', 'AUTH-006', 'AUD-001'],
+    requirements: ['BILL-003', 'ONB-004', 'AUD-001'],
     capability: 'TAX_AND_INVOICE_SETTINGS',
     request: { body: InvoiceSeriesRequest },
     responses: {
@@ -2073,9 +1970,9 @@ export const ROUTES = [
     summary: 'Rename a series, or change its format while it has no invoices',
     description:
       'Once an invoice is issued the prefix and format are fixed, so numbers stay consecutive ' +
-      '(BILL-003). The Owner with a fresh second factor (AUTH-006). Audited.',
+      '(BILL-003). The Owner only. Audited.',
     tags: ['restaurant'],
-    requirements: ['BILL-003', 'AUTH-006', 'AUD-001'],
+    requirements: ['BILL-003', 'AUD-001'],
     capability: 'TAX_AND_INVOICE_SETTINGS',
     request: { params: InvoiceSeriesParams, body: InvoiceSeriesRequest },
     responses: {
@@ -2095,7 +1992,7 @@ export const ROUTES = [
     summary: 'Stop using a series; its invoices keep their numbers',
     description: 'The default series cannot be archived: make another the default first.',
     tags: ['restaurant'],
-    requirements: ['BILL-003', 'AUTH-006', 'AUD-001'],
+    requirements: ['BILL-003', 'AUD-001'],
     capability: 'TAX_AND_INVOICE_SETTINGS',
     request: { params: InvoiceSeriesParams, body: ArchiveRequest },
     responses: {
@@ -2111,7 +2008,7 @@ export const ROUTES = [
     path: '/api/v1/invoice-series/:seriesId/default',
     summary: 'Make a series the one new bills use',
     tags: ['restaurant'],
-    requirements: ['BILL-003', 'AUTH-006', 'AUD-001'],
+    requirements: ['BILL-003', 'AUD-001'],
     capability: 'TAX_AND_INVOICE_SETTINGS',
     request: { params: InvoiceSeriesParams },
     responses: {

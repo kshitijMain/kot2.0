@@ -44,7 +44,6 @@
     "@rp/i18n": "workspace:*",
     "@rp/licensing": "workspace:*",
     "@rp/ordering": "workspace:*",
-    "@rp/totp": "workspace:*",
     "aedes": "^1.2.0",
     "exceljs": "^4.4.0",
     "express": "^5.2.1",

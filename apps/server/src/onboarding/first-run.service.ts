@@ -41,8 +41,8 @@ const closed = () =>
 /**
  * A fresh install's first step (ONB-001, P7-07b): on the restaurant PC itself and only while no
  * restaurant exists, create the restaurant with the built-in roles and a default invoice series,
- * and its Owner with a PIN. The Owner then pairs the PC (bootstrap code), signs in and sets a
- * password and authenticator (AUTH-006) as the set-up page asks.
+ * and its Owner with a PIN. The Owner then pairs the PC (bootstrap code) and signs in with that
+ * PIN (ADR-0024).
  */
 @Injectable()
 export class FirstRunService {

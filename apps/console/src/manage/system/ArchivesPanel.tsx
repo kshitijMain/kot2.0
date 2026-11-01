@@ -7,7 +7,6 @@ import { useConsole, useConsoleState } from '../../app/console-context.js';
 import { useT } from '../../app/i18n.js';
 import { messageOf } from '../../app/messages.js';
 import { grantOf } from '../../app/modes.js';
-import { SecondFactorCancelled, useSecondFactor } from '../../owner/second-factor.js';
 
 /** While an archive is being made, look again this often. */
 export const ARCHIVE_POLL_MS = 3_000;
@@ -24,7 +23,7 @@ type Year = ArchivesResponse['years'][number];
 
 /**
  * Archives one financial year (DATA-008): where to, the statutory warning to acknowledge while
- * GST law still asks for the records, and a reason; the Owner's second factor is asked.
+ * GST law still asks for the records, and a reason. The Owner's alone.
  */
 function ArchiveDialog({
   year,
@@ -37,7 +36,6 @@ function ArchiveDialog({
 }) {
   const t = useT();
   const controller = useConsole();
-  const { withSecondFactor, dialog } = useSecondFactor();
   const [folder, setFolder] = useState('');
   const [reason, setReason] = useState('');
   const [acknowledged, setAcknowledged] = useState(false);
@@ -72,27 +70,25 @@ function ArchiveDialog({
               onClick={() => {
                 setBusy(true);
                 setError(undefined);
-                withSecondFactor(() =>
-                  controller.api.startArchive({
+                controller.api
+                  .startArchive({
                     body: {
                       financialYear: year.financialYear,
                       folder: folder.trim() === '' ? null : folder.trim(),
                       acknowledgeStatutory: acknowledged,
                       reason: reason.trim(),
                     },
-                  }),
-                ).then(
-                  () => {
-                    setBusy(false);
-                    onStarted();
-                  },
-                  (failure: unknown) => {
-                    setBusy(false);
-                    if (!(failure instanceof SecondFactorCancelled)) {
+                  })
+                  .then(
+                    () => {
+                      setBusy(false);
+                      onStarted();
+                    },
+                    (failure: unknown) => {
+                      setBusy(false);
                       setError(messageOf(failure, t));
-                    }
-                  },
-                );
+                    },
+                  );
               }}
             >
               {t('archives.dialog.confirm')}
@@ -157,7 +153,6 @@ function ArchiveDialog({
           </p>
         )}
       </Dialog>
-      {dialog}
     </>
   );
 }
@@ -320,7 +315,6 @@ export function ArchivesPanel() {
 function DataExport() {
   const t = useT();
   const controller = useConsole();
-  const { withSecondFactor, dialog } = useSecondFactor();
   const [last, setLast] = useState<DataExportView | null | undefined>();
   const [asking, setAsking] = useState(false);
   const [folder, setFolder] = useState('');
@@ -385,23 +379,21 @@ function DataExport() {
                 onClick={() => {
                   setBusy(true);
                   setError(undefined);
-                  withSecondFactor(() =>
-                    controller.api.startDataExport({
+                  controller.api
+                    .startDataExport({
                       body: { folder: folder.trim() === '' ? null : folder.trim() },
-                    }),
-                  ).then(
-                    (started) => {
-                      setBusy(false);
-                      setAsking(false);
-                      setLast(started);
-                    },
-                    (failure: unknown) => {
-                      setBusy(false);
-                      if (!(failure instanceof SecondFactorCancelled)) {
+                    })
+                    .then(
+                      (started) => {
+                        setBusy(false);
+                        setAsking(false);
+                        setLast(started);
+                      },
+                      (failure: unknown) => {
+                        setBusy(false);
                         setError(messageOf(failure, t));
-                      }
-                    },
-                  );
+                      },
+                    );
                 }}
               >
                 {t('dataExport.confirm')}
@@ -425,7 +417,6 @@ function DataExport() {
           )}
         </Dialog>
       ) : null}
-      {dialog}
     </div>
   );
 }

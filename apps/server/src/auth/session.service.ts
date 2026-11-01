@@ -43,7 +43,6 @@ interface SessionRow {
   readonly id: string;
   readonly restaurantId: string;
   readonly expiresAt: Date;
-  readonly secondFactorAt: Date | null;
 }
 
 export type AccessResult = { readonly principal: Principal } | { readonly failure: AppError };
@@ -100,7 +99,6 @@ export class SessionService {
       staffId: string;
       device: AuthenticatedDevice;
       settings: AuthSettings;
-      secondFactorAt: Date | null;
       now: Date;
     },
   ): Promise<{ session: SessionRow; refreshToken: string }> {
@@ -115,9 +113,8 @@ export class SessionService {
         tokenHash: sha256Hex(refreshToken),
         expiresAt: new Date(input.now.getTime() + input.settings.sessionMaxHours * 3_600_000),
         lastActiveAt: input.now,
-        secondFactorAt: input.secondFactorAt,
       },
-      select: { id: true, restaurantId: true, expiresAt: true, secondFactorAt: true },
+      select: { id: true, restaurantId: true, expiresAt: true },
     });
     if (input.device.type === 'WAITER_PHONE') await holdPhone(tx, input.device, input.staffId);
     return { session, refreshToken };
@@ -166,7 +163,6 @@ export class SessionService {
         role: input.staff.role,
         capabilities: [...input.staff.capabilities],
       },
-      secondFactorValidUntil: this.stepUpValidUntil(session.secondFactorAt, settings, now),
     };
   }
 
@@ -174,7 +170,6 @@ export class SessionService {
   async describe(
     principal: Principal,
     device: AuthenticatedDevice,
-    now: Date = new Date(),
   ): Promise<CurrentSessionResponse> {
     const session = await this.prisma.session.findUniqueOrThrow({
       where: { id: principal.sessionId },
@@ -193,19 +188,7 @@ export class SessionService {
         role: session.staff.role.baseRole,
         capabilities: roleCapabilities(session.staff.role),
       },
-      secondFactorValidUntil: this.stepUpValidUntil(session.secondFactorAt, settings, now),
     };
-  }
-
-  /** Until when an Owner's password + TOTP step-up counts (AUTH-006), if it still does. */
-  private stepUpValidUntil(
-    secondFactorAt: Date | null,
-    settings: AuthSettings,
-    now: Date,
-  ): string | null {
-    if (secondFactorAt === null) return null;
-    const until = new Date(secondFactorAt.getTime() + settings.stepUpMinutes * 60_000);
-    return until > now ? until.toISOString() : null;
   }
 
   /**
@@ -252,7 +235,6 @@ export class SessionService {
         restaurantId: session.restaurantId,
         deviceId: session.deviceId,
         sessionId: session.id,
-        secondFactorAt: session.secondFactorAt,
         // Read with the session on every request, so a changed custom role applies at once.
         capabilities: roleCapabilities(session.staff.role),
       },

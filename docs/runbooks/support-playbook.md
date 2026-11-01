@@ -1,7 +1,7 @@
 # Support playbook
 
 For vendor support answering a restaurant. First rule: **get service running, then find the
-cause.** Never ask for the Owner's password, TOTP or recovery key. Never take a copy of customer
+cause.** Never ask for the Owner's PIN or the backup recovery key. Never take a copy of customer
 data except through the Control Plane's diagnostics or backups (`vendor-access-policy.md`).
 
 ## Triage

@@ -1,4 +1,3 @@
-import { createHmac } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { type BrowserContext, expect, type Page, test } from '@playwright/test';
@@ -100,30 +99,6 @@ async function sentMinutesAgo(item: string, minutes: number): Promise<void> {
   } finally {
     await client.end();
   }
-}
-
-/**
- * The code an authenticator app shows now for a base32 key (RFC 6238: HMAC-SHA1, 30 s steps,
- * 6 digits), as the Owner's phone would.
- */
-function authenticatorCode(key: string): string {
-  const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
-  let bits = 0;
-  let value = 0;
-  const bytes: number[] = [];
-  for (const char of key.replace(/\s/g, '')) {
-    value = (value << 5) | alphabet.indexOf(char);
-    bits += 5;
-    if (bits >= 8) {
-      bytes.push((value >>> (bits - 8)) & 255);
-      bits -= 8;
-    }
-  }
-  const counter = Buffer.alloc(8);
-  counter.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30_000)));
-  const digest = createHmac('sha1', Buffer.from(bytes)).update(counter).digest();
-  const offset = (digest.at(-1) ?? 0) & 0x0f;
-  return String((digest.readUInt32BE(offset) & 0x7fffffff) % 1_000_000).padStart(6, '0');
 }
 
 /**
@@ -612,48 +587,15 @@ test.describe.serial('the web console', () => {
     await other.close();
   });
 
-  test('[AUTH-006] the Owner sets up password and authenticator, then adds a manager with the second factor', async () => {
+  test('[MGR-004] the Owner adds a manager with their PIN session alone, no password or authenticator', async () => {
     await page.getByRole('button', { name: t('login.signOut') }).click();
     await page.getByRole('button', { name: /^Asha \(Owner\)/ }).click();
     await page.keyboard.type('1111');
     await expect(page).toHaveURL(/\/manage$/);
     const nav = page.getByRole('navigation', { name: t('dashboard.navigation') });
-    await nav.getByRole('link', { name: t('dashboard.section.security') }).click();
-    await expect(
-      page.getByRole('heading', { level: 2, name: t('ownerSecurity.title') }),
-    ).toBeVisible();
-    await expectAccessible(page);
+    // No Security page any more (ADR-0024).
+    await expect(nav.getByRole('link', { name: 'Security' })).toHaveCount(0);
 
-    const password = 'rooftop tandoor since 1998';
-    await page.getByRole('button', { name: t('ownerSecurity.password.setAction') }).click();
-    const setPassword = page.getByRole('dialog', { name: t('ownerSecurity.password.setAction') });
-    await setPassword.getByLabel(/^New password( \*)?$/).fill(password);
-    await setPassword.getByLabel(/^New password again( \*)?$/).fill(password);
-    await setPassword.getByRole('button', { name: t('ownerSecurity.password.save') }).click();
-    await expect(page.getByText(t('ownerSecurity.password.saved'))).toBeVisible();
-
-    await page.getByRole('button', { name: t('ownerSecurity.authenticator.add') }).click();
-    const enrol = page.getByRole('dialog', { name: t('ownerSecurity.authenticator.add') });
-    await expect(
-      enrol.getByRole('img', { name: t('ownerSecurity.authenticator.qrLabel') }),
-    ).toBeVisible();
-    await expectAccessible(page);
-    // The phone reads the key (typed here, as "Can't scan it?" offers) and shows the code.
-    const key = await enrol.locator('code').innerText();
-    await enrol
-      .getByLabel(t('ownerSecurity.authenticator.code'), { exact: false })
-      .fill(authenticatorCode(key));
-    await enrol.getByRole('button', { name: t('ownerSecurity.authenticator.confirm') }).click();
-    const codes = page.getByRole('dialog', { name: t('ownerSecurity.recovery.saveTitle') });
-    const recovery = codes
-      .getByRole('list', { name: t('ownerSecurity.recovery.codes') })
-      .getByRole('listitem');
-    await expect(recovery).toHaveCount(10);
-    const firstCode = await recovery.first().innerText();
-    await codes.getByRole('button', { name: t('ownerSecurity.recovery.saved') }).click();
-    await expect(page.getByText(t('ownerSecurity.recovery.left', { count: 10 }))).toBeVisible();
-
-    // Adding a manager asks for the password and a second factor: this time a recovery code.
     await nav.getByRole('link', { name: t('dashboard.section.staff') }).click();
     await page.getByRole('button', { name: t('staff.add') }).click();
     const add = page.getByRole('dialog', { name: t('staff.form.addTitle') });
@@ -661,20 +603,12 @@ test.describe.serial('the web console', () => {
     await add.getByLabel(t('staff.form.role')).selectOption({ label: t('roles.MANAGER') });
     await add.getByLabel(/^PIN( \*)?$/).fill('8264');
     await add.getByLabel(/^PIN again( \*)?$/).fill('8264');
-    await add.getByRole('button', { name: t('staff.form.add') }).click();
-    const confirm = page.getByRole('dialog', { name: t('secondFactor.title') });
-    await confirm.getByLabel(t('secondFactor.password'), { exact: false }).fill(password);
-    await confirm.getByRole('button', { name: t('secondFactor.useRecovery') }).click();
-    await confirm.getByLabel(t('secondFactor.recoveryCode'), { exact: false }).fill(firstCode);
     await expectAccessible(page);
-    await confirm.getByRole('button', { name: t('secondFactor.confirm') }).click();
+    await add.getByRole('button', { name: t('staff.form.add') }).click();
     await expect(page.getByText(t('staff.added', { name: 'Farah' }))).toBeVisible();
     await expect(
       page.getByRole('group', { name: t('staff.actionsFor', { name: 'Farah' }) }),
     ).toBeVisible();
-
-    await nav.getByRole('link', { name: t('dashboard.section.security') }).click();
-    await expect(page.getByText(t('ownerSecurity.recovery.left', { count: 9 }))).toBeVisible();
   });
 
   test('[PGR-012] [MGR-004] a manager hands out pagers at shift start; there are no sections to give', async () => {

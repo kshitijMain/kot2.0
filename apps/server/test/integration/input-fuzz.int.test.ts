@@ -117,10 +117,7 @@ const SAMPLES: Readonly<Record<string, unknown>> = {
  */
 const LAST = [
   'POST /api/v1/auth/pin-login',
-  'POST /api/v1/auth/owner-login',
-  'POST /api/v1/auth/step-up',
   'POST /api/v1/auth/override',
-  'POST /api/v1/auth/owner/password',
   'POST /api/v1/day-end',
   'POST /api/v1/archives',
   'POST /api/v1/backups/restore',
@@ -461,11 +458,6 @@ describe('[SEC-004] [NFR-A03] hostile input on every endpoint gets a clean answe
     expect(ordered.length).toBe(ROUTE_LIST.length);
     let calls = 0;
     for (const route of ordered) {
-      // A fresh second factor for the Owner-only endpoints (AUTH-006), whatever the clock says.
-      await prisma.session.update({
-        where: { id: owner.session.id },
-        data: { secondFactorAt: new Date() },
-      });
       for (const attempt of attemptsFor(route)) {
         await send(attempt);
         calls += 1;

@@ -16,7 +16,6 @@ import { useId, useState } from 'react';
 import { useConsole } from '../../app/console-context.js';
 import { useT } from '../../app/i18n.js';
 import { messageOf } from '../../app/messages.js';
-import { SecondFactorCancelled, useSecondFactor } from '../../owner/second-factor.js';
 
 interface Choice {
   readonly value: string;
@@ -77,7 +76,6 @@ export function RestoreDialog({
 }) {
   const t = useT();
   const controller = useConsole();
-  const { withSecondFactor, dialog } = useSecondFactor();
   const choices = restoreChoices(view);
   const { continuous } = view;
   const pointInTime = continuous.restorableFrom !== null;
@@ -152,15 +150,14 @@ export function RestoreDialog({
                 const label = goesBackTo();
                 setBusy(true);
                 setError(undefined);
-                withSecondFactor(() => controller.api.restoreBackup({ body })).then(
+                controller.api.restoreBackup({ body }).then(
                   () => {
                     setBusy(false);
                     onRequested(label);
                   },
                   (failure: unknown) => {
                     setBusy(false);
-                    if (!(failure instanceof SecondFactorCancelled))
-                      setError(messageOf(failure, t));
+                    setError(messageOf(failure, t));
                   },
                 );
               }}
@@ -253,7 +250,6 @@ export function RestoreDialog({
           </p>
         )}
       </Dialog>
-      {dialog}
     </>
   );
 }
@@ -265,7 +261,6 @@ export function RestoreDialog({
 export function RecoveryKeyButton() {
   const t = useT();
   const controller = useConsole();
-  const { withSecondFactor, dialog } = useSecondFactor();
   const [shown, setShown] = useState<RecoveryKeyResponse | undefined>();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -277,14 +272,14 @@ export function RecoveryKeyButton() {
         onClick={() => {
           setBusy(true);
           setError(undefined);
-          withSecondFactor(() => controller.api.showRecoveryKey()).then(
+          controller.api.showRecoveryKey().then(
             (key) => {
               setBusy(false);
               setShown(key);
             },
             (failure: unknown) => {
               setBusy(false);
-              if (!(failure instanceof SecondFactorCancelled)) setError(messageOf(failure, t));
+              setError(messageOf(failure, t));
             },
           );
         }}
@@ -320,7 +315,6 @@ export function RecoveryKeyButton() {
           <p className="dashboard-section__hint">{t('backups.recovery.keep')}</p>
         </Dialog>
       )}
-      {dialog}
     </>
   );
 }

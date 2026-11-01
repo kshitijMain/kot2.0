@@ -38,7 +38,6 @@ function login(accessToken: string, refreshToken: string, minutes = 15): LoginRe
     refreshToken,
     session: { id: SESSION_ID, expiresAt: inMinutes(600), inactivityTimeoutSeconds: 600 },
     staff: { id: STAFF_ID, displayName: 'Asha', role: 'MANAGER' },
-    secondFactorValidUntil: null,
   };
 }
 
@@ -357,20 +356,6 @@ describe('[AUTH-005] access tokens are refreshed, sessions end cleanly', () => {
     });
     await offline.signOut();
     expect(offline.session).toBeUndefined();
-  });
-
-  it('signs the Owner in with password and second factor', async () => {
-    const server = new FakeServer().on('POST', '/api/v1/auth/owner-login', () => ({
-      status: 200,
-      body: login('owner-access', 'refresh-token-number-7'),
-    }));
-    const client = new ApiClient({ baseUrl: BASE, fetch: server.fetch, credentials: PAIRED });
-    await client.signInAsOwner({
-      staffId: STAFF_ID,
-      password: 'correct horse battery',
-      secondFactor: { kind: 'TOTP', code: '123456' },
-    });
-    expect(client.session?.accessToken).toBe('owner-access');
   });
 
   it('uses the server clock from the Date header to judge expiry', async () => {

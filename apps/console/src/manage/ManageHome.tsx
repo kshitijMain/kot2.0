@@ -6,7 +6,6 @@ import { useConsoleState } from '../app/console-context.js';
 import { useT } from '../app/i18n.js';
 import { AvailabilityScreen } from '../stock/AvailabilityScreen.js';
 import { ScreenHelp } from '../help/ScreenHelp.js';
-import { OwnerSecurityScreen } from '../owner/OwnerSecurityScreen.js';
 import { DevicesScreen } from './devices/DevicesScreen.js';
 import { MenuFileScreen } from './menu/MenuFileScreen.js';
 import { BulkPhotosScreen } from './menu/BulkPhotosScreen.js';
@@ -36,9 +35,8 @@ import { SystemScreen } from './system/SystemScreen.js';
  * who pair them (P4-02c, MGR-006), the restaurant's profile, tax groups and invoice series
  * (P4-03e, ONB-004), the reports (P4-05d, RPT-016), the kitchen stations and printers (P4-03d,
  * KDS-008), the
- * settings with their own pages (P4-03a to P4-03c, MGR-007), the System page (P4-04, MGR-010)
- * and the Owner's own sign-in security
- * (AUTH-006). The navigation sits beside them on a wide screen and above them on a phone
+ * settings with their own pages (P4-03a to P4-03c, MGR-007) and the System page (P4-04, MGR-010).
+ * The navigation sits beside them on a wide screen and above them on a phone
  * (MGR-011); the page shown is marked for screen readers, not by colour alone. Pages a role cannot
  * use are neither linked nor opened; the server refuses their calls anyway.
  */
@@ -57,7 +55,6 @@ export function ManageHome() {
   const managesStock = allows('STOCK_MANAGE');
   const seesReports = allows('REPORTS_VIEW_EXPORT');
   const viewsAudit = allows('AUDIT_VIEW');
-  const isOwner = person?.role === 'OWNER';
   const viewsLicence = person !== undefined && grantOf(person, 'LICENSE_VIEW') !== 'DENY';
   const managesLicence = person !== undefined && grantOf(person, 'LICENSE_MANAGE') !== 'DENY';
   const first = operates
@@ -157,11 +154,6 @@ export function ManageHome() {
             {t('dashboard.section.licence')}
           </NavLink>
         ) : null}
-        {isOwner ? (
-          <NavLink to="/manage/security" className="dashboard__link">
-            {t('dashboard.section.security')}
-          </NavLink>
-        ) : null}
       </nav>
       <div className="dashboard__content">
         <ScreenHelp />
@@ -201,7 +193,6 @@ export function ManageHome() {
           {viewsLicence ? (
             <Route path="licence" element={<LicenceScreen owner={managesLicence} />} />
           ) : null}
-          {isOwner ? <Route path="security" element={<OwnerSecurityScreen />} /> : null}
           <Route path="*" element={<Navigate to="/manage" replace />} />
         </Routes>
       </div>

@@ -4,23 +4,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { FakeServer } from './fake-server.js';
 import { STAFF } from './fakes.js';
 import { expectNoAxeViolations, renderConsole, server, signsInAs, t } from './harness.js';
-import {
-  ownerSecurity,
-  PRIYA,
-  SECOND_FACTOR_REQUIRED,
-  staffChanged,
-  staffList,
-  staffView,
-  team,
-} from './staff-fixture.js';
+import { PRIYA, staffChanged, staffList, staffView, team } from './staff-fixture.js';
 
 const RAVI = STAFF.WAITER.staffId;
 
 function staffServer(role: 'MANAGER' | 'OWNER' = 'MANAGER'): FakeServer {
   return signsInAs(server(), role)
     .on('GET', '/api/v1/staff', () => ({ status: 200, body: staffList() }))
-    .on('GET', '/api/v1/roles', () => ({ status: 200, body: { roles: [] } }))
-    .on('GET', '/api/v1/auth/owner/security', () => ({ status: 200, body: ownerSecurity() }));
+    .on('GET', '/api/v1/roles', () => ({ status: 200, body: { roles: [] } }));
 }
 
 const nav = () => screen.getByRole('navigation', { name: t('dashboard.navigation') });
@@ -81,10 +72,6 @@ describe('[MGR-004] the Staff page', () => {
       'aria-current',
       'page',
     );
-    // The Owner's own security is not a manager's page.
-    expect(
-      within(nav()).queryByRole('link', { name: t('dashboard.section.security') }),
-    ).not.toBeInTheDocument();
 
     expect(buttonNames(await actionsFor('Ravi'))).toEqual([
       t('staff.edit'),
@@ -295,39 +282,22 @@ describe('[MGR-004] the Staff page', () => {
   });
 });
 
-describe('[AUTH-006] the Owner’s second factor', () => {
-  it('asks for password and authenticator code before adding a manager, then adds them', async () => {
+describe('[MGR-004] the Owner looks after managers with their PIN session alone (ADR-0024)', () => {
+  it('adds a manager straight away, with no password, authenticator or Security page', async () => {
     const vikram = staffView('MANAGER', {
       id: '0199a0e0-0000-7000-8000-000000000107',
       displayName: 'Vikram',
     });
-    const fake = staffServer('OWNER')
-      .on(
-        'POST',
-        '/api/v1/staff',
-        () => SECOND_FACTOR_REQUIRED,
-        () => ({ status: 201, body: vikram }),
-      )
-      .on(
-        'POST',
-        '/api/v1/auth/step-up',
-        () => ({
-          status: 401,
-          body: {
-            code: 'INVALID_CREDENTIALS',
-            message: 'That did not match. Check and try again.',
-          },
-        }),
-        () => ({ status: 200, body: { secondFactorValidUntil: '2026-09-28T10:10:00.000Z' } }),
-      );
+    const fake = staffServer('OWNER').on('POST', '/api/v1/staff', () => ({
+      status: 201,
+      body: vikram,
+    }));
     const { user, container } = await renderConsole({
       fake,
       path: '/manage/staff',
       signedIn: 'OWNER',
     });
-    expect(
-      within(nav()).getByRole('link', { name: t('dashboard.section.security') }),
-    ).toBeVisible();
+    expect(within(nav()).queryByRole('link', { name: 'Security' })).toBeNull();
     await user.click(await screen.findByRole('button', { name: t('staff.add') }));
     const add = await dialog(t('staff.form.addTitle'));
     await fillPerson(user, add, { name: 'Vikram', pin: '5678', pinAgain: '5678' });
@@ -337,105 +307,14 @@ describe('[AUTH-006] the Owner’s second factor', () => {
     );
     await user.click(within(add).getByRole('button', { name: t('staff.form.add') }));
 
-    const confirm = await dialog(t('secondFactor.title'));
-    await within(confirm).findByLabelText(new RegExp(`^${t('secondFactor.password')}`));
-    await expectNoAxeViolations(container);
-    await user.type(
-      within(confirm).getByLabelText(new RegExp(`^${t('secondFactor.password')}`)),
-      'correct horse battery',
-    );
-    await user.type(
-      within(confirm).getByLabelText(new RegExp(`^${t('secondFactor.code')}`)),
-      '12 34 5',
-    );
-    await user.click(within(confirm).getByRole('button', { name: t('secondFactor.confirm') }));
-    expect(within(confirm).getByText(t('secondFactor.codeInvalid'))).toBeVisible();
-
-    await user.type(within(confirm).getByLabelText(new RegExp(`^${t('secondFactor.code')}`)), '6');
-    await user.click(within(confirm).getByRole('button', { name: t('secondFactor.confirm') }));
-    expect(await within(confirm).findByRole('alert')).toHaveTextContent(
-      'That did not match. Check and try again.',
-    );
-
-    // Lost the phone: a recovery code, typed however.
-    await user.click(within(confirm).getByRole('button', { name: t('secondFactor.useRecovery') }));
-    const recovery = within(confirm).getByLabelText(
-      new RegExp(`^${t('secondFactor.recoveryCode')}`),
-    );
-    await user.type(recovery, 'abcd efgh');
-    expect(recovery).toHaveValue('ABCD-EFGH');
-    await user.click(within(confirm).getByRole('button', { name: t('secondFactor.confirm') }));
-
     expect(await toastSays(t('staff.added', { name: 'Vikram' }))).toBeVisible();
-    expect(fake.callsTo('POST', '/api/v1/auth/step-up').map((call) => call.body)).toEqual([
-      { password: 'correct horse battery', secondFactor: { kind: 'TOTP', code: '123456' } },
-      {
-        password: 'correct horse battery',
-        secondFactor: { kind: 'RECOVERY_CODE', code: 'ABCD-EFGH' },
-      },
-    ]);
-    // Tried, confirmed, sent again.
-    expect(fake.callsTo('POST', '/api/v1/staff')).toHaveLength(2);
-    expect(fake.callsTo('POST', '/api/v1/staff')[1]?.body).toMatchObject({ role: 'MANAGER' });
-  });
-
-  it('keeps the dialog open when the Owner cancels, and sends them to set up first', async () => {
-    const fake = staffServer('OWNER')
-      .on('POST', '/api/v1/staff', () => SECOND_FACTOR_REQUIRED)
-      .on(
-        'GET',
-        '/api/v1/auth/owner/security',
-        () => ({ status: 200, body: ownerSecurity() }),
-        () => ({
-          status: 200,
-          body: ownerSecurity({ hasAuthenticator: false, recoveryCodesLeft: 0 }),
-        }),
-      );
-    const { user } = await renderConsole({ fake, path: '/manage/staff', signedIn: 'OWNER' });
-    const deactivateMeera = async () => {
-      await user.click(
-        within(await actionsFor('Meera')).getByRole('button', { name: t('staff.deactivate') }),
-      );
-      const reason = await dialog(t('staff.deactivateDialog.title', { name: 'Meera' }));
-      await user.type(
-        within(reason).getByLabelText(t('staff.deactivateDialog.reason')),
-        'Moved city',
-      );
-      fake.on(
-        'POST',
-        `/api/v1/staff/${STAFF.MANAGER.staffId}/deactivate`,
-        () => SECOND_FACTOR_REQUIRED,
-      );
-      await user.click(
-        within(reason).getByRole('button', { name: t('staff.deactivateDialog.confirm') }),
-      );
-      return reason;
-    };
-
-    const reason = await deactivateMeera();
-    const confirm = await dialog(t('secondFactor.title'));
-    await user.click(within(confirm).getByRole('button', { name: t('secondFactor.cancel') }));
-    await waitFor(() => {
-      expect(screen.queryByRole('dialog', { name: t('secondFactor.title') })).toBeNull();
-    });
-    // Nothing happened and nothing failed: the reason is still there to try again.
-    expect(reason).toBeVisible();
-    expect(within(reason).queryByRole('alert')).toBeNull();
-    await user.click(
-      within(reason).getByRole('button', { name: t('staff.deactivateDialog.confirm') }),
-    );
-
-    // No authenticator yet: nothing to confirm with, so the Owner is sent to set one up.
-    const setUp = await dialog(t('secondFactor.title'));
-    expect(await within(setUp).findByText(t('secondFactor.notSetUp'))).toBeVisible();
-    await user.click(within(setUp).getByRole('button', { name: t('secondFactor.openSecurity') }));
-    expect(
-      await screen.findByRole('heading', { level: 2, name: t('ownerSecurity.title') }),
-    ).toBeVisible();
+    await expectNoAxeViolations(container);
+    expect(fake.callsTo('POST', '/api/v1/staff')).toHaveLength(1);
+    expect(fake.callsTo('POST', '/api/v1/staff')[0]?.body).toMatchObject({ role: 'MANAGER' });
   });
 });
 
-describe('[SEC-003] [AUTH-010] who opens the Staff and Security pages', () => {
+describe('[SEC-003] [AUTH-010] who opens the Staff page', () => {
   it('does not open Staff for a waiter', async () => {
     await renderConsole({
       fake: signsInAs(server(), 'WAITER'),
@@ -447,8 +326,12 @@ describe('[SEC-003] [AUTH-010] who opens the Staff and Security pages', () => {
     ).toBeInTheDocument();
   });
 
-  it('takes a manager from Security back to the overview', async () => {
-    await renderConsole({ fake: staffServer(), signedIn: 'MANAGER', path: '/manage/security' });
+  it('takes the Owner from the old Security address back to the overview', async () => {
+    await renderConsole({
+      fake: staffServer('OWNER'),
+      signedIn: 'OWNER',
+      path: '/manage/security',
+    });
     expect(
       await screen.findByRole('region', { name: t('dashboard.overview.glance') }),
     ).toBeVisible();

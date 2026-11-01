@@ -3,16 +3,13 @@ import {
   ApiError,
   CurrentSessionResponse,
   LoginResponse,
-  OwnerSecurityResponse,
   StaffListResponse,
   StaffTilesResponse,
   StaffView,
-  TotpEnrollmentResponse,
 } from '@rp/contracts';
 import request from 'supertest';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { AuthSettingsService } from '../../src/auth/auth-settings.js';
-import { base32Decode, hotp, totpStep } from '@rp/totp';
 import { PrismaService } from '../../src/database/prisma.service.js';
 import { DEFAULT_REALTIME_OPTIONS, REALTIME_OPTIONS } from '../../src/realtime/realtime.gateway.js';
 import {
@@ -27,20 +24,15 @@ import { RealtimeTestClient } from '../helpers/realtime-client.js';
 import { appUrl, createTestApp, httpServer } from '../helpers/test-app.js';
 import { createTestDatabase, type TestDatabase } from '../helpers/test-database.js';
 
-const PASSWORD = 'correct horse battery';
-
 let database: TestDatabase;
 let app: INestApplication;
 let prisma: PrismaService;
 let kit: AuthKit;
 let manager: LoginResponse;
 let owner: LoginResponse;
-let secret: Buffer;
 const clients: RealtimeTestClient[] = [];
 
 beforeAll(async () => {
-  // One clock for the whole file that only moves forward, so authenticator codes never repeat.
-  vi.useFakeTimers({ toFake: ['Date'] });
   database = await createTestDatabase();
   app = await createTestApp({
     databaseUrl: database.url,
@@ -53,28 +45,13 @@ beforeAll(async () => {
   });
   prisma = app.get(PrismaService);
   kit = await createAuthKit(app);
-  // Many sign-ins from one device in one (frozen) minute: lift the per-device limit (SEC-009).
+  // Many sign-ins from one device in one minute: lift the per-device limit (SEC-009).
   await prisma.setting.create({
     data: { restaurantId: kit.restaurantId, key: 'auth.attemptsPerMinutePerDevice', value: 100 },
   });
   app.get(AuthSettingsService).invalidate();
   manager = await signIn(app, kit, 'MANAGER');
   owner = await signIn(app, kit, 'OWNER');
-  // The Owner's password and authenticator, for the second factor (AUTH-006).
-  await server()
-    .post('/api/v1/auth/owner/password')
-    .set(as(owner))
-    .send({ newPassword: PASSWORD })
-    .expect(204);
-  const enrolment = TotpEnrollmentResponse.parse(
-    (await server().post('/api/v1/auth/owner/totp/enroll').set(as(owner))).body,
-  );
-  secret = base32Decode(enrolment.secret);
-  await server()
-    .post('/api/v1/auth/owner/totp/confirm')
-    .set(as(owner))
-    .send({ code: hotp(secret, totpStep(new Date())) })
-    .expect(200);
 });
 
 afterEach(() => {
@@ -82,7 +59,6 @@ afterEach(() => {
 });
 
 afterAll(async () => {
-  vi.useRealTimers();
   await app.close();
   await database.drop();
 });
@@ -96,22 +72,6 @@ const textOf = (row: unknown) =>
   JSON.stringify(row, (_key, value: unknown) =>
     typeof value === 'bigint' ? value.toString() : value,
   );
-
-/** The Owner confirms password and authenticator code (of the next 30 s step: never reused). */
-async function stepUp(session: LoginResponse = owner): Promise<void> {
-  vi.setSystemTime(Date.now() + 30_000);
-  const code = hotp(secret, totpStep(new Date()));
-  await server()
-    .post('/api/v1/auth/step-up')
-    .set(as(session))
-    .send({ password: PASSWORD, secondFactor: { kind: 'TOTP', code } })
-    .expect(200);
-}
-
-/** Forgets the Owner's step-up, as if it was done longer ago than `auth.stepUpMinutes`. */
-async function forgetStepUp(): Promise<void> {
-  await prisma.session.update({ where: { id: owner.session.id }, data: { secondFactorAt: null } });
-}
 
 async function create(
   session: LoginResponse,
@@ -386,7 +346,6 @@ describe('[AUTH-008] [MGR-004] deactivating', () => {
       .send({ role: 'WAITER' });
     expect(role.status).toBe(422);
     expect(codeOf(role)).toBe('OWN_RECORD');
-    await stepUp();
     const theOwner = await server()
       .post(`/api/v1/staff/${kit.staff.OWNER}/deactivate`)
       .set(as(owner))
@@ -402,18 +361,12 @@ describe('[AUTH-008] [MGR-004] deactivating', () => {
   });
 });
 
-describe('[AUTH-006] creating or removing managers', () => {
-  it('refuses managers, and asks the Owner for the second factor first', async () => {
+describe('[MGR-004] creating or removing managers is the Owner’s alone', () => {
+  it('refuses managers, and lets the Owner do it with their PIN session alone (ADR-0024)', async () => {
     const byManager = await create(manager, { displayName: 'Rohit', role: 'MANAGER', pin: '1357' });
     expect(byManager.status).toBe(403);
     expect(codeOf(byManager)).toBe('OWNER_ONLY');
 
-    await forgetStepUp();
-    const unconfirmed = await create(owner, { displayName: 'Rohit', role: 'MANAGER', pin: '1357' });
-    expect(unconfirmed.status).toBe(403);
-    expect(codeOf(unconfirmed)).toBe('SECOND_FACTOR_REQUIRED');
-
-    await stepUp();
     const confirmed = await create(owner, { displayName: 'Rohit', role: 'MANAGER', pin: '1357' });
     expect(confirmed.status).toBe(201);
     const rohit = StaffView.parse(confirmed.body);
@@ -436,13 +389,6 @@ describe('[AUTH-006] creating or removing managers', () => {
       expect(codeOf(response)).toBe('OWNER_ONLY');
     }
 
-    await forgetStepUp();
-    const demote = await server()
-      .patch(`/api/v1/staff/${rohit.id}`)
-      .set(as(owner))
-      .send({ role: 'WAITER' });
-    expect(codeOf(demote)).toBe('SECOND_FACTOR_REQUIRED');
-    await stepUp();
     const demoted = await server()
       .patch(`/api/v1/staff/${rohit.id}`)
       .set(as(owner))
@@ -467,7 +413,6 @@ describe('[AUTH-006] creating or removing managers', () => {
     expect(ownerLock.status).toBe(403);
     expect(codeOf(ownerLock)).toBe('OWNER_ONLY');
 
-    await stepUp();
     const added = await create(owner, { displayName: 'Meera', role: 'MANAGER', pin: '8604' });
     expect(added.status).toBe(201);
     const meera = StaffView.parse(added.body);
@@ -475,26 +420,8 @@ describe('[AUTH-006] creating or removing managers', () => {
     expect(otherManager.status).toBe(403);
     expect(codeOf(otherManager)).toBe('OWNER_ONLY');
 
-    // Unlocking gives nobody a role, so the Owner needs no second factor for it.
-    await forgetStepUp();
     await unlock(owner, meera.id).expect(204);
     await unlock(manager, kit.staff.MANAGER).expect(204);
-  });
-
-  it('tells the Owner what of their sign-in security is set up, and nobody else', async () => {
-    await stepUp();
-    const security = OwnerSecurityResponse.parse(
-      (await server().get('/api/v1/auth/owner/security').set(as(owner))).body,
-    );
-    expect(security).toMatchObject({
-      hasPassword: true,
-      hasAuthenticator: true,
-      recoveryCodesLeft: 10,
-    });
-    expect(security.secondFactorValidUntil).not.toBeNull();
-    const byManager = await server().get('/api/v1/auth/owner/security').set(as(manager));
-    expect(byManager.status).toBe(403);
-    expect(codeOf(byManager)).toBe('OWNER_ONLY');
   });
 });
 

@@ -19,7 +19,6 @@ import { useConsole } from '../../app/console-context.js';
 import { useT } from '../../app/i18n.js';
 import { messageOf } from '../../app/messages.js';
 import { useLive } from '../../app/use-live.js';
-import { SecondFactorCancelled, useSecondFactor } from '../../owner/second-factor.js';
 import { SettingsTransfer } from './SettingsTransfer.js';
 import {
   bpText,
@@ -156,14 +155,12 @@ function describe(
 /**
  * The Settings page (P4-03a, MGR-007, UPD-010): every setting of the catalogue by area, with its
  * value, its default when changed, and who may change it. Settings the vendor controls are shown
- * but not changed here; tax, invoice, data and licence settings ask for the Owner's second factor
- * (AUTH-006). The editor for each comes from its schema, and every change says why.
+ * but not changed here; tax, invoice, data and licence settings are the Owner's alone. The editor for each comes from its schema, and every change says why.
  */
 export function SettingsScreen() {
   const t = useT();
   const controller = useConsole();
   const toast = useToast();
-  const { withSecondFactor, dialog: secondFactorDialog } = useSecondFactor();
   const { data, reload } = useLive(
     async () => {
       const [settings, printers] = await Promise.all([
@@ -194,17 +191,15 @@ export function SettingsScreen() {
     setBusy(true);
     setError(undefined);
     try {
-      await withSecondFactor(() =>
-        controller.api.updateSetting({
-          params: { key: setting.key },
-          body: { value, ...(reason.trim() !== '' && { reason: reason.trim() }) },
-        }),
-      );
+      await controller.api.updateSetting({
+        params: { key: setting.key },
+        body: { value, ...(reason.trim() !== '' && { reason: reason.trim() }) },
+      });
       toast.show({ title: t('settingsPage.saved', { name: label(setting.key) }), tone: 'success' });
       close();
       reload();
     } catch (failure) {
-      if (!(failure instanceof SecondFactorCancelled)) setError(messageOf(failure, t));
+      setError(messageOf(failure, t));
       setBusy(false);
     }
   };
@@ -346,7 +341,6 @@ export function SettingsScreen() {
           onClose={close}
         />
       ) : null}
-      {secondFactorDialog}
     </section>
   );
 }

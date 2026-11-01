@@ -6,7 +6,7 @@ import {
   type Capability,
   DEFAULT_PERMISSION_MATRIX,
   OVERRIDE_RECORD_TYPES,
-  OWNER_SECOND_FACTOR_CAPABILITIES,
+  OWNER_ONLY_CAPABILITIES,
   ROLES,
   type Role,
 } from '@rp/domain';
@@ -86,9 +86,7 @@ describe('[AUTH-010] [SEC-003] every capability row of the permission matrix', (
   it.each(cases)('%s → %s', async (role: Role, capability: Capability) => {
     const response = await server().post(probe(capability)).set(as(role));
     const grant = DEFAULT_PERMISSION_MATRIX[capability][role];
-    if (grant === 'ALLOW' && OWNER_SECOND_FACTOR_CAPABILITIES.has(capability)) {
-      expect(codeOf(response)).toBe('SECOND_FACTOR_REQUIRED');
-    } else if (grant === 'ALLOW' || grant === 'OWN') {
+    if (grant === 'ALLOW' || grant === 'OWN') {
       expect(response.status).toBe(200);
       expect(response.body).toMatchObject({ capability, ownershipRequired: grant === 'OWN' });
     } else {
@@ -96,6 +94,18 @@ describe('[AUTH-010] [SEC-003] every capability row of the permission matrix', (
       expect(codeOf(response)).toBe(grant === 'OVERRIDE' ? 'OVERRIDE_REQUIRED' : 'FORBIDDEN');
     }
   });
+});
+
+describe('[AUTH-012] [SEC-003] Owner-only capabilities (ADR-0024)', () => {
+  it.each([...OWNER_ONLY_CAPABILITIES])(
+    '%s: the Owner’s PIN session is enough; a manager is refused',
+    async (capability: Capability) => {
+      const byOwner = await server().post(probe(capability)).set(as('OWNER'));
+      expect(byOwner.status, JSON.stringify(byOwner.body)).toBe(200);
+      const byManager = await server().post(probe(capability)).set(as('MANAGER'));
+      expect([byManager.status, codeOf(byManager)]).toEqual([403, 'FORBIDDEN']);
+    },
+  );
 });
 
 describe('[AUTH-011] [AUTH-013] manager override', () => {
