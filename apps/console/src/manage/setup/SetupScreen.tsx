@@ -7,20 +7,18 @@ import { useT } from '../../app/i18n.js';
 import { messageOf } from '../../app/messages.js';
 import { grantOf } from '../../app/modes.js';
 import { useLive } from '../../app/use-live.js';
-import { SecondFactorCancelled, useSecondFactor } from '../../owner/second-factor.js';
 import { EmptyMenuFileDownload } from '../menu/MenuFileScreen.js';
 import { GoLivePanel } from './GoLivePanel.js';
 import { setupCounts, STEP_PAGES } from './setup-view.js';
 
 const STATUS_TONE = { DONE: 'success', SKIPPED: 'neutral', TODO: 'warning' } as const;
 
-/** Activating the PC with the vendor's code (ONB-003): the Owner's, with their second factor. */
+/** Activating the PC with the vendor's code (ONB-003): the Owner's alone. */
 function Activation({ view, reload }: { view: OnboardingResponse; reload: () => void }) {
   const t = useT();
   const controller = useConsole();
   const { person } = useConsoleState();
   const toast = useToast();
-  const { withSecondFactor, dialog } = useSecondFactor();
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
@@ -47,9 +45,7 @@ function Activation({ view, reload }: { view: OnboardingResponse; reload: () => 
           event.preventDefault();
           setBusy(true);
           setError(undefined);
-          withSecondFactor(() =>
-            controller.api.activateInstallation({ body: { code: code.trim() } }),
-          ).then(
+          controller.api.activateInstallation({ body: { code: code.trim() } }).then(
             (activated) => {
               setBusy(false);
               setCode('');
@@ -61,7 +57,7 @@ function Activation({ view, reload }: { view: OnboardingResponse; reload: () => 
             },
             (failure: unknown) => {
               setBusy(false);
-              if (!(failure instanceof SecondFactorCancelled)) setError(messageOf(failure, t));
+              setError(messageOf(failure, t));
             },
           );
         }}
@@ -93,7 +89,6 @@ function Activation({ view, reload }: { view: OnboardingResponse; reload: () => 
         {t('setupPage.activation.title')}
       </h3>
       {body}
-      {dialog}
     </section>
   );
 }
@@ -170,7 +165,12 @@ export function SetupScreen() {
                   </Badge>
                 </p>
               </div>
-              <div className="staff-row__actions">
+              {/* Each step's buttons say which step they are for (P9-20): "Undo" alone did not. */}
+              <div
+                className="staff-row__actions"
+                role="group"
+                aria-label={t(`setupPage.step.${entry.step}.title`)}
+              >
                 <Link className="console-link" to={STEP_PAGES[entry.step]}>
                   {t(`setupPage.step.${entry.step}.open`)}
                 </Link>

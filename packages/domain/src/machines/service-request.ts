@@ -1,9 +1,15 @@
 import type { NotificationEvent } from '../notifications.js';
 import { defineStateMachine } from '../state-machine.js';
 
-/** Diner service buttons on the table tablet (TAB-004) and QR page (QR-011). */
-export const SERVICE_REQUEST_TYPES = ['WATER', 'WAITER', 'BILL'] as const;
+/**
+ * Diner service buttons on the table tablet (TAB-004) and QR page (QR-011). PAID is the QR page's
+ * "I have paid" after paying the printed bill by UPI (P9-03, ADR-0024): staff check and settle.
+ */
+export const SERVICE_REQUEST_TYPES = ['WATER', 'WAITER', 'BILL', 'PAID'] as const;
 export type ServiceRequestType = (typeof SERVICE_REQUEST_TYPES)[number];
+
+/** The tablet's buttons (TAB-004): it has no UPI payment, so no "I have paid". */
+export const TABLET_REQUEST_TYPES: readonly ServiceRequestType[] = ['WATER', 'WAITER', 'BILL'];
 
 /**
  * The alert each request raises (NTF-003, BRD Appendix C): the responsible waiter's pager and app,
@@ -13,6 +19,7 @@ export const SERVICE_REQUEST_ALERTS: Readonly<Record<ServiceRequestType, Notific
   WATER: 'WATER_REQUEST',
   WAITER: 'WAITER_REQUEST',
   BILL: 'BILL_REQUEST',
+  PAID: 'PAYMENT_CLAIMED',
 };
 
 export const SERVICE_REQUEST_STATES = [

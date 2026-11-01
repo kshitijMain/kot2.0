@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { indianMobile, maskPhone, nextDigitalBillAttempt } from '../src/digital-bill.js';
+import {
+  displayPhone,
+  indianMobile,
+  maskPhone,
+  nextDigitalBillAttempt,
+} from '../src/digital-bill.js';
 
 describe('[BILL-012] the diner’s number for a digital bill', () => {
   it('reads Indian mobile numbers however they are written', () => {
@@ -43,5 +48,13 @@ describe('[BILL-012] trying a digital bill again', () => {
   it('gives up when the next try would be more than a day after the bill was queued', () => {
     expect(nextDigitalBillAttempt(queued, 9, new Date('2026-10-05T07:01:00Z'))).toBeUndefined();
     expect(nextDigitalBillAttempt(queued, 9, new Date('2026-10-05T06:59:00Z'))).toBeDefined();
+  });
+});
+
+describe('[BILL-012] a number as people read it (P9-23)', () => {
+  it('spaces an Indian mobile and leaves anything else as it is', () => {
+    expect(displayPhone('+919876543210')).toBe('+91 98765 43210');
+    expect(displayPhone('098765 43210')).toBe('+91 98765 43210');
+    expect(displayPhone('+44 20 7946 0958')).toBe('+44 20 7946 0958');
   });
 });

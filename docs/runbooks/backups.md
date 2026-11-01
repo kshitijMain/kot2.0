@@ -15,7 +15,7 @@ in the name is UTC. Inside it are:
 - `database.dump`: the whole database, from `pg_dump --format=custom --no-owner`, with its grants;
 - `secrets.json`: the local secrets the data needs on a new PC:
   - the PIN pepper;
-  - the token, device and TOTP keys;
+  - the token and device keys;
   - the TLS key encryption key;
   - the installation key;
   - the relay and licence keys.
@@ -133,8 +133,7 @@ A backup can only be read with the backup key of the PC that made it. The key st
 in the DPAPI store. If the PC is lost, the backups on the USB drive or NAS need the key from
 somewhere else:
 
-- **The Owner's recovery key.** On the System page, "Show the recovery key" (Owner only, with a
-  fresh second factor, audited as `BACKUP_RECOVERY_KEY_SHOWN`) shows the key written out, like
+- **The Owner's recovery key.** On the System page, "Show the recovery key" (Owner only, audited as `BACKUP_RECOVERY_KEY_SHOWN`) shows the key written out, like
   `RPK1-ABCDE-...`, in 11 groups. The Owner writes it down and keeps it away from the PC. The last
   two bytes are a check, so a mistyped character is caught before a backup is tried.
 - **The vendor’s escrowed copy** (P7-05e), released for a restore once the Owner is verified.
@@ -265,7 +264,7 @@ who asked for the restore.
 
 1. The Owner opens System, then Backups, then "Restore from a backup…".
 2. They pick the backup (from the data drive or the second location), give a reason and confirm.
-   This needs the Owner with a fresh second factor; it is audited as `RESTORE_REQUESTED`.
+   This needs the Owner; it is audited as `RESTORE_REQUESTED`.
 3. The server checks that the file is there and opens with this PC's key. It saves the request in
    `<RP_DATA_DIR>/backups/restore-request.json`, then exits with code 75.
 4. The Windows service runs `restore-cli pending` before it starts the server again (P0-16). A
@@ -305,7 +304,7 @@ who asked for the restore.
 
 With the continuous backup on, the Owner can go back to the latest moment archived, or to any
 minute since the oldest base backup kept ("Restore from a backup…", then "The latest moment" or "A
-moment I choose", in India time). It needs the Owner with a fresh second factor and a reason, like
+moment I choose", in India time). It needs the Owner and a reason, like
 a file restore, and is audited (`RESTORE_REQUESTED` with the moment, then `BACKUP_RESTORED` with
 `restoredTo`, the last change brought back).
 

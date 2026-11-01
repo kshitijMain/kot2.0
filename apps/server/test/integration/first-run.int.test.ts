@@ -30,6 +30,8 @@ describe('[ONB-001] [ONB-004] the first run', () => {
     expect(FirstRunStatus.parse((await server().get('/api/v1/first-run')).body)).toEqual({
       needed: true,
       pinLength: 4,
+      // Pairing as usual: the server is not PIN-only (ADR-0025).
+      pinOnly: false,
     });
     const sixDigits = await server()
       .post('/api/v1/first-run')
@@ -78,6 +80,8 @@ describe('[ONB-001] [ONB-004] the first run', () => {
     expect(FirstRunStatus.parse((await server().get('/api/v1/first-run')).body)).toEqual({
       needed: false,
       pinLength: 4,
+      // Pairing as usual: the server is not PIN-only (ADR-0025).
+      pinOnly: false,
     });
     // The PC can now pair itself as the first POS.
     expect((await server().post('/api/v1/devices/pairing-codes/bootstrap')).status).toBe(201);

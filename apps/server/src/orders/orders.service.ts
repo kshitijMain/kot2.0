@@ -608,8 +608,19 @@ export class OrdersService {
     menu: MenuSnapshot,
     sentById: string | null,
   ): Promise<void> {
-    const modes = new Map(menu.stations.map((station) => [station.id, station.mode]));
-    for (const draft of splitIntoKots(inputs)) {
+    const drafts = splitIntoKots(inputs);
+    // Whether a station prints is the station's own setting now, not the published menu's copy
+    // (P9-25): a station set to print had kept its tickets off paper until the menu was
+    // published again, as the changed and cancelled tickets already read it.
+    const live = await tx.station.findMany({
+      where: { id: { in: [...new Set(drafts.map((draft) => draft.stationId))] } },
+      select: { id: true, mode: true },
+    });
+    const modes = new Map<string, string>([
+      ...menu.stations.map((station) => [station.id, station.mode] as const),
+      ...live.map((station) => [station.id, station.mode] as const),
+    ]);
+    for (const draft of drafts) {
       const kotNumber = await allocateDailyNumber(tx, { restaurantId, businessDate, kind: 'KOT' });
       const mode = modes.get(draft.stationId) ?? 'SCREEN';
       const kot = await tx.kot.create({

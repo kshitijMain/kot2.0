@@ -53,8 +53,7 @@ line.
 
 **People**
 
-- [ ] The Owner: name, and a smartphone for an authenticator app (Google Authenticator or
-      similar).
+- [ ] The Owner: name (they sign in with a PIN like everyone else, ADR-0026).
 - [ ] Managers (who also bill), waiters and kitchen staff: names and roles. Each person chooses their
       own PIN on the day.
 
@@ -119,10 +118,8 @@ that PIN and lands on the dashboard with the Set up page waiting.
 
 ### Activation (Owner, 5 minutes, needs the internet once)
 
-1. The Owner opens Security and sets a password and the authenticator app; they keep the
-   recovery codes somewhere safe, away from the PC.
-2. Set up page, "Activate this PC": the Owner types the activation code, with their password
-   and authenticator code. The licence arrives within a minute.
+1. Set up page, "Activate this PC": the Owner, signed in with their PIN, types the activation
+   code. The licence arrives within a minute.
 
 If the page says the PC "does not know the vendor's address yet", the installer did not set it:
 call support.

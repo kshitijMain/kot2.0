@@ -159,7 +159,8 @@ describe('[MGR-002] the overview', () => {
     await waitFor(() => {
       expect(glance).toHaveTextContent(t('dashboard.overview.orders', { count: 0 }));
     });
-    expect(glance).toHaveTextContent(t('dashboard.overview.delayed', { count: 0 }));
+    // Nothing delayed says nothing at all (P9-26).
+    expect(glance).not.toHaveTextContent(t('dashboard.overview.delayed', { count: 0 }));
     expect(glance).toHaveTextContent(t('dashboard.overview.alerts', { count: 0 }));
     expect(
       within(glance).queryByRole('link', { name: t('dashboard.overview.seeDelayed') }),
@@ -174,7 +175,8 @@ describe('[MGR-002] the overview', () => {
     const { user } = await renderConsole({ fake, path: '/manage', signedIn: 'MANAGER' });
     const glance = await screen.findByRole('region', { name: t('dashboard.overview.glance') });
     await waitFor(() => {
-      expect(within(glance).getAllByRole('button', { name: t('states.retry') })).toHaveLength(2);
+      // Tables and orders; today's takings (P9-26) has no report here and offers Retry too.
+      expect(within(glance).getAllByRole('button', { name: t('states.retry') })).toHaveLength(3);
     });
     for (const retry of within(glance).getAllByRole('button', { name: t('states.retry') })) {
       await user.click(retry);

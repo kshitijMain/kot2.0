@@ -99,6 +99,15 @@
   --rp-food-colour: var(--rp-color-danger);
 }
 
+/* Non-veg is a triangle, as on Indian food labels (FSSAI): the shape tells it apart, not only the
+   colour (NFR-U05). */
+.rp-food-mark[data-food='NON_VEG']::after {
+  width: 0.55em;
+  height: 0.5em;
+  border-radius: 0;
+  clip-path: polygon(50% 0, 100% 100%, 0 100%);
+}
+
 .rp-food-mark[data-food='EGG'] {
   --rp-food-colour: var(--rp-color-warning);
 }

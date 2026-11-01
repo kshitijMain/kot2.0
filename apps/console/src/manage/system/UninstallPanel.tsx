@@ -5,12 +5,11 @@ import { useConsole, useConsoleState } from '../../app/console-context.js';
 import { useT } from '../../app/i18n.js';
 import { messageOf } from '../../app/messages.js';
 import { grantOf } from '../../app/modes.js';
-import { SecondFactorCancelled, useSecondFactor } from '../../owner/second-factor.js';
 
 /**
  * "Removing the software" on the System page (NFR-I02, P0-16c): uninstalling keeps the data on the
- * data drive. The Owner may allow the uninstaller to delete it for 30 minutes, with a reason and
- * their second factor; the uninstall script asks the set-up tool whether it may.
+ * data drive. The Owner may allow the uninstaller to delete it for 30 minutes, with a reason; the
+ * uninstall script asks the set-up tool whether it may.
  */
 export function UninstallPanel({
   allowedUntil,
@@ -76,7 +75,6 @@ function AllowDataDeletionDialog({
   const t = useT();
   const controller = useConsole();
   const toast = useToast();
-  const { withSecondFactor, dialog } = useSecondFactor();
   const checkId = useId();
   const [reason, setReason] = useState('');
   const [understood, setUnderstood] = useState(false);
@@ -86,9 +84,7 @@ function AllowDataDeletionDialog({
   const allow = () => {
     setBusy(true);
     setError(undefined);
-    withSecondFactor(() =>
-      controller.api.allowDataDeletion({ body: { reason: reason.trim() } }),
-    ).then(
+    controller.api.allowDataDeletion({ body: { reason: reason.trim() } }).then(
       ({ allowedUntil }) => {
         toast.show({
           title: t('systemPage.uninstall.done', {
@@ -100,7 +96,7 @@ function AllowDataDeletionDialog({
       },
       (failure: unknown) => {
         setBusy(false);
-        if (!(failure instanceof SecondFactorCancelled)) setError(messageOf(failure, t));
+        setError(messageOf(failure, t));
       },
     );
   };
@@ -157,7 +153,6 @@ function AllowDataDeletionDialog({
           </p>
         )}
       </Dialog>
-      {dialog}
     </>
   );
 }

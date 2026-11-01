@@ -108,9 +108,6 @@ export function CartList({
             <Text style={[styles.name, { color: colors.text }]}>{t('pos.cart.total')}</Text>
             <Money paise={cartTotal(lines)} size="lg" strong />
           </View>
-          <Text style={{ color: colors.textMuted, fontSize: fontSize.sm }}>
-            {t('pos.cart.estimateNote')}
-          </Text>
         </View>
       )}
     </View>
@@ -128,6 +125,15 @@ const styles = StyleSheet.create({
   },
   head: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing[2] },
   name: { flex: 1, fontSize: fontSize.md, fontWeight: weight(fontWeight.semibold) },
-  controls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  // Wraps on narrow phones (P9-21): "Held: fire later" had pushed "Remove" off the card's edge,
+  // and "Hold" touched the "+" button.
+  controls: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    columnGap: spacing[3],
+    rowGap: spacing[2],
+  },
   total: { gap: spacing[1] },
 });

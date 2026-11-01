@@ -19,7 +19,7 @@ export interface TextFieldProps {
   multiline?: boolean;
   autoCapitalize?: 'none' | 'sentences' | 'words' | 'characters';
   autoCorrect?: boolean;
-  keyboardType?: 'default' | 'url' | 'number-pad';
+  keyboardType?: 'default' | 'url' | 'number-pad' | 'decimal-pad';
   /** The keyboard's action key, e.g. "search" on a search field. */
   returnKeyType?: 'done' | 'search' | 'next';
   testID?: string;

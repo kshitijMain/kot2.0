@@ -28,6 +28,13 @@ export const NOTIFICATION_EVENTS = [
   'SIGN_IN_LOCKED',
   /** A dish on a ticket was marked out of stock and its unstarted units cancelled (ADR-0023). */
   'OUT_OF_STOCK',
+  /** A diner says they paid the printed bill by UPI from the QR page (ADR-0024, P9-03). */
+  'PAYMENT_CLAIMED',
+  /**
+   * A diner called a waiter (or asked for water) at a table nobody has opened yet (P9-25): the
+   * Business Owner's answer to P9-23's question. Every waiter on duty and the managers hear it.
+   */
+  'GUEST_WAITING',
 ] as const;
 export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 
@@ -103,8 +110,10 @@ const rule = (
  * `kds.readyNotCollectedMinutes` (KDS-006). A manager can bring the repeats back per rule.
  */
 export const DEFAULT_NOTIFICATION_RULES: Readonly<Record<NotificationEvent, NotificationRule>> = {
+  // ADR-0024: the managers on duty too, so a manager's phone rings for every diner's order (QR
+  // pilot); a restaurant can take them off on the Notification rules page (NTF-002).
   ORDER_PENDING_APPROVAL: rule(
-    ['ALL_WAITERS'],
+    ['ALL_WAITERS', 'MANAGERS_ON_DUTY'],
     ['PAGER', 'WAITER_APP', 'POS'],
     '{table} NEW ORDER',
     true,
@@ -119,6 +128,13 @@ export const DEFAULT_NOTIFICATION_RULES: Readonly<Record<NotificationEvent, Noti
   ),
   WATER_REQUEST: rule(['ALL_WAITERS'], ['PAGER', 'WAITER_APP'], '{table} WATER', true, 'NONE'),
   WAITER_REQUEST: rule(['ALL_WAITERS'], ['PAGER', 'WAITER_APP'], '{table} WAITER', true, 'NONE'),
+  GUEST_WAITING: rule(
+    ['ALL_WAITERS', 'MANAGERS_ON_DUTY'],
+    ['PAGER', 'WAITER_APP', 'POS'],
+    '{table} NEW GUEST',
+    true,
+    'NONE',
+  ),
   // The cashier's part goes to the managers on duty, who bill now, and the table's to every waiter
   // on duty (ADR-0023).
   BILL_REQUEST: rule(
@@ -174,6 +190,14 @@ export const DEFAULT_NOTIFICATION_RULES: Readonly<Record<NotificationEvent, Noti
     ['PAGER', 'WAITER_APP', 'POS'],
     '{table} OUT OF STOCK',
     false,
+    'NONE',
+  ),
+  // ADR-0024: whoever takes payments checks their UPI app, then settles the bill at the POS.
+  PAYMENT_CLAIMED: rule(
+    ['ALL_WAITERS', 'MANAGERS_ON_DUTY'],
+    ['PAGER', 'WAITER_APP', 'POS'],
+    '{table} PAID UPI',
+    true,
     'NONE',
   ),
 };

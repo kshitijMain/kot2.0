@@ -686,6 +686,34 @@ Recommended next WPs (dependencies met):
   - [x] P8-06b Pilot KPI views: approval time (R-04) and availability over time
   - [ ] P8-06c The pilot itself: UAT, baselines, 4 weeks live [H]
 
+### Phase 9: The QR pilot at Mannat (`phases/phase-9.md`, ADR-0024)
+
+- [x] P9-01 The relay on a server of our own, with an open line to each restaurant (the server
+      itself: manual task 38)
+- [x] P9-02 The diner's phone number, on the order and the bill
+- [x] P9-03 The bill on the diner's phone, UPI and "I have paid"
+- [x] P9-04 The diner's page: phone first, My orders, accepted, order again, Bill tab, a nicer menu
+- [x] P9-05 The manager's phone rings for QR orders
+- [x] P9-06 The Mannat pilot set-up and a one-Mac trial (the server and the real tables: manual task 38)
+- [x] P9-07 Reprinting the tents when the site's address changes (ngrok)
+- [x] P9-08 A diner's orders follow their number; a compact page; pairing the first screen
+- [x] P9-09 A menu made for the phone: sections that follow, a stepper on the card, an order tracker
+- [x] P9-10 Approving a diner's order from its alert, and on the manager dashboard
+- [x] P9-11 A designed QR menu: cards, sheets and states
+- [x] P9-12 The open line never waits for ever on a handshake
+- [x] P9-13 Accepted reaches the diner after a pilot reset; My orders survives a reload
+- [x] P9-14 PIN-only sign-in for the pilot (ADR-0025)
+- [x] P9-15 Bill and requests from the tables reach the staff; one type scale on the console
+- [x] P9-16 Audit of every screen and the bill journey; managers take payment on the phone
+- [x] P9-17 The waiter APK builds on this Mac
+- [x] P9-20 Full audit of every screen, link, button and workflow on the live pilot
+- [x] P9-21 The waiter app on a real phone: every flow to the kitchen, the bill and payment
+- [x] P9-22 No pairing: the waiter app and browsers connect by themselves; Mannat's UPI ID
+- [x] P9-23 Every flow again (QR diner, manager, kitchen): fixes (the manager phone's part done in P9-24)
+- [x] P9-24 Everything in the manager's hands, live, checked in the database; fixes across every screen
+- [x] P9-25 The Owner by PIN only; call a waiter at an unopened table; Owner settings set up; prints saved to a folder (test)
+- [x] P9-26 Staff roles live (managers add managers); a UX and wording pass across the console, waiter app and kitchen
+
 ## Decisions
 
 On 2026-09-25 the Business Owner delegated product and engineering decisions to Claude ("you are
@@ -972,6 +1000,22 @@ Decided 2026-10-30 (operations changes at the Business Owner's request, ADR-0023
      `ALL_WAITERS` (migration `20261030120000_any_waiter_any_table`).
 834. The waiter app's home shows all tables by floor area, with "Tables I sent KOTs to today"
      (`GET /api/v1/tables/my-kots-today`, ORDER_CREATE).
+
+Decided 2026-11-01 (P9-22, at the Business Owner's request: "we are not going to pair any device for
+anyone"; ADR-0025 amended):
+
+835. Nobody pairs a device. Where the server runs PIN-only, the waiter app connects by itself: it
+     asks `POST /api/v1/devices/pairing-codes/phone` for a waiter phone's code (local network only,
+     5 a minute per address) and pairs with it. The app has no pairing screen; when the PC does not
+     answer, it says what to check and takes the PC's address.
+836. The waiter app's build names the restaurant PC: `RP_RESTAURANT_SERVERS` (addresses) and
+     `RP_RESTAURANT_CA` (certificate fingerprint, pinned; trusted on first use when missing). For
+     the pilot, `scripts/pilot/build-waiter-apk.sh` fills both from the running server.
+837. The console offers no pairing where the server is PIN-only. Manage → Devices has no "Pair a
+     device", and a browser that cannot connect by itself shows "Try again". Unpairing stays, to
+     remove devices no longer used; a removed device connects again only when someone asks.
+838. Unchanged without the flag: AUTH-007 pairing, and the table tablet, which still pairs with a
+     code (no tablets in the pilot).
 
 Decided 2026-10-25 (the menu, at the Business Owner's request: a guided editor, by hand or Excel):
 
@@ -4610,6 +4654,1331 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-11-01: P9-26 Staff roles tried live; a UX and wording pass across the apps
+
+Asked by the Business Owner: test everything the Owner, managers and waiters can do on the full
+pilot (QR menu over ngrok, everything else on the restaurant PC and the phone), and make the UX
+polished: question every sentence and warning, and fix what is vague or not needed.
+
+**Decided (the Business Owner's words):** "A manager can create another manager." A manager may
+now add a manager; promoting, demoting, deactivating or reactivating one stays the Owner's
+(`decideStaffChange`), and a manager still cannot change another manager's PIN. Additions are
+audited in the manager's name.
+
+**Tried live, each checked in the database and audit log:**
+
+- **Manager:**
+  - added a waiter (Ravi Kumar) and a manager (Priya Sharma);
+  - changed Ravi's PIN: 1234 was refused as easy; the old PIN stopped working and the new one
+    signed him in.
+- **Owner:**
+  - changed Priya's PIN, and she signed in with it;
+  - deactivated her while she was signed in (signed out within seconds, her tile gone), then
+    reactivated her.
+- **Lock-out:**
+  - five wrong PINs locked Waiter 2, the Owner was alerted, and the Staff page showed "Locked until
+    17:52";
+  - Unlock let them sign in.
+- **Owner's data:** the overview's new Today card matched the database (₹5,374.00, 10 bills,
+  average ₹537.40, Cash ₹944, UPI ₹4,430).
+- **Waiter on the phone (Ravi):**
+  - a diner on the public ngrok address called a waiter at an unopened Table 5, and Ravi's phone
+    showed it with On my way / Done;
+  - seating the table resolved the call in his name;
+  - KOT 22 printed "Sent by Ravi Kumar";
+  - Request bill alerted the Owner and the Manager, who printed and settled it (INV 000014).
+- **Clean-up:** Tables 1 and 2, left open 21 hours by earlier tests, were billed and settled.
+
+**Found and fixed:**
+
+- **The kitchen display kept tickets of tables that had paid and left**, marked late, for good. A
+  dine-in table's tickets now leave once its sitting closes; a takeaway (paid before it is cooked)
+  stays.
+- **The phone and the POS used different words** for the same request (Acknowledge / Resolve vs
+  On my way / Done): the phone now says On my way / Done.
+- `pilot` scripts listed only the tables made at set-up; they read the tables from the database.
+
+**UX, screen by screen:**
+
+- **Staff:**
+  - grouped as Owner and managers, Waiters and Kitchen, with deactivated people folded away;
+  - one compact row each, with an initial;
+  - when each person was last here ("Signed in now", "Last seen today, 16:48", "Never signed
+    in"), from a new `lastSeenAt` / `signedIn` on `StaffView`;
+  - badges only for what needs attention (no PIN, locked);
+  - Deactivate is the quieter button;
+  - a summary line ("7 people · 3 signed in now") instead of an intro restating the title.
+- **Overview:**
+  - a Today card first (sales, bills, average, cash / UPI / card), live on every bill;
+  - "Nothing…" lines are hidden;
+  - the floor hint that repeated the tip is gone;
+  - the cards fit one row.
+- **Open table:** one tap on 1–8 guests opens the table; a bigger party is typed (it took a field
+  and a calculator keypad).
+- **Header and sign-in:**
+  - the device name ("Browser 8") is gone from the header; a station-mode kitchen screen still
+    shows its own name;
+  - sign-in tiles no longer repeat a role the name says ("Kitchen / Kitchen").
+- **Settings:**
+  - the value sits beside Change, and badges beside the name; rows are half as tall;
+  - every "(our default …)" and requirement ID is gone from the descriptions;
+  - jargon labels are plain ("Escalate to the manager after (N)" → "Escalate to a manager after";
+    "Access token lifetime" → "Re-check sign-in every").
+- **Wording:** about 230 strings, from a full review (P9-26 report in the session):
+  - "server" → "restaurant PC" everywhere staff read it;
+  - "Fire" → "Send";
+  - "Wrong PIN. 4 tries left before you are locked out.";
+  - help text that was wrong is fixed (licence renewal, backups, menu publishing);
+  - audit-trail hints are gone from reason fields, and every reason dialog now has Cancel.
+
+**Checks:** `pnpm check` (see the commit) passes except the same environment-only server tests as
+P9-24 and P9-25.
+
+### 2026-11-01: P9-25 The Owner by PIN only; call a waiter at an unopened table; Owner settings live
+
+The Business Owner decided:
+
+- **No password or authenticator for the Owner:** "we don't need an authenticator app… keep the
+  PIN thing only for the owners as well." Removed totally (ADR-0026, overriding AUTH-006).
+- **"Call waiter" at a table nobody has opened** (the P9-23 question): ping the waiters and the
+  manager.
+- **Owner settings:** Claude sets them as a normal restaurant would, and tests them live.
+- **Prints, for this test only:** saved to a folder instead of a printer, to check every print
+  button.
+
+**Built:**
+
+- **The Owner by PIN only (ADR-0026).**
+  - Gone: the `owner-login`, `step-up` and `owner/totp/*` endpoints; `owner/security` and
+    `owner/password`; the console's Security page and step-up dialogs; `secondFactorValidUntil`;
+    the `SECOND_FACTOR_REQUIRED` error.
+  - Owner-only actions still refuse a Manager (`OWNER_ONLY_CAPABILITIES`, renamed from
+    `OWNER_SECOND_FACTOR_CAPABILITIES`), and threat PC-E4 is Accepted.
+  - Done by a helper agent in a worktree based on an old commit. After merging:
+    - its ADR became 0026, since 0024 and 0025 were taken;
+    - P9-21 to P9-24 code was checked for leftovers (two fixed);
+    - the merged tree was re-checked.
+- **A call at a table nobody opened.** Calling a waiter, or asking for water, from the QR page or
+  a tablet is taken, no longer refused:
+  - A `GUEST_WAITING` alert goes to every waiter on duty and the managers on duty (with nobody on
+    duty, straight to the managers). Pager text: "T4 NEW GUEST".
+  - The POS and the phone say "Table not opened yet: seat the guests".
+  - Opening the table ends the call, in the name of whoever opened it.
+  - Bill and Paid still need an open table.
+  - `service_requests.table_session_id` is now nullable (migration; ON DELETE RESTRICT kept).
+- **Prints saved to a folder** (`RP_PRINT_TO_FOLDER`, test only, set by the pilot scripts to
+  `.pilot/printouts/`). Each job is saved as `.txt` (what the slip says) and `.bin` (the printer's
+  bytes). Delete the variable to use a real printer.
+
+**Found live and fixed:**
+
+- **A station set to print did not print** until the menu was published again: new KOTs read the
+  published menu's copy of the station; they now read the station.
+- **The kitchen screen was signed out by a server restart.**
+  - Cause: its token refresh was saved but the reply was lost, so the retry looked like a stolen
+    token (`REFRESH_TOKEN_REUSED`).
+  - Fix: the same device may present the token it just replaced for 30 s (`sessions.rotated_at`,
+    migration). Any other reuse still ends the session.
+  - Checked: a restart no longer signs anyone out.
+- **CGST/SGST at the same rate appeared twice** when a service charge was on (once on the dishes,
+  once on the charge). The console bill, the printed bill and the diner's QR bill now show one line
+  per tax and rate (`taxByCodeAndRate`).
+- **The phone app could not read requests** once one had no table session: the installed APK was
+  built against the old contract. The APK was rebuilt and installed.
+
+**Owner settings, set live as the Owner (PIN 1111 only), each checked in the database and audit
+log:**
+
+- **Invoice particulars:**
+  - legal name, address, GSTIN `27AAPFU0939F1ZV` (the format's standard sample) and FSSAI
+    `21526999000123`, all marked as test data;
+  - phone and email on the profile;
+  - the bill now prints as **TAX INVOICE** with all of them.
+- **Tax groups:** standalone restaurant, so everything is GST 5% (CGST 2.5% + SGST 2.5%, SAC 996331,
+  no input credit). Packaged Water moved from 18% to 5%, the menu was published (v4), and GST 18%
+  was archived.
+- **Service charge:** stays Off (the CCPA's 2022 guidelines: voluntary only). It was switched on (the
+  open bill showed a 5% charge with GST and "Remove service charge"), then off again; both changes
+  are audited.
+- **Invoice series:** one unbroken series for every bill, renamed "All bills" (`INV/26-27/000001`,
+  restarting each April); the unused Takeaway series was archived (takeaway bills already used INV).
+- **A Manager** sees these sections read-only.
+
+**Tried live end to end:**
+
+- **QR calls:** Tables 4 and 6. Table 4 was acknowledged on the phone (the diner saw "A waiter is on
+  the way") and resolved by seating; Table 6 was resolved when Waiter 1 seated it.
+- **Prints, all saved and read back:**
+  - a test page;
+  - KOTs from the POS and the phone;
+  - bills from the POS and the phone;
+  - "Print again" (marked DUPLICATE, print count 2, audited).
+- **Payments:** INV/26-27/000010 and 000011 paid by UPI and settled.
+
+**Checks:** `pnpm check` passes except the server tests that need PostgreSQL's own programs or a
+disk under 90% full (the same 21 as P9-24).
+
+### 2026-11-01: P9-24 Everything in the manager's hands, tried live and checked in the database
+
+Asked by the Business Owner: try everything the manager (and the owner) can do on the live pilot,
+check that each action really reaches the database and the other screens, take screenshots, and
+fix the UX of every interface (POS, kitchen, QR menu, manager, waiter app). The Business Owner
+confirmed the pilot data is test data: Claude may create, change and archive anything.
+
+**Set-up:** the Redmi A1 over wireless debugging (`adb connect`; USB was not detected). Browsers:
+the console as Manager, the Kitchen display as Kitchen, and the diner (Table 3, 360 × 800).
+
+**Tried live, each checked in the database (and the audit log):**
+
+- **Staff:** a new waiter registered (Audit Waiter); a PIN reset (their sessions ended, the old PIN
+  refused); the waiter deactivated with a reason.
+- **Menu and kitchen:** a new station and a new dish on it, published (v2), on the QR site at once;
+  its KOT went to the new station on the Kitchen display; the dish archived and the station
+  archived again with reasons, then published (v3).
+- **QR orders, both ways:** approved, rejected with a reason the diner sees, and changed on the
+  manager's phone (Garlic Naan 1 → 2, "The diner agreed to these changes").
+- **The manager's phone:** the approval and "food ready" notifications, a request acknowledged and
+  resolved, a bill printed and a UPI payment taken on the phone.
+- **Waiter actions:** a cancel with a quick reason; a void with the manager's PIN (the audit has
+  actor, approver and reason); a table freed.
+- **Money on the POS:**
+  - a discount added and removed;
+  - cash with change inside a shift; cash out; the shift closed with no difference;
+  - the Z-report matching the database; the sales report and its CSV; a takeaway with a token.
+- **The full QR journey for Table 3:** order → approved with a change → the kitchen → "Ask for the
+  bill" → printed (INV/26-27/000009, ₹389) → on the diner's phone with Pay by UPI → UPI recorded →
+  "Your bill is settled". The bill request ended when the bill printed.
+- **Admin:** a setting changed live (on the QR site and in the audit); a new table and its QR code;
+  a device renamed; stale alerts acknowledged; a manual backup (it had failed, see below).
+
+**Found and fixed:**
+
+- **The diner never saw a number the restaurant changed.** After "Approve with changes" (1 → 2) the
+  database said 2 and the diner's page still said 1, as did the bill estimate. The status the PC
+  sends the relay now carries each dish's quantity (`QrOrderStatusDetail.items[].quantity`,
+  optional, so older relays and PCs keep working). My orders shows "2 × Garlic Naan · Changed by
+  the restaurant (you asked for 1)" and the estimate counts 2.
+- **The approval's audit entry said "Removed with the diner's agreement"** even when a number went
+  up. It now says "Changed with the diner's agreement"; a removed dish's own reason is unchanged.
+- **Backups failed on this Mac:** no `pg_dump` (Homebrew could not install PostgreSQL 16 here).
+  `scripts/pilot/pg-bin/` wraps `pg_dump`, `pg_restore` and `psql` to run inside the pilot's
+  database container, and both pilot scripts pass `RP_PG_BIN`. A manual backup now completes.
+- **Day-end** let you press "Close the day" with open shifts; the button now waits until nothing
+  blocks it (open tables only with "carry forward"). An open shift is named by its person, with
+  how to close it.
+- **Kitchen display:** the Start/Ready button dropped under the dish whenever the state chip was
+  wide; name, state and button now stay on one row.
+- **Settings:** the "Why" typed for one setting appeared in the next setting's dialog.
+- **Audit trail:** actions read "Table QR codes issued", "Staff PIN set" (they read "Qr", "Pin"),
+  and the date and time no longer break mid-way.
+- **Shift:** "Shift open since 9:41 am on 1 Nov 2026" (the date was missing); "Opening cash" label.
+- **Staff:** phone numbers as `+91 98765 43210`.
+- **Phone, alert button:** "Alerts · 2" in words; its glyph had shown as a box.
+- **Waiter app:** the menu is two even columns; buttons no longer split words ("App rove",
+  "Cha nge") on a 720-px phone.
+- **Wording:** the alerts tip says Acknowledge (the button's name); "Free table" explains it also
+  serves a table whose dishes were all cancelled.
+
+**Checked and left as they are:**
+
+- **The 32 menu-check warnings** at publish are all dishes without a photo (test data).
+- **A printed bill reaches the diner's page in about 10 s** (the page polls).
+- **Owner-only actions (service charge, invoice details, tax groups, invoice series)** need the
+  Owner's password and authenticator. Setting them up was refused by the permission system in
+  this session, so they were not tried; see MANUAL_TASKS.md.
+
+**Checks:** `pnpm check` passes except the server's backup, restore and update tests, which need
+PostgreSQL 16's own programs on the machine. With the `pg-bin` wrappers on `PATH`
+(`RP_PG_CONTAINER=rp-pg16`), all but one of those pass too. `pg_restore`'s wrapper copies the files
+it is given into the container. The last one fails only because this Mac's disk is 93% full
+(DISK_FULL alert).
+
+**Questions for the Business Owner (still open):** "Call waiter" at a table nobody opened (P9-23).
+
+### 2026-11-01: P9-23 Every flow again: the QR diner, the manager and the kitchen
+
+Asked by the Business Owner: test each manager function, each manager alert on the phone, QR
+ordering, approvals, KOTs and the kitchen, and how every screen looks (fonts, buttons, wording),
+and fix what is wrong.
+
+**The phone:** the new Redmi A1 (Android 12, 720 × 1600) installed the app and connected by itself
+("Phone 2", no pairing). The Manager signed in. Then the USB connection dropped and did not come
+back, so the manager phone's part (its notifications, approving on the phone) **waits for the
+phone**. Table 4's QR order (KOT 10) and its open "Call waiter" request were left for it.
+
+**Tested in browsers:**
+
+- **Diner:** Table 3 at 360 × 800, with Table 4 again after the fixes.
+- **Staff:** the POS and alerts as Manager, and the Kitchen display as Kitchen.
+- **The QR journey:**
+  1. Number, menu, a dish with options and a note, send.
+  2. "Order to approve" on the POS and the Manager's alert, then Approve.
+  3. Live on the diner's page: accepted, cooking, ready, served.
+  4. Call waiter → "On my way" → Done.
+  5. Ask for the bill → print (₹578, round-off +₹0.50), then the bill on the phone with Pay by
+     UPI to `7683072807@ptsbi`, the app buttons and the QR code.
+  6. "I have paid" → the manager's alert, then UPI recorded on the POS: the table is free.
+- **Alert recipients**, checked in the database at each step.
+
+**Found and fixed:**
+
+- **The kitchen display signed itself out after 10 idle minutes.** In PIN-only mode the kitchen is
+  a person, and AUTH-005's POS timeout applied. Kitchen sessions now have no inactivity timeout,
+  as a station-mode kitchen screen has none; only the session's lifetime ends them
+  (`SessionService.inactivityMs`).
+- **A diner's "Bill" request stayed open after the bill was printed**, with its alert on every
+  manager's list; a waiter's already cleared. The service-request consumer now also hears
+  `BillPrinted` and resolves the table's open bill requests (`ServiceRequestsService.billPrinted`).
+- **"Food ready" alerts were raised for tables that had paid and left**, and stayed open for good;
+  none is raised now.
+- **Console alert pop-ups stayed up** after their alert was acknowledged or cleared elsewhere (food
+  picked up, request done). They now go with the alert.
+- **The QR site broke ("This page couldn't load") whenever the site was rebuilt for tests**: the
+  running pilot lost its files.
+  - The pilot now builds and serves its own copy (`NEXT_DIST_DIR=.next-pilot`, set in
+    `next.config.ts`, `mannat-local.sh`, `mannat-ngrok.sh`), ignored like `.next`.
+- **Seven dishes were still "out of stock"** (all beverages, both desserts, so the Thali too). They
+  were left by the P9-20 probe; they were marked available again in Menu availability.
+- **QR site wording and layout:**
+  - **Requests:** "Call waiter: Done" and the other bare blue lines are now a card with an icon,
+    in a sentence for each request and stage ("A waiter is on the way.", "You asked for the bill.
+    It appears here as soon as it is printed."). A request dealt with says nothing more; a refusal
+    stays 20 s. A request still open hides its button (no second "Ask for the bill").
+  - **Order banner:** it follows the order (cooking, ready, "Everything is served. Enjoy your
+    meal!"); it had stayed on "accepted".
+  - **Dishes in My orders:** the name keeps the row's width, with the dish's choices ("Hot"), its
+    note and its state under it; the name had broken into three lines.
+  - **Bill estimate:** the dishes and the estimated taxes are shown above the total. The total had
+    jumped from ₹550 to ₹577.50 with nothing to say why.
+  - **Suggestion row:** it starts at its first card again after a dish is added.
+  - **Focus ring:** it is in the restaurant's colour, no longer the console's teal.
+- **Phone numbers** read `+91 90000 00003` on the console bill and the QR cart (`displayPhone`).
+
+**Checked and left as they are:**
+
+- **"Call waiter" before the table is open** is refused with "This table is not open yet. Please
+  wave to a waiter to be seated." A request needs an open table; a question for the Business
+  Owner (below).
+- **Food-ready and request alerts** go to the person who sent the KOT and, with no waiter on duty,
+  to the managers.
+- **The diner sees "Order 1"** (their own count) where the POS says "Order 7".
+
+**Questions for the Business Owner:**
+
+- (Answered in P9-25: alert every waiter on duty and the managers, without opening the table.)
+  Should "Call waiter" at a table nobody has opened yet open the table, or alert the staff without
+  one? (Today it is refused.)
+
+### 2026-11-01: P9-22 No pairing: the waiter app and browsers connect by themselves; Mannat's UPI ID
+
+Asked by the Business Owner:
+
+- set Mannat's UPI ID (7683072807@ptsbi);
+- remove pairing everywhere: "we are not going to pair any device for anyone, whether it is a
+  manager, waiter, owner, kitchen".
+
+The phone was not connected, so this was built and tested in code. The phone test waits for the
+phone (see below).
+
+**Done:**
+
+- **UPI ID:** set to `7683072807@ptsbi` by the Owner in Manage → Settings, with the reason in the
+  audit trail. Diners now see **Pay by UPI** on the printed bill in the QR menu. The setting warns
+  that UPI apps may decline links to a personal (non-merchant) ID; this one looks like a personal,
+  mobile-number ID.
+- **Server:**
+  - new public `POST /api/v1/devices/pairing-codes/phone` (`createPhonePairingCode`), PIN-only and
+    local-network only;
+  - self-pairing is rate-limited per device type and address;
+  - any other caller gets 403 `SELF_PAIR_CLOSED`;
+  - the endpoint is listed in `docs/security/authorisation.md` and the authorisation sweep, and
+    `docs/api/openapi.json` was regenerated.
+- **`@rp/mobile-core`:** `DeviceSession.connectByItself`. It finds the PC, pins its certificate
+  (against the build's fingerprint, else on first use), asks for the code, then pairs with a new
+  Keystore key.
+- **`@rp/mobile-shell`:** `ConnectScreen` connects as it opens and shows "Connecting to the
+  restaurant PC…". On failure it says what to check, with "Try again" and the PC's address. After
+  a manager removed the phone, it connects only when someone presses Connect.
+- **Waiter app:** `ConnectScreen` replaces `PairingScreen`. The restaurant PC comes from
+  `extra.restaurantServers` / `extra.restaurantCa` (`RP_RESTAURANT_SERVERS`, `RP_RESTAURANT_CA`).
+  The Maestro smoke flow and the README were updated.
+- **Console:**
+  - the state knows `pinOnly`;
+  - Manage → Devices hides "Pair a device" and says devices connect by themselves;
+  - the pairing screen, in PIN-only, is "Try again" (`connectByItself`) with no code field.
+- **Pilot:**
+  - `scripts/pilot/build-waiter-apk.sh` builds the APK with this Mac's address and certificate;
+  - `mannat-local.sh pair` was removed, and the READMEs no longer mention pairing;
+  - the server was restarted, and the new route answers on the Wi-Fi address with the PC's
+    fingerprint;
+  - Manage → Devices on the pilot shows no "Pair a device".
+- **Tests:**
+  - server: the phone connects by itself and both phone roles sign in; refused from outside and
+    without the flag;
+  - mobile-core: pinned before the code is sent, trusted on first use, refused on a wrong
+    certificate;
+  - waiter app: connects with no code; says what to check and connects to a typed address;
+  - console: "Try again" with no code field; no "Pair a device" in PIN-only.
+
+**Waiting for the phone:** install the new APK (`adb install -r`). The phone that is already paired
+keeps working. To see the new start, clear the app's data (`adb shell pm clear
+in.rp.waiter.preview`): it should go straight from "Connecting to the restaurant PC…" to "Tap your
+name".
+
+### 2026-11-01: P9-21 The waiter app on a real phone: every flow to the kitchen, the bill and payment
+
+Asked by the Business Owner, with their Android phone on USB: test each button and flow of the
+waiter app, check that it reaches the kitchen and the manager, and check button placement for
+any Android phone.
+
+**How:**
+
+- **The phone:** a Nothing Phone (1), Android 16, driven over adb (UI dumps, taps, screenshots).
+  The scripts are in the session scratchpad, not the repository.
+- **Pairing:** the phone was paired as "Waiter phone 1" from Manage → Devices, with the address and
+  code typed, the fingerprint compared and confirmed.
+- **The journey, on the empty Table 5, in four places at once** (the phone, the Kitchen display as
+  Kitchen 6666, the POS and Manage as Manager 2222):
+  1. Waiter 1 PIN, with a wrong PIN first; the notification permission allowed.
+  2. Open the table for 3 guests. Add a suggestion and a dish with options (Hot, ×2, a note). Hold
+     one dish, send the KOT, then fire the held dish. Search the menu, "Again" a dish, send it.
+  3. On the kitchen display: start, ready (the phone's "Table 5 · Food ready" notification),
+     Notify manager (the alert clears once the food is collected), picked up, Expo, recall.
+  4. Go on break and come back. Request the bill.
+  5. In the console: the alert and "Open bill", a discount added and removed with a reason, the
+     invoice issued (no printer on this Mac, said plainly).
+  6. Manager on the phone: an over-payment refused, ₹500 by UPI with a reference, ₹676 in cash,
+     "Invoice … is paid", and the table free on the POS.
+- **Every Manage page** (17) was loaded and read.
+- **Other phones:** the phone was set to 720 × 1520 at 320 dpi with 130 % text, a small budget
+  phone with large text, then put back.
+
+**Found and fixed:**
+
+- **Kitchen display, live:** in PIN-only mode (ADR-0025) a browser pairs itself as a POS. The
+  Kitchen person on it heard no new tickets or dish changes, so the board changed only on a reload.
+  - Kitchen staff on a screen that is not a kitchen screen now join the all-stations room
+    (`apps/server/src/realtime/rooms.ts`).
+  - They see every station over REST already.
+- **Kitchen display, Bump:** bumping a ticket with ready food left those dishes "Ready" for good,
+  because the waiter app has no Served button (decision 803). Their "Food ready" alerts stayed open
+  too, as Tables 3 and 4's still did.
+  - A ticket whose dishes are ready now offers "Picked up, all of it", which serves them; the
+    ticket then leaves the screen by itself.
+  - Bump stays off while food is at the pass. The server is unchanged, so a kitchen with
+    `kds.pickupMarksServed` off can still bump.
+- **Waiter app layout:**
+  - Dish names broke mid-word ("Pan eer …") in the two-column menu: the photo now sits above the
+    name, and names get up to three lines.
+  - Edge to edge on Android 15 and later, the keyboard covered what was typed: the kitchen note in
+    the options sheet, the payment amount, and the notes on the order. Sheets and screens now rise
+    by the keyboard's height (`useKeyboardHeight` in `@rp/ui-native`).
+  - "Held: fire later" pushed "Remove" off the card, and "Hold" touched "+": the row wraps.
+  - The "2 dishes ready" badge ran past the tile with large text: it wraps inside it.
+  - The payment amount takes a number pad (letters were accepted).
+  - A closed table's header read "Table "; it keeps the table's name.
+  - "Request bill" is shown only to those who cannot print the bill. Managers had three buttons in a
+    row, broken mid-word on small phones.
+- **Words:** "Open table 5" with a "Guests" label (it was "Open 5" over a bare "2"), and
+  "Table 5 is open".
+- The APK was rebuilt (`.pilot/apk/parossa-waiter-preview.apk`) and reinstalled on the phone, which
+  stays paired.
+
+**Checked and left as they are:**
+
+- The waiter cannot mark a dish served (decision 803).
+- The Owner cannot sign in on a waiter phone (`SIGN_IN_ROLES`, by decision).
+- An empty table's "Request bill" is refused with "Nothing to bill yet."
+- The manager was signed out after inactivity, with a clear message.
+
+**Pilot state after the test:**
+
+- Table 5 was settled: INV/26-27/000004, ₹1,176, UPI ₹500 + cash ₹676 into the Manager's open
+  shift.
+- KOTs 5 to 8 were served.
+- Tables 1 and 2 were untouched; a dish put in Table 1's cart on the phone was removed unsent.
+
+**Gotchas:**
+
+- **Typing over adb:** Escape closes an open sheet, so hide the keyboard with its own key.
+- **Backups:** they fail on this Mac because `pg_dump` is not installed (PostgreSQL runs in
+  Docker), and the disk is 97 % full; both raise alerts.
+- **Devices list:** every new browser makes another "Browser N" device in PIN-only mode; unpair old
+  ones in Manage → Devices.
+
+### 2026-11-01: P9-20 Full audit of every screen, link, button and workflow on the live pilot
+
+Asked by the Business Owner: audit everything (apps, dashboards and workflows: words, buttons,
+links, and whether what one screen does shows on the others) and fix it.
+
+**How:**
+
+- **Probe:** the console's 27 routes as the Manager. It followed every internal link, scanned all
+  visible text for leaked placeholders, raw keys, ISO dates, repeated words and stray punctuation,
+  pressed each button not on a never-press list, and flagged any that did nothing.
+- **Duplicate names:** a read-only scan of each page for buttons with the same accessible name.
+- **Workflows on the pilot:**
+  - POS: open a table, a dish with options and two naan, send, the kitchen starts, readies and
+    picks up exactly that ticket, the bill with the discount dialog, print, cash refused without a
+    shift, open a shift;
+  - QR diner at Table 3 with the staff: order, rejected with a reason, re-order, accepted, Call
+    waiter → On my way → "on the way", Ask for the bill → Open bill → print → the diner's bill → I
+    have paid → its alert → Open bill → UPI → settled.
+- **The text catalogue:** a scan for wording issues.
+- **Screenshots:** every state, and the QR diner pages at 390 px.
+
+**Results:**
+
+- No broken links.
+- No page errors or failed API calls apart from expected answers (wrong PIN, no printer, cash
+  without a shift).
+- The cross-screen journeys pass end to end.
+
+**Found and fixed:**
+
+- **Open table** left the POS on the floor; it now goes straight to the table's order, as the
+  waiter app does.
+- **Payment:** after a refused cash payment, "Still to pay" read ₹0.00 (it subtracted the lined-up
+  payment). It now shows what is owed, with "Left after the payments below" while payments are
+  lined up.
+- **Kitchen display:**
+  - ages over an hour read "14 h 33 min" (they read "873 min");
+  - "Order 7" and "Table 4" no longer break apart on narrow Expo cards.
+- **Set up:** each step's buttons are grouped under the step's name. "Undo" and "We don't need
+  this" did not say which step; screen readers now announce it.
+- **Words:**
+  - the out-of-stock alert's title is "Dish out of stock" (it was the pager's "OUT OF STOCK");
+  - the cart estimate says "An estimate. The bill has the final prices." ("The server prices the
+    bill" read as the waiter);
+  - "Thank you for your feedback." (no exclamation mark);
+  - "Sending your order to the restaurant…";
+  - the timeout error, the recommendations hint and the tamper warning say "restaurant PC",
+    "system" and "this PC", not "server".
+- **Pilot scripts:** they print the PIN-only sign-in and the PINs, not "/pair".
+
+Checked and left as they are:
+
+- the menu, settings, devices, staff, floor and printing rows label their button groups ("Actions
+  for Paneer Tikka"), which is accessible;
+- the file-picker buttons open the system dialog;
+- "See what is sent" downloads the diagnostics file.
+
+**Damage the audit itself did on the pilot, all undone where possible:**
+
+- The probe pressed **Out of stock** for every dish. That greyed the whole QR menu, and it
+  cancelled Table 2's unstarted Dal Makhani (order 6) and Rasmalai (order 5).
+  - Every dish was made available again through the same screen.
+  - The two cancelled dishes cannot be restored.
+- The probe marked the set-up steps INVOICE (done) and DEVICES (skipped). Both are undone.
+- The probe requested a backup (it fails here: no `pg_dump`).
+- Test data from the journeys:
+  - Table 3: orders, an invoice paid by UPI, and the table closed;
+  - Table 5: an invoice paid by UPI, and the table closed;
+  - a cash shift opened with ₹1,000 by the Manager (close it on the POS);
+  - kitchen tickets KOT 1, 2, 3 and 7 bumped.
+- The probe script is not kept in the repository. Any future probe must never press stock, set-up or other state-changing buttons, and should run on a copy of the data, not the live pilot.
+
+**Not checked here:**
+
+- the waiter app and the table tablet on a device (their tests pass: 78 and 35);
+- takeaway's send, whose step failed on the script's own category choice (the screen itself looks
+  right).
+
+Tests:
+
+- console 445 (the open-table test now expects the order screen; the payment test checks what is
+  still owed after a refusal);
+- ordering 99; i18n 37; QR unit 25, e2e 17; waiter app 78; table tablet 35;
+- lint, typecheck and format pass.
+
+### 2026-10-31: P9-17 The waiter APK builds on this Mac
+
+The first release build of the waiter app here stopped in KSP with `OutOfMemoryError: Metaspace`.
+The template gives Gradle 2 GB and 512 MB of Metaspace.
+
+Built: `apps/waiter-app/plugins/with-gradle-memory.cjs`, a config plugin. Every prebuild writes
+`org.gradle.jvmargs` (4 GB, 1.5 GB Metaspace) and `kotlin.daemon.jvmargs` (3 GB, 1 GB Metaspace)
+into the generated `gradle.properties`.
+
+Result: `assembleRelease` succeeded in 45 s, giving a 100 MB APK, "Parossa Captain (preview)"
+`in.rp.waiter.preview` 0.1.0, signed with the debug key. It is copied to
+`.pilot/apk/parossa-waiter-preview.apk`. Steps are in `scripts/pilot/README.md`.
+
+Not done:
+
+- installing it on a phone, and the Maestro smoke flow (needs a person with an Android phone;
+  manual task 37 has the checks);
+- a production-signed build (EAS credentials, OWNER_CHECKLIST 7).
+
+### 2026-10-31: P9-16 Audit of every screen and the bill journey; managers take payment on the phone
+
+Asked by the Business Owner: test every function, button and word; the bill asked for on the QR
+page must be paid there; UPI for Mannat; phone-friendly; the same in the waiter app.
+
+Decided (they did not answer):
+
+- Managers take payment in the waiter app.
+- Build the APK on this Mac.
+- No UPI ID is invented for Mannat. A notice says so where the manager looks, with a link to the
+  setting (Owner and Manager may set it). A wrong VPA would send diners' money elsewhere.
+
+How:
+
+- **A crawler** visited all 27 console routes as the Manager at 1366×768 and 390×844, recording
+  page errors, failed API calls and sideways overflow, with screenshots. Result: no errors, no
+  failed calls; one overflow (Readiness).
+- **A journey** drove a QR diner and the manager through Table 4: order → approve → kitchen → ask
+  for the bill → Open bill from the requests panel → print → the diner's bill → UPI payment → the
+  table closes.
+
+Found and fixed:
+
+- **The QR site behind ngrok lost every status read.** ngrok's free plan answers a browser's GET
+  with its own warning page (200, text/html), so order status, My orders and the bill silently
+  failed. Sending (a POST) worked. This is a likely cause of earlier "status does not update"
+  reports.
+  - The site sends `ngrok-skip-browser-warning` to ngrok addresses only (`throughNgrok`).
+  - The relay allows the header in CORS.
+  - `mannat-ngrok.sh` allows the Wi-Fi origin too, so `http://<ip>:3100` links order as well.
+- **Phone layout:** every Manage page started below the fold (a three-row header and 18 nav
+  buttons in six rows).
+  - Under 60rem the sections are one row that scrolls, keeping the open one in view.
+  - Under 40rem the header is two rows and hides the device name.
+  - Pills do not wrap.
+  - The Readiness table scrolls in its box.
+- **Wording:**
+  - Day-end and the operations report show DD-MM-YYYY (they showed 2026-10-31).
+  - Notification rules show the pager line for an example table ("T5 WATER", not "{table}
+    WATER").
+  - Kitchen tickets read "Kitchen · QR order · Sent by Manager (Mannat)".
+- **Mannat's hours:** the seed sets 11:00–23:30 every day (the restaurant read "Closed" on every
+  day); the pilot is updated.
+- **UPI:**
+  - A notice on the overview and the QR codes page while the UPI ID is not set ("Diners cannot
+    pay by UPI…", "Add the UPI ID").
+  - Settings opens filtered with `?find=UPI`.
+- **The open line:** `RelayRealtime` logs why it is down (session refused, no session, closed
+  before joining, join refused, deadline), and the session itself has the connect deadline. A
+  restart that does not join is now explained in the server log. It recurred twice in 7 full
+  restarts with nothing logged, before the session deadline was added; three restarts since joined
+  within 12 s. Watch the log.
+- **Waiter app:**
+  - **Take payment** for owners and managers on a table whose bill is printed (`PaymentSheet`:
+    the bill found with `openBill`, what is still to pay, Cash, UPI or card, a reference, one
+    idempotency key per payment; cash needs an open shift, which the phone says).
+  - `@rp/ordering` now holds `money-input` (paise from typed rupees), shared by the POS and the
+    phone.
+  - Jest compiles Expo's packages. `expo-status-bar` ships TypeScript, and only a warm transform
+    cache had hidden it; any new test file failed to load.
+
+Pilot data touched by the journey (owner's test data):
+
+- invoice INV/26-27/000001 (Table 4, ₹242, UPI, settled);
+- Table 4's duplicate test order rejected ("Test order from the audit");
+- the journey's kitchen step marked the first ticket on the board (Table 2, KOT 4, Crispy Corn)
+  served, instead of Table 4's.
+
+Tests:
+
+- console 445/445 (day-end date, pager example, KDS line updated).
+- QR unit +1 (`throughNgrok`). 25/25.
+- waiter app +2 (a manager settles by UPI; never offered to a waiter). 78/78.
+- relay-realtime 9/9.
+
+### 2026-10-31: P9-15 Bill and requests from the tables reach the staff; one type scale on the console
+
+Reported from the pilot:
+
+- a diner's "Ask for the bill" seemed to go nowhere;
+- as a waiter, Bill on Table 2 did nothing (Take order instead);
+- QR Refresh seemed not to work;
+- the console screens looked inconsistent ("big fonts here, tiny there").
+
+Found:
+
+- **The bill request arrived.** The service request was escalated, with a BILL_REQUEST alert open.
+  But the console had no request inbox (only the waiter app had one), and the alert offered only
+  Acknowledge.
+- **The waiter's Bill was refused.** `POST /bills` returned 403: BRD §4.2 lets waiters request the
+  bill, not print it. The POS showed the button anyway.
+- **Errors were hidden.** Its error toast was drawn under the open sheet: native modal dialogs sit
+  in the browser's top layer, above every z-index. This affected every toast shown while a
+  dialog was open.
+- **Refresh worked but gave no sign** while nothing had changed.
+
+Built:
+
+- **Requests panel** (`pos/ServiceRequests.tsx`) on the POS floor and the manager overview: what the
+  tables asked for, oldest first, with age and who is on the way or escalated. It has On my way
+  (acknowledge: the diner reads "Waiter is on the way"), Done, and Open bill for a bill request
+  (whoever prints).
+- **Table sheet:**
+  - Bill for those with BILL_PRINT_AND_PAYMENT, Request bill for waiters (BILL_REQUEST, alerts
+    the managers);
+  - the table's waiting items (approvals, dishes ready, requests);
+  - Take order first and widest.
+- **Alerts:** Bill requested and I have paid get Open bill.
+- **Toasts:** the region is a manual popover, shown again for each toast, so it lands above any
+  open dialog. The attribute is set only where the browser has popovers.
+- **QR Refresh** spins until the restaurant answers (at most 4 s).
+- **One type scale:** page title 24 (was 30), section headings 18 in sentence case (were uppercase
+  14 labels, or 20). The approval and request cards sit side by side, so the floor stays in view.
+- **Header:** the name, and the role under it unless the name says it ("Manager (Mannat)", not
+  "Manager (Mannat) (Manager)"); the device name small.
+- **POS order screen:** no placeholder squares when the menu has no photos.
+
+Tests:
+
+- console +2 (a waiter's Request bill; the requests panel: escalated, On my way, Open bill). The
+  landing test checks name and role separately. 445/445.
+- ui-web 126/126; QR e2e 17/17; lint and typecheck pass.
+- Checked by hand: the screenshot tour of every console screen at 1366×768, before and after.
+
+Next design pass, not done here:
+
+- the Manage side navigation and help strips;
+- the menu editor's density;
+- reports' charts and tables;
+- the KDS header.
+
+### 2026-10-31: P9-14 PIN-only sign-in for the pilot
+
+Asked by the Business Owner: no pairing in the Mannat pilot. Open the console, tap a name, enter the
+PIN; the kitchen with 6666.
+
+Decided:
+
+- **An environment flag, not a setting.** Per ADR-0025: `RP_AUTH_PIN_ONLY`, off by default.
+  Dropping device trust takes access to the PC, not a click in the dashboard.
+- **Reuse the bootstrap code and pairing** rather than a new endpoint: one audited way for devices
+  to come in.
+- **Network only.** Codes go to loopback and private addresses only, 5 a minute per address. PIN
+  lockouts are per credential, so new browsers do not get new attempts.
+
+Built:
+
+- `config.authPinOnly`.
+- `common/network.ts` `onLocalNetwork`.
+- `DevicesService.createBootstrapCode(loopback, address)`: in PIN-only mode it pairs a "Browser N"
+  POS.
+- `AuthSettingsService`: kitchen PIN sign-in when PIN-only.
+- `FirstRunStatus.pinOnly`, optional.
+- Console `pairItself()` in `start()`.
+- Pilot scripts and seed; README section; ADR-0025.
+
+Follow-ups:
+
+- The waiter app and table tablet still pair with a code (unchanged).
+- A paying restaurant must not set the flag (ADR-0025).
+
+Tests:
+
+- integration `pin-only` (5): every role on self-paired browsers; no code from a public address; a
+  limit per address; the network test; without the flag, nothing changes.
+- console +2 (straight to the PIN screen; a code as usual without the flag). 443/443.
+
+### 2026-10-31: P9-13 Accepted reaches the diner after a pilot reset; My orders survives a reload
+
+Reported from the pilot after `mannat-local.sh fresh`:
+
+- a QR order showed on the POS but not in the manager's alerts;
+- after approval the diner never saw Accepted, although the KOT reached the kitchen;
+- reloading the QR page landed on the menu.
+
+Found: the reset (`mannat-fresh-mannat.sql`) truncated `outbox` and `inbox` with RESTART IDENTITY.
+Event numbers are `MAX(sequence) + 1`, so they started again at 1, while every durable consumer's
+cursor stayed at 19. Every new event was skipped as already handled:
+
+- no ORDER_PENDING_APPROVAL alert;
+- the relay never told the order was accepted.
+
+The POS approvals panel and the KOT do not go through consumers, which is why they worked.
+
+Built:
+
+- `EventBus.recoverEmptiedOutbox`: at start-up, a cursor past the newest event is brought back to
+  it, the stream gets a new id (clients read afresh), and a warning is logged.
+- The reset script keeps `outbox` and `inbox`.
+- The pilot was repaired: cursors set to 0, the seven missed events handled; the relay now has the
+  order SENT_TO_KITCHEN.
+- QR page:
+  - the tab lives in the address (`#orders`, `#bill`), so a reload stays there and Back goes to
+    the tab before;
+  - My orders has Refresh and "Updated HH:MM".
+
+Committed with it: the owner's `fresh` command (`mannat-local.sh`, `mannat-fresh-*.sql`, README
+line), now safe.
+
+Tests:
+
+- integration `event-bus` +1 (an emptied outbox still delivers new events; fails without the
+  guard). 14/14.
+- QR unit +1 (Refresh). 24/24.
+- QR e2e +1 (reload on My orders, Back). 17/17.
+
+### 2026-10-31: P9-12 The open line never waits for ever on a handshake
+
+The PC's open line to the relay stayed down again after a restart (`restaurantsOnLine: 0`) while
+the server held an established connection to ngrok. Orders still came by the 5 s polling.
+
+Found: `RelayRealtime` joins on `open` and retries on `close`. A WebSocket handshake that is never
+answered raises neither, so `this.socket` stayed set, every later `connect()` returned at once,
+and no heartbeat ever ran. Probes through ngrok and directly both opened, so this is a stall of the
+one attempt, not a broken path. It is the "cause not found" of P9-08.
+
+Built: `connectTimeoutMs` (default 15 s). A line not open and joined in time is dropped and tried
+again with the usual back-off; the timer is cleared on join and on loss.
+
+Tests:
+
+- unit `relay-realtime` +1 (a line that never opens is dropped and joined again). 9/9.
+- integration `relay-realtime` and `pilot-mannat` 11/11.
+- On the pilot, the restarted server joined within 10 s.
+
+### 2026-10-31: P9-11 A designed QR menu
+
+The Business Owner asked for a designer's pass with the `/qr-menu-redesign` skill:
+
+- audit;
+- brief;
+- implement in the skill's order (rhythm, header and filters, cards, sheets, Orders and Bill,
+  skeletons, copy);
+- verify.
+
+The references read were `design-ref/` (local, patterns only):
+
+- qr-tablev2 `menu-view.tsx` and `order-tracking.tsx`;
+- qr-menu-ahmed-hakim90 `product-badges.tsx`;
+- bubblexport-foodie `cart-sheet.tsx`;
+- FoodHunt `ShimmerRestaurant.jsx`;
+- basil-ui `llms.txt`.
+
+None of the five is GPL or AGPL. qr-tablev2 has no licence (look only); the rest are MIT or ISC.
+No code was copied.
+
+Audit scores, before (out of 5):
+
+- hierarchy 3: the item sheet's CTA was teal while the others were the accent;
+- scannability 3: a ragged action column, prices not tabular;
+- touch targets 4: 36–40 px chips and stepper;
+- states 2: none designed; Orders and Bill said "nothing yet" while still loading; two "!" in the
+  copy;
+- contrast 4: raw white overlays, and Mannat's maroon hard-coded in the step pulse;
+- motion 4.
+
+Built (screen by screen in the phase-9 spec):
+
+- flat cards with one fixed 7 rem action column. With a photo, the action sits over its lower edge
+  (the Indian delivery apps' pattern), so a 360 px phone keeps about 190 px for the name;
+- toggle chips, and section pills with 48 px targets;
+- bottom sheets with a sticky priced CTA;
+- a floating cart bar with a count;
+- status pills and a tracker with checks;
+- designed empty and loading states;
+- tabular money.
+
+`qr.css` has no raw colours left: tints are `color-mix` of tokens.
+
+Decided:
+
+- **Accent on diner CTAs.** Every main action on the QR page uses `Button variant="accent"` (the
+  restaurant's colour). Teal is kept for focus. Recorded in DESIGN_SYSTEM §06.
+- **Non-veg is a triangle** in `@rp/ui-web` and `@rp/ui-native`, as on Indian (FSSAI) labels, so
+  the mark isn't colour-only.
+- **The loading route streams a skeleton.** As a result, an unknown table code now answers HTTP
+  200 with the "not in use" page instead of 404. It is a QR code, not a page to index.
+- **The skeleton header is neutral**, not the accent: the restaurant's colour isn't known before
+  the menu arrives, and a teal band first would flash.
+
+Repo: `design-ref/tier-*/` is ignored by ESLint and Prettier (the clones carry their own configs,
+and root `pnpm lint` crashed on them).
+
+Tests:
+
+- QR unit +2 (Orders' empty state leads to the menu; loading says it is looking). 23/23.
+- QR e2e 16/16 (LCP 996 ms; was 660 ms, budget 2.5 s).
+- `pnpm check`: everything passes except the known `pg_dump`/`PG_BIN` server integration files
+  (10). Native ui-native 39, waiter app 76, tablet 35.
+- Checked by hand: screenshots at 375 and 414 px, with and without photos.
+
+Left out:
+
+- the dish photo in the item sheet already existed and is unchanged;
+- dark mode (the diner surfaces pin light);
+- a cover image or logo in the header (the menu document has no logo yet).
+
+### 2026-10-31: P9-10 Approving a diner's order from its alert
+
+Reported by the Business Owner from the pilot: Table 2's two orders stayed "Received. Waiting for
+the restaurant to accept it." after the manager "accepted" them. The owner expected Cooking, Ready
+and Served to fail as well.
+
+Found:
+
+- The server log shows three `POST /alerts/:id/acknowledge` calls and no approval.
+- In the pilot database all three QR orders (8 dishes) were still `PENDING_APPROVAL`, and the relay
+  had them as `RECEIVED`, which is exactly what the phone showed.
+- The console never asked for `/orders/pending-approval`. The manager signs in to the dashboard,
+  whose overview had no approvals panel; only the POS floor did. The alert's only button,
+  Acknowledge, reads like "accept" but only silences it.
+- The PC → relay path was fine. It pushes approval, rejection and every dish state change.
+
+Built:
+
+- Alert centre: an approval alert shows Approve and Reject (shared `RejectDialog`) for anyone
+  with `ORDER_APPROVE_CUSTOMER`; everyone else still sees Acknowledge.
+- Manager dashboard overview: the Approvals panel first, as on the POS floor.
+- The waiter app needed nothing: its Tables screen already lists approvals.
+
+Tests:
+
+- console +3 (approve and reject from the alert; approve on the dashboard). 441/441.
+- server `pilot-mannat.int`: the accept test now carries on, so the diner's page shows every dish
+  Preparing, then Ready, then Served. Reads are 250 ms apart, because the relay lets a table read
+  5 times a second. 5/5.
+
+Gotcha: with `kds.pickupMarksServed` on (the default since 2026-10-25), Pick up at the pass also
+serves the dish. The diner goes from Ready straight to Served, which is intended.
+
+On the pilot Mac: the console is rebuilt and the server restarted. The orders waiting at Table 2
+are approved from the dashboard or the alert.
+
+### 2026-10-31: P9-09 A menu made for the phone
+
+Asked by the Business Owner: find how the best menus present themselves, and make the QR page as
+easy for diners. A short look, not an endless one, covered:
+
+- Swiggy's design team ("Menus to Mmmmenus") and a heuristic evaluation of Swiggy;
+- a Zomato review and a Swiggy vs Zomato study;
+- QR-menu guides from Adobe Express, Loop, sundayapp and QRMax;
+- Seenlabs on why diners dislike digital-only menus.
+
+They agree on:
+
+- a category bar that follows the scroll;
+- an Add that becomes − n + on the card;
+- a one-line description and a marked bestseller;
+- a sticky cart bar with count and total;
+- a delivery-style tracker;
+- above all, speed and nothing in the way.
+
+Built:
+
+- `site/progress.ts`: `orderStep` (Sent, Accepted, Cooking, Ready, Served). It returns the step
+  every dish still coming has reached; cancelled, voided and rejected dishes don't hold an order
+  back. An order that was rejected, or whose pickup time passed, has no tracker. `Orders` shows it
+  as an `ol` with `aria-current="step"`.
+- Section bar:
+  - the active section is the last whose heading has gone under the sticky bar, or the last one at
+    the page's bottom;
+  - a scroll listener throttled to one check per frame replaced the IntersectionObserver, which
+    never marked a short last section;
+  - the bar scrolls sideways to the active pill; smooth scrolling unless reduced motion.
+- Section headings show their dish count.
+- Dish card:
+  - a plain dish in the order shows a `QuantityStepper` (0 removes it);
+  - a dish with options shows "n in cart";
+  - a Bestseller badge (tag `bestseller` or the recommendation engine's bestsellers), and the
+    filter shows whenever either exists.
+- Cart bar: count and total on the left and "View order ›" on the right; its accessible name is
+  unchanged.
+- Mannat: one-line descriptions for all 32 dishes (`ItemSpec.description`, used by the seed).
+  `pilot-cli --menu-text` fills in empty descriptions on an existing database.
+
+Gotcha: a 150 ms colour fade on the active pill failed axe colour contrast, because axe sampled
+mid-fade. The fade is gone: a pill switches at once.
+
+Tests:
+
+- QR site unit +2: the tracker for every status and dish state; no tracker for a rejected order.
+  The chip assertion is scoped, because the tracker also says "Ready". 22/22.
+- QR e2e +1: the card stepper adds and removes, the cart bar counts, and the tapped last section
+  is marked; axe clean. 16/16.
+- Server `pilot-mannat.int` +1: every dish has a description on the QR menu. 5/5.
+- Checked by hand: screenshots at 360 px on the pilot. The page is 360 px wide, the active pill
+  follows, and the stepper and cart bar look right.
+
+On the pilot Mac:
+
+- `pilot-cli --menu-text` filled 32 descriptions, and the stack was restarted on the new build (same
+  ngrok address).
+- **Manager to do:** Manage → Menu → Publish, so the descriptions reach the QR page and the
+  phones.
+
+### 2026-10-31: P9-08 Orders by number, a compact page, pairing the first screen
+
+Reported by the Business Owner from the pilot. Three problems:
+
+1. **The same number in another browser showed no orders or bill.** "My orders" was only the
+   order ids this browser kept, and the bill's estimate was built from them.
+2. **The page dragged sideways and felt oversized.** On a 360 px phone the filters' `<fieldset>`
+   kept its content's width, so the page was 406 px wide, the fixed bars too, and the cart bar
+   covered the tabs. Search, filters and sections all stayed at the top, taking a third of the
+   screen.
+3. **The first POS couldn't be paired.** On the PC's address (not localhost) only the code form
+   shows, its button stays grey for anything but an 8-character code (a PIN is the usual guess),
+   and no paired screen existed yet to make a code.
+
+Built:
+
+- Relay:
+  - migration `20261031130000_table_sittings` (`qr_table_bills.last_closed_at`, a phone index);
+  - `PUT server/tables/:id/bill` takes `lastClosedAt`;
+  - new diner function `table-orders` (`x-rp-diner-phone`, a header so never in an address; RLS
+    keeps it to the token's table; orders after the last close and within 12 hours);
+  - the header is in CORS; host, Supabase entry and config updated.
+- Contracts: `DINER_PHONE_HEADER`, `QrTableOrdersResponse`, `PublishTableBillRequest.lastClosedAt`.
+- PC: `syncBills` sends each QR table's last close time (one `groupBy`) in the same hashed
+  publish.
+- QR site:
+  - looks the number's orders up when the number is known, every 15 s and on return;
+  - merges them into My orders, sorted, dropping orders before the sitting;
+  - another number empties this browser's list.
+- Layout:
+  - only the section bar is sticky;
+  - compact header, search, chips, pills and cards; a text-only list when the menu has no photos;
+  - two columns from 40rem;
+  - `min-inline-size: 0` on the fieldset, `overflow-x: clip` on the root (not `hidden` on the
+    body, which broke sticky), `overscroll-behavior-x: contain` on the chip rows;
+  - the cart bar sits above the 3.5rem tab bar.
+- Console pairing: the button explains `notAPin` or `codeFormat` instead of staying grey; an
+  IP-opened screen shows `firstScreen`.
+- `mannat-local.sh pair`: the server's bootstrap code (loopback only, nothing paired yet).
+
+Tests:
+
+- relay `diner-functions` +4 (any browser, newest first, other numbers, tables and restaurants
+  get nothing; only this sitting; 12 hours; bad number or code). Relay 180.
+- server `pilot-mannat.int` +1 (after settlement and close, the number sees nothing; `since` is
+  the session's `closedAt`).
+- QR e2e +2 (another phone with the same number sees the order and another number doesn't; at
+  360 px the page is never wider than the screen and Bill is tappable with a cart). 15/15.
+- console +1 (a PIN and a short code explained; nothing sent).
+- Checked by hand: screenshots at 360 px; `mannat-local.sh pair` printed a code.
+
+On the pilot Mac:
+
+- The relay migration was applied and the services restarted (`mannat-ngrok.sh`, same ngrok
+  address).
+- Before the restart the PC's open line was not joined (`restaurantsOnLine: 0`; orders still
+  came by the 5 s fallback). Session calls succeeded every minute but no socket opened. A fresh
+  process joined at once, and the same client joins through ngrok in a test. Cause not found.
+  Watch `/healthz` after restarts; a watchdog for the line client is a candidate if it recurs.
+
+Edge cases decided:
+
+- The number is the diner's key at the table, for this sitting only.
+- A diner who skipped the number (OPTIONAL) keeps orders in that browser only.
+- The printed bill is the table's, for any phone at the table.
+
+### 2026-10-31: P9-07 Reprinting the tents when the site's address changes (ngrok)
+
+The Mannat pilot runs behind ngrok (`scripts/pilot/mannat-ngrok.sh`), whose free address changes
+at each start. The codes stay right, but `.pilot/mannat-tents.pdf` and printed tents kept the old
+(LAN) address.
+
+Found:
+
+- The server was already right: `TableQrService` builds every listed URL and every tent from
+  `RP_QR_SITE_URL` at request time, so a restart with the new address lists and prints it. Not
+  changed; a test now proves it.
+- The console had no inline code, no copy and no single-table print, and did not show which
+  address the codes open.
+
+Built:
+
+- `QrCodesScreen`:
+  - a notice "The codes open {address}…" with what to do when it changes;
+  - per table a 72 px code (`@rp/ui-web` QrCode), its link, Copy link (falls back to the code and
+    link dialog where the browser has no clipboard: plain http) and Print, which prints that
+    table's tent at the chosen size (existing `tableIds`).
+- Strings: `qrCodes.site`, `copy`, `copyOf`, `copied`, `printOne`, `printOf`. CSS: `.qr-row__thumb`,
+  `.qr-row__url`.
+- `pilot-cli --tents-only --site … --tents …` writes the existing restaurant's tents for an
+  address.
+- `mannat-ngrok.sh` (now in the repository):
+  - rewrites `.pilot/mannat-tents.pdf` for the ngrok address;
+  - remembers the last address in `.pilot/tents-url.txt` and warns when it changed;
+  - says where to reprint;
+  - its gateway moved from `.pilot/` to `scripts/pilot/ngrok-gateway.mjs`, so the script works on
+    a fresh checkout.
+- README: the reprint section and the manual test for Mannat over ngrok.
+
+Tests:
+
+- server `table-qr.int` +1 (a new site address lists and prints the same codes at the new address).
+- console `qr-codes` +3 (the address and every code inline, copy, copy without a clipboard, one
+  table's tent at A5); the no-site case also disables Copy and Print per row.
+- Tried by hand: `--tents-only` against the live ngrok address wrote 5 A5 pages with the same 5
+  codes.
+
+Gotchas (this Mac):
+
+- `pnpm check` runs every package's tests at once. The Docker test PostgreSQL needs
+  `-c max_connections=400`, or audit, licence and backup tests fail with "too many clients".
+- Still failing here, for the machine alone (CI uses PG 16 tools and a roomy disk):
+  - backup and restore tests: Homebrew's PG 18 client tools, no `initdb`;
+  - the Control Plane audit test: the disk is 93% full, so DISK_FULL is open.
+- Not pushed: this Mac's GitHub account gets 403 (MANUAL_TASKS.md).
+
+### 2026-10-31: P9-06 The Mannat pilot set-up and a one-Mac trial (Phase 9 built)
+
+Built:
+
+- `dev-seed.ts` takes a `SeedProfile` (`DEMO_PROFILE` is the old data, unchanged).
+- `pilot-seed.ts` `MANNAT_PROFILE` + `seedMannat`:
+  - tables 1–5 with QR codes;
+  - a North Indian menu (chapati, naan, thali and more);
+  - Owner, Manager, two waiters, Kitchen;
+  - the kitchen on its screen;
+  - `qr.askPhone` REQUIRED, payee name Mannat, a UPI ID when given.
+- `pilot-cli.ts` (`pnpm --filter @rp/server pilot:mannat --site … --tents … --upi-id …`) prints the
+  PINs and QR addresses and writes the A5 tents.
+- `scripts/pilot/mannat-local.sh` (setup, start, status, stop, reset) and its README:
+  PostgreSQL 16 in Docker, the relay host, the QR site and the KOT server with LAN TLS, secrets
+  in `.pilot/` (git-ignored). Manual task 38 points to it.
+
+Fixed on the way:
+
+- `relay-cli` audited with entity id "credential", which the audit table (UUID) refuses once a
+  restaurant exists. It now uses the restaurant's id.
+- The QR page's `crypto.randomUUID` exists only on secure pages, so over http on the Wi-Fi adding
+  to the cart threw. `newUuid` falls back to `getRandomValues`.
+- The page now looks at a new order again after 1 s, since the line brings it to the PC in about
+  130 ms.
+- My orders scrolls to the top after sending.
+- Primary buttons use the restaurant's colour, and the filters sit in one scrolling row.
+
+Tests:
+
+- server `pilot-mannat.int` 3: 5 codes open the same menu at their own table with the phone
+  required; table 2's order comes down the open line with polling an hour away, alerts the
+  manager, is approved, and makes a KOT sent by the manager, with the diner told; the bill
+  carries the phone and the diner's page shows it with UPI.
+- schema and service-day (the demo seed) pass.
+- site +1 (UUIDs on insecure pages).
+
+Checked by hand on this Mac (`mannat-local.sh`, Pixel 7 browser):
+
+- Welcome, menu, cart ("On your bill"), send.
+- The PC received the order 133 ms after it was sent, over the line.
+- POS "1 order to approve: Table 2"; Approve opened table 2 and made KOT #1.
+- The diner page read accepted with per-dish states.
+- The POS bill had the diner's number; Print bill showed the bill with Pay ₹410.00 with UPI,
+  the app links and the QR code on the phone.
+- I have paid raised `T3 PAID UPI` to the manager on duty.
+
+Decided:
+
+- The pilot seed refuses a database with a restaurant, like the dev seed. Mannat on a fresh
+  install, and nothing is overwritten.
+- No kitchen printer by default (the KDS works without one); add it in Manage → Printers.
+
+### 2026-10-31: P9-05 The manager's phone rings for QR orders
+
+Built:
+
+- `@rp/domain` `SIGN_IN_ROLES.WAITER_PHONE` is `['WAITER', 'MANAGER']`, reversing the 2026-10-25
+  waiters-only rule for the QR pilot (ADR-0024).
+- `DEFAULT_NOTIFICATION_RULES.ORDER_PENDING_APPROVAL` names `MANAGERS_ON_DUTY` as well as
+  `ALL_WAITERS`. Managers on duty are those signed in on a device now, else every active manager
+  (P2-03), so a manager signed in on a phone hears every diner's order.
+
+Tests: domain permissions and the notification matrix; server `auth-login.int` (a manager is
+listed and signs in on a waiter phone; Owner and kitchen refused); waiter app login screen. 46
+server tests on approval alerts pass unchanged.
+
+Decided:
+
+- No `qr.approvalAlerts` setting (the spec had one). The rule is already a manager's setting on
+  the Notification rules page (NTF-002), so the factory rule changes and a restaurant can take the
+  managers off there.
+- Tablet orders alert the managers too, since they are the same customer-order approvals.
+
+### 2026-10-31: P9-04 The diner's page
+
+Built in `apps/qr-menu`:
+
+- `PhoneGate` (the welcome step: restaurant, "You're at table T3", the mobile number, skippable
+  only when OPTIONAL).
+- Tabs Menu, My orders and Bill at the bottom, with a badge counting orders on their way.
+- Call waiter in the header band (the restaurant's accent colour).
+- `Orders`: cards with a coloured edge, plain statuses ("Waiting for the restaurant to accept
+  it", "accepted and has gone to the kitchen"), the shared StatusChip per dish, "Order again"
+  per order and + per dish.
+- An "accepted" banner with a short buzz the moment the restaurant accepts (status seen moving
+  from SUBMITTED or RECEIVED to SENT_TO_KITCHEN).
+- `BillTab`:
+  - before the bill: the estimate of what was ordered so far (orders not taken and dishes not
+    served left out) and Ask for the bill;
+  - after: each printed invoice with Pay with UPI (`upi://`), the GPay, PhonePe and Paytm links,
+    a UPI QR code (`@rp/ui-web` QrCode), Copy UPI ID and I have paid;
+  - "settled, thank you" when the bill it showed goes away;
+  - asks every 5 s while open or asked for, 30 s otherwise.
+- `requests.ts` (`useServiceRequests`) is shared by the header, the Bill tab and HelpButtons.
+- The cart shows the number "On your bill" with Change.
+- Restyled `qr.css`: dish cards, category pills, welcome card, tab bar, bill and pay.
+- `@rp/ordering` `requestAgainLine` (a QR request line back in the cart, or undefined when the menu
+  cannot serve it now).
+- Strings: `qrSite.tabs`, `welcome`, `bill`, new `orders` and `help` texts. Terms say the bill
+  may be paid by UPI.
+
+Tests:
+
+- site unit 19 (+6: order again, empty, the welcome refuses and takes numbers, skip, the
+  estimate, ask for the bill, the printed bill's UPI links, QR and I have paid, the thanks after
+  settlement).
+- ordering `reorder` +3.
+- QR e2e on a Pixel 7: +1 for Mannat (phone REQUIRED) end to end through the real relay, 13 of 13
+  pass.
+
+Fixed: the e2e photo test looked for `img.qr-dish__photo`, but since 039496e the class is on
+DishPhoto's wrapper (`.qr-dish__photo img`). It failed on main before this.
+
+Decided:
+
+- The menu stays in the page while another tab shows (hidden, not unmounted), so the search, the
+  filters and the scroll survive a look at the bill.
+- iPhones get the app links next to the generic one (iOS may open no app for `upi://`).
+
+### 2026-10-31: P9-03 The bill on the diner's phone, UPI and "I have paid"
+
+Built:
+
+- Settings `payments.upiId` (a UPI ID or none) and `payments.upiPayeeName`, with console labels
+  and hints. The hint says to use a business UPI ID.
+- Contracts: `UpiId`, `QrUpiPayee`, `QrBillInvoice`, `QrTableBill`, `PublishTableBillRequest` and
+  response, `RelayTableParams`, `QrTableBillResponse`.
+- Relay migration `20261031120000_table_bills`:
+  - `relay.qr_table_bills` (RLS: the writer's own restaurant, the diner's own table);
+  - `PAID` in the request types;
+  - `relay.purge_table_bills` (a day) for `relay_janitor` and pg_cron.
+- Relay functions: `PUT server/tables/:tableId/bill` and the diners' `GET table-bill` (host,
+  Supabase entry, config.toml).
+- PC:
+  - `relay/table-bill.ts` maps an invoice to the diner's bill (voided invoices left out);
+  - `RelaySyncService.syncBills` sends each QR table's bill when its hash changes and clears it
+    when the sitting closes;
+  - `BillPrinted`, `BillSettled`, `TableClosed`, `TableStateChanged` and `payments.upi*`
+    settings bring the sync forward (about 2 s).
+- Service request `PAID` ("I have paid"):
+  - domain `SERVICE_REQUEST_TYPES` (the tablet keeps `TABLET_REQUEST_TYPES`);
+  - alert `PAYMENT_CLAIMED` (all waiters and managers on duty, `{table} PAID UPI`, two short
+    buzzes);
+  - Prisma enum and the local inbox's check (migration `20261031100000_qr_paid_request`);
+  - the console's alert group.
+- `@rp/domain` `upiPayLink` and `upiAmount`: NPCI deep link from integer paise, plus the GPay,
+  PhonePe and Paytm app links for iPhones.
+
+Tests:
+
+- relay `server-functions` +3 (shown to its table only, cleared, refused shapes, a day's
+  retention), `service-requests` (+PAID), roles and isolation cover the new table and function.
+  Relay 177.
+- domain `upi.test.ts` 4; notification matrix and service-request alerts.
+- server `relay-orders.int` +2 (the printed bill with UPI and then cleared on settlement; PAID
+  alerts with PAID UPI). Contract snapshots and API docs regenerated.
+- Console 434, waiter app 76, mobile shell 52, tablet 35.
+
+Decided:
+
+- No payment gateway (BRD Q4). UPI intent with staff confirming; "I have paid" alerts them.
+- Settling closes the sitting and clears the bill at once, so a "paid" state is never shown from
+  the relay. The page says thanks when the bill it showed goes away (P9-04).
+- Bills sync with the existing loop, by hash per table, rather than a new loop.
+
+Gotchas:
+
+- This Mac has PostgreSQL 18 client tools (Homebrew `libpq`). Two restore tests fail on
+  `transaction_timeout` against the PG 16 test server; the backup tests need `pg_dump` on PATH.
+  Unrelated to P9; CI runs PG 16 tools.
+
+### 2026-10-31: P9-02 The diner's phone number, on the order and the bill
+
+Built:
+
+- Contracts: `DinerPhone` (`+91` and ten digits), `QrPhoneAsk`, `QrMenuDocument.phone`,
+  `QrSubmitOrderRequest.customerPhone`, `QrPickupOrder.customerPhone`.
+- Setting `qr.askPhone` (OFF, OPTIONAL, REQUIRED; restaurant scope).
+- Relay migration `20261031110000_diner_phone` (column, the diner's insert grant, the number
+  immutable).
+- `submit-order` refuses `PHONE_REQUIRED` and stores the number only where the page asks for it.
+- Pickup passes it on.
+- PC:
+  - the menu document carries the setting;
+  - the order takes the number;
+  - `BillsService.create` puts the session's latest QR number (and name) on a new bill with
+    consent;
+  - the printed bill shows `Mobile: ...` when consented.
+- QR site: a mobile field in the cart, required when asked, kept per table in the browser, checked
+  with `@rp/domain` `indianMobile`. P9-04 moves it to the first screen.
+- Privacy notice updated.
+
+Tests:
+
+- relay `diner-functions` +4 (required and stored, the form refused, not kept when not asked,
+  immutable).
+- server `relay-orders.int` +1 (order and bill carry it, with consent).
+- `bill-template` +1 (printed only with consent).
+- Contract snapshots updated; `relay.openapi.json` regenerated.
+
+Decided:
+
+- The default is OPTIONAL, not REQUIRED: every existing restaurant and test sends no number. The
+  Mannat pilot sets REQUIRED (P9-06).
+- The diner's own order view never repeats the number.
+- Entering it on a page that says "printed on your bill, used for nothing else" is consent for the
+  bill only (BILL-011). Digital bills still need their own consent.
+
+### 2026-10-31: P9-01 The relay on a server of our own, with an open line
+
+The Business Owner approved the QR pilot's architecture (Option B with an open line; ADR-0024)
+and asked for it to be built. Phase 9 added (`phases/phase-9.md`, BUILD_PLAN).
+
+Built:
+
+- `infra/supabase/src/host`:
+  - `host.ts` (functions, line, photos, `/healthz`, timeouts);
+  - `line.ts` (the production version of the old Realtime stand-in: the Phoenix subset, tokens
+    must be `relay_server`, a renewed token cannot change restaurant, 16 KB messages, 4 channels
+    a socket, pings drop dead lines, the LISTEN connection reconnects);
+  - `listener.ts` (9 MB cap before reading);
+  - `database.ts`, `photos.ts` (disk, strict path form), `jobs.ts`, `config.ts`, `main.ts`.
+- `dist/relay-host.mjs` (esbuild, Node).
+- Migration `20261031100000_self_hosted_relay` (`relay.ring()` on both queues; login
+  `relay_janitor` for expiry and retention).
+- `scripts/migrate.mjs`, `scripts/provision-restaurant.mjs`.
+- `infra/relay-host/` (Caddyfile, two systemd units, env templates, `setup-ubuntu.sh`, README).
+- Manual task 38 (replaces 20/21 for the pilot in MANUAL_TASKS.md).
+- `@rp/relay/testing` now builds on `src/host`; `testing/realtime.ts` is gone.
+
+Tests:
+
+- relay `host.test.ts` 9: rings within a second and only its restaurant, a call rings too, keys
+  and tokens refused, photos on disk and traversal refused, the 9 MB cap, the expiry job, 404s,
+  dead lines dropped, settings.
+- `roles.test.ts` and `retention.test.ts` cover `relay_janitor`.
+- Relay suite 168 passed. Server relay, Realtime, QR exit and table-QR integration suites pass on
+  the production line.
+- Checked by hand on Docker PostgreSQL 16: migrate as superuser, logins given passwords, Mannat
+  provisioned, a second migrate is a no-op.
+
+Decided:
+
+- The line speaks the Phoenix subset the PC already speaks, so the PC is unchanged.
+- Migrations run as superuser (as on Supabase); requests as `relay_edge`; jobs as
+  `relay_janitor` (EXECUTE on expiry and retention only).
+- Paths stay Supabase's (`/functions/v1`, `/realtime/v1/websocket`,
+  `/storage/v1/object/public/menu-photos`), so `RP_RELAY_URL` works unchanged and going back to
+  Supabase is a deployment change.
+
+Gotchas:
+
+- Roles are cluster-wide. Do not give `relay_edge` a password on the shared test cluster (the
+  roles test checks logins). The pilot's own relay database runs in its own PostgreSQL.
+- On this Mac, Homebrew is an Intel install and could not install PostgreSQL. The tests use
+  Docker `postgres:16` on port 55432 (`TEST_DATABASE_URL`).
 
 ### 2026-10-27: the Control Plane ready for AWS in Mumbai (staging first)
 

@@ -1,8 +1,8 @@
 import type { ServiceRequestView } from '@rp/contracts';
-import { isOpenServiceRequest, SERVICE_REQUEST_TYPES, type ServiceRequestType } from '@rp/domain';
+import { isOpenServiceRequest, TABLET_REQUEST_TYPES, type ServiceRequestType } from '@rp/domain';
 
 /** The cabin-call buttons in the order the tablet shows them (TAB-004). */
-export const REQUEST_BUTTONS: readonly ServiceRequestType[] = SERVICE_REQUEST_TYPES;
+export const REQUEST_BUTTONS: readonly ServiceRequestType[] = TABLET_REQUEST_TYPES;
 
 /**
  * What a request button shows (TAB-004): its plain label while nothing is open; "Requested, waiter

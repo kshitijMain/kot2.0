@@ -11,7 +11,6 @@ import {
   CAPABILITIES,
   type Capability,
   DEFAULT_PERMISSION_MATRIX,
-  OWNER_SECOND_FACTOR_CAPABILITIES,
   ROLES,
   type Role,
 } from '@rp/domain';
@@ -62,6 +61,7 @@ const PUBLIC_ROUTES = [
   'POST /api/v1/first-run',
   'GET /api/v1/tls/ca',
   'POST /api/v1/devices/pairing-codes/bootstrap',
+  'POST /api/v1/devices/pairing-codes/phone',
   'POST /api/v1/devices/pair',
   'POST /api/v1/devices/challenge',
   'POST /api/v1/devices/token',
@@ -269,10 +269,6 @@ describe('[SEC-017] [SEC-003] [AUTH-010] the authorisation sweep over every endp
         if (grant === 'OVERRIDE') {
           return [{ route, headers, status: 403, code: 'OVERRIDE_REQUIRED' }];
         }
-        // The Owner signed in with a PIN, so an Owner-only action asks for the second factor.
-        if (grant === 'ALLOW' && OWNER_SECOND_FACTOR_CAPABILITIES.has(capability)) {
-          return [{ route, headers, status: 403, code: 'SECOND_FACTOR_REQUIRED' }];
-        }
         return [];
       });
     });
@@ -336,7 +332,7 @@ describe('[AUTH-009] [SEC-003] people sign in only on staff devices', () => {
     ]);
   });
 
-  it('refuses a PIN or Owner sign-in on a table tablet or a pager, and counts no attempt', async () => {
+  it('refuses a PIN sign-in on a table tablet or a pager, and counts no attempt', async () => {
     for (const type of ['TABLE_TABLET', 'PAGER'] as const) {
       const pin = await request(httpServer(app))
         .post('/api/v1/auth/pin-login')
@@ -344,15 +340,6 @@ describe('[AUTH-009] [SEC-003] people sign in only on staff devices', () => {
         .send({ staffId: kit.staff.MANAGER, pin: TEST_PINS.MANAGER });
       expect(pin.status).toBe(403);
       expect(ApiError.parse(pin.body).code).toBe('DEVICE_NOT_ALLOWED');
-      const owner = await request(httpServer(app))
-        .post('/api/v1/auth/owner-login')
-        .set(authHeaders(devices[type]))
-        .send({
-          staffId: kit.staff.OWNER,
-          password: 'not checked at all',
-          secondFactor: { kind: 'TOTP', code: '000000' },
-        });
-      expect(owner.status).toBe(403);
     }
     expect(
       await prisma.session.count({

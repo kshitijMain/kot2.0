@@ -1,4 +1,4 @@
-import type { OwnerSecurityResponse, StaffView } from '@rp/contracts';
+import type { StaffView } from '@rp/contracts';
 import type { Role } from '@rp/domain';
 import { inMinutes, RESTAURANT_ID, STAFF } from './fakes.js';
 
@@ -45,26 +45,6 @@ export function team(): StaffView[] {
 export function staffList(staff: StaffView[] = team(), pinLength: 4 | 6 = 4) {
   return { staff, pinLength };
 }
-
-export function ownerSecurity(
-  overrides: Partial<OwnerSecurityResponse> = {},
-): OwnerSecurityResponse {
-  return {
-    hasPassword: true,
-    hasAuthenticator: true,
-    recoveryCodesLeft: 10,
-    secondFactorValidUntil: null,
-    ...overrides,
-  };
-}
-
-export const SECOND_FACTOR_REQUIRED = {
-  status: 403,
-  body: {
-    code: 'SECOND_FACTOR_REQUIRED',
-    message: 'Confirm your Owner password and authenticator code to continue.',
-  },
-};
 
 /** `RestaurantChanged` as the live connection delivers it. */
 export function staffChanged(sequence: number) {

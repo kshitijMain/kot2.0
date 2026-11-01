@@ -273,10 +273,6 @@ describe.skipIf(asRoot)('[DATA-004] restore to a point in time', () => {
     live = await startApp();
     app = live;
     const owner = await signIn(live, kit, 'OWNER');
-    await live.get(PrismaService).session.update({
-      where: { id: owner.session.id },
-      data: { secondFactorAt: new Date() },
-    });
     const ask = (body: object) =>
       request(httpServer(live))
         .post('/api/v1/backups/restore')

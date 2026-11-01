@@ -1,25 +1,26 @@
 import { createHash, randomBytes, randomUUID } from 'node:crypto';
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
+import { createServer, type IncomingMessage, type Server } from 'node:http';
 import { dirname, join } from 'node:path';
 import type { Duplex } from 'node:stream';
 import { fileURLToPath } from 'node:url';
 import { createMigratedDatabase, type TestDatabase } from '@rp/test-postgres';
 import pg from 'pg';
-import type { RelayDatabase, Tx } from '../db.js';
-import type { FunctionContext, Handler, PhotoStorage } from '../http.js';
-import { orderStatus } from '../order-status.js';
-import { qrMenu } from '../qr-menu.js';
-import { server } from '../server.js';
-import { serviceRequest } from '../service-request.js';
-import { submitOrder } from '../submit-order.js';
-import { type FakeRealtime, startFakeRealtime } from './realtime.js';
+import type { RelayDatabase } from '../db.js';
+import { pgRelayDatabase as hostDatabase } from '../host/database.js';
+import { FUNCTIONS } from '../host/functions.js';
+import { type Line, startLine } from '../host/line.js';
+import { nodeListener } from '../host/listener.js';
+import type { FunctionContext, PhotoStorage } from '../http.js';
 
-export type { FakeRealtime } from './realtime.js';
+/** The open line, as the tests reach it (formerly a stand-in for Supabase Realtime, P5-03d). */
+export type FakeRealtime = Line;
+export { FUNCTIONS, nodeListener };
 
 /**
  * The QR relay for tests outside this package (`@rp/relay/testing`): its schema in a database of
  * the test cluster and its functions behind a local HTTP server, as the local server's sync agent
- * reaches them on Supabase (P5-03). Never part of a product build.
+ * reaches them on Supabase (P5-03) or on a self-hosted relay (P9-01). The functions, the listener
+ * and the open line are the self-hosted relay's own (`src/host`). Never part of a product build.
  */
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
@@ -28,106 +29,12 @@ export const RELAY_MIGRATIONS_DIR = join(root, 'migrations');
 /** What a Supabase project already has: its API roles and the Realtime publication. */
 export const SUPABASE_PRELUDE = join(root, 'test', 'setup', 'supabase-prelude.sql');
 
-/** Every function, by the name Supabase serves it under (`/functions/v1/<name>`). */
-export const FUNCTIONS: Readonly<Record<string, Handler>> = {
-  'qr-menu': qrMenu,
-  'submit-order': submitOrder,
-  'order-status': orderStatus,
-  'service-request': serviceRequest,
-  server,
-};
-
 /**
  * The functions' database on node-postgres, as on Supabase: each transaction runs as the edge
- * functions' login (`relay_edge`), and, like postgres.js there, a statement that fails outside a
- * savepoint fails the whole transaction even when caught. The pool must connect as a superuser.
+ * functions' login (`relay_edge`). The pool must connect as a superuser.
  */
 export function pgRelayDatabase(pool: pg.Pool): RelayDatabase {
-  return {
-    async transaction(work) {
-      const client = await pool.connect();
-      let depth = 0;
-      let savepoints = 0;
-      let uncaught: Error | undefined;
-      const tx: Tx = {
-        async query<Row extends object>(text: string, params: readonly unknown[] = []) {
-          try {
-            return (await client.query<Row>(text, [...params])).rows;
-          } catch (error) {
-            if (depth === 0) uncaught ??= error instanceof Error ? error : new Error(String(error));
-            throw error;
-          }
-        },
-        async savepoint(inner) {
-          savepoints += 1;
-          const name = `sp_${String(savepoints)}`;
-          await client.query(`SAVEPOINT ${name}`);
-          depth += 1;
-          try {
-            const value = await inner(tx);
-            await client.query(`RELEASE SAVEPOINT ${name}`);
-            return value;
-          } catch (error) {
-            await client.query(`ROLLBACK TO SAVEPOINT ${name}`);
-            throw error;
-          } finally {
-            depth -= 1;
-          }
-        },
-      };
-      try {
-        await client.query('BEGIN');
-        await client.query('SET LOCAL SESSION AUTHORIZATION relay_edge');
-        const result = await work(tx);
-        if (uncaught !== undefined) throw uncaught;
-        await client.query('COMMIT');
-        return result;
-      } catch (error) {
-        await client.query('ROLLBACK');
-        throw error;
-      } finally {
-        client.release();
-      }
-    },
-  };
-}
-
-/** Serves `functions` over Node's HTTP server the way Supabase does: `/functions/v1/<name>/...`. */
-export function nodeListener(
-  functions: Readonly<Record<string, Handler>>,
-  context: FunctionContext,
-): (request: IncomingMessage, response: ServerResponse) => void {
-  return (incoming, outgoing) => {
-    void (async () => {
-      const url = new URL(incoming.url ?? '/', 'http://127.0.0.1');
-      const name = /^\/functions\/v1\/([a-z-]+)(?:\/|$)/.exec(url.pathname)?.[1];
-      const handler = name === undefined ? undefined : functions[name];
-      if (handler === undefined) {
-        outgoing.writeHead(404).end();
-        return;
-      }
-      const chunks: Buffer[] = [];
-      for await (const chunk of incoming) chunks.push(chunk as Buffer);
-      const headers = new Headers();
-      for (const [key, value] of Object.entries(incoming.headers)) {
-        if (typeof value === 'string') headers.set(key, value);
-        else if (Array.isArray(value)) for (const item of value) headers.append(key, item);
-      }
-      const method = incoming.method ?? 'GET';
-      const response = await handler(
-        new Request(url, {
-          method,
-          headers,
-          ...(method !== 'GET' && method !== 'HEAD' && { body: Buffer.concat(chunks) }),
-        }),
-        context,
-      );
-      outgoing.writeHead(response.status, Object.fromEntries(response.headers));
-      outgoing.end(Buffer.from(await response.arrayBuffer()));
-    })().catch(() => {
-      outgoing.destroy();
-    });
-  };
+  return hostDatabase(pool, { authorization: 'relay_edge' });
 }
 
 export interface ProvisionedTenant {
@@ -155,7 +62,7 @@ export interface TestRelay {
   readonly requests: string[];
   /** The photo files in the relay's bucket, by path. */
   readonly photoFiles: ReadonlyMap<string, Uint8Array>;
-  /** The stand-in for Supabase Realtime, when started with a JWT secret (P5-03d). */
+  /** The open line (Realtime's protocol), when started with a JWT secret (P5-03d, P9-01). */
   readonly realtime: FakeRealtime | undefined;
   stop(): Promise<void>;
 }
@@ -229,8 +136,7 @@ export async function startRelay(options: {
   const realtime =
     options.realtimeJwtSecret === undefined
       ? undefined
-      : await startFakeRealtime({
-          admin,
+      : await startLine({
           databaseUrl: database.url,
           jwtSecret: options.realtimeJwtSecret,
           apiKey: context.realtimeApiKey ?? '',

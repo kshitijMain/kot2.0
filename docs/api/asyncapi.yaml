@@ -1537,6 +1537,8 @@ components:
         - VENDOR_RESTORE_CODE
         - SIGN_IN_LOCKED
         - OUT_OF_STOCK
+        - PAYMENT_CLAIMED
+        - GUEST_WAITING
     OrderApproved:
       type: object
       properties:
@@ -2181,6 +2183,7 @@ components:
         - WATER
         - WAITER
         - BILL
+        - PAID
     SettingsChanged:
       type: object
       properties:

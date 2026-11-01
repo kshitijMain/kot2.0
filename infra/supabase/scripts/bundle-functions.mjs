@@ -31,3 +31,24 @@ for (const name of FUNCTIONS) {
     logLevel: 'warning',
   });
 }
+
+// The self-hosted relay (P9-01, ADR-0024): every function, the open line and the jobs in one file
+// for Node, so a server needs only Node and this file. Only when building the package itself.
+if (process.argv[2] === undefined) {
+  await build({
+    entryPoints: [join(root, 'src', 'host', 'main.ts')],
+    outfile: join(root, 'dist', 'relay-host.mjs'),
+    bundle: true,
+    format: 'esm',
+    platform: 'node',
+    target: 'node22',
+    // pg and ws are CommonJS: give them `require` inside the ES module.
+    banner: {
+      js: "import { createRequire as __rpRequire } from 'node:module'; const require = __rpRequire(import.meta.url);",
+    },
+    // Optional native speed-ups pg and ws look for and do without.
+    external: ['pg-native', 'bufferutil', 'utf-8-validate'],
+    legalComments: 'eof',
+    logLevel: 'warning',
+  });
+}

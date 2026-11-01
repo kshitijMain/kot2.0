@@ -28,6 +28,8 @@ export function requestTitle(request: ServiceRequestView, t: Translator): string
 /** How long it has waited, and whether someone is on the way or the managers were alerted. */
 function requestFacts(request: ServiceRequestView, now: number, t: Translator): string {
   const facts = [alertAge(request.createdAt, now, t)];
+  // A call at a table nobody has opened yet (P9-25): someone goes and seats them.
+  if (request.tableSessionId === null) facts.push(t('pos.tableRequests.notOpened'));
   if (request.state === 'ACKNOWLEDGED') {
     facts.push(
       request.acknowledgedByName === null
@@ -125,13 +127,13 @@ export function ServiceRequests({ show }: { show?: (request: ServiceRequestView)
                   style={styles.grow}
                   loading={busy === 'acknowledge'}
                   disabled={busy !== undefined}
-                  accessibilityLabel={t('alerts.acknowledgeOf', { title })}
+                  accessibilityLabel={t('pos.tableRequests.onMyWayOf', { title })}
                   testID={`request-${request.id}-acknowledge`}
                   onPress={() => {
                     act(request, 'acknowledge');
                   }}
                 >
-                  {t('alerts.acknowledge')}
+                  {t('pos.tableRequests.onMyWay')}
                 </Button>
               )}
               <Button
@@ -139,13 +141,13 @@ export function ServiceRequests({ show }: { show?: (request: ServiceRequestView)
                 style={styles.grow}
                 loading={busy === 'resolve'}
                 disabled={busy !== undefined}
-                accessibilityLabel={t('mobile.requests.resolveOf', { title })}
+                accessibilityLabel={t('pos.tableRequests.doneOf', { title })}
                 testID={`request-${request.id}-resolve`}
                 onPress={() => {
                   act(request, 'resolve');
                 }}
               >
-                {t('mobile.requests.resolve')}
+                {t('pos.tableRequests.done')}
               </Button>
             </View>
           </View>
@@ -179,6 +181,7 @@ const styles = StyleSheet.create({
   title: { fontSize: fontSize.md, fontWeight: weight(fontWeight.bold) },
   facts: { fontSize: fontSize.sm },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2], marginTop: spacing[1] },
-  grow: { flex: 1 },
+  // Natural width, filling the row; wraps rather than breaking a word (P9-24: "App rove").
+  grow: { flexGrow: 1 },
   failed: { gap: spacing[2] },
 });

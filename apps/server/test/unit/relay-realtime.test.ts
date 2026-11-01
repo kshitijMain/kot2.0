@@ -7,6 +7,8 @@ import { until } from '../helpers/wait.js';
 /** A scripted WebSocket: records what is sent; the test plays Realtime's part. */
 class FakeSocket {
   static all: FakeSocket[] = [];
+  /** Off: the handshake is never answered (neither open nor close), as through a stuck proxy. */
+  static opens = true;
   readonly sent: { topic: string; event: string; payload: Record<string, unknown>; ref: string }[] =
     [];
   closed = false;
@@ -14,6 +16,7 @@ class FakeSocket {
 
   constructor(readonly url: string) {
     FakeSocket.all.push(this);
+    if (!FakeSocket.opens) return;
     setTimeout(() => {
       this.emit('open', {});
     }, 0);
@@ -113,6 +116,7 @@ const socket = (index: number) =>
 
 afterEach(() => {
   doorbell?.stop();
+  FakeSocket.opens = true;
 });
 
 describe('[QR-009] the Realtime doorbell', () => {
@@ -163,6 +167,20 @@ describe('[QR-009] the Realtime doorbell', () => {
     expect(changes).toEqual([true, false]);
     const second = await socket(1);
     await until(() => second.sentEvents('phx_join').length === 1, 1_000, 'a new join');
+  });
+
+  it('gives up on a line that never opens, and tries again (P9-12)', async () => {
+    FakeSocket.opens = false;
+    const { changes } = start({ connectTimeoutMs: 30 });
+    const first = await socket(0);
+    // Neither open nor close ever comes: only the deadline ends the wait.
+    await until(() => first.closed, 1_000, 'the unopened line to be dropped');
+    expect(changes).toEqual([]);
+    FakeSocket.opens = true;
+    const second = await socket(1);
+    await until(() => second.sentEvents('phx_join').length === 1, 1_000, 'a new join');
+    second.acceptJoin();
+    expect(doorbell?.subscribed).toBe(true);
   });
 
   it('keeps a line whose heartbeats are answered', async () => {

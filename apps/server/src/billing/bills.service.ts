@@ -527,6 +527,21 @@ export class BillsService {
     target: { tableSessionId?: string; orderId?: string },
   ): Promise<string> {
     const businessDate = await currentBusinessDate(tx, principal.restaurantId);
+    // P9-02, BILL-011: the number the diner gave on the QR page, which said it is printed on the
+    // bill, goes on the table's bill; the latest one, if several diners gave one.
+    const fromQr =
+      target.tableSessionId === undefined
+        ? null
+        : await tx.order.findFirst({
+            where: {
+              restaurantId: principal.restaurantId,
+              tableSessionId: target.tableSessionId,
+              source: 'QR',
+              customerPhone: { not: null },
+            },
+            orderBy: { createdAt: 'desc' },
+            select: { customerPhone: true, customerName: true },
+          });
     const bill = await tx.bill.create({
       data: {
         id: newId(),
@@ -534,6 +549,11 @@ export class BillsService {
         businessDate: dbDate(businessDate),
         tableSessionId: target.tableSessionId ?? null,
         orderId: target.orderId ?? null,
+        ...(fromQr !== null && {
+          customerPhone: fromQr.customerPhone,
+          customerPhoneConsent: true,
+          customerName: fromQr.customerName,
+        }),
       },
     });
     return bill.id;

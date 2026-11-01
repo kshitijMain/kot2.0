@@ -1,0 +1,24 @@
+# The self-hosted QR relay (P9-01, ADR-0024): /etc/systemd/system/relay-host.service
+[Unit]
+Description=Restaurant platform QR relay
+After=network-online.target postgresql.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=rp-relay
+Group=rp-relay
+EnvironmentFile=/etc/rp-relay/relay-host.env
+ExecStart=/usr/bin/node /opt/rp/infra/supabase/dist/relay-host.mjs
+Restart=always
+RestartSec=2
+# Enough for thousands of open lines; each costs one descriptor.
+LimitNOFILE=65536
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/var/lib/rp-relay
+
+[Install]
+WantedBy=multi-user.target

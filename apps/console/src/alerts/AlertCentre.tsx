@@ -12,11 +12,14 @@ import {
   useToast,
 } from '@rp/ui-web';
 import { useId, useState } from 'react';
+import { useConsole } from '../app/console-context.js';
 import { useT } from '../app/i18n.js';
 import { messageOf } from '../app/messages.js';
 import { useNow } from '../app/use-now.js';
 import { type AlertGroup, alertsForMe, groupAlerts } from './alert-view.js';
 import { type AlertsState, useAlerts } from './alerts-context.js';
+import { useOpenBill } from '../billing/use-open-bill.js';
+import { RejectDialog } from '../pos/Approvals.js';
 import { NudgeDialog } from './NudgeDialog.js';
 
 /** Refresh "4 min ago" this often. */
@@ -24,8 +27,9 @@ const AGE_REFRESH_MS = 30_000;
 
 /**
  * The alert centre (P2-06c, MGR-008): the open alerts in groups, what asks for the person first,
- * each with Acknowledge (NTF-004), and for managers the nudge to waiters (NTF-008). Live: it reads
- * the alerts again after every alert event.
+ * each with Acknowledge (NTF-004), and for managers the nudge to waiters (NTF-008). A diner's order
+ * waiting for approval is approved or rejected right there (P9-10): acknowledging only silenced it,
+ * and the diner kept reading "waiting". Live: it reads the alerts again after every alert event.
  */
 export function AlertCentre() {
   const state = useAlerts();
@@ -124,8 +128,22 @@ function AlertRow({
 }) {
   const t = useT();
   const toast = useToast();
+  const controller = useConsole();
   const [working, setWorking] = useState(false);
+  const [rejecting, setRejecting] = useState(false);
   const { title, detail } = describeAlert(alert, t);
+  const orderId = alert.type === 'ORDER_PENDING_APPROVAL' ? alert.orderId : null;
+  const decides = orderId !== null && grantOf(state.person, 'ORDER_APPROVE_CUSTOMER') !== 'DENY';
+  const orderNumber =
+    typeof alert.payload.orderNumber === 'number' ? alert.payload.orderNumber : '';
+  // A table asked for its bill, or says it paid: whoever prints and takes payment goes to it.
+  const { openBill, opening } = useOpenBill();
+  const billSession =
+    (alert.type === 'BILL_REQUEST' || alert.type === 'PAYMENT_CLAIMED') &&
+    alert.tableSessionId !== null &&
+    grantOf(state.person, 'BILL_PRINT_AND_PAYMENT') !== 'DENY'
+      ? alert.tableSessionId
+      : null;
   // Whom it is for, when a manager looks over someone else's alert.
   const others = mine
     ? []
@@ -138,6 +156,25 @@ function AlertRow({
     } catch (error) {
       toast.show({
         title: t('alerts.acknowledgeFailed', { message: messageOf(error, t) }),
+        tone: 'danger',
+      });
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  const approve = async (id: string) => {
+    setWorking(true);
+    try {
+      await controller.api.approveOrder({
+        params: { orderId: id },
+        body: { changes: [], dinerAgreed: false },
+      });
+      toast.show({ title: t('approvals.approved', { number: orderNumber }), tone: 'success' });
+      state.reload();
+    } catch (error) {
+      toast.show({
+        title: t('approvals.failed', { message: messageOf(error, t) }),
         tone: 'danger',
       });
     } finally {
@@ -163,16 +200,71 @@ function AlertRow({
           )}
         </p>
       </div>
-      <Button
-        variant="secondary"
-        loading={working}
-        aria-label={t('alerts.acknowledgeOf', { title })}
-        onClick={() => {
-          void acknowledge();
-        }}
-      >
-        {t('alerts.acknowledge')}
-      </Button>
+      {decides ? (
+        <div className="alert-row__actions">
+          <Button
+            loading={working}
+            aria-label={t('approvals.approveOf', { title })}
+            onClick={() => {
+              void approve(orderId);
+            }}
+          >
+            {t('approvals.approve')}
+          </Button>
+          <Button
+            variant="secondary"
+            disabled={working}
+            aria-label={t('approvals.rejectOf', { title })}
+            onClick={() => {
+              setRejecting(true);
+            }}
+          >
+            {t('approvals.reject')}
+          </Button>
+        </div>
+      ) : (
+        <div className="alert-row__actions">
+          {billSession === null ? null : (
+            <Button
+              loading={opening}
+              onClick={() => {
+                state.setPanel(undefined);
+                openBill({ tableSessionId: billSession });
+              }}
+            >
+              {t('pos.tableRequests.openBill')}
+            </Button>
+          )}
+          <Button
+            variant="secondary"
+            loading={working}
+            aria-label={t('alerts.acknowledgeOf', { title })}
+            onClick={() => {
+              void acknowledge();
+            }}
+          >
+            {t('alerts.acknowledge')}
+          </Button>
+        </div>
+      )}
+      {rejecting && orderId !== null ? (
+        <RejectDialog
+          title={title}
+          onClose={() => {
+            setRejecting(false);
+          }}
+          onReject={(reason) =>
+            controller.api.rejectOrder({ params: { orderId }, body: { reason } }).then(() => {
+              toast.show({
+                title: t('approvals.rejected', { number: orderNumber }),
+                tone: 'success',
+              });
+              setRejecting(false);
+              state.reload();
+            })
+          }
+        />
+      ) : null}
     </div>
   );
 }

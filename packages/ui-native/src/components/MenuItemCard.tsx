@@ -57,9 +57,14 @@ export function MenuItemCard({
     <>
       <View style={styles.top}>
         <View testID={`food-${foodType}`} style={[styles.mark, { borderColor: mark }]}>
-          <View style={[styles.markDot, { backgroundColor: mark }]} />
+          {foodType === 'NON_VEG' ? (
+            // A triangle, as on Indian food labels: the shape tells it apart, not only the colour.
+            <View style={[styles.markTriangle, { borderBottomColor: mark }]} />
+          ) : (
+            <View style={[styles.markDot, { backgroundColor: mark }]} />
+          )}
         </View>
-        <Text numberOfLines={2} style={[styles.name, { color: colors.text }]}>
+        <Text numberOfLines={3} style={[styles.name, { color: colors.text }]}>
           {name}
         </Text>
       </View>
@@ -117,10 +122,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     elevation: elevation[1].androidElevation,
   },
-  /** With a photo: a small square beside the name, so the list stays quick to scan. */
-  withPhoto: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], padding: spacing[3] },
-  photo: { width: touchTarget.comfortable * 1.25, aspectRatio: 1, borderRadius: radius.md },
-  body: { flex: 1, gap: spacing[2] },
+  /**
+   * With a photo: a short strip above the name (P9-21). Beside it, in the phone's two columns, the
+   * name had a few letters' width and broke mid-word ("Pan eer …").
+   */
+  withPhoto: { padding: spacing[3] },
+  photo: { width: '100%', aspectRatio: 2, borderRadius: radius.md },
+  body: { gap: spacing[2] },
   top: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[2] },
   mark: {
     width: 16,
@@ -132,5 +140,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   markDot: { width: 7, height: 7, borderRadius: radius.full },
+  markTriangle: {
+    width: 0,
+    height: 0,
+    borderLeftWidth: 4,
+    borderRightWidth: 4,
+    borderBottomWidth: 7,
+    borderLeftColor: 'transparent',
+    borderRightColor: 'transparent',
+  },
   name: { flex: 1, fontSize: fontSize.md, fontWeight: weight(fontWeight.semibold) },
 });

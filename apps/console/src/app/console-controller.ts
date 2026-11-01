@@ -31,6 +31,11 @@ export interface ConsoleSnapshot {
    * loaded again to get the server's own console.
    */
   readonly clientTooOld: boolean;
+  /**
+   * The server runs PIN-only (ADR-0025): browsers and phones connect by themselves, so nobody
+   * pairs a device and the console offers no pairing (Business Owner, 2026-11-01).
+   */
+  readonly pinOnly: boolean;
 }
 
 export interface ConsoleControllerOptions {
@@ -57,6 +62,7 @@ const INITIAL: ConsoleSnapshot = {
   connection: 'stopped',
   notice: undefined,
   clientTooOld: false,
+  pinOnly: false,
 };
 
 /**
@@ -102,6 +108,8 @@ export class ConsoleController {
   async start(): Promise<void> {
     const record = await this.options.storage.loadDevice();
     if (record === undefined) {
+      // PIN-only (ADR-0025): pair this browser at once, no code typed, and go to the PIN screen.
+      if (await this.pairItself()) return;
       this.update({ phase: 'unpaired' });
       return;
     }
@@ -132,6 +140,39 @@ export class ConsoleController {
     }
     this.update({ phase: 'paired', device, person, session: current });
     this.connect(this.options.storage.loadResume());
+    // Whether devices pair at all here (ADR-0025): Manage → Devices offers pairing only if so.
+    this.client.api.getFirstRun().then(
+      (status) => {
+        this.update({ pinOnly: status.pinOnly === true });
+      },
+      () => undefined,
+    );
+  }
+
+  /**
+   * Connects this browser by itself again where the server runs PIN-only (ADR-0025): after a
+   * manager removed it, or when the first try failed. True when it did.
+   */
+  connectByItself(): Promise<boolean> {
+    return this.pairItself();
+  }
+
+  /**
+   * Where the server runs PIN-only (ADR-0025), pairs this browser by itself with a code the server
+   * gives anyone on the restaurant's network; true when it did. Otherwise, or should it fail, the
+   * pairing screen asks for a manager's code as usual.
+   */
+  private async pairItself(): Promise<boolean> {
+    try {
+      const status = await this.client.api.getFirstRun();
+      this.update({ pinOnly: status.pinOnly === true });
+      if (status.pinOnly !== true || status.needed) return false;
+      const { code } = await this.client.api.createBootstrapPairingCode();
+      await this.pair(code);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /** Pairs this browser with a manager's code, creating its device key (AUTH-007). */

@@ -14,6 +14,7 @@ import type {
   QrPhotoSize,
   QrRecommendations,
   QrRelaySettings,
+  QrUpiPayee,
   RelayTable,
   SyncRelayTablesResponse,
 } from '@rp/contracts/relay';
@@ -25,6 +26,7 @@ import { SERVER_PACKAGE } from '../common/package-version.js';
 import { currentBusinessDate } from '../common/business-dates.js';
 import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
 import { PrismaService } from '../database/prisma.service.js';
+import { InvoicesService } from '../billing/invoices.service.js';
 import { AppError } from '../errors/app-error.js';
 import { EventBus } from '../events/event-bus.js';
 import { tableTokenHash } from '../floor/table-qr.service.js';
@@ -37,6 +39,7 @@ import { SettingsService, type SettingsSnapshot } from '../settings/settings.ser
 import { PacedLoop } from './paced-loop.js';
 import { RelayClient, RelayError } from './relay-client.js';
 import { readRelayCredential } from './relay-credential.js';
+import { qrTableBillOf } from './table-bill.js';
 
 export const RELAY_SYNC_OPTIONS = Symbol('RELAY_SYNC_OPTIONS');
 
@@ -81,6 +84,8 @@ const SyncState = z.object({
   menuVersion: z.int().nonnegative(),
   menuHash: z.string().nullable(),
   tablesHash: z.string().nullable(),
+  /** P9-03: each table's bill as last sent ('none' once cleared); absent before P9-03. */
+  billHashes: z.record(z.string(), z.string()).default({}),
 });
 type SyncState = z.infer<typeof SyncState>;
 const STATE_KEY = 'relay.sync';
@@ -134,10 +139,17 @@ export function concernsRelay(event: DomainEvent): boolean {
           key.startsWith('reco.') ||
           key === 'orders.specialInstructionsMaxLength' ||
           key === 'billing.priceMode' ||
+          key.startsWith('payments.upi') ||
           key === 'menu.bestSellerCount',
       );
     case 'RestaurantChanged':
       return event.payload.part === 'PROFILE' || event.payload.part === 'FLOOR';
+    // P9-03: the table's bill on the diners' phones follows the till within seconds.
+    case 'BillPrinted':
+    case 'BillSettled':
+    case 'TableClosed':
+    case 'TableStateChanged':
+      return true;
     default:
       return false;
   }
@@ -180,6 +192,7 @@ export class RelaySyncService implements OnApplicationBootstrap, OnModuleDestroy
     private readonly rules: RecommendationRulesService,
     private readonly bestSellers: BestSellers,
     private readonly learned: LearnedAssociations,
+    private readonly invoices: InvoicesService,
     private readonly events: EventBus,
     @Inject(RELAY_SYNC_OPTIONS) private readonly options: RelaySyncOptions,
   ) {
@@ -266,6 +279,7 @@ export class RelaySyncService implements OnApplicationBootstrap, OnModuleDestroy
     let saved = await this.readState();
     saved = await this.syncTables(client, restaurant.id, saved);
     saved = await this.syncMenu(client, restaurant, settings, saved);
+    saved = await this.syncBills(client, restaurant, settings, saved);
 
     if (this.state.lastError !== null) this.logger.log('In step with the QR relay again');
     this.state = {
@@ -276,6 +290,76 @@ export class RelaySyncService implements OnApplicationBootstrap, OnModuleDestroy
       clockOffsetMs: Math.round(clockOffsetMs),
     };
     return settings.get('qr.presenceIntervalSeconds') * 1_000;
+  }
+
+  /**
+   * P9-03 (ADR-0024): each table's printed bill for its diners, with how to pay it by UPI. Sent
+   * when it changes, and cleared once the table's sitting closes, so the next sitting never sees
+   * it. With it goes when the table's last sitting ended (P9-08), which bounds the orders a
+   * diner's number shows. Only tables with a QR code are looked at.
+   */
+  private async syncBills(
+    client: RelayClient,
+    restaurant: { id: string; displayName: string },
+    settings: SettingsSnapshot,
+    saved: SyncState,
+  ): Promise<SyncState> {
+    const upiId = settings.get('payments.upiId');
+    const upi: QrUpiPayee | null =
+      upiId === null
+        ? null
+        : {
+            upiId,
+            payeeName: (settings.get('payments.upiPayeeName') ?? restaurant.displayName).slice(
+              0,
+              60,
+            ),
+          };
+    const tables = await this.prisma.diningTable.findMany({
+      where: { restaurantId: restaurant.id, archivedAt: null, qrToken: { not: null } },
+      select: { id: true, sessions: { where: { status: 'OPEN' }, select: { id: true } } },
+    });
+    // P9-08: when each table's last sitting ended, so a diner's number shows only this one's
+    // orders on any phone. One query for every table.
+    const closed = await this.prisma.tableSession.groupBy({
+      by: ['tableId'],
+      where: { restaurantId: restaurant.id, status: 'CLOSED', closedAt: { not: null } },
+      _max: { closedAt: true },
+    });
+    const lastClosed = new Map(
+      closed.map((row) => [row.tableId, row._max.closedAt?.toISOString() ?? null]),
+    );
+    const hashes = { ...saved.billHashes };
+    for (const table of tables) {
+      const sessionId = table.sessions[0]?.id;
+      const invoiceIds =
+        sessionId === undefined
+          ? []
+          : await this.prisma.invoice.findMany({
+              where: { restaurantId: restaurant.id, tableSessionId: sessionId },
+              orderBy: [{ issuedAt: 'asc' }, { id: 'asc' }],
+              select: { id: true },
+            });
+      const invoices = await Promise.all(
+        invoiceIds.map(({ id }) => this.invoices.view(restaurant.id, id)),
+      );
+      const bill = qrTableBillOf(invoices, upi);
+      const lastClosedAt = lastClosed.get(table.id) ?? null;
+      // A table with nothing to say, never told anything, is left alone.
+      const hash = bill === null && lastClosedAt === null ? 'none' : hashOf({ bill, lastClosedAt });
+      if (hash === (hashes[table.id] ?? 'none')) continue;
+      try {
+        await client.publishTableBill(table.id, { bill, lastClosedAt });
+      } catch (error) {
+        // Not at the relay yet (its code is new): the next sync sends the tables first.
+        if (error instanceof RelayError && error.code === 'TABLE_NOT_FOUND') continue;
+        throw error;
+      }
+      hashes[table.id] = hash;
+      // Remembered after each table, so a failure later on resends only what is left.
+      await this.writeState({ ...saved, billHashes: hashes });
+    }
+    return { ...saved, billHashes: hashes };
   }
 
   /** QR-001: every table, with its QR code's hash once it has one (P5-04). */
@@ -334,6 +418,7 @@ export class RelaySyncService implements OnApplicationBootstrap, OnModuleDestroy
       instructionMaxLength: settings.get('orders.specialInstructionsMaxLength'),
       priceMode: settings.get('billing.priceMode'),
       serviceRequests: settings.get('qr.serviceRequests'),
+      phone: settings.get('qr.askPhone'),
       menu: qrMenu,
       photos: await this.syncPhotos(
         client,
@@ -509,7 +594,7 @@ export class RelaySyncService implements OnApplicationBootstrap, OnModuleDestroy
     const parsed = row === null ? undefined : SyncState.safeParse(JSON.parse(row.value));
     return parsed?.success === true
       ? parsed.data
-      : { menuVersion: 0, menuHash: null, tablesHash: null };
+      : { menuVersion: 0, menuHash: null, tablesHash: null, billHashes: {} };
   }
 
   private async writeState(state: SyncState): Promise<void> {

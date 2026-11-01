@@ -42,6 +42,23 @@ describe('[AUTH-007] pairing a browser', () => {
     expect(await screen.findByText('That code is not valid any more.')).toBeInTheDocument();
   });
 
+  it('says a PIN is not a pairing code, and a short code what it should be (P9-08)', async () => {
+    const fake = server();
+    const { user } = await renderConsole({ fake, pair: false });
+    const field = await screen.findByLabelText(new RegExp(t('pairing.codeLabel')));
+    const submit = screen.getByRole('button', { name: t('pairing.submit') });
+    await user.type(field, '2222');
+    expect(submit).toBeEnabled();
+    await user.click(submit);
+    expect(await screen.findByText(t('pairing.notAPin'))).toBeInTheDocument();
+    await user.clear(field);
+    await user.type(field, 'ABCD');
+    await user.click(submit);
+    expect(await screen.findByText(t('pairing.codeFormat'))).toBeInTheDocument();
+    // Nothing invalid is sent to the server.
+    expect(fake.callsTo('POST', '/api/v1/devices/pair')).toHaveLength(0);
+  });
+
   it('explains that pairing needs a secure page', async () => {
     vi.stubGlobal('isSecureContext', false);
     await renderConsole({ pair: false });
@@ -61,9 +78,10 @@ describe('[AUTH-001] [AUTH-004] staff tiles and PIN login', () => {
     await expectNoAxeViolations(container);
     await signIn(user, name, '1234');
     expect(await screen.findByRole('heading', { level: 1, name: t(heading) })).toBeInTheDocument();
-    expect(
-      screen.getByText(t('modes.signedInAs', { name, role: t(`roles.${role}`) })),
-    ).toBeVisible();
+    // Who is signed in: the name, and the role under it (P9-15).
+    const header = within(screen.getByRole('banner'));
+    expect(header.getByText(name)).toBeVisible();
+    expect(header.getByText(t(`roles.${role}`))).toBeVisible();
     await expectNoAxeViolations(container);
   });
 

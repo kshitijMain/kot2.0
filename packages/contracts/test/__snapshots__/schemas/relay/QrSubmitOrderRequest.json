@@ -91,7 +91,8 @@
         }
       },
       "orderNote": { "type": "string", "maxLength": 500 },
-      "customerName": { "type": "string", "minLength": 1, "maxLength": 60 }
+      "customerName": { "type": "string", "minLength": 1, "maxLength": 60 },
+      "customerPhone": { "type": "string", "pattern": "^\\+91[6-9]\\d{9}$" }
     },
     "required": ["idempotencyKey", "lines"],
     "additionalProperties": false
@@ -188,7 +189,8 @@
         }
       },
       "orderNote": { "type": "string", "maxLength": 500 },
-      "customerName": { "type": "string", "minLength": 1, "maxLength": 60 }
+      "customerName": { "type": "string", "minLength": 1, "maxLength": 60 },
+      "customerPhone": { "type": "string", "pattern": "^\\+91[6-9]\\d{9}$" }
     },
     "required": ["idempotencyKey", "lines"],
     "additionalProperties": false

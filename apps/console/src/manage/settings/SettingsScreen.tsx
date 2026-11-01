@@ -14,12 +14,11 @@ import {
   useToast,
 } from '@rp/ui-web';
 import { type ReactNode, useCallback, useId, useState } from 'react';
-import { Link } from 'react-router';
+import { Link, useSearchParams } from 'react-router';
 import { useConsole } from '../../app/console-context.js';
 import { useT } from '../../app/i18n.js';
 import { messageOf } from '../../app/messages.js';
 import { useLive } from '../../app/use-live.js';
-import { SecondFactorCancelled, useSecondFactor } from '../../owner/second-factor.js';
 import { SettingsTransfer } from './SettingsTransfer.js';
 import {
   bpText,
@@ -156,14 +155,12 @@ function describe(
 /**
  * The Settings page (P4-03a, MGR-007, UPD-010): every setting of the catalogue by area, with its
  * value, its default when changed, and who may change it. Settings the vendor controls are shown
- * but not changed here; tax, invoice, data and licence settings ask for the Owner's second factor
- * (AUTH-006). The editor for each comes from its schema, and every change says why.
+ * but not changed here; tax, invoice, data and licence settings are the Owner's alone. The editor for each comes from its schema, and every change says why.
  */
 export function SettingsScreen() {
   const t = useT();
   const controller = useConsole();
   const toast = useToast();
-  const { withSecondFactor, dialog: secondFactorDialog } = useSecondFactor();
   const { data, reload } = useLive(
     async () => {
       const [settings, printers] = await Promise.all([
@@ -174,7 +171,9 @@ export function SettingsScreen() {
     },
     (type) => type === 'SettingsChanged' || type === 'RestaurantChanged',
   );
-  const [search, setSearch] = useState('');
+  // `?find=UPI` opens the page on those settings, e.g. from the overview's notice (P9-16).
+  const [params] = useSearchParams();
+  const [search, setSearch] = useState(params.get('find') ?? '');
   const [editing, setEditing] = useState<
     { readonly setting: SettingView; readonly editor: Editor } | undefined
   >();
@@ -194,17 +193,15 @@ export function SettingsScreen() {
     setBusy(true);
     setError(undefined);
     try {
-      await withSecondFactor(() =>
-        controller.api.updateSetting({
-          params: { key: setting.key },
-          body: { value, ...(reason.trim() !== '' && { reason: reason.trim() }) },
-        }),
-      );
+      await controller.api.updateSetting({
+        params: { key: setting.key },
+        body: { value, ...(reason.trim() !== '' && { reason: reason.trim() }) },
+      });
       toast.show({ title: t('settingsPage.saved', { name: label(setting.key) }), tone: 'success' });
       close();
       reload();
     } catch (failure) {
-      if (!(failure instanceof SecondFactorCancelled)) setError(messageOf(failure, t));
+      setError(messageOf(failure, t));
       setBusy(false);
     }
   };
@@ -247,12 +244,10 @@ export function SettingsScreen() {
                 return (
                   <li key={setting.key} className="staff-row">
                     <div className="staff-row__who">
-                      <h4 className="staff-row__name">{name}</h4>
-                      <p className="staff-row__contact">{hint(setting.key)}</p>
-                      <p className="settings-row__value">
-                        {describe(editor, setting.value, setting.unit, data.value.printers, t)}
-                      </p>
-                      <p className="staff-row__states">
+                      {/* P9-26: the badges beside the name, the value beside the button; an
+                          empty line of badges had made every row twice as tall. */}
+                      <div className="settings-row__title">
+                        <h4 className="staff-row__name">{name}</h4>
                         {setting.isDefault ? null : (
                           <Badge tone="info">{t('settingsPage.changed')}</Badge>
                         )}
@@ -264,7 +259,8 @@ export function SettingsScreen() {
                         {needsOwner(setting) ? (
                           <Badge tone="warning">{t('settingsPage.ownerOnly')}</Badge>
                         ) : null}
-                      </p>
+                      </div>
+                      <p className="staff-row__contact">{hint(setting.key)}</p>
                       {setting.isDefault ? null : (
                         <p className="staff-row__contact">
                           {t('settingsPage.default', {
@@ -282,6 +278,9 @@ export function SettingsScreen() {
                         <p className="staff-row__contact">{t('settingsPage.notYours')}</p>
                       ) : null}
                     </div>
+                    <p className="settings-row__value">
+                      {describe(editor, setting.value, setting.unit, data.value.printers, t)}
+                    </p>
                     {editor?.kind === 'RULES' ? (
                       <div className="staff-row__actions">
                         <Link to={`/manage/settings/${editor.page}`} className="staff-pages__link">
@@ -318,7 +317,6 @@ export function SettingsScreen() {
       <h2 id="dashboard-settings" className="dashboard-section__heading">
         {t('settingsPage.title')}
       </h2>
-      <p className="dashboard-section__hint">{t('settingsPage.intro')}</p>
       <div className="menu-toolbar">
         <TextField
           label={t('settingsPage.search')}
@@ -334,6 +332,9 @@ export function SettingsScreen() {
       {content}
       {editing !== undefined && data.status === 'ready' ? (
         <SettingDialog
+          // A fresh dialog per setting (P9-24): moving from one to another had kept the first's
+          // reason in the second's "Why".
+          key={editing.setting.key}
           setting={editing.setting}
           editor={editing.editor}
           name={label(editing.setting.key)}
@@ -346,7 +347,6 @@ export function SettingsScreen() {
           onClose={close}
         />
       ) : null}
-      {secondFactorDialog}
     </section>
   );
 }
@@ -425,7 +425,6 @@ function SettingDialog({
         />
         <TextField
           label={t('settingsPage.dialog.reason')}
-          hint={t('settingsPage.dialog.reasonHint')}
           value={reason}
           maxLength={200}
           autoComplete="off"

@@ -50,21 +50,34 @@ export function groupLines(lines: readonly KdsTicketLine[]): LineGroup[] {
 /** A new ticket can be bumped once nothing on it is waiting or cooking; slips any time. */
 export function canBump(ticket: KdsTicket): boolean {
   if (ticket.kind !== 'NEW') return true;
-  return ticket.lines.every((line) => line.state !== 'SENT' && line.state !== 'PREPARING');
+  // Food still at the pass is picked up, not bumped (P9-21): picking it up serves it, and a ready
+  // dish bumped off the screen had stayed "Ready" for good (the waiter app has no Served button).
+  return ticket.lines.every(
+    (line) => line.state !== 'SENT' && line.state !== 'PREPARING' && line.state !== 'READY',
+  );
 }
 
-/** The ticket-wide step: everything waiting starts, else everything cooking is ready. */
-export function ticketStep(ticket: KdsTicket): 'START_PREPARING' | 'MARK_READY' | undefined {
+/**
+ * The ticket-wide step: everything waiting starts, else everything cooking is ready, else
+ * everything ready is picked up at the pass.
+ */
+export function ticketStep(ticket: KdsTicket): KitchenStep | undefined {
   if (ticket.kind !== 'NEW') return undefined;
   if (ticket.lines.some((line) => line.state === 'SENT')) return 'START_PREPARING';
   if (ticket.lines.some((line) => line.state === 'PREPARING')) return 'MARK_READY';
+  if (ticket.lines.some((line) => line.state === 'READY')) return 'PICK_UP';
   return undefined;
 }
 
+const STEP_FROM: Readonly<Record<KitchenStep, OrderItemState>> = {
+  START_PREPARING: 'SENT',
+  MARK_READY: 'PREPARING',
+  PICK_UP: 'READY',
+};
+
 /** The items a ticket-wide step moves. */
-export function linesFor(ticket: KdsTicket, step: 'START_PREPARING' | 'MARK_READY') {
-  const from: OrderItemState = step === 'START_PREPARING' ? 'SENT' : 'PREPARING';
-  return ticket.lines.filter((line) => line.state === from);
+export function linesFor(ticket: KdsTicket, step: KitchenStep) {
+  return ticket.lines.filter((line) => line.state === STEP_FROM[step]);
 }
 
 /**

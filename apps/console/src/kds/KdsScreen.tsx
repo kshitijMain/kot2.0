@@ -262,7 +262,7 @@ interface BoardProps {
   onOpenRecall: () => void;
   onOpenStock: () => void;
   onStep: (ticket: KdsTicket, line: KdsTicketLine, event: KitchenStep) => void;
-  onTicketStep: (ticket: KdsTicket, event: 'START_PREPARING' | 'MARK_READY') => void;
+  onTicketStep: (ticket: KdsTicket, event: KitchenStep) => void;
   onBump: (ticket: KdsTicket) => void;
   onNotify: (ticket: KdsTicket) => void;
 }
@@ -384,7 +384,7 @@ function ExpoOrderCard({ order, ...props }: BoardProps & { order: ExpoOrder }) {
           <span className="kds-ticket__destination">{where}</span>
         </h3>
         <Badge tone={AGE_BADGE[tone]} variant="solid" icon={<Icon name={AGE_ICONS[tone]} />}>
-          {t('kds.ageMinutes', { minutes })}
+          {ageText(minutes, t)}
         </Badge>
         {order.allReady ? (
           <Badge tone="success" variant="solid" icon={<Icon name="check" />}>
@@ -461,14 +461,15 @@ function TicketCard({
           <span className="kds-ticket__destination">{destination(ticket, t)}</span>
         </h3>
         <Badge tone={AGE_BADGE[tone]} variant="solid" icon={<Icon name={AGE_ICONS[tone]} />}>
-          {t('kds.ageMinutes', { minutes })}
+          {ageText(minutes, t)}
           {tone === 'fresh' ? null : ` · ${t(`kds.age.${tone}`)}`}
         </Badge>
         <p className="kds-ticket__meta">
           {[
             showStation ? ticket.stationName : '',
-            ticket.waiterName,
             t(`kds.source.${ticket.source}`),
+            // Who sent it, said so (P9-16): a bare name read like part of the station.
+            ticket.waiterName === null ? '' : t('kds.sentBy', { name: ticket.waiterName }),
           ]
             .filter(Boolean)
             .join(' · ')}
@@ -560,7 +561,11 @@ function TicketCard({
               props.onTicketStep(ticket, wide);
             }}
           >
-            {wide === 'START_PREPARING' ? t('kds.allPreparing') : t('kds.allReady')}
+            {wide === 'START_PREPARING'
+              ? t('kds.allPreparing')
+              : wide === 'MARK_READY'
+                ? t('kds.allReady')
+                : t('kds.pickUpAll')}
           </Button>
         )}
         <Button
@@ -576,4 +581,11 @@ function TicketCard({
       </footer>
     </article>
   );
+}
+
+/** A ticket's age as the kitchen reads it: "12 min", and from an hour "14 h 33 min" (P9-20). */
+function ageText(minutes: number, t: ReturnType<typeof useT>): string {
+  return minutes < 60
+    ? t('kds.ageMinutes', { minutes })
+    : t('kds.ageHours', { hours: Math.floor(minutes / 60), minutes: minutes % 60 });
 }

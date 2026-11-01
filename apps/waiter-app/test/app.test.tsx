@@ -153,16 +153,20 @@ describe('[UPD-001] over-the-air updates on a waiter phone', () => {
 });
 
 describe('[WTR-001] waiter app smoke flow', () => {
-  it('pairs, signs a waiter in, shows live tables and signs out', async () => {
+  it('connects by itself, signs a waiter in, shows live tables and signs out', async () => {
     const { restaurant, session, sockets, server } = setup();
     // A new phone alerts nobody yet.
     restaurant.holder = null;
     await session.start();
-    await render(<App session={session} translator={translator} />);
-
-    await fireEvent.changeText(screen.getByLabelText('Server address'), 'http://pos.test:3000');
-    await fireEvent.changeText(screen.getByLabelText('Pairing code'), 'ABCDEFGH');
-    await fireEvent.press(screen.getByTestId('pairing-submit'));
+    // ADR-0025, 2026-11-01: nobody pairs the phone; it connects to the PC it was built for.
+    await render(
+      <App
+        session={session}
+        translator={translator}
+        restaurant={{ servers: ['http://pos.test:3000'] }}
+      />,
+    );
+    expect(screen.queryByText('Pairing code')).toBeNull();
 
     await fireEvent.press(await screen.findByRole('button', { name: 'Ravi, Waiter' }));
     for (const digit of '4444') {
@@ -189,16 +193,63 @@ describe('[WTR-001] waiter app smoke flow', () => {
     await fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
     expect(await screen.findByText('Tap your name')).toBeOnTheScreen();
     expect(server.callsTo('POST', '/api/v1/auth/logout')).toHaveLength(1);
+    expect(server.callsTo('POST', '/api/v1/devices/pairing-codes/phone')).toHaveLength(1);
   });
 
-  it('[AUTH-010] offers only waiters on the login screen', async () => {
+  it('says what to check when the PC does not answer, and connects to an address typed', async () => {
+    const { restaurant, session, server } = setup();
+    restaurant.holder = null;
+    let refused = true;
+    server.on('POST', '/api/v1/devices/pairing-codes/phone', () =>
+      refused
+        ? {
+            status: 403,
+            body: {
+              code: 'SELF_PAIR_CLOSED',
+              message: 'The restaurant PC does not let phones connect by themselves.',
+            },
+          }
+        : {
+            status: 201,
+            body: {
+              code: 'ABCD-EFGH',
+              expiresAt: new Date(Date.now() + 600_000).toISOString(),
+              caSha256: null,
+              serverUrls: [],
+              qrPayload: '{}',
+            },
+          },
+    );
+    await session.start();
+    await render(
+      <App
+        session={session}
+        translator={translator}
+        restaurant={{ servers: ['http://pos.test:3000'] }}
+      />,
+    );
+    expect(await screen.findByTestId('connect-error')).toHaveTextContent(
+      'The restaurant PC does not let phones connect by themselves.',
+    );
+    expect(screen.getByText(translator('connect.wifi'))).toBeOnTheScreen();
+    refused = false;
+    await fireEvent.changeText(
+      screen.getByLabelText('Restaurant PC address'),
+      'http://pos.test:3000',
+    );
+    await fireEvent.press(screen.getByTestId('connect-retry'));
+    expect(await screen.findByRole('button', { name: 'Ravi, Waiter' })).toBeOnTheScreen();
+  });
+
+  it('[AUTH-010] offers only waiters and managers on the login screen (ADR-0024)', async () => {
     const { restaurant, session } = setup();
     restaurant.holder = null;
     await session.start();
     await session.pair('http://pos.test:3000', 'ABCD-EFGH');
     await render(<App session={session} translator={translator} />);
     expect(await screen.findByRole('button', { name: 'Ravi, Waiter' })).toBeOnTheScreen();
-    expect(screen.queryByText('Meera')).toBeNull();
+    // ADR-0024: a manager's phone rings for diners' orders, so managers sign in here too.
+    expect(screen.getByText('Meera')).toBeOnTheScreen();
     expect(screen.queryByText('Imran')).toBeNull();
     expect(screen.queryByText('Asha')).toBeNull();
   });

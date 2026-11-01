@@ -1,0 +1,24 @@
+# The QR menu site (P5-05, P9-01): /etc/systemd/system/qr-menu.service
+[Unit]
+Description=Restaurant platform QR menu site
+After=network-online.target relay-host.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=rp-relay
+Group=rp-relay
+WorkingDirectory=/opt/rp/apps/qr-menu
+EnvironmentFile=/etc/rp-relay/qr-menu.env
+Environment=NODE_ENV=production NEXT_TELEMETRY_DISABLED=1
+ExecStart=/opt/rp/apps/qr-menu/node_modules/.bin/next start --port 3100 --hostname 127.0.0.1
+Restart=always
+RestartSec=2
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/rp/apps/qr-menu/.next
+
+[Install]
+WantedBy=multi-user.target

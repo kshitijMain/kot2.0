@@ -45,6 +45,7 @@ import { useCart } from './carts';
 import { EndItemSheet, type Ending } from './EndItemSheet';
 import { MenuBrowser } from './MenuBrowser';
 import { mayMove, MoveSheet } from './MoveSheet';
+import { mayTakePayment, PaymentSheet } from './PaymentSheet';
 import { SentOrders } from './SentOrders';
 import { Approvals } from './Approvals';
 import { ServiceRequests } from './ServiceRequests';
@@ -119,6 +120,7 @@ export function TableScreen({
     menu !== null && menu !== undefined,
   );
   const [moving, setMoving] = useState(false);
+  const [paying, setPaying] = useState(false);
   const [notice, setNotice] = useState<string | undefined>();
   const [asking, setAsking] = useState(false);
   const [printing, setPrinting] = useState(false);
@@ -161,13 +163,16 @@ export function TableScreen({
     };
   }, [onBack, view]);
 
-  if (person === undefined) return null;
   const table: TableOverviewEntry | undefined =
     tables.data.status === 'ready'
       ? tables.data.value.tables.find((candidate) => candidate.session?.id === sessionId)
       : undefined;
+  // The table's name stays in the header once it closes (P9-21): it had read "Table " there.
+  const [lastLabel, setLastLabel] = useState('');
+  if (table !== undefined && table.label !== lastLabel) setLastLabel(table.label);
+  if (person === undefined) return null;
   const closed = tables.data.status === 'ready' && table === undefined;
-  const label = table?.label ?? drafts[0]?.body.tableLabel ?? '';
+  const label = table?.label ?? (lastLabel === '' ? drafts[0]?.body.tableLabel : lastLabel) ?? '';
 
   const add = (line: Omit<CartLine, 'clientLineId' | 'error'>, source?: RecommendationSource) => {
     setNotice(undefined);
@@ -465,7 +470,8 @@ export function TableScreen({
                 {t('pos.table.move')}
               </Button>
             ) : null}
-            {table.state === 'OCCUPIED' ? (
+            {/* Who may print the bill prints it; asking the managers is for the others (P9-21). */}
+            {table.state === 'OCCUPIED' && !mayPrint ? (
               <Button
                 variant="secondary"
                 style={styles.grow}
@@ -473,6 +479,18 @@ export function TableScreen({
                 onPress={requestBill}
               >
                 {t('mobile.tables.requestBill')}
+              </Button>
+            ) : null}
+            {/* P9-16: the manager settles the printed bill at the table. */}
+            {table.state === 'BILL_PRINTED' && table.session !== null && mayTakePayment(person) ? (
+              <Button
+                style={styles.grow}
+                testID="take-payment"
+                onPress={() => {
+                  setPaying(true);
+                }}
+              >
+                {t('billing.pay')}
               </Button>
             ) : null}
             {mayPrint && table.state !== 'BILL_PRINTED' ? (
@@ -601,6 +619,20 @@ export function TableScreen({
           }}
         />
       ) : null}
+      {paying && table !== undefined ? (
+        <PaymentSheet
+          sessionId={sessionId}
+          tableLabel={table.label}
+          onClose={() => {
+            setPaying(false);
+          }}
+          onPaid={(message) => {
+            setPaying(false);
+            toast.show({ title: message, tone: 'success' });
+            tables.reload();
+          }}
+        />
+      ) : null}
       {ending === undefined ? null : (
         <EndItemSheet
           line={ending.line}
@@ -621,8 +653,9 @@ export function TableScreen({
 
 const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing[1] },
-  actions: { flexDirection: 'row', gap: spacing[2] },
-  grow: { flex: 1 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
+  // Natural width, filling the row; wraps rather than breaking a word (P9-24: "App rove").
+  grow: { flexGrow: 1 },
   heading: { fontSize: fontSize.lg, fontWeight: weight(fontWeight.semibold) },
   summary: { fontSize: fontSize.md },
 });

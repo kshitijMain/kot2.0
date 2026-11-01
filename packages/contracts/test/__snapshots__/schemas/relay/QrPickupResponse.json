@@ -105,6 +105,9 @@
             },
             "orderNote": { "type": ["string", "null"] },
             "customerName": { "type": ["string", "null"] },
+            "customerPhone": {
+              "anyOf": [{ "type": "string", "pattern": "^\\+91[6-9]\\d{9}$" }, { "type": "null" }]
+            },
             "menuVersion": {
               "type": "integer",
               "exclusiveMinimum": 0,
@@ -243,6 +246,9 @@
             },
             "orderNote": { "type": ["string", "null"] },
             "customerName": { "type": ["string", "null"] },
+            "customerPhone": {
+              "anyOf": [{ "type": "string", "pattern": "^\\+91[6-9]\\d{9}$" }, { "type": "null" }]
+            },
             "menuVersion": {
               "type": "integer",
               "exclusiveMinimum": 0,

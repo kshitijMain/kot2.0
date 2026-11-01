@@ -106,10 +106,25 @@ describe('[AUTH-005] inactivity', () => {
   });
 });
 
+describe('[AUTH-005] [KDS-001] a kitchen person on a kitchen screen (P9-23)', () => {
+  it('is not signed out for being idle, as station mode is not; the lifetime still ends it', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    const session = await signIn(app, kit, 'KITCHEN');
+    expect(session.session.inactivityTimeoutSeconds).toBeGreaterThan(60 * 60);
+    // A quiet hour between lunch and dinner: the screen still shows the next tickets.
+    minutes(90);
+    const renewed = LoginResponse.parse((await refresh(kit.deviceId, session.refreshToken)).body);
+    expect((await me(kit.deviceId, renewed.accessToken)).status).toBe(200);
+  });
+});
+
 describe('[AUTH-005] refresh tokens', () => {
   it('revoke the whole session when a replaced refresh token is used again', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
     const session = await signIn(app, kit, 'MANAGER');
     const renewed = LoginResponse.parse((await refresh(kit.deviceId, session.refreshToken)).body);
+    // Past the few seconds a lost reply is allowed (below), a replay is a leak.
+    vi.setSystemTime(Date.now() + 31_000);
     const replay = await refresh(kit.deviceId, session.refreshToken);
     expect(codeOf(replay)).toBe('SESSION_REVOKED');
     expect(codeOf(await me(kit.deviceId, renewed.accessToken))).toBe('SESSION_REVOKED');
@@ -119,6 +134,23 @@ describe('[AUTH-005] refresh tokens', () => {
         where: { action: 'REFRESH_TOKEN_REUSED', entityId: session.session.id },
       }),
     ).toBe(1);
+  });
+
+  it('[AUTH-005] let the same device retry a refresh whose reply it lost to a restart (P9-25)', async () => {
+    const session = await signIn(app, kit, 'KITCHEN');
+    // The server rotated the token, then stopped before the screen heard the new one.
+    const lost = LoginResponse.parse((await refresh(kit.deviceId, session.refreshToken)).body);
+    const retried = await refresh(kit.deviceId, session.refreshToken);
+    expect(retried.status, JSON.stringify(retried.body)).toBe(200);
+    const kept = LoginResponse.parse(retried.body);
+    expect((await me(kit.deviceId, kept.accessToken)).status).toBe(200);
+    // The token the screen never received is no longer any good, and nothing was revoked.
+    expect(codeOf(await refresh(kit.deviceId, lost.refreshToken))).toBe('SESSION_REVOKED');
+    const row = await prisma.session.findUniqueOrThrow({ where: { id: session.session.id } });
+    expect(row.revokedAt).toBeNull();
+    // Another device with the same token is refused outright.
+    const other = await addDevice(app, kit);
+    expect(codeOf(await refresh(other, kept.refreshToken))).toBe('DEVICE_MISMATCH');
   });
 
   it('only work on the device they were issued to', async () => {
@@ -248,7 +280,6 @@ describe('[AUTH-005] the current session', () => {
         inactivityTimeoutSeconds: 30 * 60,
       },
       staff: session.staff,
-      secondFactorValidUntil: null,
     });
     expect(JSON.stringify(current.body)).not.toMatch(/Token/);
     // Still alive 25 minutes later thanks to that call (manager browsers idle out after 30).

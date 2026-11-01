@@ -1,5 +1,7 @@
 import {
   BROWSER_ID_HEADER,
+  DINER_PHONE_HEADER,
+  QrTableOrdersResponse,
   QrMenuResponse,
   QrOrderView,
   QrServiceRequestResponse,
@@ -7,6 +9,7 @@ import {
   QrServiceRequestView,
   QrSubmitOrderResponse,
   type QrSubmitOrderRequest,
+  QrTableBillResponse,
   TABLE_TOKEN_HEADER,
 } from '@rp/contracts/relay';
 import { ApiError } from '@rp/contracts';
@@ -28,10 +31,26 @@ export class RelayCallError extends Error {
   }
 }
 
+/**
+ * A relay behind ngrok's free plan (a pilot, ADR-0024) answers a browser's request with ngrok's own
+ * warning page, not the relay, unless the request carries this header (P9-16): the order's status,
+ * My orders and the bill then never came. Sent only to such an address.
+ */
+export function throughNgrok(url: string): Record<string, string> {
+  return /\.ngrok(-free)?\.(app|dev|io)$/.test(new URL(url).hostname)
+    ? { 'ngrok-skip-browser-warning': '1' }
+    : {};
+}
+
 async function call<T>(url: string, init: RequestInit, parse: (body: unknown) => T): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(url, { ...init, cache: 'no-store', referrerPolicy: 'no-referrer' });
+    response = await fetch(url, {
+      ...init,
+      headers: { ...throughNgrok(url), ...(init.headers as Record<string, string> | undefined) },
+      cache: 'no-store',
+      referrerPolicy: 'no-referrer',
+    });
   } catch {
     throw new RelayCallError(0, 'NETWORK', 'The relay could not be reached');
   }
@@ -120,5 +139,28 @@ export function fetchServiceRequest(
     `${relayUrl}/service-request?id=${encodeURIComponent(requestId)}`,
     { headers: { [TABLE_TOKEN_HEADER]: token } },
     (body) => QrServiceRequestView.parse(body),
+  );
+}
+
+/** P9-03: the table's printed bill for this sitting, or none yet. */
+export function fetchTableBill(relayUrl: string, token: string): Promise<QrTableBillResponse> {
+  return call(`${relayUrl}/table-bill`, { headers: { [TABLE_TOKEN_HEADER]: token } }, (body) =>
+    QrTableBillResponse.parse(body),
+  );
+}
+
+/**
+ * P9-08: the orders this mobile number placed at this table during this sitting, from any phone
+ * or browser. The number goes in a header, never in the address.
+ */
+export function fetchTableOrders(
+  relayUrl: string,
+  token: string,
+  phone: string,
+): Promise<QrTableOrdersResponse> {
+  return call(
+    `${relayUrl}/table-orders`,
+    { headers: { [TABLE_TOKEN_HEADER]: token, [DINER_PHONE_HEADER]: phone } },
+    (body) => QrTableOrdersResponse.parse(body),
   );
 }

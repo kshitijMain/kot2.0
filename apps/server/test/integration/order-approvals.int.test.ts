@@ -274,7 +274,12 @@ describe('[WTR-004] [ORD-003] approving and rejecting', () => {
       'the alert cleared',
     );
     const entry = await prisma.auditLog.findFirstOrThrow({ where: { action: 'ORDER_APPROVED' } });
-    expect(entry).toMatchObject({ actorId: kit.staff.WAITER, entityId: id('first') });
+    // A changed number is not "removed" (P9-24): the audit says the order was changed.
+    expect(entry).toMatchObject({
+      actorId: kit.staff.WAITER,
+      entityId: id('first'),
+      reason: 'Changed with the diner’s agreement',
+    });
     const list = TabletOrdersResponse.parse(
       (await server().get('/api/v1/devices/current/orders').set(fromTablet())).body,
     );

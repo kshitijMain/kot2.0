@@ -1,5 +1,12 @@
 .rp-toast-region {
   position: fixed;
+  /* A popover (see ToastProvider): none of the browser's popover box. */
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  overflow: visible;
   inset: auto var(--rp-space-4) var(--rp-space-4) auto;
   z-index: var(--rp-z-toast);
   display: flex;

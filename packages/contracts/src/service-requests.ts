@@ -19,7 +19,8 @@ export const ServiceRequestView = z.object({
   /** Where the guests are now: the session's table, which a move changes. */
   tableId: Id,
   tableLabel: z.string(),
-  tableSessionId: Id,
+  /** Null for a call at a table nobody had opened yet (P9-25). */
+  tableSessionId: Id.nullable(),
   createdAt: Timestamp,
   escalatedAt: Timestamp.nullable(),
   acknowledgedAt: Timestamp.nullable(),

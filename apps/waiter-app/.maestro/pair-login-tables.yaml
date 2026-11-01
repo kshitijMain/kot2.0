@@ -1,12 +1,14 @@
 # Smoke flow (P2-01c, P2-02a to P2-02c, P2-06a; WTR-001 to WTR-003, WTR-006 to WTR-008, TBL-003,
-# WTR-012): pair with the local server, sign a waiter in, see the live tables, open a free table,
+# WTR-012): connect to the local server by itself (no pairing, ADR-0025), sign a waiter in, see the live tables, open a free table,
 # find a dish, send the KOT and see it reach the kitchen, see it ready with its alert on the bell,
 # then served once the kitchen marks it picked up, and ask for the bill. Nothing is acknowledged or
 # marked on the phone (2026-10-25). TABLE must be free; DISH must be a dish without options on the
 # waiter-app menu. While the flow waits (up to 5 minutes each), a person marks the dish Ready and
 # then Picked up on the kitchen screen (the console in Kitchen mode). Run against a development
-# build with Metro running (see apps/waiter-app/README.md):
-#   maestro test -e PAIRING_CODE=ABCD-EFGH -e TABLE=T1 -e "DISH=Dal Makhani" apps/waiter-app/.maestro
+# build with Metro running, against a server started with RP_AUTH_PIN_ONLY=1 (see
+# apps/waiter-app/README.md). A development build has no restaurant PC built in, so the flow types
+# the server's address once:
+#   maestro test -e TABLE=T1 -e "DISH=Dal Makhani" apps/waiter-app/.maestro
 appId: ${APP_ID}
 env:
   APP_ID: in.rp.waiter.dev
@@ -22,17 +24,14 @@ env:
 - openLink: exp+rp-waiter://expo-development-client/?url=${METRO}
 - extendedWaitUntil:
     visible:
-      id: pairing-server
+      id: connect-address
     timeout: 60000
 - tapOn:
-    id: pairing-server
+    id: connect-address
 - inputText: ${SERVER}
-- tapOn:
-    id: pairing-code
-- inputText: ${PAIRING_CODE}
 - hideKeyboard
 - tapOn:
-    id: pairing-submit
+    id: connect-retry
 - tapOn: ${STAFF_NAME}
 - tapOn: ${PIN.charAt(0)}
 - tapOn: ${PIN.charAt(1)}
@@ -44,7 +43,7 @@ env:
 - tapOn: One more
 - tapOn:
     id: open-table
-- assertVisible: ${TABLE} is open
+- assertVisible: Table ${TABLE} is open
 - assertVisible: Table ${TABLE}
 - tapOn: Add from the menu
 - tapOn:

@@ -6,6 +6,16 @@
   color-scheme: light;
 }
 
+/*
+ * P9-08: the page never moves sideways. Nothing is wider than the screen (.qr-root clips, which
+ * unlike overflow: hidden on the body keeps the section bar sticky), and a sideways swipe that
+ * reaches the end of a row of chips does not carry on to the page.
+ */
+html,
+body {
+  overscroll-behavior-x: none;
+}
+
 body {
   margin: 0;
   background: var(--rp-color-background);
@@ -17,12 +27,32 @@ body {
 
 .qr-root {
   min-height: 100vh;
+  overflow-x: clip;
+}
+
+/* The focus ring in the restaurant's own colour (P9-23): the console's teal had ringed the sheets'
+   close button on Mannat's maroon page. */
+.rp-theme {
+  --rp-color-focus-ring: var(--rp-color-accent);
 }
 
 .qr-page {
   max-width: 40rem;
   margin: 0 auto;
-  padding: var(--rp-space-4) var(--rp-space-4) calc(var(--rp-space-16) + var(--rp-space-8));
+  /* Room for the cart bar above the tab bar (P9-04). A 16 px gutter, as the cards' own padding. */
+  padding: var(--rp-space-3) var(--rp-space-4)
+    calc(var(--rp-space-16) * 2 + var(--rp-space-6) + env(safe-area-inset-bottom));
+}
+
+/* Money and counts in columns that line up (basil-ui doctrine; P9-11). */
+.qr-dish__price,
+.qr-cart__price,
+.qr-totals dd,
+.qr-bill__lines li > span:last-child,
+.qr-cart-bar__total,
+.qr-cart-bar__count,
+.qr-dish__stepper .rp-stepper__value {
+  font-variant-numeric: tabular-nums;
 }
 
 .qr-message,
@@ -51,22 +81,60 @@ body {
   margin: 0;
 }
 
+/* The restaurant's band (P9-04): its name in its own colour, the table, and Call waiter. */
 .qr-header {
-  padding-bottom: var(--rp-space-3);
-  border-bottom: 3px solid var(--rp-color-accent);
-  margin-bottom: var(--rp-space-4);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rp-space-3);
+  padding: var(--rp-space-4);
+  margin-bottom: var(--rp-space-3);
+  border-radius: var(--rp-radius-xl);
+  background: var(--rp-color-accent);
+  color: var(--rp-color-on-accent);
+  box-shadow: var(--rp-elevation-1);
 }
 
 .qr-header__name {
   font-size: var(--rp-font-size-2xl);
   line-height: var(--rp-line-height-tight);
+  letter-spacing: 0.01em;
   margin: 0;
 }
 
 .qr-header__table {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rp-space-1);
   margin: var(--rp-space-1) 0 0;
+  padding: 2px var(--rp-space-2);
+  border-radius: var(--rp-radius-full);
+  /* Tints of the accent's own text colour, readable on a light accent as on a dark one. */
+  background: color-mix(in srgb, var(--rp-color-on-accent) 18%, transparent);
   font-weight: var(--rp-font-weight-semibold);
-  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-sm);
+}
+
+.qr-header__call {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--rp-space-2);
+  flex: none;
+  min-width: var(--rp-touch-target);
+  min-height: var(--rp-touch-target);
+  padding: 0 var(--rp-space-3);
+  border: 1px solid color-mix(in srgb, var(--rp-color-on-accent) 55%, transparent);
+  border-radius: var(--rp-radius-full);
+  background: color-mix(in srgb, var(--rp-color-on-accent) 10%, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: var(--rp-font-size-sm);
+  font-weight: var(--rp-font-weight-semibold);
+  cursor: pointer;
+}
+
+.qr-header__call:disabled {
+  opacity: 0.6;
 }
 
 .qr-notice {
@@ -92,11 +160,7 @@ body {
 }
 
 .qr-tools {
-  position: sticky;
-  top: 0;
-  z-index: var(--rp-z-sticky);
-  background: var(--rp-color-background);
-  padding: var(--rp-space-2) 0;
+  padding: var(--rp-space-1) 0 0;
 }
 
 .qr-search input {
@@ -107,52 +171,139 @@ body {
   border-radius: var(--rp-radius-full);
   padding: 0 var(--rp-space-4);
   font: inherit;
+  font-size: var(--rp-font-size-md);
   background: var(--rp-color-surface);
   color: var(--rp-color-text);
 }
 
 .qr-filters {
   display: flex;
-  flex-wrap: wrap;
+  /* One row that scrolls sideways, so more of the menu fits on a phone (P9-04). */
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
   gap: var(--rp-space-2);
   border: 0;
   margin: var(--rp-space-2) 0 0;
   padding: 0;
+  /* A fieldset is as wide as its content unless told otherwise: on a 360 px phone the chips made
+     the whole page wider than the screen, and it dragged sideways (P9-08). */
+  min-width: 0;
+  min-inline-size: 0;
 }
 
 .qr-chip {
+  flex: none;
+  white-space: nowrap;
   display: inline-flex;
   align-items: center;
   gap: var(--rp-space-1);
-  min-height: var(--rp-touch-min);
-  padding: 0 var(--rp-space-3);
+  min-height: var(--rp-touch-target);
+  padding: 0 var(--rp-space-4);
   border: 1px solid var(--rp-color-border-strong);
   border-radius: var(--rp-radius-full);
   background: var(--rp-color-surface);
   font-size: var(--rp-font-size-sm);
+  font-weight: var(--rp-font-weight-medium);
+  cursor: pointer;
 }
 
+/* The checkbox stays for keyboards and screen readers; the chip is what is seen (P9-11). */
+.qr-chip__input {
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+}
+
+.qr-chip:has(.qr-chip__input:focus-visible) {
+  outline: 2px solid var(--rp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+/* On: filled in the restaurant's colour, with a check, so it is not the colour alone. */
+.qr-chip[data-on] {
+  border-color: var(--rp-color-accent);
+  background: var(--rp-color-accent);
+  color: var(--rp-color-on-accent);
+}
+
+/* The menu's sections, the one bar that stays at the top while the dishes scroll (P9-08). */
 .qr-categories {
+  position: sticky;
+  top: 0;
+  z-index: var(--rp-z-sticky);
   display: flex;
-  gap: var(--rp-space-3);
+  gap: var(--rp-space-1);
   overflow-x: auto;
-  padding: var(--rp-space-2) 0 var(--rp-space-1);
+  overscroll-behavior-x: contain;
+  margin: var(--rp-space-2) calc(-1 * var(--rp-space-4)) 0;
+  padding: var(--rp-space-1) var(--rp-space-4);
+  background: var(--rp-color-background);
+  border-bottom: 1px solid var(--rp-color-border);
   font-size: var(--rp-font-size-sm);
+  scrollbar-width: none;
 }
 
+/* The link is the 48 px target; the pill inside is what is seen (NFR-U03). */
 .qr-categories a {
-  white-space: nowrap;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--rp-touch-target);
   color: var(--rp-color-text);
+  font-weight: var(--rp-font-weight-semibold);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.qr-categories__pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.5rem;
+  padding: 0 var(--rp-space-4);
+  border-radius: var(--rp-radius-full);
+  background: var(--rp-color-surface-sunken);
+}
+
+/* The section being read: filled, and bolder, not the colour alone. */
+.qr-categories a[aria-current='true'] .qr-categories__pill {
+  background: var(--rp-color-accent);
+  color: var(--rp-color-on-accent);
+  font-weight: var(--rp-font-weight-bold);
+}
+
+.qr-categories a:focus-visible {
+  outline: none;
+}
+
+.qr-categories a:focus-visible .qr-categories__pill {
+  outline: 2px solid var(--rp-color-focus-ring);
+  outline-offset: 2px;
 }
 
 .qr-section {
-  margin-top: var(--rp-space-5);
-  scroll-margin-top: 9rem;
+  margin-top: var(--rp-space-6);
+  /* Below the sticky section bar when a section is jumped to. */
+  scroll-margin-top: 4rem;
 }
 
 .qr-section__title {
+  display: flex;
+  align-items: baseline;
+  gap: var(--rp-space-2);
   font-size: var(--rp-font-size-xl);
-  margin: 0 0 var(--rp-space-2);
+  line-height: var(--rp-line-height-tight);
+  letter-spacing: -0.01em;
+  margin: 0 0 var(--rp-space-3);
+}
+
+.qr-section__count {
+  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-sm);
+  font-weight: var(--rp-font-weight-regular);
 }
 
 .qr-dishes,
@@ -163,12 +314,41 @@ body {
   padding: 0;
 }
 
+/* A dish (P9-11): flat, one hairline, no shadow (shadows are for what floats). Name and facts on
+   the left; on the right one column the same width on every card, holding the photo with the
+   action over its lower edge (the Indian delivery apps' pattern), or the action alone. */
 .qr-dish {
   display: flex;
-  justify-content: space-between;
+  align-items: flex-start;
   gap: var(--rp-space-3);
-  padding: var(--rp-space-3) 0;
-  border-bottom: 1px solid var(--rp-color-border);
+  padding: var(--rp-space-4);
+  margin-bottom: var(--rp-space-3);
+  border: 1px solid var(--rp-color-border);
+  border-radius: var(--rp-radius-lg);
+  background: var(--rp-color-surface);
+}
+
+/* In the order: a ring in the restaurant's colour, with "n in cart" or the stepper to say it. */
+.qr-dish[data-in-cart] {
+  border-color: var(--rp-color-accent);
+  box-shadow: 0 0 0 1px var(--rp-color-accent);
+}
+
+/* Two columns of dishes where the screen has room (a tablet, a phone on its side). */
+@media (min-width: 40rem) {
+  .qr-page {
+    max-width: 60rem;
+  }
+
+  .qr-dishes {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--rp-space-3);
+  }
+
+  .qr-dish {
+    margin-bottom: 0;
+  }
 }
 
 /* A sold-out dish fades, but its words stay readable on the page colour (WCAG AA, 6.3:1). */
@@ -178,78 +358,198 @@ body {
 
 .qr-dish[data-unavailable] .qr-dish__photo {
   opacity: 0.6;
+  filter: grayscale(1);
 }
 
 .qr-dish__what {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--rp-space-1);
   flex: 1;
   min-width: 0;
 }
 
-/* A square thumbnail; the photo keeps its shape and fills it (MENU-008). */
-/* The photo or the shared placeholder (@rp/ui-web DishPhoto), the same square either way. */
-.qr-dish__photo {
-  flex: none;
-  align-self: center;
-  width: 4.5rem;
-  height: 4.5rem;
-  aspect-ratio: auto;
-  border-radius: var(--rp-radius-md);
-}
-
-.qr-sheet__photo {
-  max-height: 16rem;
-  border-radius: var(--rp-radius-md);
-  margin-bottom: var(--rp-space-3);
-}
-
 .qr-dish__name {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--rp-space-2);
   margin: 0;
+  font-size: var(--rp-font-size-lg);
   font-weight: var(--rp-font-weight-semibold);
-}
-
-.qr-dish__description {
-  margin: var(--rp-space-1) 0 0;
-  color: var(--rp-color-text-muted);
-  font-size: var(--rp-font-size-sm);
+  line-height: var(--rp-line-height-snug);
 }
 
 .qr-dish__facts {
   display: flex;
-  gap: var(--rp-space-3);
-  align-items: baseline;
-  margin: var(--rp-space-1) 0 0;
+  flex-wrap: wrap;
+  gap: var(--rp-space-1) var(--rp-space-3);
+  align-items: center;
+  margin: 0;
 }
 
 .qr-dish__price {
+  font-size: var(--rp-font-size-md);
   font-weight: var(--rp-font-weight-semibold);
 }
 
-.qr-dish__action {
+.qr-dish__spice {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-sm);
+}
+
+.qr-dish__spice .rp-icon {
+  width: 1em;
+  height: 1em;
+  color: var(--rp-color-danger);
+}
+
+/* Two lines at most; the dish's sheet shows it all. */
+.qr-dish__description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  margin: var(--rp-space-1) 0 0;
+  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-sm);
+  line-height: var(--rp-line-height-snug);
+}
+
+.qr-dish__badge {
+  min-height: 1.5rem;
+  font-size: var(--rp-font-size-xs);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+.qr-dish__side {
   flex: none;
-  align-self: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 7rem;
+}
+
+/* The photo or the shared placeholder (@rp/ui-web DishPhoto), a square in the column. */
+.qr-dish__photo {
+  width: 7rem;
+  height: 7rem;
+  aspect-ratio: auto;
+  border-radius: var(--rp-radius-md);
+}
+
+.qr-dish__action {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--rp-space-1);
+  width: 100%;
+}
+
+/* Over the photo's lower edge, raised off it. */
+.qr-dish__photo + .qr-dish__action {
+  margin-top: calc(-1 * var(--rp-space-5));
+}
+
+.qr-dish__photo + .qr-dish__action > .rp-button,
+.qr-dish__photo + .qr-dish__action > .qr-dish__stepper {
+  box-shadow: var(--rp-elevation-2);
+}
+
+/* Add and Choose: the whole column wide, in the restaurant's colour on white. */
+.qr-dish__add.rp-button {
+  width: 100%;
+  min-height: var(--rp-touch-target);
+  border-color: var(--rp-color-accent);
+  background: var(--rp-color-surface);
+  color: var(--rp-color-accent);
+  font-weight: var(--rp-font-weight-bold);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.qr-dish__in-cart {
+  color: var(--rp-color-accent);
+  font-size: var(--rp-font-size-xs);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+/* The card's own stepper: as wide as Add, its buttons 36 px to see and 48 px to touch. */
+.qr-dish__stepper {
+  justify-content: space-between;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: var(--rp-touch-target);
+  gap: 0;
+  padding: 0 2px;
+  border-radius: var(--rp-radius-md);
+  background: var(--rp-color-accent);
+}
+
+.qr-dish__stepper .rp-icon-button {
+  position: relative;
+  min-width: 2.25rem;
+  width: 2.25rem;
+  min-height: 2.25rem;
+  height: 2.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--rp-color-on-accent);
+}
+
+.qr-dish__stepper .rp-icon-button::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+}
+
+.qr-dish__stepper .rp-stepper__value {
+  min-width: 1.5rem;
+  text-align: center;
+  font-weight: var(--rp-font-weight-bold);
+  color: var(--rp-color-on-accent);
 }
 
 .qr-dish__unavailable {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2rem;
+  padding: 0 var(--rp-space-3);
+  border-radius: var(--rp-radius-full);
+  background: var(--rp-color-neutral-subtle);
+  color: var(--rp-color-neutral-text);
   font-size: var(--rp-font-size-sm);
-  color: var(--rp-color-text-muted);
+  font-weight: var(--rp-font-weight-semibold);
+  text-align: center;
+}
+
+.qr-sheet__photo {
+  max-height: 16rem;
+  border-radius: var(--rp-radius-lg);
 }
 
 .qr-empty {
   margin-top: var(--rp-space-6);
 }
 
+/* The cart bar floats just above the tab bar, never over it (P9-04, P9-08), as a card of its own
+   (P9-11): nothing behind it but the page. */
 .qr-cart-bar {
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 0;
+  bottom: calc(3.5rem + env(safe-area-inset-bottom));
   z-index: var(--rp-z-sticky);
-  padding: var(--rp-space-3) var(--rp-space-4) calc(var(--rp-space-3) + env(safe-area-inset-bottom));
-  background: var(--rp-color-surface-raised);
-  box-shadow: var(--rp-elevation-2);
+  padding: var(--rp-space-2) var(--rp-space-4);
+  pointer-events: none;
+}
+
+.qr-cart-bar > * {
+  pointer-events: auto;
 }
 
 .qr-cart-bar > * {
@@ -263,8 +563,44 @@ body {
   margin-top: var(--rp-space-4);
 }
 
-.qr-sheet__description {
+/* The dish and the order slide up from the bottom (P9-11), no wider than the page on a tablet;
+   their action stays at the bottom while the rest scrolls. */
+.qr-sheet.rp-dialog[data-variant='sheet'][data-side='bottom'] {
+  width: min(100%, 40rem);
+  margin-inline: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.qr-sheet .rp-dialog__panel {
+  padding-bottom: 0;
+}
+
+.qr-sheet .rp-dialog__footer {
+  position: sticky;
+  bottom: 0;
+  margin: 0 calc(-1 * var(--rp-space-6));
+  padding: var(--rp-space-3) var(--rp-space-6) calc(var(--rp-space-3) + env(safe-area-inset-bottom));
+  background: var(--rp-color-surface-raised);
+  border-top: 1px solid var(--rp-color-border);
+}
+
+.qr-sheet__meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--rp-space-2) var(--rp-space-3);
   margin: 0;
+  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-sm);
+}
+
+.qr-sheet__meta .rp-food-mark {
+  margin-top: 0;
+}
+
+.qr-sheet__description {
+  margin: var(--rp-space-2) 0 0;
   color: var(--rp-color-text-muted);
 }
 
@@ -276,6 +612,9 @@ body {
 }
 
 .qr-cart__name {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--rp-space-2);
   margin: 0;
   font-weight: var(--rp-font-weight-semibold);
 }
@@ -315,42 +654,145 @@ body {
   font-size: var(--rp-font-size-lg);
 }
 
-.qr-orders {
-  margin: var(--rp-space-4) 0;
-  padding: var(--rp-space-3) var(--rp-space-4);
+/* Your orders and, beside it, when they were last heard of and Refresh (P9-13). */
+.qr-orders__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rp-space-2);
+  margin-bottom: var(--rp-space-3);
+}
+
+.qr-orders__head .qr-section__title {
+  margin: 0;
+}
+
+.qr-orders__refresh {
+  display: flex;
+  align-items: center;
+  gap: var(--rp-space-2);
+}
+
+.qr-orders > ul {
+  display: grid;
+  gap: var(--rp-space-3);
+}
+
+/* Each order a card, its edge the colour of where it is (P9-04). */
+.qr-order {
+  display: grid;
+  gap: var(--rp-space-3);
+  padding: var(--rp-space-4);
+  border: 1px solid var(--rp-color-border);
+  border-left: 4px solid var(--rp-color-info);
   border-radius: var(--rp-radius-lg);
   background: var(--rp-color-surface);
-  box-shadow: var(--rp-elevation-1);
 }
 
-.qr-order + .qr-order {
-  margin-top: var(--rp-space-3);
-  padding-top: var(--rp-space-3);
-  border-top: 1px solid var(--rp-color-border);
+.qr-order[data-tone='success'] {
+  border-left-color: var(--rp-color-success);
 }
 
+.qr-order[data-tone='danger'] {
+  border-left-color: var(--rp-color-danger);
+}
+
+.qr-order__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.qr-order__number {
+  margin: 0;
+  font-weight: var(--rp-font-weight-bold);
+}
+
+/* Where the order is, in words with an icon on a tint of its tone (never the colour alone). */
 .qr-order__status {
-  margin: var(--rp-space-1) 0;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--rp-space-2);
+  margin: 0;
+  padding: var(--rp-space-2) var(--rp-space-3);
+  border-radius: var(--rp-radius-md);
+  background: var(--rp-color-info-subtle);
+  color: var(--rp-color-info-text);
   font-weight: var(--rp-font-weight-semibold);
+  line-height: var(--rp-line-height-snug);
 }
 
-.qr-order__status--success {
+.qr-order__status .rp-icon {
+  flex: none;
+  margin-top: 1px;
+}
+
+.qr-order__status[data-tone='success'] {
+  background: var(--rp-color-success-subtle);
   color: var(--rp-color-success-text);
 }
 
-.qr-order__status--danger {
+.qr-order__status[data-tone='danger'] {
+  background: var(--rp-color-danger-subtle);
   color: var(--rp-color-danger-text);
 }
 
-.qr-order__status--info {
-  color: var(--rp-color-info-text);
+.qr-order__reason {
+  margin: 0;
+  font-size: var(--rp-font-size-sm);
+}
+
+.qr-order__lines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--rp-space-2);
 }
 
 .qr-order__lines li {
   display: flex;
-  justify-content: space-between;
+  align-items: center;
   gap: var(--rp-space-2);
+  padding-bottom: var(--rp-space-2);
+  border-bottom: 1px solid var(--rp-color-border);
   font-size: var(--rp-font-size-sm);
+}
+
+.qr-order__lines li:last-child {
+  border-bottom: 0;
+}
+
+/* A dish, its choices and its state, stacked: the name keeps the row's width (P9-23). */
+.qr-order__dish {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--rp-space-1);
+}
+
+.qr-order__line {
+  font-size: var(--rp-font-size-md);
+}
+
+/* One dish again: a small round + (P9-04). */
+.qr-again-one {
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: var(--rp-touch-min);
+  height: var(--rp-touch-min);
+  border: 1px solid var(--rp-color-border-strong);
+  border-radius: var(--rp-radius-full);
+  background: var(--rp-color-surface);
+  color: var(--rp-color-text);
+}
+
+.qr-again-one:disabled {
+  opacity: 0.5;
 }
 
 .qr-order__state {
@@ -399,10 +841,22 @@ body {
   gap: var(--rp-space-1);
   align-content: start;
   padding: var(--rp-space-3);
+  border: 1px solid var(--rp-color-border);
   border-radius: var(--rp-radius-lg);
   background: var(--rp-color-surface);
-  box-shadow: var(--rp-elevation-1);
   scroll-snap-align: start;
+}
+
+/* Suggestions scroll sideways to the page's edge, like the section bar. */
+.qr-suggestions ul {
+  margin-inline: calc(-1 * var(--rp-space-4));
+  padding-inline: var(--rp-space-4);
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+
+.qr-suggestion .qr-dish__add {
+  margin-top: var(--rp-space-2);
 }
 
 .qr-suggestion__name,
@@ -424,8 +878,583 @@ body {
   flex: 1;
 }
 
-.qr-help__status {
-  margin: var(--rp-space-2) 0 0;
+/* ---------------------------------------------------------------- P9-04: tabs, welcome, bill */
+
+.qr-panel {
+  margin: var(--rp-space-2) 0;
+}
+
+/* An empty state that says what to do next (NFR-U04, P9-11). */
+.qr-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--rp-space-2);
+  padding: var(--rp-space-10) var(--rp-space-6);
+  border: 1px solid var(--rp-color-border);
+  border-radius: var(--rp-radius-lg);
+  background: var(--rp-color-surface);
+  text-align: center;
+}
+
+.qr-empty-state__icon {
+  display: inline-grid;
+  place-items: center;
+  width: 4rem;
+  height: 4rem;
+  margin-bottom: var(--rp-space-2);
+  border-radius: var(--rp-radius-full);
+  background: color-mix(in srgb, var(--rp-color-accent) 10%, var(--rp-color-surface));
+  color: var(--rp-color-accent);
+}
+
+.qr-empty-state__title {
+  margin: 0;
+  font-size: var(--rp-font-size-lg);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+.qr-empty-state .rp-button {
+  margin-top: var(--rp-space-3);
+}
+
+/* Inside a sheet the state needs no card of its own. */
+.qr-sheet .qr-empty-state {
+  border: 0;
+  padding-block: var(--rp-space-6);
+}
+
+/* The page's three parts, at the thumb (NFR-U03). */
+.qr-tabbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--rp-z-sticky);
+  display: flex;
+  justify-content: center;
+  padding-bottom: env(safe-area-inset-bottom);
+  background: var(--rp-color-surface-raised);
+  border-top: 1px solid var(--rp-color-border);
+  box-shadow: var(--rp-elevation-2);
+}
+
+.qr-tabbar__tab {
+  flex: 1;
+  max-width: 13rem;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 3.5rem;
+  border: 0;
+  background: transparent;
+  color: var(--rp-color-text-muted);
+  font: inherit;
+  font-size: var(--rp-font-size-xs);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+.qr-tabbar__tab[aria-current='page'] {
+  color: var(--rp-color-accent);
+}
+
+.qr-tabbar__tab[aria-current='page']::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 25%;
+  right: 25%;
+  height: 3px;
+  border-radius: 0 0 var(--rp-radius-sm) var(--rp-radius-sm);
+  background: var(--rp-color-accent);
+}
+
+.qr-tabbar__tab .rp-badge {
+  position: absolute;
+  top: 2px;
+  left: calc(50% + 0.6rem);
+}
+
+/* "Your order is accepted" (P9-04). */
+.qr-accepted,
+.qr-paid-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--rp-space-2);
+  margin: var(--rp-space-2) 0;
+  padding: var(--rp-space-3) var(--rp-space-4);
+  border-radius: var(--rp-radius-md);
+  background: var(--rp-color-success-subtle);
+  color: var(--rp-color-success-text);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+.qr-accepted {
+  position: sticky;
+  top: var(--rp-space-2);
+  z-index: var(--rp-z-banner);
+  box-shadow: var(--rp-elevation-2);
+}
+
+/* Where a diner's request stands (P9-23): a small card with an icon, not a bare blue line. */
+.qr-request {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--rp-space-2);
+  margin: var(--rp-space-3) 0;
+  padding: var(--rp-space-3) var(--rp-space-4);
+  border-radius: var(--rp-radius-md);
   font-size: var(--rp-font-size-sm);
+  line-height: var(--rp-line-height-normal);
+  background: var(--rp-color-info-subtle);
   color: var(--rp-color-info-text);
+}
+
+.qr-request > svg {
+  flex: none;
+  margin-top: 2px;
+}
+
+.qr-request[data-tone='success'] {
+  background: var(--rp-color-success-subtle);
+  color: var(--rp-color-success-text);
+}
+
+.qr-request[data-tone='danger'] {
+  background: var(--rp-color-danger-subtle);
+  color: var(--rp-color-danger-text);
+}
+
+/* The welcome step (P9-02, P9-04). */
+.qr-welcome {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--rp-space-4);
+  background: var(--rp-color-accent);
+}
+
+.qr-welcome__card {
+  width: 100%;
+  max-width: 26rem;
+  box-sizing: border-box;
+  padding: var(--rp-space-8) var(--rp-space-6);
+  border-radius: var(--rp-radius-xl);
+  background: var(--rp-color-surface);
+  box-shadow: var(--rp-elevation-3);
+  text-align: center;
+}
+
+.qr-welcome__hello {
+  margin: 0;
+  color: var(--rp-color-text-muted);
+}
+
+.qr-welcome__name {
+  margin: var(--rp-space-1) 0;
+  font-size: var(--rp-font-size-3xl);
+  color: var(--rp-color-accent);
+}
+
+.qr-welcome__table {
+  display: inline-block;
+  margin: 0 0 var(--rp-space-6);
+  padding: var(--rp-space-1) var(--rp-space-3);
+  border-radius: var(--rp-radius-full);
+  background: var(--rp-color-surface-sunken);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+.qr-welcome__form {
+  display: grid;
+  gap: var(--rp-space-3);
+  text-align: left;
+}
+
+.qr-cart__phone {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rp-space-2);
+  margin: 0;
+  font-size: var(--rp-font-size-sm);
+}
+
+/* The bill (P9-03, P9-04). */
+.qr-bill__lines {
+  list-style: none;
+  margin: var(--rp-space-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--rp-space-2);
+}
+
+.qr-bill__lines li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--rp-space-3);
+}
+
+.qr-invoice {
+  margin: var(--rp-space-3) 0;
+  padding: var(--rp-space-4);
+  border: 1px solid var(--rp-color-border);
+  border-radius: var(--rp-radius-lg);
+  background: var(--rp-color-surface);
+}
+
+.qr-invoice__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.qr-invoice__number {
+  margin: 0;
+  font-weight: var(--rp-font-weight-bold);
+}
+
+.qr-invoice__paid {
+  padding: var(--rp-space-1) var(--rp-space-3);
+  border-radius: var(--rp-radius-full);
+  background: var(--rp-color-success-subtle);
+  color: var(--rp-color-success-text);
+  font-weight: var(--rp-font-weight-semibold);
+  font-size: var(--rp-font-size-sm);
+}
+
+.qr-totals div + div {
+  margin-top: var(--rp-space-1);
+}
+
+.qr-totals__total {
+  padding-top: var(--rp-space-2);
+  border-top: 1px dashed var(--rp-color-border-strong);
+}
+
+.qr-pay {
+  display: grid;
+  gap: var(--rp-space-3);
+  margin-top: var(--rp-space-4);
+  justify-items: center;
+}
+
+.qr-pay__button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--rp-space-2);
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 3.5rem;
+  border-radius: var(--rp-radius-md);
+  background: var(--rp-color-success);
+  color: var(--rp-color-on-success);
+  font-size: var(--rp-font-size-lg);
+  font-weight: var(--rp-font-weight-bold);
+  text-decoration: none;
+  box-shadow: var(--rp-elevation-2);
+}
+
+.qr-pay__apps {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: var(--rp-space-2);
+  margin: 0;
+}
+
+.qr-pay__app {
+  padding: var(--rp-space-2) var(--rp-space-3);
+  border: 1px solid var(--rp-color-border-strong);
+  border-radius: var(--rp-radius-full);
+  color: var(--rp-color-text);
+  font-weight: var(--rp-font-weight-semibold);
+  font-size: var(--rp-font-size-sm);
+  text-decoration: none;
+}
+
+.qr-pay__qr {
+  display: grid;
+  justify-items: center;
+  gap: var(--rp-space-2);
+  padding: var(--rp-space-3);
+  border-radius: var(--rp-radius-md);
+  /* The page is pinned to the light theme: a white quiet zone around the code. */
+  background: var(--rp-color-surface);
+  border: 1px solid var(--rp-color-border);
+}
+
+.qr-pay__upi {
+  display: flex;
+  align-items: center;
+  gap: var(--rp-space-2);
+  margin: 0;
+  font-size: var(--rp-font-size-sm);
+}
+
+.qr-paid-ask {
+  margin-top: var(--rp-space-4);
+}
+
+/* ---------------------------------------------------------------- P9-09: the menu as a diner uses it */
+
+/* A section tapped in the bar glides there; never for those who asked for less motion. The bar's
+   mark switches at once: a fade would show a pill in colours that cannot be read on the way. */
+@media (prefers-reduced-motion: no-preference) {
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+/* The cart bar: how many and the total on the left, the way to it on the right. */
+.qr-cart-bar__button {
+  display: flex;
+  align-items: center;
+  gap: var(--rp-space-3);
+  width: 100%;
+  min-height: 3.5rem;
+  padding: 0 var(--rp-space-4) 0 var(--rp-space-3);
+  border: 0;
+  border-radius: var(--rp-radius-lg);
+  background: var(--rp-color-accent);
+  color: var(--rp-color-on-accent);
+  box-shadow: var(--rp-elevation-3);
+  font: inherit;
+  cursor: pointer;
+}
+
+.qr-cart-bar__count {
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  min-width: 2rem;
+  height: 2rem;
+  padding: 0 var(--rp-space-1);
+  box-sizing: border-box;
+  border-radius: var(--rp-radius-full);
+  background: color-mix(in srgb, var(--rp-color-on-accent) 18%, transparent);
+  font-weight: var(--rp-font-weight-bold);
+}
+
+.qr-cart-bar__summary {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  font-size: var(--rp-font-size-xs);
+  line-height: var(--rp-line-height-tight);
+}
+
+.qr-cart-bar__total {
+  font-size: var(--rp-font-size-lg);
+  font-weight: var(--rp-font-weight-bold);
+}
+
+.qr-cart-bar__cta {
+  font-weight: var(--rp-font-weight-bold);
+}
+
+.qr-cart-bar__cta::after {
+  content: ' ›';
+}
+
+/* A little bounce when something is added (the bar is drawn again for each count). */
+@media (prefers-reduced-motion: no-preference) {
+  .qr-cart-bar__button {
+    animation: qr-cart-added 300ms ease-out;
+  }
+}
+
+@keyframes qr-cart-added {
+  0% {
+    transform: scale(0.97);
+  }
+  60% {
+    transform: scale(1.02);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Where an order is: five dots on a line, the steps reached filled, the next one pulsing. */
+.qr-progress {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  margin: var(--rp-space-1) 0;
+  padding: 0;
+  list-style: none;
+}
+
+.qr-progress__step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--rp-space-1);
+  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-xs);
+  text-align: center;
+}
+
+/* The line to the previous step. */
+.qr-progress__step + .qr-progress__step::before {
+  content: '';
+  position: absolute;
+  top: calc(0.5rem - 1px);
+  right: 50%;
+  width: 100%;
+  height: 2px;
+  background: var(--rp-color-border);
+}
+
+.qr-progress__step[data-state='done']::before {
+  background: var(--rp-color-success);
+}
+
+.qr-progress__dot {
+  position: relative;
+  z-index: 1;
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: 1rem;
+  height: 1rem;
+  border: 2px solid var(--rp-color-border-strong);
+  border-radius: 50%;
+  background: var(--rp-color-surface);
+  color: var(--rp-color-on-success);
+}
+
+.qr-progress__step[data-state='done'] {
+  color: var(--rp-color-text);
+}
+
+.qr-progress__step[data-state='done'] .qr-progress__dot {
+  border-color: var(--rp-color-success);
+  background: var(--rp-color-success);
+}
+
+.qr-progress__step[data-state='next'] .qr-progress__dot {
+  border-color: var(--rp-color-accent);
+}
+
+.qr-progress__step[aria-current='step'] {
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .qr-progress__step[data-state='next'] .qr-progress__dot {
+    animation: qr-next-step 1.4s ease-in-out infinite;
+  }
+}
+
+@keyframes qr-next-step {
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--rp-color-accent) 20%, transparent);
+  }
+}
+
+/* ---------------------------------------------------------------- P9-11: loading */
+
+/* Placeholders the shape of what they stand for (FoodHunt's pattern): a gentle pulse, none for
+   those who asked for less motion. */
+.qr-skeleton__line,
+.qr-skeleton__block {
+  display: block;
+  border-radius: var(--rp-radius-sm);
+  background: var(--rp-color-surface-sunken);
+}
+
+.qr-skeleton__line {
+  height: 0.875rem;
+  margin: var(--rp-space-2) 0;
+}
+
+.qr-skeleton .qr-skeleton__line:nth-of-type(1) {
+  width: 70%;
+  height: 1.125rem;
+}
+
+.qr-skeleton .qr-skeleton__line:nth-of-type(2) {
+  width: 30%;
+}
+
+.qr-skeleton .qr-skeleton__line:nth-of-type(3) {
+  width: 90%;
+}
+
+.qr-skeleton .qr-skeleton__line:nth-of-type(4) {
+  width: 55%;
+}
+
+.qr-dish.qr-skeleton .qr-dish__what {
+  display: block;
+  width: 100%;
+}
+
+.qr-skeleton__action {
+  width: 100%;
+  height: var(--rp-touch-target);
+  border-radius: var(--rp-radius-md);
+}
+
+.qr-skeleton__header {
+  height: 5.5rem;
+  box-sizing: border-box;
+  padding: var(--rp-space-4);
+  margin-bottom: var(--rp-space-3);
+  border-radius: var(--rp-radius-xl);
+  background: var(--rp-color-surface-sunken);
+}
+
+.qr-skeleton__header .qr-skeleton__line {
+  background: var(--rp-color-border);
+}
+
+.qr-skeleton__search {
+  height: var(--rp-touch-target);
+  border-radius: var(--rp-radius-full);
+}
+
+.qr-skeleton__chips {
+  display: flex;
+  gap: var(--rp-space-2);
+  margin: var(--rp-space-2) 0 var(--rp-space-6);
+}
+
+.qr-skeleton__chip {
+  width: 5rem;
+  height: var(--rp-touch-target);
+  border-radius: var(--rp-radius-full);
+}
+
+.qr-skeleton .qr-skeleton__title {
+  width: 40%;
+  height: 1.5rem;
+  margin-bottom: var(--rp-space-3);
+}
+
+.qr-card-skeleton {
+  padding: var(--rp-space-4);
+  border: 1px solid var(--rp-color-border);
+  border-radius: var(--rp-radius-lg);
+  background: var(--rp-color-surface);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .qr-skeleton {
+    animation: qr-pulse 1.4s var(--rp-easing-standard) infinite;
+  }
+}
+
+@keyframes qr-pulse {
+  50% {
+    opacity: 0.55;
+  }
 }

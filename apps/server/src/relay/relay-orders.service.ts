@@ -191,6 +191,9 @@ export class RelayOrdersService implements OnModuleInit, OnApplicationBootstrap,
       retryBaseMs: this.options.retryBaseMs,
       retryMaxMs: this.options.retryMaxMs,
       notConfiguredRetryMs: 60 * 60_000,
+      warn: (message, details) => {
+        this.logger.warn(details ?? {}, message);
+      },
     });
     this.realtime.start(this.options.realtimeDelayMs);
   }
@@ -341,6 +344,9 @@ export class RelayOrdersService implements OnModuleInit, OnApplicationBootstrap,
           lines: order.lines,
           ...(order.orderNote !== null && { orderNote: order.orderNote }),
           ...(order.customerName !== null && { customerName: order.customerName }),
+          // P9-02: given on the QR page for the bill (BILL-011).
+          ...(order.customerPhone !== null &&
+            order.customerPhone !== undefined && { customerPhone: order.customerPhone }),
         },
         { tableId: table.id, externalRef: order.id },
       );
@@ -370,7 +376,7 @@ export class RelayOrdersService implements OnModuleInit, OnApplicationBootstrap,
             items: {
               where: { parentOrderItemId: null },
               orderBy: { createdAt: 'asc' },
-              select: { clientLineId: true, state: true, endReason: true },
+              select: { clientLineId: true, state: true, endReason: true, quantity: true },
             },
           },
         },
@@ -480,7 +486,8 @@ export class RelayOrdersService implements OnModuleInit, OnApplicationBootstrap,
       }
       throw error;
     }
-    const type = row.type === 'WATER' || row.type === 'BILL' ? row.type : 'WAITER';
+    const type =
+      row.type === 'WATER' || row.type === 'BILL' || row.type === 'PAID' ? row.type : 'WAITER';
     try {
       const raised = await this.requests.raiseFromQr(restaurantId, row.tableId, type);
       return { outcome: 'RAISED', serviceRequestId: raised.id, reason: null, pushed: 'RECEIVED' };

@@ -1,5 +1,5 @@
 import type { StaffView } from '@rp/contracts';
-import { timeOfDayOf } from '@rp/domain';
+import { displayPhone, timeOfDayOf } from '@rp/domain';
 import {
   Badge,
   Button,
@@ -17,9 +17,17 @@ import { messageOf } from '../../app/messages.js';
 import { useLive } from '../../app/use-live.js';
 import { useNow } from '../../app/use-now.js';
 import { ReasonDialog } from '../../billing/ReasonDialog.js';
-import { SecondFactorCancelled, useSecondFactor } from '../../owner/second-factor.js';
 import { PersonDialog, PinDialog } from './StaffDialogs.js';
-import { isLocked, type StaffAction, type StaffActorView, staffActions } from './staff-view.js';
+import {
+  groupOf,
+  initialsOf,
+  isLocked,
+  lastSeenOf,
+  type StaffAction,
+  type StaffActorView,
+  type StaffGroup,
+  staffActions,
+} from './staff-view.js';
 
 /** Check locks again this often, so an expired lock stops showing without a reload. */
 const CLOCK_MS = 30_000;
@@ -41,7 +49,6 @@ export function StaffScreen() {
   const { person: me } = useConsoleState();
   const toast = useToast();
   const now = useNow(CLOCK_MS);
-  const { withSecondFactor, dialog: secondFactorDialog } = useSecondFactor();
   const { data, reload } = useLive(
     async () => {
       const [list, roles] = await Promise.all([
@@ -69,15 +76,14 @@ export function StaffScreen() {
     reload();
   };
 
-  /** Deactivating and reactivating may ask the Owner for the second factor first. */
   const run = async (action: () => Promise<unknown>, message: string) => {
     setBusy(true);
     setError(undefined);
     try {
-      await withSecondFactor(action);
+      await action();
       done(message);
     } catch (failure) {
-      if (!(failure instanceof SecondFactorCancelled)) setError(messageOf(failure, t));
+      setError(messageOf(failure, t));
       setBusy(false);
     }
   };
@@ -109,35 +115,70 @@ export function StaffScreen() {
     );
   } else {
     const others = data.value.staff.filter((person) => person.id !== me.id);
+    const active = data.value.staff.filter((person) => person.active);
+    const inactive = data.value.staff.filter((person) => !person.active);
+    const row = (person: StaffView) => (
+      <StaffRow
+        key={person.id}
+        person={person}
+        self={person.id === me.id}
+        actions={staffActions(actor, person, now)}
+        now={now}
+        onAction={(action) => {
+          if (action === 'UNLOCK') void unlock(person);
+          else setOpen({ kind: action, person });
+        }}
+      />
+    );
+    // Grouped by what people do (P9-26): who runs the place, the floor, the kitchen; the people
+    // who left folded away under them.
     content = (
       <>
         {others.length === 0 ? <EmptyState title={t('staff.none')} /> : null}
-        <ul className="staff-list">
-          {data.value.staff.map((person) => (
-            <StaffRow
-              key={person.id}
-              person={person}
-              self={person.id === me.id}
-              actions={staffActions(actor, person, now)}
-              now={now}
-              onAction={(action) => {
-                if (action === 'UNLOCK') void unlock(person);
-                else setOpen({ kind: action, person });
-              }}
-            />
-          ))}
-        </ul>
+        {GROUPS.map((group) => {
+          const people = active.filter((person) => groupOf(person) === group);
+          if (people.length === 0) return null;
+          return (
+            <section key={group} className="staff-group" aria-labelledby={`staff-group-${group}`}>
+              <h3 id={`staff-group-${group}`} className="staff-group__title">
+                {t(`staff.groups.${group}`)}
+                <span className="staff-group__count">{people.length}</span>
+              </h3>
+              <ul className="staff-list">{people.map(row)}</ul>
+            </section>
+          );
+        })}
+        {inactive.length === 0 ? null : (
+          <details className="staff-group staff-group--inactive">
+            <summary className="staff-group__title">
+              {t('staff.groups.INACTIVE')}
+              <span className="staff-group__count">{inactive.length}</span>
+            </summary>
+            <ul className="staff-list">{inactive.map(row)}</ul>
+          </details>
+        )}
       </>
     );
   }
 
   const pinLength = data.status === 'ready' ? data.value.pinLength : 4;
+  const signedIn =
+    data.status === 'ready' ? data.value.staff.filter((person) => person.signedIn === true) : [];
+  const activeCount =
+    data.status === 'ready' ? data.value.staff.filter((person) => person.active).length : 0;
   return (
     <section className="dashboard-section" aria-labelledby="dashboard-staff">
       <div className="staff-header">
-        <h2 id="dashboard-staff" className="dashboard-section__heading">
-          {t('staff.title')}
-        </h2>
+        <div>
+          <h2 id="dashboard-staff" className="dashboard-section__heading">
+            {t('staff.title')}
+          </h2>
+          {data.status === 'ready' ? (
+            <p className="staff-header__summary">
+              {t('staff.summary', { count: activeCount, signedIn: signedIn.length })}
+            </p>
+          ) : null}
+        </div>
         <Button
           startIcon={<Icon name="plus" />}
           disabled={data.status !== 'ready'}
@@ -148,10 +189,6 @@ export function StaffScreen() {
           {t('staff.add')}
         </Button>
       </div>
-      <p className="dashboard-section__hint">
-        {t('staff.intro')}
-        {me.role === 'OWNER' ? null : ` ${t('staff.managersByOwner')}`}
-      </p>
       {content}
       {open?.kind === 'ADD' || open?.kind === 'EDIT' ? (
         <PersonDialog
@@ -159,7 +196,6 @@ export function StaffScreen() {
           person={open.kind === 'EDIT' ? open.person : undefined}
           customRoles={data.status === 'ready' ? data.value.roles : []}
           pinLength={pinLength}
-          withSecondFactor={withSecondFactor}
           onSaved={(saved) => {
             done(
               t(open.kind === 'ADD' ? 'staff.added' : 'staff.saved', { name: saved.displayName }),
@@ -207,7 +243,6 @@ export function StaffScreen() {
           open
           tone="primary"
           title={t('staff.reactivateDialog.title', { name: open.person.displayName })}
-          description={t('staff.reactivateDialog.description', { name: open.person.displayName })}
           confirmLabel={t('staff.reactivateDialog.confirm')}
           cancelLabel={t('staff.reactivateDialog.cancel')}
           busy={busy}
@@ -227,10 +262,11 @@ export function StaffScreen() {
           )}
         </ConfirmDialog>
       ) : null}
-      {secondFactorDialog}
     </section>
   );
 }
+
+const GROUPS: readonly StaffGroup[] = ['LEADS', 'WAITERS', 'KITCHEN'];
 
 const ACTION_LABELS = {
   EDIT: 'staff.edit',
@@ -239,7 +275,11 @@ const ACTION_LABELS = {
   REACTIVATE: 'staff.reactivate',
 } as const;
 
-/** One person: who they are, their state in words (not colour alone) and their actions. */
+/**
+ * One person (P9-26): an initial, their name, one quiet line (role, phone, when they were last
+ * here) and only the states that need attention: no PIN yet, or a locked login. Deactivating is
+ * the quieter, last button.
+ */
 function StaffRow({
   person,
   self,
@@ -255,27 +295,29 @@ function StaffRow({
 }) {
   const t = useT();
   const locked = isLocked(person, now);
+  const seen = person.active ? lastSeenOf(person, now) : undefined;
+  const role =
+    person.customRoleName === null
+      ? t(`roles.${person.role}`)
+      : t('staff.customRole', { name: person.customRoleName, role: t(`roles.${person.role}`) });
+  const facts = [
+    // The role is the group's title already; a custom role or the Owner still says which.
+    (person.customRoleName !== null || person.role === 'OWNER' || !person.active) &&
+    !person.displayName.toLowerCase().includes(role.toLowerCase())
+      ? role
+      : null,
+    person.phone === null ? null : displayPhone(person.phone),
+    person.email,
+  ].filter((fact): fact is string => fact !== null && fact !== '');
   return (
     <li className="staff-row" data-inactive={!person.active || undefined}>
+      <span className="staff-row__avatar" data-role={person.role} aria-hidden="true">
+        {initialsOf(person.displayName)}
+      </span>
       <div className="staff-row__who">
-        <h3 className="staff-row__name">
+        <p className="staff-row__name">
           {person.displayName}
           {self ? <Badge tone="info">{t('staff.you')}</Badge> : null}
-        </h3>
-        <p className="staff-row__role">
-          {person.customRoleName === null
-            ? t(`roles.${person.role}`)
-            : t('staff.customRole', {
-                name: person.customRoleName,
-                role: t(`roles.${person.role}`),
-              })}
-        </p>
-        <p className="staff-row__states">
-          {person.active ? (
-            <Badge tone="success">{t('staff.active')}</Badge>
-          ) : (
-            <Badge tone="neutral">{t('staff.inactive')}</Badge>
-          )}
           {person.hasPin ? null : <Badge tone="warning">{t('staff.noPin')}</Badge>}
           {locked && person.lockedUntil !== null ? (
             <Badge tone="danger" icon={<Icon name="warning" />}>
@@ -283,12 +325,24 @@ function StaffRow({
             </Badge>
           ) : null}
         </p>
-        {person.phone === null ? null : (
-          <p className="staff-row__contact">{t('staff.phone', { phone: person.phone })}</p>
-        )}
-        {person.email === null ? null : (
-          <p className="staff-row__contact">{t('staff.email', { email: person.email })}</p>
-        )}
+        <p className="staff-row__meta">
+          {seen === undefined ? null : (
+            <span className="staff-row__seen" data-now={seen.kind === 'NOW' || undefined}>
+              {seen.kind === 'NOW'
+                ? t('staff.seen.now')
+                : seen.kind === 'NEVER'
+                  ? t('staff.seen.never')
+                  : seen.kind === 'ON'
+                    ? t('staff.seen.on', { date: seen.date })
+                    : t(`staff.seen.${seen.kind === 'TODAY' ? 'today' : 'yesterday'}`, {
+                        time: seen.time,
+                      })}
+            </span>
+          )}
+          {facts.map((fact) => (
+            <span key={fact}>{fact}</span>
+          ))}
+        </p>
       </div>
       {actions.length === 0 ? null : (
         <div
@@ -299,7 +353,7 @@ function StaffRow({
           {actions.map((action) => (
             <Button
               key={action}
-              variant="secondary"
+              variant={action === 'DEACTIVATE' ? 'ghost' : 'secondary'}
               onClick={() => {
                 onAction(action);
               }}

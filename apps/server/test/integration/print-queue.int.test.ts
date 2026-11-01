@@ -453,4 +453,22 @@ describe('[KDS-008] [NFR-P02] the print queue', () => {
     expect(heard.map((event) => event.printStatus)).toEqual(['FAILED', 'PRINTED']);
     await kitchenPaper.start();
   });
+  it('[KDS-008] a station set to print prints its next ticket, with no menu publish (P9-25)', async () => {
+    const changed = await server()
+      .put(`/api/v1/stations/${id('bar')}`)
+      .set(as(manager))
+      .send({ name: 'Bar', mode: 'BOTH', printerId: id('sparePrinter') });
+    expect(changed.status, JSON.stringify(changed.body)).toBe(200);
+    const hall = await prisma.section.findFirstOrThrow({ where: { name: 'Hall' } });
+    ids.T9 = (
+      await prisma.diningTable.create({
+        data: { restaurantId: kit.restaurantId, sectionId: hall.id, label: 'T9' },
+      })
+    ).id;
+    const kitchen = await order('T9', 'After the bar changed');
+    const bar = await prisma.kot.findFirstOrThrow({
+      where: { orderId: kitchen.orderId, stationId: id('bar') },
+    });
+    expect(bar.printStatus).toBe('PENDING');
+  });
 });

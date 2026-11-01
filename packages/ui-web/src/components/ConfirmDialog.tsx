@@ -6,7 +6,8 @@ export interface ConfirmDialogProps {
   open: boolean;
   title: ReactNode;
   /** What will happen, in plain language (e.g. "The bill will be voided and reprinted"). */
-  description: ReactNode;
+  /** What will happen, when the title does not say it all. */
+  description?: ReactNode;
   confirmLabel: string;
   cancelLabel: string;
   onConfirm: () => void;

@@ -1,7 +1,9 @@
 import type { DayEndPreview } from '@rp/contracts';
+import { formatDisplayDate } from '@rp/domain';
 import { Button, Card, ErrorState, Icon, LoadingState, Money, useToast } from '@rp/ui-web';
 import { useState } from 'react';
 import { useConsole } from '../app/console-context.js';
+import { useAlerts } from '../alerts/alerts-context.js';
 import { useT } from '../app/i18n.js';
 import { messageOf } from '../app/messages.js';
 import { useLive } from '../app/use-live.js';
@@ -29,7 +31,7 @@ export function DayEndScreen({ onBack }: { onBack: () => void }) {
         body: { businessDate: preview.businessDate, carryForwardTables: carryForward },
       });
       toast.show({
-        title: t('dayEnd.closedToast', { date: preview.businessDate }),
+        title: t('dayEnd.closedToast', { date: formatDisplayDate(preview.businessDate) }),
         tone: 'success',
       });
     } catch (failure) {
@@ -48,7 +50,7 @@ export function DayEndScreen({ onBack }: { onBack: () => void }) {
         </Button>
         <h2 id="day-end-title" className="pos-floor__heading">
           {data.status === 'ready'
-            ? t('dayEnd.title', { date: data.value.businessDate })
+            ? t('dayEnd.title', { date: formatDisplayDate(data.value.businessDate) })
             : t('dayEnd.open')}
         </h2>
       </header>
@@ -89,6 +91,9 @@ export function DayEndScreen({ onBack }: { onBack: () => void }) {
                   variant="danger"
                   size="lg"
                   loading={busy}
+                  // Closed only once nothing stands in the way (P9-24): it had stayed pressable with
+                  // a shift open, only to be refused.
+                  disabled={!canClose(data.value, carryForward)}
                   onClick={() => {
                     void close(data.value);
                   }}
@@ -104,8 +109,20 @@ export function DayEndScreen({ onBack }: { onBack: () => void }) {
   );
 }
 
+/** Whether the day can be closed: no shift open, no bill unpaid, open tables carried forward. */
+function canClose(preview: DayEndPreview, carryForward: boolean): boolean {
+  const { openShifts, openTables, unsettledInvoices } = preview.blockers;
+  return (
+    openShifts.length === 0 &&
+    unsettledInvoices.length === 0 &&
+    (openTables.length === 0 || carryForward)
+  );
+}
+
 function Blockers({ preview }: { preview: DayEndPreview }) {
   const t = useT();
+  // Whose shift is open, by name (P9-24): "1 shift is still open" did not say whose.
+  const names = useAlerts()?.names;
   const { openShifts, openTables, unsettledInvoices } = preview.blockers;
   const none = openShifts.length + openTables.length + unsettledInvoices.length === 0;
   return (
@@ -113,7 +130,14 @@ function Blockers({ preview }: { preview: DayEndPreview }) {
       {none ? <p>{t('dayEnd.noBlockers')}</p> : null}
       <ul className="bill__discounts">
         {openShifts.length > 0 ? (
-          <li>{t('dayEnd.openShifts', { count: openShifts.length })}</li>
+          <li>
+            {t('dayEnd.openShifts', {
+              count: openShifts.length,
+              names: openShifts
+                .map((shift) => names?.get(shift.staffId) ?? t('dayEnd.someone'))
+                .join(', '),
+            })}
+          </li>
         ) : null}
         {openTables.length > 0 ? (
           <li>

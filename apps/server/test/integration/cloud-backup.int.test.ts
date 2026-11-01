@@ -280,10 +280,6 @@ describe('[DATA-003] the nightly backup in the cloud', () => {
 
   it('lets the Owner opt out, audited, and tells the vendor', async () => {
     const owner = await signIn(server, kit, 'OWNER');
-    await server.get(PrismaService).session.update({
-      where: { id: owner.session.id },
-      data: { secondFactorAt: new Date() },
-    });
     const changed = await request(httpServer(server))
       .put('/api/v1/settings/backups.cloudEnabled')
       .set(authHeaders(kit.deviceId, owner.accessToken))

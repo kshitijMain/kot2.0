@@ -1,4 +1,4 @@
-import type { AlertView } from '@rp/contracts';
+import type { AlertView, OrderView } from '@rp/contracts';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
@@ -178,6 +178,40 @@ describe('[MGR-008] [NTF-006] alerts on the POS, live', () => {
     expect(within(sheet).getByRole('button', { name: t('alerts.nudge.open') })).toBeVisible();
   });
 
+  it('takes an alert’s toast away once the alert is dealt with elsewhere (P9-23)', async () => {
+    const food = alertView(31);
+    const escalated: AlertView = {
+      ...food,
+      escalatedAt: food.createdAt,
+      escalatedTo: [STAFF.MANAGER.staffId],
+      recipientIds: [...food.recipientIds, STAFF.MANAGER.staffId],
+    };
+    const fake = alertsServer(
+      'MANAGER',
+      [],
+      [escalated],
+      [{ ...escalated, status: 'ACKNOWLEDGED' }],
+    );
+    const { sockets } = await renderConsole({ fake, path: '/pos', signedIn: 'MANAGER' });
+    expect(await alertsButton(0)).toBeInTheDocument();
+    act(() => {
+      sockets.sync(0);
+      sockets.last.fire('event', alertEvent(1, 'AlertEscalated', escalated));
+    });
+    // An escalation stays until dismissed...
+    expect(await within(toasts()).findByRole('alert')).toHaveTextContent('Table 5 · Food ready');
+    // ...unless someone deals with it meanwhile: then it goes by itself.
+    act(() => {
+      sockets.last.fire(
+        'event',
+        alertEvent(2, 'AlertAcknowledged', { ...escalated, status: 'ACKNOWLEDGED' }),
+      );
+    });
+    await waitFor(() => {
+      expect(within(toasts()).queryByRole('alert')).toBeNull();
+    });
+  });
+
   it('[NTF-005] pops up an escalation to the manager on the POS and keeps it up', async () => {
     const food = alertView(30);
     const escalated: AlertView = {
@@ -217,5 +251,77 @@ describe('[MGR-008] [NTF-006] alerts on the POS, live', () => {
     await renderConsole({ fake: server('KDS'), path: '/kds' });
     await screen.findByRole('heading', { level: 1, name: t('modes.kds') });
     expect(screen.queryByRole('button', { name: /^Alerts/ })).toBeNull();
+  });
+});
+
+describe('[ORD-003] [ORD-004] a diner’s order waiting for approval, decided in its alert (P9-10)', () => {
+  const ORDER = '0199a0e0-0000-7000-8000-000000009001';
+  const approval = alertView(9, {
+    type: 'ORDER_PENDING_APPROVAL',
+    tableLabel: '2',
+    orderId: ORDER,
+    pagerText: 'T2 APPROVE',
+    payload: { orderNumber: 2, source: 'QR' },
+    recipientIds: [STAFF.MANAGER.staffId],
+    channels: ['POS', 'DASHBOARD'],
+  });
+  const decided = (status: OrderView['status']): OrderView => ({
+    id: ORDER,
+    orderNumber: 2,
+    orderType: 'DINE_IN',
+    source: 'QR',
+    status,
+    tableSessionId: null,
+    tableId: approval.tableId,
+    takeawayToken: null,
+    customerName: null,
+    businessDate: '2026-09-27',
+    createdAt: approval.createdAt,
+    note: null,
+    items: [],
+    kots: [],
+  });
+  const approvalServer = () =>
+    alertsServer('MANAGER', [approval], [])
+      .on('POST', `/api/v1/orders/${ORDER}/approve`, () => ({
+        status: 200,
+        body: decided('OPEN'),
+      }))
+      .on('POST', `/api/v1/orders/${ORDER}/reject`, () => ({
+        status: 200,
+        body: decided('CANCELLED'),
+      }));
+  const button = (label: string) =>
+    screen.findByRole('button', { name: new RegExp(`^${label} Table 2`) });
+
+  it('approves it there: acknowledging only silenced it and the diner kept waiting', async () => {
+    const fake = approvalServer();
+    const { user, container } = await renderConsole({
+      fake,
+      path: '/manage/alerts',
+      signedIn: 'MANAGER',
+    });
+    const approve = await button(t('approvals.approve'));
+    expect(screen.queryByRole('button', { name: /^Acknowledge Table 2/ })).toBeNull();
+    await expectNoAxeViolations(container);
+    await user.click(approve);
+    expect(await screen.findByText(t('approvals.approved', { number: 2 }))).toBeVisible();
+    expect(fake.callsTo('POST', `/api/v1/orders/${ORDER}/approve`)[0]?.body).toEqual({
+      changes: [],
+      dinerAgreed: false,
+    });
+  });
+
+  it('rejects it there with the reason the diner reads', async () => {
+    const fake = approvalServer();
+    const { user } = await renderConsole({ fake, path: '/manage/alerts', signedIn: 'MANAGER' });
+    await user.click(await button(t('approvals.reject')));
+    const dialog = within(await screen.findByRole('dialog'));
+    await user.type(dialog.getByLabelText(t('approvals.reason')), 'Kitchen closed');
+    await user.click(dialog.getByRole('button', { name: t('approvals.rejectConfirm') }));
+    expect(await screen.findByText(t('approvals.rejected', { number: 2 }))).toBeVisible();
+    expect(fake.callsTo('POST', `/api/v1/orders/${ORDER}/reject`)[0]?.body).toEqual({
+      reason: 'Kitchen closed',
+    });
   });
 });

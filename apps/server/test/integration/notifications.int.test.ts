@@ -114,7 +114,7 @@ const events = (alertId: string, eventType: string) =>
   });
 
 describe('[NTF-001] [NTF-003] [NTF-004] a bill request', () => {
-  it('alerts the responsible waiter and the cashier; acknowledging stops it everywhere', async () => {
+  it('alerts the responsible waiter and the managers on duty; acknowledging stops it everywhere', async () => {
     const session = await openTable('4');
     const alert = await requestBill(session);
     expect(alert).toMatchObject({

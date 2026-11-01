@@ -6,7 +6,7 @@ import { inject } from 'vitest';
 import type { RelayDatabase } from '../../src/db.js';
 import { pgRelayDatabase } from '../../src/testing/index.js';
 
-/** The relay's own roles (ADR-0015), the last two of them logins. */
+/** The relay's own roles (ADR-0015), the last three of them logins (ADR-0024 adds the jobs'). */
 export const RELAY_ROLES = [
   'relay_server',
   'relay_writer',
@@ -14,6 +14,7 @@ export const RELAY_ROLES = [
   'relay_provisioner',
   'relay_edge',
   'relay_control_plane',
+  'relay_janitor',
 ] as const;
 /** Supabase's Data API roles: none of them may reach the relay. */
 export const API_ROLES = ['anon', 'authenticated', 'service_role', 'authenticator'] as const;
@@ -29,6 +30,7 @@ export const RELAY_TABLES = [
   'presence',
   'qr_orders',
   'qr_service_requests',
+  'qr_table_bills',
 ] as const;
 export type RelayTable = (typeof RELAY_TABLES)[number];
 /** The column naming each table's tenant. */
@@ -224,6 +226,11 @@ export async function seedTenant(db: RelayDb, name: string): Promise<SeededTenan
       id,
       '1.0.0',
     ]);
+    // P9-03: the first table's printed bill.
+    await client.query(
+      'INSERT INTO relay.qr_table_bills (tenant_id, table_id, bill) VALUES ($1, $2, $3)',
+      [id, tables[0].id, JSON.stringify({ invoices: [], upi: null })],
+    );
   });
   const orderIds: [string, string] = [
     await submitOrder(db, id, tables[0].id),

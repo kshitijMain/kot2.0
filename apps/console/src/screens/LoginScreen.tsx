@@ -110,7 +110,12 @@ export function LoginScreen() {
                   }}
                 >
                   <span className="console-tile__name">{person.displayName}</span>
-                  <span className="console-tile__role">{t(`roles.${person.role}`)}</span>
+                  {/* The role, unless the name says it already ("Kitchen", P9-26). */}
+                  {person.displayName
+                    .toLowerCase()
+                    .includes(t(`roles.${person.role}`).toLowerCase()) ? null : (
+                    <span className="console-tile__role">{t(`roles.${person.role}`)}</span>
+                  )}
                 </button>
               </li>
             ))}

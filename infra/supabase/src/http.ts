@@ -1,6 +1,6 @@
 import type { ApiError } from '@rp/contracts/relay';
 import type { z } from 'zod';
-import { BROWSER_ID_HEADER, TABLE_TOKEN_HEADER } from '@rp/contracts/relay';
+import { BROWSER_ID_HEADER, DINER_PHONE_HEADER, TABLE_TOKEN_HEADER } from '@rp/contracts/relay';
 import type { RelayDatabase } from './db.js';
 
 /** What every relay function gets besides the request. */
@@ -85,6 +85,11 @@ const ALLOWED_HEADERS = [
   'x-client-info',
   TABLE_TOKEN_HEADER,
   BROWSER_ID_HEADER,
+  // P9-08: the diner's number for their orders (table-orders).
+  DINER_PHONE_HEADER,
+  // P9-16: a relay behind ngrok's free plan answers browsers with its warning page unless asked
+  // not to; the QR site asks.
+  'ngrok-skip-browser-warning',
 ].join(', ');
 
 function corsHeaders(request: Request, allowed: readonly string[]): Record<string, string> {

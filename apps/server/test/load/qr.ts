@@ -92,7 +92,6 @@ export async function connectQr(
     restaurantId: restaurant.restaurantId,
     deviceId: dashboard.deviceId,
     sessionId: randomUUID(),
-    secondFactorAt: null,
     capabilities: [],
   });
   const tables = await prisma.diningTable.findMany({

@@ -22,6 +22,13 @@ export interface RelayRealtimeOptions {
   readonly retryMaxMs: number;
   /** When the relay has no Realtime (no JWT secret), ask again this much later. */
   readonly notConfiguredRetryMs: number;
+  /**
+   * How long opening the line and joining may take (P9-12). A handshake nobody answers raises
+   * neither open nor close: without this the doorbell waited on it for ever. Default 15 s.
+   */
+  readonly connectTimeoutMs?: number;
+  /** Why the line is not up, for the server's log (P9-16); nothing by default. */
+  readonly warn?: (message: string, details?: Record<string, unknown>) => void;
   /** Replaces the global WebSocket (tests). */
   readonly WebSocket?: typeof WebSocket;
 }
@@ -40,6 +47,20 @@ export function realtimeUrlOf(relayUrl: string, apiKey: string): string {
   url.searchParams.set('apikey', apiKey);
   url.searchParams.set('vsn', '1.0.0');
   return url.toString();
+}
+
+/** `work`, or a rejection once `ms` have passed without an answer. */
+function deadline<T>(work: Promise<T>, ms: number): Promise<T> {
+  let timer: NodeJS.Timeout | undefined;
+  const late = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`no answer in ${String(ms)} ms`));
+    }, ms);
+    timer.unref();
+  });
+  return Promise.race([work, late]).finally(() => {
+    clearTimeout(timer);
+  });
 }
 
 const record = (value: unknown): Record<string, unknown> =>
@@ -66,6 +87,7 @@ export class RelayRealtime {
   private retryTimer: NodeJS.Timeout | undefined;
   private heartbeatTimer: NodeJS.Timeout | undefined;
   private refreshTimer: NodeJS.Timeout | undefined;
+  private connectTimer: NodeJS.Timeout | undefined;
 
   constructor(private readonly options: RelayRealtimeOptions) {
     this.WebSocket = options.WebSocket ?? globalThis.WebSocket;
@@ -113,8 +135,12 @@ export class RelayRealtime {
     if (this.stopped || this.socket !== undefined) return;
     let session: RelaySessionResponse | undefined;
     try {
-      session = await this.options.session();
+      // A session that never answers held the doorbell for good (P9-16): it gets the same deadline.
+      session = await deadline(this.options.session(), this.options.connectTimeoutMs ?? 15_000);
     } catch (error) {
+      this.options.warn?.('Realtime session refused', {
+        code: error instanceof RelayError ? error.code : String(error),
+      });
       if (error instanceof RelayError && error.code === 'REALTIME_NOT_CONFIGURED') {
         this.retry(this.options.notConfiguredRetryMs);
       } else {
@@ -123,6 +149,7 @@ export class RelayRealtime {
       return;
     }
     if (session === undefined) {
+      this.options.warn?.('Realtime has no session yet (no relay credential?); trying again');
       this.retry(this.options.retryMaxMs);
       return;
     }
@@ -137,6 +164,15 @@ export class RelayRealtime {
     }
     this.socket = socket;
     const current = session;
+    // Open and joined in time, or start again (P9-12).
+    clearTimeout(this.connectTimer);
+    this.connectTimer = setTimeout(() => {
+      if (socket === this.socket && !this.live) {
+        this.options.warn?.('Realtime line not open and joined in time; trying again');
+        this.drop(socket);
+      }
+    }, this.options.connectTimeoutMs ?? 15_000);
+    this.connectTimer.unref();
     socket.addEventListener('open', () => {
       this.join(socket, current);
       this.heartbeatTimer = setInterval(() => {
@@ -234,10 +270,15 @@ export class RelayRealtime {
         }),
       );
     if (!all) {
+      this.options.warn?.('Realtime join refused', {
+        status: payload.status,
+        response: payload.response,
+      });
       this.drop(socket);
       return;
     }
     this.failures = 0;
+    clearTimeout(this.connectTimer);
     this.setLive(true);
     // Whatever arrived before the join is picked up now.
     this.options.onRing();
@@ -291,11 +332,13 @@ export class RelayRealtime {
 
   private lost(socket: WebSocket): void {
     if (socket !== this.socket) return;
+    if (!this.live) this.options.warn?.('Realtime line closed before it was joined');
     this.socket = undefined;
     this.joinRef = undefined;
     this.unanswered = undefined;
     clearInterval(this.heartbeatTimer);
     clearTimeout(this.refreshTimer);
+    clearTimeout(this.connectTimer);
     this.setLive(false);
     if (!this.stopped) this.backOff();
   }

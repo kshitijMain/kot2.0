@@ -33,7 +33,7 @@ type Open =
 export function DevicesScreen() {
   const t = useT();
   const controller = useConsole();
-  const { device: thisDevice } = useConsoleState();
+  const { device: thisDevice, pinOnly } = useConsoleState();
   const toast = useToast();
   const { data, reload } = useLive(
     async () => {
@@ -164,7 +164,6 @@ export function DevicesScreen() {
               <summary className="device-group__heading">
                 {t('devices.unpairedCount', { count: unpaired.length })}
               </summary>
-              <p className="dashboard-section__hint">{t('devices.unpairedHint')}</p>
               <ul className="staff-list" aria-label={t('devices.unpairedTitle')}>
                 {unpaired.map((device) => (
                   <DeviceRow key={device.id} device={device} names={names} isThisDevice={false} />
@@ -182,17 +181,23 @@ export function DevicesScreen() {
         <h2 id="dashboard-devices" className="dashboard-section__heading">
           {t('devices.title')}
         </h2>
-        <Button
-          startIcon={<Icon name="plus" />}
-          disabled={data.status !== 'ready'}
-          onClick={() => {
-            setOpen({ kind: 'PAIR' });
-          }}
-        >
-          {t('devices.pair')}
-        </Button>
+        {/* Devices connect by themselves where the server runs PIN-only: nobody pairs one
+            (Business Owner, 2026-11-01). */}
+        {pinOnly ? null : (
+          <Button
+            startIcon={<Icon name="plus" />}
+            disabled={data.status !== 'ready'}
+            onClick={() => {
+              setOpen({ kind: 'PAIR' });
+            }}
+          >
+            {t('devices.pair')}
+          </Button>
+        )}
       </div>
-      <p className="dashboard-section__hint">{t('devices.intro')}</p>
+      <p className="dashboard-section__hint">
+        {pinOnly ? t('devices.introSelf') : t('devices.intro')}
+      </p>
       {content}
       {open?.kind === 'PAIR' && data.status === 'ready' ? (
         <PairDeviceDialog

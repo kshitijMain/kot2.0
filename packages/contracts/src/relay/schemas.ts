@@ -1,5 +1,14 @@
 import { z } from 'zod';
-import { Id, IdempotencyKey, IsoDate, OrderItemState, PriceMode, Timestamp } from '../common.js';
+import {
+  Id,
+  IdempotencyKey,
+  IsoDate,
+  OrderItemState,
+  Paise,
+  PriceMode,
+  SignedPaise,
+  Timestamp,
+} from '../common.js';
 import { MenuSnapshot } from '../menu.js';
 import { INSTRUCTION_HARD_MAX_LENGTH, OrderLineRequest, RejectedLine } from '../order.js';
 import { RecommendationTarget } from '../recommendations.js';
@@ -85,6 +94,14 @@ export const QrRecommendations = z.strictObject({
 });
 export type QrRecommendations = z.infer<typeof QrRecommendations>;
 
+/** A diner's mobile number as the QR page sends it: +91 and ten digits (P9-02, BILL-011). */
+export const DinerPhone = z.string().regex(/^\+91[6-9]\d{9}$/);
+export type DinerPhone = z.infer<typeof DinerPhone>;
+
+/** Whether the QR page asks for the diner's mobile number before the first order (`qr.askPhone`). */
+export const QrPhoneAsk = z.enum(['OFF', 'OPTIONAL', 'REQUIRED']);
+export type QrPhoneAsk = z.infer<typeof QrPhoneAsk>;
+
 /**
  * What a local server publishes for its QR menu (QR-002, QR-003, MENU-013): the menu the QR
  * channel offers, live availability included, and what the site needs to show and check it.
@@ -104,6 +121,8 @@ export const QrMenuDocument = z.strictObject({
   photos: z.array(QrPhoto).max(2000),
   /** QR-004; absent from menus published before P5-05b. */
   recommendations: QrRecommendations.optional(),
+  /** P9-02: the page asks for the diner's mobile number; absent (before P9-02) means OFF. */
+  phone: QrPhoneAsk.optional(),
 });
 export type QrMenuDocument = z.infer<typeof QrMenuDocument>;
 
@@ -134,6 +153,11 @@ export const QrSubmitOrderRequest = z.strictObject({
   orderNote: z.string().trim().max(INSTRUCTION_HARD_MAX_LENGTH).optional(),
   /** QR-005: optional. */
   customerName: z.string().trim().min(1).max(60).optional(),
+  /**
+   * P9-02: the diner's mobile number, given on the page that says it is printed on the bill
+   * (their consent for that, BILL-011). Required when the menu's `phone` is REQUIRED.
+   */
+  customerPhone: DinerPhone.optional(),
 });
 export type QrSubmitOrderRequest = z.infer<typeof QrSubmitOrderRequest>;
 
@@ -155,9 +179,18 @@ export type QrOrderStatus = z.infer<typeof QrOrderStatus>;
 export const QrOrderStatusDetail = z.strictObject({
   /** Why the waiter rejected it, as the diner should read it (ORD-004). */
   rejectionReason: z.string().min(1).max(200).optional(),
-  /** QR-007 (S): each line's state in the kitchen. */
+  /**
+   * QR-007 (S): each line's state in the kitchen, and how many the restaurant took: a manager
+   * approving with changes (ORD-004) may have changed it (P9-24), and the diner sees that.
+   */
   items: z
-    .array(z.strictObject({ clientLineId: z.uuid(), state: OrderItemState }))
+    .array(
+      z.strictObject({
+        clientLineId: z.uuid(),
+        state: OrderItemState,
+        quantity: z.int().positive().max(999).optional(),
+      }),
+    )
     .max(200)
     .optional(),
 });
@@ -298,6 +331,8 @@ export const QrPickupOrder = z.object({
   lines: z.array(OrderLineRequest),
   orderNote: z.string().nullable(),
   customerName: z.string().nullable(),
+  /** P9-02: the diner's mobile number; absent from relays before P9-02. */
+  customerPhone: DinerPhone.nullable().optional(),
   /** The publication the lines were checked against. */
   menuVersion: z.int().positive(),
   submittedAt: Timestamp,
@@ -329,7 +364,7 @@ export type UpdateQrOrderResponse = z.infer<typeof UpdateQrOrderResponse>;
 // ---------------------------------------------------------------- call waiter / request bill (P5-05c)
 
 /** What a diner can ask for from the QR page (QR-011): the tablet's buttons. */
-export const QrServiceRequestType = z.enum(['WATER', 'WAITER', 'BILL']);
+export const QrServiceRequestType = z.enum(['WATER', 'WAITER', 'BILL', 'PAID']);
 export type QrServiceRequestType = z.infer<typeof QrServiceRequestType>;
 
 /**
@@ -431,3 +466,95 @@ export const RelayPhotoSweepResponse = z.object({
   missing: z.array(Id),
 });
 export type RelayPhotoSweepResponse = z.infer<typeof RelayPhotoSweepResponse>;
+
+// ---------------------------------------------------------------- the table's bill and UPI (P9-03)
+
+/** A UPI ID (VPA), as NPCI writes it: `name@bank`. */
+export const UpiId = z.string().regex(/^[A-Za-z0-9._-]{2,256}@[A-Za-z][A-Za-z0-9.-]{1,63}$/);
+export type UpiId = z.infer<typeof UpiId>;
+
+/** Where diners pay by UPI: the restaurant's UPI ID and the name their apps show. */
+export const QrUpiPayee = z.strictObject({
+  upiId: UpiId,
+  payeeName: z.string().min(1).max(60),
+});
+export type QrUpiPayee = z.infer<typeof QrUpiPayee>;
+
+/** One printed invoice of the table, as the diner reads it: amounts in paise, as printed. */
+export const QrBillInvoice = z.strictObject({
+  invoiceNumber: z.string().min(1).max(16),
+  issuedAt: Timestamp,
+  /** SETTLED once the restaurant has taken the payment. */
+  status: z.enum(['ISSUED', 'SETTLED']),
+  lines: z
+    .array(
+      z.strictObject({
+        description: z.string().min(1).max(200),
+        quantity: z.int().positive(),
+        amount: Paise,
+      }),
+    )
+    .max(300),
+  subtotal: Paise,
+  discountTotal: Paise,
+  serviceCharge: Paise,
+  /** Each tax as printed, e.g. "CGST 2.5%". */
+  taxLines: z.array(z.strictObject({ label: z.string().min(1).max(40), amount: Paise })).max(20),
+  roundOff: SignedPaise,
+  grandTotal: Paise,
+});
+export type QrBillInvoice = z.infer<typeof QrBillInvoice>;
+
+/**
+ * The table's bill for its current sitting (P9-03, ADR-0024): every invoice printed for it (a split
+ * bill has several), and how to pay by UPI. The restaurant publishes it when it prints, settles or
+ * voids an invoice, and clears it when the table closes, so the next sitting never sees it.
+ */
+export const QrTableBill = z.strictObject({
+  invoices: z.array(QrBillInvoice).min(1).max(20),
+  upi: QrUpiPayee.nullable(),
+});
+export type QrTableBill = z.infer<typeof QrTableBill>;
+
+/**
+ * The restaurant's side: the table's bill, or null to clear it, and when the table's previous
+ * sitting ended (P9-08), so a diner's number shows only this sitting's orders. Absent: unchanged.
+ */
+export const PublishTableBillRequest = z.strictObject({
+  bill: QrTableBill.nullable(),
+  lastClosedAt: Timestamp.nullable().optional(),
+});
+export type PublishTableBillRequest = z.infer<typeof PublishTableBillRequest>;
+
+export const PublishTableBillResponse = z.object({ tableId: Id, cleared: z.boolean() });
+export type PublishTableBillResponse = z.infer<typeof PublishTableBillResponse>;
+
+export const RelayTableParams = z.strictObject({ tableId: Id });
+export type RelayTableParams = z.infer<typeof RelayTableParams>;
+
+/** The diner's side: the bill of the table their code opens, or none yet. */
+export const QrTableBillResponse = z.object({
+  bill: QrTableBill.nullable(),
+  updatedAt: Timestamp.nullable(),
+});
+export type QrTableBillResponse = z.infer<typeof QrTableBillResponse>;
+
+// ---------------------------------------------------------------- a diner's orders by number (P9-08)
+
+/**
+ * The diner's mobile number for looking up their orders, in a header so it is never in an
+ * address (and so never in a server's access log).
+ */
+export const DINER_PHONE_HEADER = 'x-rp-diner-phone';
+
+/**
+ * The orders a number placed at the code's table during this sitting, newest first: what "My
+ * orders" shows on any phone or browser where the diner gives the same number at that table.
+ * `since` is when the table's previous sitting ended (null: none known); the page drops orders it
+ * kept from before then.
+ */
+export const QrTableOrdersResponse = z.object({
+  orders: z.array(QrOrderView).max(50),
+  since: Timestamp.nullable(),
+});
+export type QrTableOrdersResponse = z.infer<typeof QrTableOrdersResponse>;

@@ -248,7 +248,7 @@ describe('[MENU-006] an OUT OF STOCK alert (ADR-0023)', () => {
         t,
       ),
     ).toEqual({
-      title: 'Table 5 · OUT OF STOCK',
+      title: 'Table 5 · Dish out of stock',
       detail: '2 × Dal Makhani: cancelled, not charged. Tell the table and offer something else.',
     });
   });

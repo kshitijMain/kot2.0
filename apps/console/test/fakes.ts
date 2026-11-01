@@ -49,7 +49,6 @@ export function login(role: Role, inactivityTimeoutSeconds = 600): LoginResponse
       inactivityTimeoutSeconds,
     },
     staff: { id: person.staffId, displayName: person.displayName, role, capabilities: [] },
-    secondFactorValidUntil: null,
   };
 }
 

@@ -3,9 +3,7 @@ import type { RoleListResponse, RoleRequest, RoleView } from '@rp/contracts';
 import { checkCustomRole, type CustomRoleProblem, extraCapabilitiesOf } from '@rp/domain';
 import { AuditService } from '../audit/audit.service.js';
 import { authErrors } from '../auth/auth-errors.js';
-import { AuthSettingsService } from '../auth/auth-settings.js';
 import type { Principal } from '../auth/principal.js';
-import { hasFreshStepUp } from '../auth/step-up.js';
 import { newId } from '../common/ids.js';
 import { PrismaService, type TransactionClient } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
@@ -61,7 +59,7 @@ const COUNT_ACTIVE_STAFF = {
  * Custom roles (P4-02e, AUTH-012): the Owner combines capabilities into a named role on top of
  * the waiter or kitchen role. The permission guard and the services apply them through
  * `@rp/domain` `actorGrant`, which only ever honours what `extraCapabilitiesOf` accepts. Only the
- * Owner, with a fresh second factor (AUTH-006), creates, changes or archives one; every change is
+ * Owner creates, changes or archives one; every change is
  * audited and announced as `RestaurantChanged` `STAFF`. A role people have keeps its base role
  * and cannot be archived.
  */
@@ -70,7 +68,6 @@ export class RolesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly audit: AuditService,
-    private readonly settings: AuthSettingsService,
   ) {}
 
   async list(principal: Principal): Promise<RoleListResponse> {
@@ -87,7 +84,7 @@ export class RolesService {
   }
 
   async create(principal: Principal, request: RoleRequest): Promise<RoleView> {
-    await this.requireOwner(principal);
+    this.requireOwner(principal);
     return this.prisma.transaction(async (tx) => {
       await lockSetup(tx);
       await this.check(tx, principal.restaurantId, request, null);
@@ -114,7 +111,7 @@ export class RolesService {
   }
 
   async update(principal: Principal, roleId: string, request: RoleRequest): Promise<RoleView> {
-    await this.requireOwner(principal);
+    this.requireOwner(principal);
     return this.prisma.transaction(async (tx) => {
       await lockSetup(tx);
       const existing = await this.customRole(tx, principal.restaurantId, roleId);
@@ -144,7 +141,7 @@ export class RolesService {
   }
 
   async archive(principal: Principal, roleId: string, reason: string): Promise<RoleView> {
-    await this.requireOwner(principal);
+    this.requireOwner(principal);
     return this.prisma.transaction(async (tx) => {
       await lockSetup(tx);
       const existing = await this.customRole(tx, principal.restaurantId, roleId);
@@ -170,13 +167,9 @@ export class RolesService {
     });
   }
 
-  /** Only the Owner, having confirmed password and authenticator just now (AUTH-006). */
-  private async requireOwner(principal: Principal): Promise<void> {
+  /** Only the Owner manages roles (AUTH-012); their PIN session is enough (ADR-0026). */
+  private requireOwner(principal: Principal): void {
     if (principal.role !== 'OWNER') throw authErrors.ownerOnly();
-    const settings = await this.settings.get(principal.restaurantId);
-    if (!hasFreshStepUp(principal, settings.stepUpMinutes)) {
-      throw authErrors.secondFactorRequired();
-    }
   }
 
   private async check(

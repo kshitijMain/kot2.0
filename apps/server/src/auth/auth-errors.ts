@@ -38,15 +38,15 @@ export const authErrors = {
       401,
       'INVALID_CREDENTIALS',
       attemptsRemaining === undefined
-        ? 'That did not match. Check and try again.'
-        : `That did not match. ${String(attemptsRemaining)} ${attemptsRemaining === 1 ? 'try' : 'tries'} left before ${device ? 'this device stops taking PINs for a while' : 'the login is locked'}.`,
+        ? 'Wrong PIN. Try again.'
+        : `Wrong PIN. ${String(attemptsRemaining)} ${attemptsRemaining === 1 ? 'try' : 'tries'} left before ${device ? 'this device stops taking PINs for a while' : 'you are locked out'}.`,
       attemptsRemaining === undefined ? undefined : { attemptsRemaining },
     ),
   locked: (lockedUntil: Date) =>
     new AppError(
       423,
       'ACCOUNT_LOCKED',
-      'This login is locked after too many wrong attempts. Wait, or ask a manager to unlock it.',
+      'Locked after too many wrong PINs. Wait, or ask a manager to unlock you.',
       { lockedUntil: lockedUntil.toISOString() },
     ),
   /** PC-S5: too many wrong PINs or passwords on this device, for anyone. */
@@ -67,12 +67,6 @@ export const authErrors = {
   deviceNotAllowed: () =>
     new AppError(403, 'DEVICE_NOT_ALLOWED', 'This kind of device cannot do this.'),
   ownerOnly: () => new AppError(403, 'OWNER_ONLY', 'Only the Owner can do this.'),
-  secondFactorRequired: () =>
-    new AppError(
-      403,
-      'SECOND_FACTOR_REQUIRED',
-      'Confirm your Owner password and authenticator code to continue.',
-    ),
   overrideRequired: (capability: string) =>
     new AppError(
       403,
@@ -114,18 +108,4 @@ export const authErrors = {
       'KITCHEN_STATION_MODE',
       'Kitchen screens work in station mode, so kitchen staff do not sign in individually.',
     ),
-  totpNotStarted: () =>
-    new AppError(
-      409,
-      'TOTP_ENROLMENT_NOT_STARTED',
-      'Start authenticator setup first, then enter a code.',
-    ),
-  invalidCode: () =>
-    new AppError(
-      422,
-      'INVALID_CODE',
-      'That code did not match. Enter the current code from the app.',
-    ),
-  currentPasswordRequired: () =>
-    new AppError(422, 'CURRENT_PASSWORD_REQUIRED', 'Enter the current password to change it.'),
 };

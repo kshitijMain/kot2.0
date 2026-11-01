@@ -97,10 +97,6 @@ beforeAll(async () => {
     database.name,
   );
   owner = await signIn(app, kit, 'OWNER');
-  await prisma.session.update({
-    where: { id: owner.session.id },
-    data: { secondFactorAt: new Date() },
-  });
 }, 120_000);
 
 afterAll(async () => {

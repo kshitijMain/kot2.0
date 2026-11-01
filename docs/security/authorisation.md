@@ -46,7 +46,11 @@ decides, before validation and before any work, and refuses with:
 | A session on a device staff do not sign in on                    | 403 `DEVICE_NOT_ALLOWED`                                      |
 | The role is denied the capability                                | 403 `FORBIDDEN`                                               |
 | The capability needs a manager's PIN (§4.2 "PIN")                | 403 `OVERRIDE_REQUIRED`, or `OVERRIDE_INVALID` for a used one |
-| An Owner-only action without a fresh password + TOTP (AUTH-006)  | 403 `SECOND_FACTOR_REQUIRED`                                  |
+
+Owner-only capabilities (`OWNER_ONLY_CAPABILITIES`: DATA_ADMIN, LICENSE_MANAGE,
+TAX_AND_INVOICE_SETTINGS, plus creating or removing managers and custom roles) are granted to the
+Owner alone; the Owner's PIN session is enough for them, with no password or authenticator step-up
+(ADR-0026, the Business Owner's decision of 2026-11-01, overriding AUTH-006).
 
 A manager's override is single-use, for one capability, bound to the requester's session and valid
 2 minutes (AUTH-011). An override for an action about a record (a voided item, a reopened or voided
@@ -87,16 +91,17 @@ device may send at most 16 KB, which every public endpoint needs a few hundred b
 paired devices may send more (1 MB, and photos, menu files and AI imports on their own paths;
 PC-D1, `apps/server/src/http/body-limits.ts`).
 
-| Endpoint                                         | Why it is public                                                                                   |
-| ------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
-| `GET /health`, `GET /version`                    | The watchdog, support and devices before sign-in; no business data.                                |
-| `GET /first-run`, `POST /first-run`              | Nothing to sign in with yet; the POST only from the PC itself and only while no restaurant exists. |
-| `GET /tls/ca`                                    | A device needs the CA to pin before pairing (ADR-0011).                                            |
-| `POST /devices/pairing-codes/bootstrap`          | The installer pairs the PC's own POS: loopback only, only while no device is paired.               |
-| `POST /devices/pair`                             | The one-time code (10 minutes) is the credential; rate-limited (SEC-009).                          |
-| `POST /devices/challenge`, `POST /devices/token` | Device authentication: a signature over a fresh challenge with the paired key.                     |
-| `GET /photos/:id/:width`                         | Menu photos in `<img>` tags; they are shown to diners anyway.                                      |
-| `GET /pager-firmware/:token`                     | A 15-minute token sent to one pager on its own MQTT topic; the image is signed (secure boot).      |
+| Endpoint                                         | Why it is public                                                                                               |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `GET /health`, `GET /version`                    | The watchdog, support and devices before sign-in; no business data.                                            |
+| `GET /first-run`, `POST /first-run`              | Nothing to sign in with yet; the POST only from the PC itself and only while no restaurant exists.             |
+| `GET /tls/ca`                                    | A device needs the CA to pin before pairing (ADR-0011).                                                        |
+| `POST /devices/pairing-codes/bootstrap`          | The installer pairs the PC's own POS: loopback only, only while no device is paired.                           |
+| `POST /devices/pairing-codes/phone`              | PIN-only pilots only (ADR-0025): a waiter phone on the restaurant's network pairs itself; the PIN is the gate. |
+| `POST /devices/pair`                             | The one-time code (10 minutes) is the credential; rate-limited (SEC-009).                                      |
+| `POST /devices/challenge`, `POST /devices/token` | Device authentication: a signature over a fresh challenge with the paired key.                                 |
+| `GET /photos/:id/:width`                         | Menu photos in `<img>` tags; they are shown to diners anyway.                                                  |
+| `GET /pager-firmware/:token`                     | A 15-minute token sent to one pager on its own MQTT topic; the image is signed (secure boot).                  |
 
 ### Object-level checks
 
@@ -182,10 +187,9 @@ restaurant PC (about 3,500 calls, a few seconds):
 - every kind of device on each device endpoint it does not serve, pagers included;
 - every kind of device with nobody signed in, on every endpoint that needs a person;
 - a person's token from another device; a signed-out session;
-- each role on each capability §4.2 does not give it (FORBIDDEN, OVERRIDE_REQUIRED, and the
-  Owner's second factor);
+- each role on each capability §4.2 does not give it (FORBIDDEN, OVERRIDE_REQUIRED);
 - a kitchen screen in station mode outside its station's endpoints;
-- sign-in on a table tablet or a pager, and a session on a tablet however it was made.
+- PIN sign-in on a table tablet or a pager, and a session on a tablet however it was made.
 
 `apps/control-plane/test/integration/authorisation-sweep.int.test.ts`, over the Control Plane's
 endpoints: the routes match the registry with their access; no credential; a vendor session on a

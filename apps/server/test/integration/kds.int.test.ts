@@ -435,6 +435,23 @@ describe('[KDS-001] [NFR-P01] a kitchen that never bumps its tickets', () => {
 });
 
 describe('[AUTH-005] when kitchen staff sign in individually', () => {
+  it('takes a dine-in table’s tickets off once it has paid and left (P9-26)', async () => {
+    const before = await tickets(screen('allScreen'));
+    const open = before.tickets.filter((ticket) => ticket.tableLabel !== null);
+    expect(open.length).toBeGreaterThan(0);
+    const sessions = await prisma.tableSession.findMany({ where: { status: 'OPEN' } });
+    await prisma.tableSession.updateMany({
+      where: { id: { in: sessions.map((session) => session.id) } },
+      data: { status: 'CLOSED', closedAt: new Date() },
+    });
+    const after = await tickets(screen('allScreen'));
+    expect(after.tickets.filter((ticket) => ticket.tableLabel !== null)).toEqual([]);
+    await prisma.tableSession.updateMany({
+      where: { id: { in: sessions.map((session) => session.id) } },
+      data: { status: 'OPEN', closedAt: null },
+    });
+  });
+
   it('refuses a kitchen screen with nobody signed in', async () => {
     await prisma.setting.upsert({
       where: {

@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
 import { SettingsService } from '../settings/settings.service.js';
 
 /**
@@ -14,7 +15,7 @@ export interface AuthSettings {
   readonly lockoutMinutes: number;
   /** SEC-009: login and override attempts per device per minute. */
   readonly attemptsPerMinutePerDevice: number;
-  /** PC-S5: wrong PINs or passwords on one device within the window that stop it taking any. */
+  /** PC-S5: wrong PINs on one device within the window that stop it taking any. */
   readonly deviceLockoutMaxFailures: number;
   /** MOBILE-S3: the same on a table tablet, where they count against the tablet only. */
   readonly tabletLockoutMaxFailures: number;
@@ -28,8 +29,6 @@ export interface AuthSettings {
   readonly managerBrowserInactivityMinutes: number;
   /** Absolute session length, whatever the activity (one long shift). */
   readonly sessionMaxHours: number;
-  /** AUTH-006: how long a password + TOTP step-up stays valid. */
-  readonly stepUpMinutes: number;
   /** AUTH-011: how long a manager's override approval can be used. */
   readonly overrideSeconds: number;
   /** AUTH-005: kitchen staff sign in individually instead of station mode. */
@@ -48,7 +47,10 @@ export function authSettingKey(name: keyof AuthSettings): string {
 /** The authentication settings of a restaurant, read through the settings registry (P1-01a). */
 @Injectable()
 export class AuthSettingsService {
-  constructor(private readonly settings: SettingsService) {}
+  constructor(
+    private readonly settings: SettingsService,
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
+  ) {}
 
   /** Current values; a missing or invalid stored value falls back to its default. */
   async get(restaurantId: string): Promise<AuthSettings> {
@@ -66,9 +68,10 @@ export class AuthSettingsService {
       inactivityMinutes: values.get('auth.inactivityMinutes'),
       managerBrowserInactivityMinutes: values.get('auth.managerBrowserInactivityMinutes'),
       sessionMaxHours: values.get('auth.sessionMaxHours'),
-      stepUpMinutes: values.get('auth.stepUpMinutes'),
       overrideSeconds: values.get('auth.overrideSeconds'),
-      kitchenIndividualLogins: values.get('auth.kitchenIndividualLogins'),
+      // PIN-only (ADR-0025): the kitchen signs in with its PIN like everyone else.
+      kitchenIndividualLogins:
+        values.get('auth.kitchenIndividualLogins') || this.config.authPinOnly,
       pairingCodeMinutes: values.get('auth.pairingCodeMinutes'),
       deviceTokenMinutes: values.get('auth.deviceTokenMinutes'),
     };

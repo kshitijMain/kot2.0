@@ -20,7 +20,6 @@ import { type AuthSettings, AuthSettingsService } from '../auth/auth-settings.js
 import { CredentialHasher } from '../auth/credential-hasher.js';
 import type { Principal } from '../auth/principal.js';
 import { SignInLockouts } from '../auth/sign-in-lockouts.js';
-import { hasFreshStepUp } from '../auth/step-up.js';
 import { PrismaService, type TransactionClient } from '../database/prisma.service.js';
 import { PagerBroker } from '../pagers/pager-broker.js';
 import { announceSetupChange } from '../restaurant/setup-changes.js';
@@ -63,7 +62,15 @@ const BUILT_IN_ROLE_NAMES: Readonly<Record<AssignableRole, string>> = {
   KITCHEN: 'Kitchen',
 };
 
-function view(person: StaffRow, now: Date): StaffView {
+/** Signed in and active within this long counts as signed in now (P9-26). */
+const SIGNED_IN_WINDOW_MS = 30 * 60_000;
+
+interface Seen {
+  readonly lastSeenAt: Date | null;
+  readonly signedIn: boolean;
+}
+
+function view(person: StaffRow, now: Date, seen?: Seen): StaffView {
   const locks = person.credentials
     .map((credential) => credential.lockedUntil)
     .filter((until): until is Date => until !== null && until > now)
@@ -80,6 +87,10 @@ function view(person: StaffRow, now: Date): StaffView {
     photoId: person.photoId,
     hasPin: person.credentials.some((credential) => credential.kind === 'PIN'),
     lockedUntil: locks[0]?.toISOString() ?? null,
+    ...(seen !== undefined && {
+      lastSeenAt: seen.lastSeenAt?.toISOString() ?? null,
+      signedIn: seen.signedIn,
+    }),
     createdAt: person.createdAt.toISOString(),
     updatedAt: person.updatedAt.toISOString(),
   };
@@ -88,8 +99,8 @@ function view(person: StaffRow, now: Date): StaffView {
 /**
  * Staff administration (P4-02a, MGR-004): adding people, their roles and PINs, deactivating and
  * reactivating them; never deleting (AUD-004). Who may change whom is `decideStaffChange`
- * (`@rp/domain`), including the Owner's fresh second factor for creating or removing managers
- * (AUTH-006). PINs are hashed with the pepper and never stored, logged or audited (AUTH-002).
+ * (`@rp/domain`), including that only the Owner creates or removes managers (their PIN session is
+ * enough, ADR-0026). PINs are hashed with the pepper and never stored, logged or audited (AUTH-002).
  * Every change is audited in its own transaction and announced as `RestaurantChanged` `STAFF`, so
  * login tiles and staff lists are read again.
  */
@@ -106,21 +117,47 @@ export class StaffService {
 
   /** Everyone not archived, active first, by name (MGR-004). */
   async list(principal: Principal): Promise<StaffListResponse> {
-    const [staff, settings] = await Promise.all([
+    const now = new Date();
+    const [staff, settings, lastSeen, open] = await Promise.all([
       this.prisma.staff.findMany({
         where: { restaurantId: principal.restaurantId, archivedAt: null },
         include: STAFF_INCLUDE,
         orderBy: [{ active: 'desc' }, { displayName: 'asc' }],
       }),
       this.settings.get(principal.restaurantId),
+      // When each person last used the system, and who is signed in now (P9-26): what an Owner
+      // looks for on the Staff page.
+      this.prisma.session.groupBy({
+        by: ['staffId'],
+        where: { restaurantId: principal.restaurantId },
+        _max: { lastActiveAt: true },
+      }),
+      this.prisma.session.findMany({
+        where: {
+          restaurantId: principal.restaurantId,
+          revokedAt: null,
+          expiresAt: { gt: now },
+          lastActiveAt: { gt: new Date(now.getTime() - SIGNED_IN_WINDOW_MS) },
+        },
+        select: { staffId: true },
+      }),
     ]);
-    const now = new Date();
-    return { staff: staff.map((person) => view(person, now)), pinLength: settings.pinLength };
+    const seenAt = new Map(lastSeen.map((row) => [row.staffId, row._max.lastActiveAt]));
+    const signedIn = new Set(open.map((row) => row.staffId));
+    return {
+      staff: staff.map((person) =>
+        view(person, now, {
+          lastSeenAt: seenAt.get(person.id) ?? null,
+          signedIn: signedIn.has(person.id),
+        }),
+      ),
+      pinLength: settings.pinLength,
+    };
   }
 
   async create(principal: Principal, request: CreateStaffRequest): Promise<StaffView> {
     const settings = await this.settings.get(principal.restaurantId);
-    this.require(principal, settings, null, { kind: 'CREATE', role: request.role });
+    this.require(principal, null, { kind: 'CREATE', role: request.role });
     this.requirePinLength(request.pin, settings);
     this.requireHardToGuess(request.pin, settings);
     const secretHash = await this.hasher.hash(request.pin);
@@ -160,7 +197,6 @@ export class StaffService {
     staffId: string,
     request: UpdateStaffRequest,
   ): Promise<StaffView> {
-    const settings = await this.settings.get(principal.restaurantId);
     const { restaurantId } = principal;
     const person = await this.prisma.transaction(async (tx) => {
       const target = await this.lockedTarget(tx, restaurantId, staffId);
@@ -168,7 +204,7 @@ export class StaffService {
       const base = request.role ?? assignableOf(target.role.baseRole);
       if (roleChange && base === undefined) {
         // The Owner's record: its role never changes (refused as OWNER_RECORD).
-        this.require(principal, settings, target, { kind: 'CHANGE_ROLE', role: 'MANAGER' });
+        this.require(principal, target, { kind: 'CHANGE_ROLE', role: 'MANAGER' });
       }
       // A new built-in role drops any custom role; a custom role is given on its base role.
       const wantedRole =
@@ -180,9 +216,9 @@ export class StaffService {
       const details = (['displayName', 'phone', 'email'] as const).filter(
         (field) => request[field] !== undefined && request[field] !== target[field],
       );
-      if (details.length > 0) this.require(principal, settings, target, { kind: 'EDIT' });
+      if (details.length > 0) this.require(principal, target, { kind: 'EDIT' });
       if (newRole !== undefined) {
-        this.require(principal, settings, target, { kind: 'CHANGE_ROLE', role: newRole });
+        this.require(principal, target, { kind: 'CHANGE_ROLE', role: newRole });
       }
       if (details.length === 0 && newRole === undefined) return target;
 
@@ -230,12 +266,11 @@ export class StaffService {
    * and they leave today's sections, so their alerts go to others.
    */
   async deactivate(principal: Principal, staffId: string, reason: string): Promise<StaffView> {
-    const settings = await this.settings.get(principal.restaurantId);
     const { restaurantId } = principal;
     const now = new Date();
     const { person, pagerIds } = await this.prisma.transaction(async (tx) => {
       const target = await this.lockedTarget(tx, restaurantId, staffId);
-      this.require(principal, settings, target, { kind: 'DEACTIVATE' });
+      this.require(principal, target, { kind: 'DEACTIVATE' });
       const updated = await tx.staff.update({
         where: { id: target.id },
         data: { active: false, onBreakSince: null },
@@ -276,11 +311,10 @@ export class StaffService {
   }
 
   async reactivate(principal: Principal, staffId: string): Promise<StaffView> {
-    const settings = await this.settings.get(principal.restaurantId);
     const { restaurantId } = principal;
     const person = await this.prisma.transaction(async (tx) => {
       const target = await this.lockedTarget(tx, restaurantId, staffId);
-      this.require(principal, settings, target, { kind: 'REACTIVATE' });
+      this.require(principal, target, { kind: 'REACTIVATE' });
       const updated = await tx.staff.update({
         where: { id: target.id },
         data: { active: true },
@@ -314,7 +348,7 @@ export class StaffService {
     const now = new Date();
     await this.prisma.transaction(async (tx) => {
       const target = await this.lockedTarget(tx, restaurantId, staffId);
-      this.require(principal, settings, target, { kind: 'SET_PIN' });
+      this.require(principal, target, { kind: 'SET_PIN' });
       this.requireHardToGuess(pin, settings);
       const had = target.credentials.find((credential) => credential.kind === 'PIN');
       await tx.credential.upsert({
@@ -346,17 +380,8 @@ export class StaffService {
     });
   }
 
-  private require(
-    principal: Principal,
-    settings: AuthSettings,
-    target: StaffRow | null,
-    change: StaffChange,
-  ): void {
-    const actor = {
-      staffId: principal.staffId,
-      role: principal.role,
-      secondFactorFresh: hasFreshStepUp(principal, settings.stepUpMinutes),
-    };
+  private require(principal: Principal, target: StaffRow | null, change: StaffChange): void {
+    const actor = { staffId: principal.staffId, role: principal.role };
     const subject: StaffTarget | null =
       target === null
         ? null

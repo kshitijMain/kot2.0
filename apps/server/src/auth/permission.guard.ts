@@ -1,12 +1,7 @@
 import { type CanActivate, type ExecutionContext, Injectable, Logger } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { OVERRIDE_TOKEN_HEADER } from '@rp/contracts';
-import {
-  actorGrant,
-  grantFor,
-  OVERRIDE_RECORD_TYPES,
-  OWNER_SECOND_FACTOR_CAPABILITIES,
-} from '@rp/domain';
+import { actorGrant, grantFor, OVERRIDE_RECORD_TYPES } from '@rp/domain';
 import { authErrors } from './auth-errors.js';
 import { AuthSettingsService } from './auth-settings.js';
 import { AuthService } from './auth.service.js';
@@ -25,8 +20,8 @@ import type { AuthenticatedRequest, Principal } from './principal.js';
  *   act for the kitchen (station mode, AUTH-005), when kitchen staff do not sign in individually
  *   and the kitchen role is granted `c`; the guard sets `request.station`.
  * - `@RequireCapability(c)` needs a signed-in person whose role is granted `c` in the BRD §4.2
- *   matrix. ALLOW passes, and Owner-only capabilities (AUTH-006) also need a fresh password + TOTP
- *   step-up. OWN passes with `request.ownershipRequired` set, so the service checks the table or
+ *   matrix. ALLOW passes; Owner-only capabilities are granted to the Owner alone, and the Owner's
+ *   PIN session is enough (ADR-0026). OWN passes with `request.ownershipRequired` set, so the service checks the table or
  *   shift belongs to the person. OVERRIDE needs a manager's single-use override token in the
  *   `x-override-token` header (AUTH-011), given for the record in the route's `record` parameter
  *   (PC-T2). DENY is refused.
@@ -114,12 +109,6 @@ export class PermissionGuard implements CanActivate {
       actorGrant({ role: principal.role, extraCapabilities: principal.capabilities }, capability)
     ) {
       case 'ALLOW':
-        if (OWNER_SECOND_FACTOR_CAPABILITIES.has(capability)) {
-          const settings = await this.settings.get(principal.restaurantId);
-          if (!this.auth.hasFreshStepUp(principal, settings)) {
-            throw authErrors.secondFactorRequired();
-          }
-        }
         return true;
       case 'OWN':
         request.ownershipRequired = true;

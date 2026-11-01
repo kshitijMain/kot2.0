@@ -7,7 +7,6 @@ import {
   IDLE_HEADER,
   type LoginResponse,
   OVERRIDE_TOKEN_HEADER,
-  type OwnerLoginRequest,
   type PairedDevice,
   pairingProofMessage,
   type PinLoginRequest,
@@ -251,13 +250,6 @@ export class ApiClient implements RealtimeAuthority {
   /** Signs a person in with their PIN on this device (AUTH-001, AUTH-004). */
   async signInWithPin(body: PinLoginRequest): Promise<LoginResponse> {
     const session = await this.request('pinLogin', { body });
-    this.update({ ...this.stored, session });
-    return session;
-  }
-
-  /** Signs the Owner in with password and second factor (AUTH-006). */
-  async signInAsOwner(body: OwnerLoginRequest): Promise<LoginResponse> {
-    const session = await this.request('ownerLogin', { body });
     this.update({ ...this.stored, session });
     return session;
   }

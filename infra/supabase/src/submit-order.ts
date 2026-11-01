@@ -63,6 +63,15 @@ export const submitOrder: Handler = serveWith('POST', async (request, context) =
       );
     }
 
+    // P9-02: the restaurant asks every table for a number to print on the bill.
+    if (document.phone === 'REQUIRED' && body.customerPhone === undefined) {
+      throw new HttpError(
+        422,
+        'PHONE_REQUIRED',
+        'Please add your mobile number. The restaurant prints it on your bill.',
+      );
+    }
+
     const now = context.now();
     const rejectedLines = body.lines.flatMap((line) => {
       const resolved = resolveOrderLine(document.menu, line, {
@@ -97,8 +106,8 @@ export const submitOrder: Handler = serveWith('POST', async (request, context) =
 
     const [inserted] = await tx.query<OrderRow>(
       `INSERT INTO relay.qr_orders (tenant_id, table_id, idempotency_key, browser_id,
-         snapshot_version, lines, instructions, customer_name)
-       VALUES ($1, $2, $3, $4, $5::bigint, $6::text::jsonb, $7, $8)
+         snapshot_version, lines, instructions, customer_name, customer_phone)
+       VALUES ($1, $2, $3, $4, $5::bigint, $6::text::jsonb, $7, $8, $9)
        ON CONFLICT (tenant_id, idempotency_key) DO NOTHING
        RETURNING ${ORDER_COLUMNS}`,
       [
@@ -110,6 +119,10 @@ export const submitOrder: Handler = serveWith('POST', async (request, context) =
         JSON.stringify(body.lines),
         body.orderNote ?? null,
         body.customerName ?? null,
+        // Kept only where the page asks for it.
+        document.phone === undefined || document.phone === 'OFF'
+          ? null
+          : (body.customerPhone ?? null),
       ],
     );
     if (inserted !== undefined)

@@ -5,7 +5,10 @@ import {
   type UpdateStaffRequest,
 } from '@rp/contracts';
 import {
+  addDays,
+  calendarDateOf,
   decideStaffChange,
+  displayDateTime,
   isAssignableRole,
   isValidPin,
   type Role,
@@ -22,16 +25,56 @@ export interface StaffActorView {
 /** A button on a person's row. */
 export type StaffAction = 'EDIT' | 'SET_PIN' | 'UNLOCK' | 'DEACTIVATE' | 'REACTIVATE';
 
-/**
- * Whether `actor` may make `change` to `person` (`@rp/domain` staff rules). The Owner is assumed
- * to confirm the second factor when the server asks, so the Owner is offered what that allows.
- */
+/** Whether `actor` may make `change` to `person` (`@rp/domain` staff rules). */
 function may(actor: StaffActorView, person: StaffView, change: StaffChange): boolean {
   return decideStaffChange(
-    { ...actor, secondFactorFresh: true },
+    actor,
     { staffId: person.id, role: person.role, active: person.active },
     change,
   ).allowed;
+}
+
+/** The page's groups, in order (P9-26): who runs the place, then the floor, then the kitchen. */
+export type StaffGroup = 'LEADS' | 'WAITERS' | 'KITCHEN';
+
+export function groupOf(person: Pick<StaffView, 'role'>): StaffGroup {
+  if (person.role === 'OWNER' || person.role === 'MANAGER') return 'LEADS';
+  return person.role === 'KITCHEN' ? 'KITCHEN' : 'WAITERS';
+}
+
+/** Up to two initials for the avatar: "Ravi Kumar" → "RK", "Waiter 1" → "W1". */
+export function initialsOf(name: string): string {
+  const words = name
+    .replace(/[()]/g, ' ')
+    .split(/\s+/)
+    .filter((word) => word !== '');
+  return words
+    .slice(0, 2)
+    .map((word) => word[0]?.toUpperCase() ?? '')
+    .join('');
+}
+
+/** When someone was last here, as a person says it (P9-26). */
+export type LastSeen =
+  | { readonly kind: 'NOW' }
+  | { readonly kind: 'NEVER' }
+  | { readonly kind: 'TODAY' | 'YESTERDAY'; readonly time: string }
+  | { readonly kind: 'ON'; readonly date: string };
+
+export function lastSeenOf(
+  person: Pick<StaffView, 'signedIn' | 'lastSeenAt'>,
+  now: number,
+): LastSeen | undefined {
+  if (person.signedIn === true) return { kind: 'NOW' };
+  if (person.lastSeenAt === undefined) return undefined;
+  if (person.lastSeenAt === null) return { kind: 'NEVER' };
+  const seen = new Date(person.lastSeenAt);
+  const today = calendarDateOf(new Date(now));
+  const day = calendarDateOf(seen);
+  const { date, time } = displayDateTime(seen);
+  if (day === today) return { kind: 'TODAY', time };
+  if (day === addDays(today, -1)) return { kind: 'YESTERDAY', time };
+  return { kind: 'ON', date };
 }
 
 /** The login is locked after wrong attempts and has not opened again yet (AUTH-003). */

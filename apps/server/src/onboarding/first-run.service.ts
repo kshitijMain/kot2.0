@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
 import {
   type FirstRunRequest,
   type FirstRunResponse,
@@ -8,6 +8,7 @@ import {
 import { isEasilyGuessedPin } from '@rp/domain';
 import { AuditService } from '../audit/audit.service.js';
 import { CredentialHasher } from '../auth/credential-hasher.js';
+import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
 import { ADVISORY_LOCKS } from '../database/advisory-locks.js';
 import { PrismaService } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
@@ -41,8 +42,8 @@ const closed = () =>
 /**
  * A fresh install's first step (ONB-001, P7-07b): on the restaurant PC itself and only while no
  * restaurant exists, create the restaurant with the built-in roles and a default invoice series,
- * and its Owner with a PIN. The Owner then pairs the PC (bootstrap code), signs in and sets a
- * password and authenticator (AUTH-006) as the set-up page asks.
+ * and its Owner with a PIN. The Owner then pairs the PC (bootstrap code) and signs in with that
+ * PIN (ADR-0026).
  */
 @Injectable()
 export class FirstRunService {
@@ -50,10 +51,16 @@ export class FirstRunService {
     private readonly prisma: PrismaService,
     private readonly hasher: CredentialHasher,
     private readonly audit: AuditService,
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
   ) {}
 
   async status(): Promise<FirstRunStatus> {
-    return { needed: (await this.prisma.restaurant.count()) === 0, pinLength: pinLength() };
+    return {
+      needed: (await this.prisma.restaurant.count()) === 0,
+      pinLength: pinLength(),
+      // The console pairs itself and goes straight to the PIN screen (ADR-0025).
+      pinOnly: this.config.authPinOnly,
+    };
   }
 
   async complete(request: FirstRunRequest, loopback: boolean): Promise<FirstRunResponse> {

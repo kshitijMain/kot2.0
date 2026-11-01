@@ -15,9 +15,18 @@ can be updated. Never paste secrets, keys or passwords into a Claude session or 
       `gh auth login` (GitHub.com, HTTPS, "authenticate Git with your GitHub credentials").
       Steps: [`manual-tasks/01-github-access.md`](manual-tasks/01-github-access.md).
 - [x] `main` is the repository's default branch.
+- [ ] **Get Phase 9 onto GitHub** (2026-10-31): both accounts signed in on this Mac have read-only
+      access to `kshitijMain/kot2.0`, so `git push` answers 403. Local `main` holds all of Phase 9,
+      with nothing to merge from GitHub, and the pull request's description is ready in
+      `.pilot/pr-body.md`. Get write access for `kunaltomartwo99`, or open the pull request from a
+      fork (a public copy; Claude's session may not create one). The commands for both are in
+      [`manual-tasks/01-github-access.md`](manual-tasks/01-github-access.md#phase-9-pull-request).
 - [ ] Protect `main` (pull requests, the CI checks) and require 2FA for everyone with access.
       Same file. Checked 2026-10-11: `main` is not protected yet; the `release-signing`
       environment for the code-signing certificate (SEC-013) exists.
+
+- [x] ~~Set the Owner's password and authenticator on the pilot~~ (2026-11-01): no longer needed.
+      The Business Owner removed them (P9-25, ADR-0026); the Owner does everything with their PIN.
 
 ## 2. Accounts and keys (Business Owner)
 
@@ -57,10 +66,13 @@ code from going live:
       gear): waiters-only sign-in, the back button, the screen's edges, notifications that come and
       go, Picked up meaning served, the new home screen:
       [`manual-tasks/37-waiter-phone-feedback.md`](manual-tasks/37-waiter-phone-feedback.md).
-- [ ] Supabase organisation, Mumbai region (QR relay), then deploy the relay schema and give the
-      edge functions and the Control Plane their logins:
+- [ ] **QR pilot (Mannat): put the QR site and relay on your own server** (Oracle VM, Ubuntu
+      24.04, one script) and connect the restaurant PC; replaces tasks 20 and 21 for the pilot
+      (ADR-0024): [`manual-tasks/38-qr-pilot-server.md`](manual-tasks/38-qr-pilot-server.md).
+- [ ] (Not for the pilot) Supabase organisation, Mumbai region (QR relay), then deploy the relay
+      schema and give the edge functions and the Control Plane their logins:
       [`manual-tasks/20-supabase-relay.md`](manual-tasks/20-supabase-relay.md).
-- [ ] Host the QR menu site (Next.js, India region) on its domain:
+- [ ] (Not for the pilot) Host the QR menu site (Next.js, India region) on its domain:
       [`manual-tasks/21-qr-site.md`](manual-tasks/21-qr-site.md).
 - [ ] Legal review of the QR site's privacy notice and terms (drafts at `/privacy` and `/terms`).
 - [ ] Expo account + Android app-signing keystore (signed APKs, OTA updates), and the update

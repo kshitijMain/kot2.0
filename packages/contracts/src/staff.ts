@@ -8,7 +8,7 @@ import { PhoneNumber } from './restaurant.js';
  * Staff administration (P4-02a, MGR-004): the people who work here, their roles and PINs. Nobody
  * is deleted, only deactivated, so their history stays theirs (AUD-004). Who may change whom is
  * `decideStaffChange` in `@rp/domain`: managers look after waiters and kitchen staff;
- * creating or removing a manager needs the Owner with a fresh second factor (AUTH-006).
+ * creating or removing a manager is the Owner's alone.
  */
 
 /** Roles a person can be given; the one Owner is set up at installation. */
@@ -37,6 +37,10 @@ export const StaffView = z.object({
   hasPin: z.boolean(),
   /** Until when their sign-in is locked after failed attempts (AUTH-003); null when it is not. */
   lockedUntil: Timestamp.nullable(),
+  /** When they last used the system on any device (P9-26); null when they never signed in. */
+  lastSeenAt: Timestamp.nullable().optional(),
+  /** Signed in on a device and active in the last half hour (P9-26). */
+  signedIn: z.boolean().optional(),
   createdAt: Timestamp,
   updatedAt: Timestamp,
 });

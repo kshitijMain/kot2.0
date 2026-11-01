@@ -64,6 +64,10 @@ export function roomsForConnection(identity: ConnectionIdentity): string[] {
   if (person !== undefined) {
     joined.push(rooms.role(rid, person.role), rooms.staff(rid, person.staffId));
     for (const sectionId of identity.sectionIds ?? []) joined.push(rooms.section(rid, sectionId));
+    // P9-21: kitchen staff signed in on a screen that is not a kitchen screen (a PIN-only browser
+    // pairs itself as a POS, ADR-0025) see every station's tickets over REST, so they hear every
+    // station's tickets live too; without this their kitchen display only changed on a reload.
+    if (person.role === 'KITCHEN' && device.type !== 'KDS') joined.push(rooms.allStations(rid));
   } else if (device.type === 'KDS') {
     // Station mode (AUTH-005): the screen acts for the kitchen when nobody is signed in.
     joined.push(rooms.role(rid, 'KITCHEN'));

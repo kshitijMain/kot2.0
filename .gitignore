@@ -23,6 +23,7 @@ apps/waiter-app/android/
 apps/table-tablet/android/
 # Next.js
 .next/
+.next-pilot/
 out/
 # Storybook workbench build (packages/ui-web)
 storybook-static/
@@ -60,3 +61,24 @@ apps/control-plane/src/generated/
 
 # Vitest report output
 .vitest/
+
+# The QR pilot on one Mac (scripts/pilot/mannat-local.sh): databases, secrets, logs
+/.pilot/
+
+# Local UI reference clones (index + scripts at design-ref/ are tracked; see design-ref/README.md)
+/design-ref/tier-*/
+
+# Pilot print-outs: the QR images and the scan sheet carry live table links (anyone with one can
+# order at that table). Print them from Manage -> QR codes or .pilot/mannat-tents.pdf instead.
+/MANNAT-QR-SCAN.txt
+/mannat-qr-*.png
+
+# Android build output (Gradle), e.g. from building the waiter APK on a Mac; always regenerated
+**/android/build/
+**/android/.gradle/
+**/android/.cxx/
+*.apk
+*.aab
+
+# Cursor's local settings for this machine
+/.cursor/

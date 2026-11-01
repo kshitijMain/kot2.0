@@ -38,8 +38,8 @@ export interface SettingDefinition<
   readonly defaultValue: z.output<Schema>;
   readonly scope: SettingScope;
   /**
-   * Who may change it. Capabilities that need the Owner's second factor (AUTH-006) need it here
-   * too; VENDOR settings cannot be changed locally at all.
+   * Who may change it. Owner-only capabilities (`@rp/domain` `OWNER_ONLY_CAPABILITIES`) make the
+   * setting the Owner's alone; VENDOR settings cannot be changed locally at all.
    */
   readonly capability: z.infer<typeof Capability>;
   readonly description: string;
@@ -170,7 +170,7 @@ export const SETTINGS = [
     scope: 'RESTAURANT',
     capability: 'STAFF_MANAGE',
     description:
-      'Wrong PINs or passwords on one device, for anyone, within the window that stop it taking any for the lockout time (our default).',
+      'Wrong PINs on one device, for anyone, within the window that stop it taking any for the lockout time (our default).',
     requirements: ['AUTH-003', 'SEC-009'],
   }),
   setting({
@@ -232,17 +232,6 @@ export const SETTINGS = [
     description: 'Longest a session lasts, however active (one long shift; our default).',
     requirements: ['AUTH-005'],
     unit: 'hours',
-  }),
-  setting({
-    key: 'auth.stepUpMinutes',
-    schema: int(1, 60),
-    defaultValue: 5,
-    scope: 'RESTAURANT',
-    capability: 'STAFF_MANAGE',
-    description:
-      "How long the Owner's password and second factor stay fresh for Owner-only actions.",
-    requirements: ['AUTH-006'],
-    unit: 'minutes',
   }),
   setting({
     key: 'auth.overrideSeconds',
@@ -381,7 +370,7 @@ export const SETTINGS = [
     schema: z.boolean(),
     defaultValue: false,
     scope: 'RESTAURANT',
-    // An invoice setting (ONB-004 step 3), so the Owner's (AUTH-006).
+    // An invoice setting (ONB-004 step 3), so the Owner's alone.
     capability: 'TAX_AND_INVOICE_SETTINGS',
     description: 'Add a voluntary service charge to bills (off by default; removable on request).',
     requirements: ['BILL-006', 'OI-12'],
@@ -472,6 +461,31 @@ export const SETTINGS = [
     scope: 'RESTAURANT',
     capability: 'OPERATIONS_CONFIGURE',
     description: 'Names of payment modes offered besides cash, card and UPI.',
+    requirements: ['BILL-008'],
+  }),
+  setting({
+    key: 'payments.upiId',
+    // A UPI ID (VPA) as NPCI writes it: name@bank.
+    schema: z
+      .string()
+      .trim()
+      .regex(/^[A-Za-z0-9._-]{2,256}@[A-Za-z][A-Za-z0-9.-]{1,63}$/)
+      .nullable(),
+    defaultValue: null,
+    scope: 'RESTAURANT',
+    capability: 'OPERATIONS_CONFIGURE',
+    description:
+      'The restaurant’s UPI ID: diners pay the printed bill from the QR page with the amount filled in (none: no Pay button). ADR-0024.',
+    requirements: ['BILL-008', 'QR-011'],
+  }),
+  setting({
+    key: 'payments.upiPayeeName',
+    schema: z.string().trim().min(1).max(60).nullable(),
+    defaultValue: null,
+    scope: 'RESTAURANT',
+    capability: 'OPERATIONS_CONFIGURE',
+    description:
+      'The name diners’ UPI apps show for the restaurant’s UPI ID (none: the restaurant’s display name).',
     requirements: ['BILL-008'],
   }),
   setting({
@@ -759,6 +773,16 @@ export const SETTINGS = [
     capability: 'OPERATIONS_CONFIGURE',
     description: 'The QR page offers Call waiter and Request bill (for tables without a tablet).',
     requirements: ['QR-011'],
+  }),
+  setting({
+    key: 'qr.askPhone',
+    schema: z.enum(['OFF', 'OPTIONAL', 'REQUIRED']),
+    defaultValue: 'OPTIONAL',
+    scope: 'RESTAURANT',
+    capability: 'OPERATIONS_CONFIGURE',
+    description:
+      'The QR page asks for the diner’s mobile number before the first order (REQUIRED: it must be given); it is printed on the bill (ADR-0024).',
+    requirements: ['QR-005', 'BILL-011'],
   }),
   setting({
     key: 'qr.readOnlyAfterSeconds',
@@ -1195,7 +1219,7 @@ export const SettingView = z.object({
   isDefault: z.boolean(),
   scope: SettingScope,
   capability: Capability,
-  /** Whether the person asking may change it now (vendor settings never; AUTH-006 aside). */
+  /** Whether the person asking may change it now (vendor settings never). */
   editable: z.boolean(),
   description: z.string(),
   requirements: z.array(z.string()),

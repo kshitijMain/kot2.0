@@ -87,7 +87,7 @@ export function TableTile({
       {alert === undefined ? null : (
         <View style={[styles.alert, { backgroundColor: warning.subtle }]}>
           <Glyph name="bell" color={warning.text} size={fontSize.sm} />
-          <Text style={{ color: warning.text, fontSize: fontSize.sm }}>{alert}</Text>
+          <Text style={[styles.alertText, { color: warning.text }]}>{alert}</Text>
         </View>
       )}
     </>
@@ -157,7 +157,9 @@ const styles = StyleSheet.create({
   },
   stateText: { fontSize: fontSize.sm, fontWeight: weight(fontWeight.semibold) },
   details: { fontSize: fontSize.md },
+  // Kept inside the tile with large text on a small phone (P9-21): it had run past the edge.
   alert: {
+    maxWidth: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     alignSelf: 'flex-start',
@@ -166,4 +168,5 @@ const styles = StyleSheet.create({
     paddingVertical: spacing[1],
     borderRadius: radius.sm,
   },
+  alertText: { flexShrink: 1, fontSize: fontSize.sm },
 });

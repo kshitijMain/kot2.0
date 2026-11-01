@@ -46,8 +46,8 @@ function notFound(): AppError {
 
 /**
  * Tax groups (P1-01b, BILL-004): the rates are the restaurant's data, entered in the setup wizard
- * (ONB-004 step 2), never constants. The routes need the Owner with a fresh second factor
- * (AUTH-006). New rates apply to bills from then on; issued invoices keep their own tax lines.
+ * (ONB-004 step 2), never constants. The routes need the Owner (TAX_AND_INVOICE_SETTINGS).
+ * New rates apply to bills from then on; issued invoices keep their own tax lines.
  * Groups are archived, never deleted (BRD §9.4), and only when no menu item uses them.
  */
 @Injectable()

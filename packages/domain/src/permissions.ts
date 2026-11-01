@@ -99,10 +99,11 @@ export const DEFAULT_PERMISSION_MATRIX: Readonly<Record<Capability, Row>> = {
 };
 
 /**
- * Capabilities that additionally need the Owner's password + TOTP second factor (AUTH-006).
+ * Capabilities only the Owner has, never grantable to a custom role (AUTH-012). The Owner's PIN
+ * session is enough for them: no password or authenticator is asked (ADR-0026).
  * "Creating or removing managers" is enforced inside STAFF_MANAGE by the server.
  */
-export const OWNER_SECOND_FACTOR_CAPABILITIES: ReadonlySet<Capability> = new Set<Capability>([
+export const OWNER_ONLY_CAPABILITIES: ReadonlySet<Capability> = new Set<Capability>([
   'DATA_ADMIN',
   'LICENSE_MANAGE',
   'TAX_AND_INVOICE_SETTINGS',
@@ -138,7 +139,7 @@ export const CUSTOM_ROLE_GRANTABLE: readonly Capability[] = CAPABILITIES.filter(
   (capability) =>
     DEFAULT_PERMISSION_MATRIX[capability].MANAGER === 'ALLOW' &&
     capability !== 'STAFF_MANAGE' &&
-    !OWNER_SECOND_FACTOR_CAPABILITIES.has(capability),
+    !OWNER_ONLY_CAPABILITIES.has(capability),
 );
 
 const GRANTABLE = new Set<string>(CUSTOM_ROLE_GRANTABLE);
@@ -247,11 +248,13 @@ export function grantFor(
 
 /**
  * Who may sign in on each kind of device; a device not listed takes every role. A waiter phone is
- * the waiters' (Business Owner, 2026-10-25): managers and the Owner work at the POS and the
- * dashboard, and a manager's PIN for a void on the phone is an approval, not a sign-in (AUTH-011).
+ * the waiters' (Business Owner, 2026-10-25) and, since the QR pilot, the managers' too, so a
+ * manager's phone rings for each diner's order to accept or reject at the table (ADR-0024,
+ * 2026-10-31). The Owner works at the POS and the dashboard; a manager's PIN for a void on a
+ * waiter's phone is still an approval, not a sign-in (AUTH-011).
  */
 export const SIGN_IN_ROLES: Readonly<Partial<Record<string, readonly Role[]>>> = {
-  WAITER_PHONE: ['WAITER'],
+  WAITER_PHONE: ['WAITER', 'MANAGER'],
 };
 
 /** Whether `role` may sign in on a device of `deviceType` (AUTH-001, AUTH-010). */

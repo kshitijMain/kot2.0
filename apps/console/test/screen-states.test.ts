@@ -23,7 +23,7 @@ const folders = [
   ...readdirSync(join(src, 'manage'))
     .map((name) => join(src, 'manage', name))
     .filter((path) => statSync(path).isDirectory()),
-  ...['pos', 'kds', 'billing', 'alerts', 'owner', 'screens'].map((name) => join(src, name)),
+  ...['pos', 'kds', 'billing', 'alerts', 'screens'].map((name) => join(src, name)),
 ];
 
 const text = (dir: string) =>
@@ -51,7 +51,6 @@ describe('[NFR-U04] every screen folder has designed states', () => {
         'manage/reports',
         'manage/setup',
         'manage/system',
-        'owner',
       ];
       if (fixed.some((name) => dir.endsWith(name))) return;
       if (/<ul|<table|\.map\(/.test(all)) expect(all).toMatch(/EmptyState|empty/i);

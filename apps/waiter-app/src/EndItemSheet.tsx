@@ -99,6 +99,7 @@ export function EndItemSheet({
 }
 
 const styles = StyleSheet.create({
-  grow: { flex: 1 },
+  // Natural width, filling the row; wraps rather than breaking a word (P9-24: "App rove").
+  grow: { flexGrow: 1 },
   quick: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
 });

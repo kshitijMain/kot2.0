@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# The pilot's PostgreSQL 16 client programs on a Mac without them (P9-24): run inside the database's
+# own Docker container, which has them. The server (RP_PG_BIN=scripts/pilot/pg-bin) passes the
+# connection in libpq's environment (PGUSER, PGPASSWORD, PGDATABASE); inside the container the
+# server is on localhost:5432. Data flows through stdin and stdout, as with the real programs.
+# RP_PG_CONTAINER picks the container (default rp-pilot-pg; rp-pg16 for the test database).
+set -euo pipefail
+exec docker exec -i \
+  -e PGUSER="${PGUSER:-postgres}" -e PGPASSWORD="${PGPASSWORD:-}" -e PGDATABASE="${PGDATABASE:-postgres}" \
+  -e PGHOST=127.0.0.1 -e PGPORT=5432 -e PGCONNECT_TIMEOUT=10 \
+  "${RP_PG_CONTAINER:-rp-pilot-pg}" pg_dump "$@"

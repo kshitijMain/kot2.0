@@ -213,16 +213,18 @@ describe('[TBL-003] opening a table', () => {
     expect(within(dialog).getByText(t('pos.open.invalidGuests'))).toBeInTheDocument();
     expect(fake.callsTo('POST', `/api/v1/tables/${T1}/open`)).toHaveLength(0);
 
-    const pad = within(dialog).getByRole('group', { name: t('pos.open.guestsPad') });
-    await user.click(within(pad).getByRole('button', { name: '4' }));
-    expect(within(dialog).getByLabelText(t('pos.open.guests'))).toHaveValue('4');
-    await user.click(within(dialog).getByRole('button', { name: t('pos.open.submit') }));
+    // One tap on the party size opens the table (P9-26).
+    const picker = within(dialog).getByRole('group', { name: t('pos.open.howMany') });
+    await user.click(
+      within(picker).getByRole('button', { name: t('pos.open.guestsCount', { count: 4 }) }),
+    );
 
     expect(await screen.findByText(t('pos.open.opened', { table: 'T1' }))).toBeInTheDocument();
     // No waiter is chosen: any waiter serves any table (ADR-0023).
     expect(within(dialog).queryByRole('combobox')).toBeNull();
     expect(fake.callsTo('POST', `/api/v1/tables/${T1}/open`)[0]?.body).toEqual({ covers: 4 });
-    expect(await tile(/^T1, Occupied/)).toBeInTheDocument();
+    // Guests seated: straight on to their order (P9-20), not back to the floor.
+    expect(await screen.findByRole('button', { name: t('pos.backToTables') })).toBeInTheDocument();
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
@@ -238,7 +240,7 @@ describe('[TBL-003] opening a table', () => {
     const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
     await user.click(await tile(/^T1, Free$/));
     const dialog = await screen.findByRole('dialog');
-    await user.type(within(dialog).getByLabelText(t('pos.open.guests')), '2');
+    await user.type(within(dialog).getByLabelText(t('pos.open.more')), '12');
     await user.click(within(dialog).getByRole('button', { name: t('pos.open.submit') }));
     expect(
       await within(dialog).findByText('T1 was just opened on another device.'),
@@ -279,6 +281,72 @@ describe('[TBL-005] moving a table', () => {
       expect(screen.queryByRole('dialog')).toBeNull();
     });
     expect(await tile(/^T3, Occupied/)).toBeInTheDocument();
+  });
+
+  it('[BILL-001] a waiter asks the managers for the bill, never a button that cannot work (P9-15)', async () => {
+    const fake = signsInAs(server(), 'WAITER')
+      .on('GET', '/api/v1/floor', () => ({ status: 200, body: FLOOR }))
+      .on('GET', '/api/v1/tables/overview', () => ({
+        status: 200,
+        body: overview(entry(T1, 'T1', HALL, {})),
+      }))
+      .on('POST', `/api/v1/table-sessions/${SESSION}/request-bill`, () => ({
+        status: 200,
+        body: sessionView(T1, 'T1'),
+      }));
+    const { user } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos' });
+    await user.click(await tile(/^T1, Occupied/));
+    const details = await screen.findByRole('dialog', {
+      name: t('pos.table.title', { table: 'T1' }),
+    });
+    expect(within(details).queryByRole('button', { name: t('pos.billTable') })).toBeNull();
+    await user.click(within(details).getByRole('button', { name: t('mobile.tables.requestBill') }));
+    expect(
+      await screen.findByText(t('mobile.tables.billRequested', { table: 'T1' })),
+    ).toBeInTheDocument();
+    expect(fake.callsTo('POST', `/api/v1/table-sessions/${SESSION}/request-bill`)).toHaveLength(1);
+  });
+
+  it('[QR-011] [WTR-005] shows what the tables asked for: the bill opens, On my way, Done (P9-15)', async () => {
+    const REQUEST = '0199a0e0-0000-7000-8000-00000000d001';
+    const request = {
+      id: REQUEST,
+      type: 'BILL',
+      state: 'ESCALATED',
+      source: 'QR',
+      tableId: T1,
+      tableLabel: 'T1',
+      tableSessionId: SESSION,
+      createdAt: new Date(Date.now() - 4 * 60_000).toISOString(),
+      escalatedAt: new Date(Date.now() - 60_000).toISOString(),
+      acknowledgedAt: null,
+      acknowledgedById: null,
+      acknowledgedByName: null,
+      closedAt: null,
+    };
+    const fake = posServer(overview(entry(T1, 'T1', HALL, {})))
+      .on('GET', '/api/v1/service-requests', () => ({ status: 200, body: { requests: [request] } }))
+      .on('POST', `/api/v1/service-requests/${REQUEST}/acknowledge`, () => ({
+        status: 200,
+        body: { ...request, state: 'ACKNOWLEDGED' },
+      }))
+      .on('POST', '/api/v1/bills', () => ({ status: 200, body: billView() }));
+    const { user, container } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    const panel = within(
+      await screen.findByRole('region', { name: t('mobile.requests.title', { count: 1 }) }),
+    );
+    const title = t('alerts.atTable', { table: 'T1', what: t('alerts.type.BILL_REQUEST') });
+    expect(panel.getByText(title)).toBeVisible();
+    expect(panel.getByText(new RegExp(t('alerts.escalated')))).toBeVisible();
+    await expectNoAxeViolations(container);
+    await user.click(
+      panel.getByRole('button', { name: t('pos.tableRequests.onMyWayOf', { title }) }),
+    );
+    expect(fake.callsTo('POST', `/api/v1/service-requests/${REQUEST}/acknowledge`)).toHaveLength(1);
+    await user.click(panel.getByRole('button', { name: t('pos.tableRequests.openBill') }));
+    await waitFor(() => {
+      expect(fake.callsTo('POST', '/api/v1/bills')[0]?.body).toEqual({ tableSessionId: SESSION });
+    });
   });
 
   it('[BILL-001] opens the table’s bill from its details, and says when it cannot', async () => {

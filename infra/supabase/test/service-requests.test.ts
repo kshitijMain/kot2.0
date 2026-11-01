@@ -104,6 +104,9 @@ describe('[QR-011] a diner calls a waiter or asks for the bill', () => {
     const bill = QrServiceRequestResponse.parse((await ask('BILL')).body);
     expect(bill.existing).toBe(false);
     expect(bill.request.id).not.toBe(first.request.id);
+    // P9-03: "I have paid" after paying the printed bill by UPI is a request of its own.
+    const paid = QrServiceRequestResponse.parse((await ask('PAID')).body);
+    expect(paid).toMatchObject({ existing: false, request: { type: 'PAID', status: 'SUBMITTED' } });
   });
 
   it('[ORD-013] finds the same request when it is sent again', async () => {

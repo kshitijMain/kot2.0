@@ -5,6 +5,16 @@ It shows the table's menu from the QR relay and sends dine-in orders through the
 functions; it never writes a database (QR-006). Built by P5-05a (P5-05b adds recommendations,
 call waiter / request bill and the Lighthouse budget).
 
+- What a diner sees (P9-04, ADR-0024):
+  - a welcome step with the restaurant, the table (from the code alone) and the diner's mobile
+    number, printed on the bill (`qr.askPhone`);
+  - then three tabs at the thumb:
+    - **Menu**: search, filters, categories, dish cards, the cart;
+    - **My orders**: each order's status, with a banner and a buzz when the restaurant accepts
+      it, each dish's state, "Order again" for an order or a dish;
+    - **Bill**: what was ordered so far and "Ask for the bill"; once printed, the bill with Pay by
+      UPI (the amount filled in, app links for iPhones, a QR code) and "I have paid".
+  - Call waiter is in the header.
 - Next.js 16 App Router.
   - `src/app/t/[token]/page.tsx` fetches the menu on the server, so the first view is already
     the menu (QR-012).
