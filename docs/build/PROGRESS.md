@@ -714,6 +714,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-25 The Owner by PIN only; call a waiter at an unopened table; Owner settings set up; prints saved to a folder (test)
 - [x] P9-26 Staff roles live (managers add managers); a UX and wording pass across the console, waiter app and kitchen
 - [x] P9-27 Phones find the PC by themselves; Wi-Fi without internet; the installer's network step; daily summaries and bill history; CI fixed
+- [x] P9-28 The waiter app in phones' browsers for iPhones, the same code as the APK (ADR-0028)
 
 ## Decisions
 
@@ -4655,6 +4656,68 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-11-01: P9-28 The waiter app in phones' browsers, for iPhones
+
+The Business Owner asked that staff, managers and the Owner with an iPhone get every function of
+the APK from a link, in Chrome. Every iPhone browser runs on WebKit, so the target is WebKit.
+
+**What was built (ADR-0028):**
+
+- **The APK's own screens in the browser** (React Native Web through Expo's web export): no second
+  copy of any screen.
+  - `apps/waiter-app` `build` now exports `dist/`. The PC serves it at `/phone/` (`RP_PHONE_DIR`).
+    The installer stages `<install>\phone\`.
+  - Only the wiring differs (`*.web.ts(x)`).
+- **The browser's parts** (`@rp/mobile-core/web`):
+  - WebCrypto device keys in IndexedDB, as the console keeps them;
+  - token storage;
+  - alerts: chime, vibration on Android, notifications through a service worker when the page is
+    hidden, and the screen kept on while signed in.
+- **The page:**
+  - It connects to the PC that served it; there is nothing to scan.
+  - Inter is served by the PC.
+  - A manifest and Apple tags for Add to Home Screen.
+  - The browser's back (the iPhone's swipe) closes the newest screen, as Android's back does.
+  - One tab at a time.
+  - Reload when out of date.
+- **The Owner signs in on phones** (`SIGN_IN_ROLES.WAITER_PHONE`), with what a manager has there,
+  minus the break.
+  - Managers and the Owner have Menu → Open the full dashboard (the console, new tab).
+- **Manage → Devices:** "iPhone, or a phone without the app": the certificate step and a QR code
+  for `/phone/`.
+
+**Tested:**
+
+- **The pilot, in WebKit at iPhone size:**
+  - Ravi opened table 4, sent KOT 2 (printed) and requested the bill.
+  - The browser's back returned to the tables.
+  - Priya printed INV/26-27/000015 (₹221.00) and recorded a UPI payment; the table went free.
+  - The Owner signed in and opened the dashboard.
+  - A diner's QR order at table 5 (from Chrome through ngrok) was approved by Priya on the phone
+    web app; it went to the kitchen and printed.
+- **The Redmi's real Chrome:**
+  - The page connected by itself (after "Proceed": the CA is not installed on the owner's own
+    phone) and Ravi signed in.
+  - The tables were live, Android's back closed a table, and signing out worked.
+  - It also showed the two-tab problem, which led to the one-tab guard.
+- **Automated:** phone e2e, 16/16 (8 WebKit iPhone, 8 Chrome Android); `/phone/` integration; back,
+  web keys and alerts (unit).
+
+**Decided:**
+
+- **The phone page's CSP** allows run-time styles (`'unsafe-inline'` for styles only) and one
+  Trusted Types policy for the service worker's URL (`rp-phone-worker`). The console's headers are
+  unchanged.
+- **No Web Push** for a locked iPhone: it needs the internet and Apple's servers (NFR-A01). With
+  the page open, alerts ring; the screen stays on while someone is signed in.
+- **Owner on phones:** allowed (Business Owner's request), with a manager's screens.
+- **Certificate on iPhones:** installed once with Safari (`docs/runbooks/phone-web-app.md`).
+
+**For the next session:**
+
+- A real iPhone has not been tried: manual task 39.
+- Web Push, if the Business Owner wants locked-phone alerts on iPhones, would be a separate WP.
 
 ### 2026-11-01: P9-27 The network and the data, as the Business Owner approved
 

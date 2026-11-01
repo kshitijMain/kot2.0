@@ -3,6 +3,7 @@ import type { PairingTarget } from '@rp/mobile-core';
 import { ServerMismatchError, ServerUnreachableError } from '@rp/mobile-core';
 import { Button, TextField } from '@rp/ui-native';
 import { lazy, Suspense, useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { useDeviceSession, useSessionState, useT } from './context.js';
 import { messageOf } from './messages.js';
 import { Note, Screen } from './Screen.js';
@@ -117,6 +118,8 @@ export function ConnectScreen({
   }
 
   const typed = address.trim();
+  // In a browser (P9-28) the page came from the PC: nothing to scan or type, only Try again.
+  const inBrowser = Platform.OS === 'web';
   return (
     <Screen title={t('connect.title')} brand>
       {removed ? <Note tone="danger">{t('connect.removed')}</Note> : null}
@@ -140,28 +143,32 @@ export function ConnectScreen({
       )}
       {working ? null : (
         <>
-          <Button
-            testID="connect-scan"
-            variant={error === null && !removed ? 'secondary' : 'primary'}
-            size="lg"
-            fullWidth
-            onPress={() => {
-              setError(null);
-              setScanning(true);
-            }}
-          >
-            {t('connect.scan')}
-          </Button>
-          <TextField
-            label={t('connect.address')}
-            hint={t('connect.addressHint')}
-            value={address}
-            onChangeText={setAddress}
-            testID="connect-address"
-            autoCapitalize="none"
-            autoCorrect={false}
-            keyboardType="url"
-          />
+          {inBrowser ? null : (
+            <>
+              <Button
+                testID="connect-scan"
+                variant={error === null && !removed ? 'secondary' : 'primary'}
+                size="lg"
+                fullWidth
+                onPress={() => {
+                  setError(null);
+                  setScanning(true);
+                }}
+              >
+                {t('connect.scan')}
+              </Button>
+              <TextField
+                label={t('connect.address')}
+                hint={t('connect.addressHint')}
+                value={address}
+                onChangeText={setAddress}
+                testID="connect-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+              />
+            </>
+          )}
           <Button
             testID="connect-retry"
             variant="secondary"

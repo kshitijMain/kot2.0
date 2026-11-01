@@ -1,7 +1,8 @@
 import type { ApkUpdater, DeviceSession, OtaUpdater } from '@rp/mobile-core';
 import { StartupFailed } from '@rp/mobile-shell';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { App } from './App';
+import { OneTab } from './OneTab';
 import {
   apkUpdater,
   appUpdater,
@@ -43,6 +44,13 @@ export function Root() {
       mounted = false;
     };
   }, [attempt]);
+  // Another tab of the phone web app took over (P9-28): this one stops listening.
+  const onElsewhere = useCallback(() => {
+    void deviceSession().then((session) => {
+      session.stop();
+    });
+    notifier.stop().catch(() => undefined);
+  }, []);
   if (failed) {
     return (
       <StartupFailed
@@ -55,14 +63,16 @@ export function Root() {
     );
   }
   return started === null ? null : (
-    <App
-      session={started.session}
-      translator={translator}
-      restaurant={restaurantPc}
-      notifications={notifier}
-      opener={notifier}
-      {...(started.updater !== undefined && { updater: started.updater })}
-      {...(started.apkUpdater !== undefined && { apkUpdater: started.apkUpdater })}
-    />
+    <OneTab translator={translator} onElsewhere={onElsewhere}>
+      <App
+        session={started.session}
+        translator={translator}
+        restaurant={restaurantPc}
+        notifications={notifier}
+        opener={notifier}
+        {...(started.updater !== undefined && { updater: started.updater })}
+        {...(started.apkUpdater !== undefined && { apkUpdater: started.apkUpdater })}
+      />
+    </OneTab>
   );
 }

@@ -1,7 +1,7 @@
 import { type ChildProcess, spawn } from 'node:child_process';
 import { createServer } from 'node:net';
 import { join } from 'node:path';
-import { CONSOLE_DIST, SERVER_DIST } from './paths.js';
+import { CONSOLE_DIST, PHONE_DIST, SERVER_DIST } from './paths.js';
 
 export interface RunningServer {
   readonly url: string;
@@ -45,7 +45,12 @@ async function waitUntilHealthy(url: string, child: ChildProcess): Promise<void>
  */
 export async function startServer(
   port?: number,
-  install: { readonly databaseUrl?: string; readonly dataDir?: string } = {},
+  install: {
+    readonly databaseUrl?: string;
+    readonly dataDir?: string;
+    /** Settings of the server's own (environment), e.g. PIN-only for the phone web app. */
+    readonly env?: Readonly<Record<string, string>>;
+  } = {},
 ): Promise<RunningServer> {
   const databaseUrl = install.databaseUrl ?? process.env.RP_E2E_DATABASE_URL;
   const dataDir = install.dataDir ?? process.env.RP_E2E_DATA_DIR;
@@ -63,9 +68,11 @@ export async function startServer(
       DATABASE_URL: databaseUrl,
       RP_DATA_DIR: dataDir,
       RP_CONSOLE_DIR: CONSOLE_DIST,
+      RP_PHONE_DIR: PHONE_DIST,
       // No nightly backup during the tests (P7-05a); pg_dump may not be installed.
       RP_BACKUPS: 'off',
       LOG_LEVEL: 'warn',
+      ...install.env,
     },
     stdio: ['ignore', 'inherit', 'inherit'],
   });

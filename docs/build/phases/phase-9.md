@@ -306,3 +306,52 @@ Acceptance:
 - Without the flag, nothing changes: no code for the network, kitchen in station mode
   (integration).
 - The console goes straight to the PIN screen, or asks for a code without the flag (console).
+
+## P9-28 The waiter app in phones' browsers, for iPhones (ADR-0028)
+
+Requirements: WTR-001, WTR-002, WTR-003, WTR-005, WTR-006, MGR-001, AUTH-005, AUTH-007, BILL-005,
+SEC-017. ADR-0028.
+
+Asked by the Business Owner (2026-11-01): there are no iPhone apps, so staff, managers and the
+Owner with an iPhone use the waiter app in Chrome, with every function the APK has.
+
+Deliverables:
+
+- `apps/waiter-app` builds for the web (`build`: React Native Web, `expo export --platform web` into
+  `dist/`).
+  - Web wiring: `session.web.ts` (browser keys, storage and alerts), `background.web.ts`,
+    `web-setup.web.ts` (Zod jitless) and `OneTab.web.tsx` (one tab at a time).
+  - The page: a CSP-safe template, Inter from the PC, a manifest for Add to Home Screen, and a
+    service worker for notifications.
+- `@rp/mobile-core/web` provides:
+  - `WebCryptoDeviceKeys`, `IndexedDbStore` and `WebStorageStore`;
+  - `WebAlertNotifier`: chime, vibration, notifications when hidden, and the screen kept on while
+    signed in;
+  - `browserAlertEnvironment`, which registers the service worker through one Trusted Types policy.
+- `@rp/mobile-shell`:
+  - `onBackPress`, so the browser's back (the iPhone's swipe) closes the newest screen;
+  - the connect screen without scan or address in a browser;
+  - Reload when the page is out of date.
+- The server serves `/phone/` (`RP_PHONE_DIR`, `phoneMiddleware`). Its headers are the console's
+  plus run-time styles and the worker's one policy. The installer stages `<install>\phone\`, and
+  CI's Windows job builds it.
+- The Owner may sign in on a phone (`SIGN_IN_ROLES.WAITER_PHONE`). For managers and the Owner in
+  the browser, Menu → **Open the full dashboard**.
+- Manage → Devices: "iPhone, or a phone without the app", with the certificate step and the QR
+  code for `/phone/`.
+- Docs: ADR-0028, `docs/runbooks/phone-web-app.md`, manual task 39.
+
+Acceptance:
+
+- Phone e2e (`apps/console/e2e/phone.e2e.ts`), on WebKit at iPhone size and Chrome at Android
+  size, against a real PIN-only server:
+  - connects by itself;
+  - a waiter's KOT and bill request;
+  - the browser's back;
+  - a manager's bill and payment;
+  - the Owner's dashboard;
+  - a reload;
+  - one tab;
+  - no CSP or Trusted Types violation.
+- `/phone/` routes and headers (integration). The Owner signs in on a phone; the kitchen does not
+  (domain, integration). Browser keys, storage and alerts (unit). Browser back (unit).
