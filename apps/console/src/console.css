@@ -2815,6 +2815,26 @@ body {
     margin-inline-start: auto;
   }
 
+  /* One row on a phone (P9-28): the logo, the bell with its count, who is signed in and Sign
+     out; the word "Alerts" had pushed Sign out onto a row of its own. */
+  .console-header__alerts-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .console-header__alerts .rp-badge {
+    margin-inline-start: var(--rp-space-1);
+  }
+
+  .console-header > .rp-button,
+  .console-header__alerts {
+    padding-inline: var(--rp-space-3);
+  }
+
   .console-header__person {
     order: 2;
   }

@@ -220,48 +220,50 @@ export function BackupsPanel() {
             />
           ) : null}
           {view.runs.length === 0 ? null : (
-            <table className="backups-table">
-              <caption>{t('backups.latest')}</caption>
-              <thead>
-                <tr>
-                  <th scope="col">{t('backups.column.when')}</th>
-                  <th scope="col">{t('backups.column.kind')}</th>
-                  <th scope="col">{t('backups.column.status')}</th>
-                  <th scope="col">{t('backups.column.size')}</th>
-                  <th scope="col">{t('backups.column.notes')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {view.runs.map((run) => (
-                  <tr key={run.id}>
-                    <td>{at(run.startedAt)}</td>
-                    <td>
-                      {run.requestedBy === null
-                        ? t(`backups.kind.${run.kind}`)
-                        : t('backups.kindBy', {
-                            kind: t(`backups.kind.${run.kind}`),
-                            name: run.requestedBy,
-                          })}
-                    </td>
-                    <td>
-                      <Badge tone={STATUS_TONE[run.status]}>
-                        {t(`backups.status.${run.status}`)}
-                      </Badge>
-                    </td>
-                    <td>{run.sizeBytes === null ? '' : size(run.sizeBytes)}</td>
-                    <td>
-                      {run.error ??
-                        (run.secondCopy === 'COPIED'
-                          ? t('backups.copied')
-                          : run.secondCopy === 'NOT_SET'
-                            ? t('backups.notCopied')
-                            : '')}
-                      {run.cloud === 'UPLOADED' ? ` ${t('backups.inCloud')}` : null}
-                    </td>
+            <div className="table-scroll">
+              <table className="backups-table">
+                <caption>{t('backups.latest')}</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">{t('backups.column.when')}</th>
+                    <th scope="col">{t('backups.column.kind')}</th>
+                    <th scope="col">{t('backups.column.status')}</th>
+                    <th scope="col">{t('backups.column.size')}</th>
+                    <th scope="col">{t('backups.column.notes')}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {view.runs.map((run) => (
+                    <tr key={run.id}>
+                      <td>{at(run.startedAt)}</td>
+                      <td>
+                        {run.requestedBy === null
+                          ? t(`backups.kind.${run.kind}`)
+                          : t('backups.kindBy', {
+                              kind: t(`backups.kind.${run.kind}`),
+                              name: run.requestedBy,
+                            })}
+                      </td>
+                      <td>
+                        <Badge tone={STATUS_TONE[run.status]}>
+                          {t(`backups.status.${run.status}`)}
+                        </Badge>
+                      </td>
+                      <td>{run.sizeBytes === null ? '' : size(run.sizeBytes)}</td>
+                      <td>
+                        {run.error ??
+                          (run.secondCopy === 'COPIED'
+                            ? t('backups.copied')
+                            : run.secondCopy === 'NOT_SET'
+                              ? t('backups.notCopied')
+                              : '')}
+                        {run.cloud === 'UPLOADED' ? ` ${t('backups.inCloud')}` : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </>
       )}

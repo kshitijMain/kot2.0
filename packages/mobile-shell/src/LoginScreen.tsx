@@ -2,7 +2,8 @@ import type { StaffTile } from '@rp/contracts';
 import { spacing } from '@rp/design-tokens';
 import { Button, PinPad } from '@rp/ui-native';
 import { useEffect, useState } from 'react';
-import { BackHandler, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
+import { onBackPress } from './back.js';
 import { useAlerts } from './alerts.js';
 import { ApkOffer } from './ApkOffer.js';
 import { useDeviceSession, useSessionState, useT } from './context.js';
@@ -43,15 +44,12 @@ export function LoginScreen({ roles }: { roles?: readonly StaffTile['role'][] })
   const choosing = person !== null;
   useEffect(() => {
     if (!choosing) return undefined;
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+    return onBackPress(() => {
       setChosen(null);
       setListed(true);
       setError(null);
       return true;
     });
-    return () => {
-      subscription.remove();
-    };
   }, [choosing]);
 
   const signIn = (pin: string) => {

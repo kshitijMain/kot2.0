@@ -9,6 +9,7 @@ import { APP_BUILDS_FILE } from '@rp/contracts';
  *   <install>\node\node.exe        Node.js, for the server, the service host and the watchdog
  *   <install>\server\              the server: dist, prisma\migrations, node_modules
  *   <install>\console\             the web console the server serves
+ *   <install>\phone\               the waiter app for phones' browsers, served at /phone/ (P9-28)
  *   <install>\apps\                the release's phone and tablet APKs and apps.json (P7-04e2)
  *   <install>\postgres\            PostgreSQL 16: bin, lib, share
  *   <install>\services\            WinSW as RPServer.exe and RPWatchdog.exe
@@ -18,6 +19,7 @@ export const INSTALL_FOLDERS = {
   node: 'node',
   server: 'server',
   console: 'console',
+  phone: 'phone',
   apps: 'apps',
   postgres: 'postgres',
   services: 'services',
@@ -120,6 +122,7 @@ export interface InstallationPathsJson {
   readonly node: string;
   readonly serverDir: string;
   readonly consoleDir: string;
+  readonly phoneDir: string;
   readonly appsDir: string;
   readonly pgBin: string;
   readonly servicesDir: string;
@@ -150,6 +153,7 @@ export function requiredPayloadFiles(paths: InstallationPathsJson): string[] {
     posix.join(relative(paths.serverDir), 'dist', 'backups', 'wal-stage.js'),
     posix.join(relative(paths.serverDir), 'prisma', 'migrations', 'migration_lock.toml'),
     posix.join(relative(paths.consoleDir), 'index.html'),
+    posix.join(relative(paths.phoneDir), 'index.html'),
     posix.join(relative(paths.appsDir), APP_BUILDS_FILE),
     ...['postgres', 'pg_ctl', 'initdb', 'pg_dump', 'pg_restore', 'pg_basebackup', 'psql'].map(
       (program) => posix.join(relative(paths.pgBin), `${program}.exe`),

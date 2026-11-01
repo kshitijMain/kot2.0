@@ -320,6 +320,9 @@ export const en = {
       guests: 'Please call a waiter to order.',
       onItsWay: 'This app is out of date. The update is on its way; the app restarts by itself.',
       fromPc: 'This app is out of date. Install the new version below.',
+      /** P9-28: the phone web app loads the PC's newest version when reloaded. */
+      web: 'This page is out of date. Reload it to get the newest version from the restaurant PC.',
+      reload: 'Reload',
     },
     apk: {
       available: 'Version {version} of this app is on the restaurant PC ({megabytes} MB).',
@@ -374,6 +377,22 @@ export const en = {
       noFreeTables: 'There is no free table to move to.',
       moved: '{from} moved to {to}',
       back: 'Back',
+      /** P9-28: managers and the Owner in the phone web app. */
+      dashboard: 'Open the full dashboard',
+      dashboardHint:
+        'Reports, staff, menu and settings open in a new tab. Sign in there with your PIN.',
+    },
+    /** P9-28: the waiter app in a phone's browser. */
+    web: {
+      alerts: 'Alerts ring while this page is open. The screen stays on while you’re signed in.',
+      homeScreen:
+        'Add this page to your Home Screen (Share → Add to Home Screen) to open it like an app.',
+      homeScreenAndroid:
+        'Add this page to your Home screen (⋮ → Add to Home screen) to open it like an app.',
+      elsewhereTitle: 'Open in another tab',
+      elsewhere:
+        'The app is open in another tab on this phone. Use that one, or use it here instead.',
+      useHere: 'Use it here',
     },
     break: {
       start: 'Go on break',
@@ -450,9 +469,10 @@ export const en = {
     item: {
       more: 'More',
       moreOf: 'More for {name}',
-      cancel: 'Cancel',
+      /** P9-28: never just "Cancel", which reads as closing the sheet. */
+      cancel: 'Cancel this dish',
       cancelOf: 'Cancel {name}',
-      void: 'Void',
+      void: 'Void this dish',
       voidOf: 'Void {name}',
       cancelTitle: 'Cancel {name}?',
       voidTitle: 'Void {name}?',
@@ -1031,6 +1051,13 @@ export const en = {
       notAnnounced: 'This PC is not announcing itself on the Wi-Fi: phones need the code.',
       noNetwork: 'This PC has no network connection. Connect it to the restaurant’s router.',
       loadFailed: 'The connect details could not be loaded.',
+      /** P9-28: iPhones, and phones without the app, use it in the browser. */
+      webTitle: 'iPhone, or a phone without the app',
+      webStep1:
+        'Once per phone: open {caUrl} in Safari, install the certificate, then turn it on in Settings → General → About → Certificate Trust Settings.',
+      webStep2: 'Scan this code with the camera, or open {url} in Chrome or Safari.',
+      webStep3: 'Add it to the Home Screen to open it like an app.',
+      webQrLabel: 'Code that opens the waiter app in the phone’s browser',
     },
     pair: 'Pair a device',
     loadFailed: 'The devices could not be loaded.',
@@ -4345,6 +4372,8 @@ until you press Publish.
     approved: 'Approved by {name}',
     noManagers: 'No manager can approve on this device.',
     otherManager: 'Another manager',
+    /** P9-28: whose PIN the pad wants, on screen, not only to a screen reader. */
+    enterPin: '{name}, enter your PIN.',
   },
   payment: {
     title: 'Payment for invoice {number}',

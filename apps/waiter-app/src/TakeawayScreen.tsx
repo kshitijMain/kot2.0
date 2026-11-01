@@ -12,6 +12,7 @@ import {
   useMenu,
   useNow,
   useT,
+  onBackPress,
 } from '@rp/mobile-shell';
 import {
   addLine,
@@ -23,7 +24,7 @@ import {
 } from '@rp/ordering';
 import { Button, StatusChip, Text, TextField, useTheme, useToast, weight } from '@rp/ui-native';
 import { useEffect, useMemo, useState } from 'react';
-import { BackHandler, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { CartList } from './CartList';
 import { MenuBrowser } from './MenuBrowser';
 
@@ -65,13 +66,10 @@ export function TakeawayScreen({
   );
   // The phone's back button goes back to the tables, not out of the app.
   useEffect(() => {
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+    return onBackPress(() => {
       onBack();
       return true;
     });
-    return () => {
-      subscription.remove();
-    };
   }, [onBack]);
   const problems = useMemo(
     () =>
@@ -187,6 +185,15 @@ export function TakeawayScreen({
       <Text accessibilityRole="header" style={[styles.heading, { color: colors.text }]}>
         {t('mobile.takeaway.open')}
       </Text>
+      {/* A list that could not be read says so, with Try again (P9-28: it showed nothing). */}
+      {open.data.status === 'error' ? (
+        <>
+          <Note tone="danger">{messageOf(open.data.error, t)}</Note>
+          <Button variant="secondary" onPress={open.reload}>
+            {t('states.retry')}
+          </Button>
+        </>
+      ) : null}
       {open.data.status !== 'ready' ? null : open.data.value.length === 0 ? (
         <Note>{t('mobile.takeaway.none')}</Note>
       ) : (

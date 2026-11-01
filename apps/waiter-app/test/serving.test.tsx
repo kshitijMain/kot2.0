@@ -107,6 +107,13 @@ describe('[WTR-009] [ORD-011] cancellations and voids', () => {
     await fireEvent.press(button('More for Paneer Tikka'));
     expect(screen.queryByRole('button', { name: 'Cancel Paneer Tikka' })).toBeNull();
     expect(button('Void Paneer Tikka')).toBeOnTheScreen();
+    // Says what it does (P9-28): "Void this dish", not a bare word, with what follows.
+    expect(screen.getByText('Void this dish')).toBeOnTheScreen();
+    expect(
+      screen.getByText('Already started. It comes off the bill and shows in the voids report.', {
+        exact: false,
+      }),
+    ).toBeOnTheScreen();
     await fireEvent.press(button('Close'));
 
     await endItem('Cancel', 'Dal Makhani');

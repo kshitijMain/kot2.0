@@ -47,8 +47,11 @@ export function PaymentSheet({
   const [reference, setReference] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
-  // One key per payment shown here: sending it again is recognised (ORD-013 style).
-  const [key] = useState(newIdempotencyKey);
+  // One key per payment: sending it again after a failure is recognised (ORD-013 style); a new
+  // payment after one went through takes a new key.
+  const [key, setKey] = useState(newIdempotencyKey);
+  /** What the last part payment left to pay, said in the sheet that stays open for the rest. */
+  const [recorded, setRecorded] = useState<string | undefined>();
 
   useEffect(() => {
     // Closed meanwhile: what comes back is not shown.
@@ -84,6 +87,7 @@ export function PaymentSheet({
     }
     setBusy(true);
     setError(undefined);
+    setRecorded(undefined);
     session.api
       .recordPayments({
         params: { id: view.invoiceId },
@@ -103,10 +107,23 @@ export function PaymentSheet({
       .then(
         (result) => {
           setBusy(false);
-          onPaid(
-            result.remaining === 0
-              ? t('payment.settled', { number: result.invoiceNumber })
-              : t('payment.recorded', { amount: formatRupees(result.remaining) }),
+          if (result.remaining === 0) {
+            onPaid(t('payment.settled', { number: result.invoiceNumber }));
+            return;
+          }
+          // Part paid (P9-28): the sheet stays for the rest, in another mode if need be, instead
+          // of closing and having to be opened again.
+          setKey(newIdempotencyKey());
+          setRecorded(t('payment.recorded', { amount: formatRupees(result.remaining) }));
+          setReference('');
+          session.api.getInvoicePayments({ params: { id: view.invoiceId } }).then(
+            (fresh) => {
+              setDue({ status: 'ready', view: fresh });
+              setAmount(inputFromPaise(fresh.remaining));
+            },
+            () => {
+              setAmount(inputFromPaise(result.remaining));
+            },
           );
         },
         (failure: unknown) => {
@@ -147,6 +164,11 @@ export function PaymentSheet({
             <Text style={styles.strong}>{t('payment.remaining')}</Text>
             <Text style={styles.strong}>{formatRupees(due.view.remaining)}</Text>
           </View>
+          {recorded === undefined ? null : (
+            <Note tone="text" testID="payment-recorded">
+              {recorded}
+            </Note>
+          )}
           <SegmentedControl
             label={t('payment.mode')}
             options={MODES.map((id) => ({ id, label: t(`payment.modes.${id}`) }))}

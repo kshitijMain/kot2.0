@@ -236,6 +236,8 @@ export async function stage(options: StageOptions): Promise<StageManifest> {
     log('Deploying the server with its run-time packages.');
     await stageServer(repoRoot, folder('server'), log);
     await cp(join(repoRoot, 'apps', 'console', 'dist'), folder('console'), { recursive: true });
+    // The waiter app for phones' browsers (P9-28): iPhones and phones without the APK.
+    await cp(join(repoRoot, 'apps', 'waiter-app', 'dist'), folder('phone'), { recursive: true });
     const builds = await stageAppBuilds({
       repoRoot,
       release: options.version,

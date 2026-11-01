@@ -10,6 +10,10 @@
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
     },
+    "./web": {
+      "types": "./dist/web/index.d.ts",
+      "import": "./dist/web/index.js"
+    },
     "./testing": {
       "types": "./dist/testing/index.d.ts",
       "import": "./dist/testing/index.js"
@@ -30,5 +34,8 @@
     "@rp/contracts": "workspace:*",
     "@rp/domain": "workspace:*",
     "@rp/ordering": "workspace:*"
+  },
+  "devDependencies": {
+    "fake-indexeddb": "^6.2.5"
   }
 }

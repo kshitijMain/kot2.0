@@ -68,11 +68,26 @@ export function OpenTableSheet({
       title={t('pos.open.title', { table: table.label })}
       footer={
         dirty ? (
-          <Button size="lg" fullWidth loading={busy} testID="mark-clean" onPress={clean}>
+          <Button
+            size="lg"
+            fullWidth
+            loading={busy}
+            testID="mark-clean"
+            onPress={clean}
+            style={styles.grow}
+          >
             {t('pos.table.clean')}
           </Button>
         ) : (
-          <Button size="lg" fullWidth loading={busy} testID="open-table" onPress={open}>
+          // The footer is a row: the button takes its width (P9-28; it sat at the left).
+          <Button
+            size="lg"
+            fullWidth
+            loading={busy}
+            testID="open-table"
+            onPress={open}
+            style={styles.grow}
+          >
             {t('pos.open.submit')}
           </Button>
         )
@@ -97,4 +112,5 @@ export function OpenTableSheet({
 
 const styles = StyleSheet.create({
   label: { fontSize: fontSize.md, fontWeight: weight(fontWeight.semibold) },
+  grow: { flex: 1 },
 });

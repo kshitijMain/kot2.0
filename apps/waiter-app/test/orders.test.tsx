@@ -251,6 +251,17 @@ describe('[WTR-003] [ORD-013] taking an order', () => {
     expect(others.length).toBeGreaterThan(0);
   });
 
+  it('[P9-28] gives a menu without photos compact cards, with no placeholders', async () => {
+    await signedInApp();
+    await openTable('T2');
+    await showMenu();
+    await fireEvent.press(button('Main Course'));
+    expect(screen.getByTestId(`dish-${IDS.dal}`)).toBeOnTheScreen();
+    expect(
+      screen.queryAllByTestId(/-photo(-placeholder)?$/, { includeHiddenElements: true }),
+    ).toEqual([]);
+  });
+
   it('says when the phone has no menu yet', async () => {
     const { session } = await signedInApp();
     await act(async () => {

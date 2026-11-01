@@ -19,7 +19,7 @@ import { NotificationsProvider } from './notifications';
 import type { RestaurantPc } from './session';
 import { SignedIn } from './SignedIn';
 
-/** Who may sign in on a waiter phone: waiters (2026-10-25); the server says the same. */
+/** Who may sign in on a waiter phone: waiters, managers and the Owner (P9-28); the server decides. */
 const WAITER_APP_ROLES = SIGN_IN_ROLES.WAITER_PHONE ?? ['WAITER'];
 
 /** The status and navigation bars' room, for screens drawn edge to edge. */

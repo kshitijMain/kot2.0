@@ -101,6 +101,8 @@ describe("[AUTH-011] [WTR-009] a manager's approval on the phone", () => {
     expect(screen.queryByRole('button', { name: 'Asha' })).toBeNull();
 
     await fireEvent.press(screen.getByRole('button', { name: 'Meera' }));
+    // Whose PIN the pad wants, on screen (P9-28).
+    expect(screen.getByText('Meera, enter your PIN.')).toBeOnTheScreen();
     await pressDigits('1111');
     expect(await screen.findByText('Wrong PIN. Try again.')).toBeOnTheScreen();
     await pressDigits('2222');

@@ -250,11 +250,13 @@ export function grantFor(
  * Who may sign in on each kind of device; a device not listed takes every role. A waiter phone is
  * the waiters' (Business Owner, 2026-10-25) and, since the QR pilot, the managers' too, so a
  * manager's phone rings for each diner's order to accept or reject at the table (ADR-0024,
- * 2026-10-31). The Owner works at the POS and the dashboard; a manager's PIN for a void on a
- * waiter's phone is still an approval, not a sign-in (AUTH-011).
+ * 2026-10-31). Since P9-28 the Owner's too (Business Owner, 2026-11-01): an Owner with an iPhone
+ * works from the phone web app, with everything a manager has there. The kitchen stays at its
+ * screen; a manager's PIN for a void on a waiter's phone is still an approval, not a sign-in
+ * (AUTH-011).
  */
 export const SIGN_IN_ROLES: Readonly<Partial<Record<string, readonly Role[]>>> = {
-  WAITER_PHONE: ['WAITER', 'MANAGER'],
+  WAITER_PHONE: ['WAITER', 'MANAGER', 'OWNER'],
 };
 
 /** Whether `role` may sign in on a device of `deviceType` (AUTH-001, AUTH-010). */

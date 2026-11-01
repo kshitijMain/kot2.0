@@ -15,7 +15,8 @@ can be updated. Never paste secrets, keys or passwords into a Claude session or 
       `gh auth login` (GitHub.com, HTTPS, "authenticate Git with your GitHub credentials").
       Steps: [`manual-tasks/01-github-access.md`](manual-tasks/01-github-access.md).
 - [x] `main` is the repository's default branch.
-- [ ] **Get Phase 9 onto GitHub** (2026-10-31): both accounts signed in on this Mac have read-only
+- [x] **Get Phase 9 onto GitHub** (done 2026-11-01: `kunaltomar597` has write access; PR #1 merged,
+      PR #2 for P9-27). Before then: both accounts signed in on this Mac had read-only
       access to `kshitijMain/kot2.0`, so `git push` answers 403. Local `main` holds all of Phase 9,
       with nothing to merge from GitHub, and the pull request's description is ready in
       `.pilot/pr-body.md`. Get write access for `kunaltomartwo99`, or open the pull request from a
@@ -69,6 +70,11 @@ code from going live:
 - [ ] **QR pilot (Mannat): put the QR site and relay on your own server** (Oracle VM, Ubuntu
       24.04, one script) and connect the restaurant PC; replaces tasks 20 and 21 for the pilot
       (ADR-0024): [`manual-tasks/38-qr-pilot-server.md`](manual-tasks/38-qr-pilot-server.md).
+- [ ] **The waiter app on a real iPhone** (P9-28, 2026-11-01): trust the PC's certificate once in
+      Safari, open `https://<PC address>:8080/phone/` in Chrome, and try a waiter's order, a
+      manager's bill and payment, the Owner's dashboard, Add to Home Screen and two tabs. WebKit at
+      iPhone size and the Redmi's Chrome passed here; only a real iPhone shows the rest:
+      [`manual-tasks/39-iphone-web-app.md`](manual-tasks/39-iphone-web-app.md).
 - [ ] (Not for the pilot) Supabase organisation, Mumbai region (QR relay), then deploy the relay
       schema and give the edge functions and the Control Plane their logins:
       [`manual-tasks/20-supabase-relay.md`](manual-tasks/20-supabase-relay.md).
