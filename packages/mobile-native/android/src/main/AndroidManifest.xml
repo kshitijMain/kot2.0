@@ -15,6 +15,15 @@
   <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
   <!--
+    Finding the restaurant PC on the Wi-Fi (P9-27): mDNS needs a Wi-Fi multicast lock. On a Wi-Fi
+    without internet the app asks Android for that Wi-Fi and binds its own traffic to it, so it
+    reaches the PC while the rest of the phone uses mobile data.
+  -->
+  <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+  <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+  <uses-permission android:name="android.permission.CHANGE_NETWORK_STATE" />
+
+  <!--
     The in-app updater (P7-04e2, WTR-001): the app installs its own new APK from the restaurant
     PC. Android asks the person on a phone; a device-owner tablet installs without asking.
   -->

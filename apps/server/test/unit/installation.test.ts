@@ -295,6 +295,8 @@ describe('[NFR-I02] the set-up tool', () => {
           '5433',
           '--tls-hostnames',
           'POS.local, back-office',
+          '--lan-interface',
+          'Wi-Fi',
           '--secret-store',
           'file',
         ],
@@ -313,7 +315,8 @@ describe('[NFR-I02] the set-up tool', () => {
       dataDir: join(folder, 'data'),
       productVersion: '1.1.0',
       secretStore: 'file',
-      server: { tlsHostnames: ['pos.local', 'back-office'] },
+      // The adapter staff phones use is kept on repair (P9-27).
+      server: { tlsHostnames: ['pos.local', 'back-office'], lanInterface: 'Wi-Fi' },
       postgres: { port: 5433 },
     });
     await expect(

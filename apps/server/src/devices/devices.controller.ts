@@ -12,6 +12,8 @@ import {
 } from '@nestjs/common';
 import {
   BindTableRequest,
+  type ConnectInfoResponse,
+  type ConnectQrPayload,
   CreatePairingCodeRequest,
   DeviceChallengeRequest,
   type DeviceChallengeResponse,
@@ -35,6 +37,9 @@ import { Public, RequireCapability, RequireDevice } from '../auth/decorators.js'
 import type { AuthenticatedDevice } from '../auth/device.js';
 import type { AuthenticatedRequest, Principal } from '../auth/principal.js';
 import { clientIdentityOf } from '../http/client-version.js';
+import { PrismaService } from '../database/prisma.service.js';
+import { MdnsService } from '../tls/mdns.service.js';
+import { TlsService } from '../tls/tls.service.js';
 import { ZodValidationPipe } from '../validation/zod-validation.pipe.js';
 import { DevicesService } from './devices.service.js';
 
@@ -58,7 +63,42 @@ function deviceOf(request: AuthenticatedRequest): AuthenticatedDevice {
 /** Device pairing, device authentication and device management (AUTH-007 to AUTH-009). */
 @Controller('devices')
 export class DevicesController {
-  constructor(private readonly devices: DevicesService) {}
+  constructor(
+    private readonly devices: DevicesService,
+    private readonly tls: TlsService,
+    private readonly mdns: MdnsService,
+    private readonly prisma: PrismaService,
+  ) {}
+
+  /**
+   * Where phones find this PC, and the Connect QR (P9-27): one scan tells the waiter app the PC's
+   * addresses and its certificate, with nothing built into the app and nothing secret in the code.
+   */
+  @Get('connect-info')
+  @RequireCapability('DEVICE_PAIR')
+  async connectInfo(@Req() request: AuthenticatedRequest): Promise<ConnectInfoResponse> {
+    const restaurant = await this.prisma.restaurant.findUnique({
+      where: { id: principalOf(request).restaurantId },
+      select: { displayName: true },
+    });
+    const urls = this.tls.lanUrls();
+    const caSha256 = this.tls.caFingerprint();
+    const name = (restaurant?.displayName ?? '').slice(0, 80);
+    const qr: ConnectQrPayload = {
+      v: 1,
+      kind: 'connect',
+      urls,
+      ...(caSha256 !== null && { ca: caSha256 }),
+      ...(name !== '' && { name }),
+    };
+    return {
+      urls,
+      caSha256,
+      restaurantName: restaurant?.displayName ?? '',
+      qrPayload: JSON.stringify(qr),
+      announced: this.mdns.announced,
+    };
+  }
 
   @Post('pairing-codes')
   @RequireCapability('DEVICE_PAIR')

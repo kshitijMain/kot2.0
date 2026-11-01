@@ -713,6 +713,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-24 Everything in the manager's hands, live, checked in the database; fixes across every screen
 - [x] P9-25 The Owner by PIN only; call a waiter at an unopened table; Owner settings set up; prints saved to a folder (test)
 - [x] P9-26 Staff roles live (managers add managers); a UX and wording pass across the console, waiter app and kitchen
+- [x] P9-27 Phones find the PC by themselves; Wi-Fi without internet; the installer's network step; daily summaries and bill history; CI fixed
 
 ## Decisions
 
@@ -4654,6 +4655,81 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-11-01: P9-27 The network and the data, as the Business Owner approved
+
+The Business Owner approved the architecture proposed after the installer and network review:
+four tiers of data, phones that find the PC by themselves, Wi-Fi without internet handled, and
+the CI fixes. Built by the main session with two helper agents (mobile; data) in the same tree.
+
+**Network (docs/runbooks/restaurant-network.md):**
+
+- **The PC announces itself on the Wi-Fi** (mDNS `_parossa-pos._tcp`, `MdnsService`, bonjour-service)
+  with its CA fingerprint in TXT; `RP_MDNS=off` turns it off.
+  - Tested: macOS `dns-sd` found "Mannat PC" at port 8080, `v=1 tls=1 ca=DC97…`.
+- **Addresses offered to phones** leave out VPN, virtual-machine, container, Bluetooth,
+  link-local and carrier-NAT adapters (`lanAddresses`). The installer's chosen adapter comes first
+  (`RP_LAN_INTERFACE`).
+  - The certificate already followed a new address within a minute; the review's worry about
+    that was wrong.
+- **Connect QR** (`ConnectQrPayload`, `GET /devices/connect-info`) in Manage → Devices, with the
+  address and whether the PC is announcing.
+- **Waiter app (helper agent)** finds the PC in this order:
+  1. the last address;
+  2. mDNS, keeping only answers with its CA (Android NsdManager, `RpLanDiscovery`);
+  3. the Connect QR ("Scan the code on the PC");
+  4. the built-in list, now optional.
+
+  It also:
+  - follows the PC to a new address with the same CA after 15 s offline, without signing anyone
+    out;
+  - on a Wi-Fi without internet, binds its own traffic to the Wi-Fi (`RpWifiRoute`) while the
+    phone uses mobile data for everything else, and says so on the connect screen.
+
+- **Tested on the Redmi:** an APK with no address built in (`build-waiter-apk.sh --discover`),
+  with app data cleared, found the PC by mDNS and self-paired as "Phone 3" from 192.168.29.13.
+  Ravi signed in.
+- **Installer:**
+  - chooses the staff network: the adapter with the gateway, not virtual ones, or
+    `/LANINTERFACE=` / `-LanInterface`;
+  - saves it (`setup-cli --lan-interface`);
+  - opens UDP 5353 for mDNS beside HTTPS and MQTT;
+  - says to reserve a DHCP address and which address to open on a staff phone.
+
+  Pester tests were added (Network.Tests.ps1) and updated (Firewall, Install). They run on CI's
+  Windows; PowerShell cannot run on this Mac.
+
+**Data (helper agent; ADR-0027, docs/runbooks/data-lifecycle.md):**
+
+- **Daily summaries**, written at day-end in the same transaction:
+  - tables `daily_summaries`, `daily_sales_hours`, `daily_item_sales`, `daily_payment_modes`,
+    `daily_staff_sales`;
+  - a trigger marks a closed date stale when an invoice or payment changes;
+  - a job re-sums stale and missing dates (also the backfill).
+- **Reports** read the summaries for closed dates and the live tables for the rest, with
+  identical figures (proved both ways in tests).
+- **Tested live:** closing 01-11-2026 wrote summaries equal to its Z-report: 13 invoices,
+  ₹6,898.00, cash ₹944, UPI ₹5,954.
+- **Bill history:** `GET /reports/bills` searches by dates, bill number or guest phone, paged 50 at
+  a time; Reports → History → Bills opens a bill as printed and prints it again.
+  - Tested live: the phone search found that guest's two bills.
+- **No partitioning** (ADR-0027): it would break the invoice numbering and audit-chain unique
+  keys and 15 foreign keys, and at about 50 GB in 5 years it is not needed. The summaries and new
+  indexes give the benefit. Revisit above about 200 GB.
+
+**CI fixed:**
+
+- Overrides for body-parser ≥ 2.4.0 and multer ≥ 2.5.0 (the image scan's two HIGH CVEs).
+- The end-to-end suites were stale since the cashier role went (ADR-0023), open table → order
+  (P9-20), the pass flow (P9-21) and P9-26's grouping.
+  - Updated and run locally: console 24/24, menu file, first run and speed all pass.
+  - Speed: taps p95 32 ms, screens shown p95 52 ms.
+
+**UX:** the Connect panel; Unpair is a quiet button on each row (red only in its confirmation);
+the Devices tip and help say "Unpair".
+
+**Checks:** every suite passes (`turbo test --continue`) except the same 21 environment-only
+server tests. Lint, format, contract docs and both security checks pass.
 
 ### 2026-11-01: P9-26 Staff roles tried live; a UX and wording pass across the apps
 

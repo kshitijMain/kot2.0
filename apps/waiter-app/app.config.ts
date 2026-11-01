@@ -129,6 +129,8 @@ export default ({ config, projectRoot }: ConfigContext): ExpoConfig => {
       clientApi: clientApiVersion(projectRoot),
       // The restaurant PC the app connects to by itself (ADR-0025, 2026-11-01): its addresses
       // and its certificate's fingerprint. Neither is secret (SEC-002); both come from the build.
+      // Optional since P9-27: the app finds the PC by mDNS or the Connect QR code; pilot builds
+      // still name it as the last fallback.
       restaurantServers: listOf(variables.RP_RESTAURANT_SERVERS),
       ...(variables.RP_RESTAURANT_CA !== undefined &&
         variables.RP_RESTAURANT_CA !== '' && { restaurantCa: variables.RP_RESTAURANT_CA }),

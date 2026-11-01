@@ -2426,6 +2426,44 @@
         "x-requirements": ["AUTH-007"]
       }
     },
+    "/api/v1/devices/connect-info": {
+      "get": {
+        "operationId": "getConnectInfo",
+        "summary": "Where phones find this PC, and the Connect QR code (P9-27)",
+        "description": "The PC’s addresses on the restaurant’s networks, its CA fingerprint and the Connect QR: one scan tells a waiter phone where the PC is, with no address built into the app.",
+        "tags": ["devices"],
+        "responses": {
+          "200": {
+            "description": "Connect details.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/ConnectInfoResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "The request does not match the contract.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "No valid session or device credential.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "The signed-in role lacks the required capability.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        },
+        "x-capability": "DEVICE_PAIR",
+        "x-requirements": ["AUTH-007"]
+      }
+    },
     "/api/v1/devices/current": {
       "get": {
         "operationId": "getCurrentDevice",
@@ -8874,6 +8912,145 @@
         "x-requirements": ["RPT-003", "RPT-018", "ORD-004"]
       }
     },
+    "/api/v1/reports/bills": {
+      "get": {
+        "operationId": "getBillHistory",
+        "summary": "Find past bills by business dates, number or guest phone, newest first",
+        "description": "P9-27, DATA-012: every invoice still on the PC, 50 a page; pass `nextCursor` back as `cursor` for the next page. Filters combine. A number of digits only matches the running number in any series or year; a phone matches on its last ten digits.",
+        "tags": ["reports"],
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "minLength": 1, "maxLength": 200 }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": { "default": 50, "type": "integer", "minimum": 1, "maximum": 50 }
+          },
+          {
+            "name": "number",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "minLength": 1, "maxLength": 32 }
+          },
+          {
+            "name": "phone",
+            "in": "query",
+            "required": false,
+            "schema": { "type": "string", "pattern": "^\\+?[\\d\\s().-]{6,24}$" }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "format": "date",
+              "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of invoices.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BillHistoryResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "The request does not match the contract.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "No valid session or device credential.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "The signed-in role lacks the required capability.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        },
+        "x-capability": "REPORTS_VIEW_EXPORT",
+        "x-requirements": ["RPT-006", "RPT-018", "DATA-012"]
+      }
+    },
+    "/api/v1/reports/bills/{id}": {
+      "get": {
+        "operationId": "getBillHistoryInvoice",
+        "summary": "One past invoice as issued, and its text as printed",
+        "tags": ["reports"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The invoice.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/BillHistoryInvoiceResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "The request does not match the contract.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "No valid session or device credential.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "The signed-in role lacks the required capability.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "No such invoice.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        },
+        "x-capability": "REPORTS_VIEW_EXPORT",
+        "x-requirements": ["RPT-006", "BILL-014"]
+      }
+    },
     "/api/v1/reports/cancellations": {
       "get": {
         "operationId": "getCancellationReport",
@@ -14735,6 +14912,108 @@
         ],
         "additionalProperties": false
       },
+      "BillHistoryEntry": {
+        "type": "object",
+        "properties": {
+          "invoiceId": { "$ref": "#/components/schemas/Id" },
+          "invoiceNumber": { "type": "string" },
+          "businessDate": { "$ref": "#/components/schemas/IsoDate" },
+          "issuedAt": { "$ref": "#/components/schemas/Timestamp" },
+          "tableLabel": { "type": ["string", "null"] },
+          "takeawayToken": {
+            "anyOf": [
+              { "type": "integer", "exclusiveMinimum": 0, "maximum": 9007199254740991 },
+              { "type": "null" }
+            ]
+          },
+          "grandTotal": { "$ref": "#/components/schemas/Paise" },
+          "status": { "type": "string", "enum": ["ISSUED", "SETTLED", "VOIDED"] },
+          "payments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "mode": { "$ref": "#/components/schemas/PaymentMode" },
+                "label": { "type": ["string", "null"] }
+              },
+              "required": ["mode", "label"],
+              "additionalProperties": false
+            }
+          }
+        },
+        "required": [
+          "invoiceId",
+          "invoiceNumber",
+          "businessDate",
+          "issuedAt",
+          "tableLabel",
+          "takeawayToken",
+          "grandTotal",
+          "status",
+          "payments"
+        ],
+        "additionalProperties": false
+      },
+      "BillHistoryInvoiceResponse": {
+        "type": "object",
+        "properties": {
+          "invoice": { "$ref": "#/components/schemas/InvoiceView" },
+          "printed": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["invoice", "printed"],
+        "additionalProperties": false
+      },
+      "BillHistoryInvoiceResponseInput": {
+        "type": "object",
+        "properties": {
+          "invoice": { "$ref": "#/components/schemas/InvoiceViewInput" },
+          "printed": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["invoice", "printed"]
+      },
+      "BillHistoryParams": {
+        "type": "object",
+        "properties": { "id": { "$ref": "#/components/schemas/Id" } },
+        "required": ["id"],
+        "additionalProperties": false
+      },
+      "BillHistoryQuery": {
+        "type": "object",
+        "properties": {
+          "from": { "$ref": "#/components/schemas/IsoDate" },
+          "to": { "$ref": "#/components/schemas/IsoDate" },
+          "number": { "type": "string", "minLength": 1, "maxLength": 32 },
+          "phone": { "type": "string", "pattern": "^\\+?[\\d\\s().-]{6,24}$" },
+          "cursor": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "limit": { "default": 50, "type": "integer", "minimum": 1, "maximum": 50 }
+        },
+        "required": ["limit"],
+        "additionalProperties": false
+      },
+      "BillHistoryQueryInput": {
+        "type": "object",
+        "properties": {
+          "from": { "$ref": "#/components/schemas/IsoDate" },
+          "to": { "$ref": "#/components/schemas/IsoDate" },
+          "number": { "type": "string", "minLength": 1, "maxLength": 32 },
+          "phone": { "type": "string", "pattern": "^\\+?[\\d\\s().-]{6,24}$" },
+          "cursor": { "type": "string", "minLength": 1, "maxLength": 200 },
+          "limit": { "default": 50, "type": "integer", "minimum": 1, "maximum": 50 }
+        },
+        "additionalProperties": false
+      },
+      "BillHistoryResponse": {
+        "type": "object",
+        "properties": {
+          "invoices": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/BillHistoryEntry" }
+          },
+          "nextCursor": { "type": ["string", "null"] }
+        },
+        "required": ["invoices", "nextCursor"],
+        "additionalProperties": false
+      },
       "BillLineView": {
         "type": "object",
         "properties": {
@@ -15635,6 +15914,41 @@
           }
         },
         "required": ["itemId", "components", "activeFrom", "activeUntil", "timeWindow"],
+        "additionalProperties": false
+      },
+      "ConnectInfoResponse": {
+        "type": "object",
+        "properties": {
+          "urls": {
+            "maxItems": 8,
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ServerUrl" }
+          },
+          "caSha256": {
+            "anyOf": [{ "$ref": "#/components/schemas/CaFingerprint" }, { "type": "null" }]
+          },
+          "restaurantName": { "type": "string" },
+          "qrPayload": { "type": "string" },
+          "announced": { "type": "boolean" }
+        },
+        "required": ["urls", "caSha256", "restaurantName", "qrPayload", "announced"],
+        "additionalProperties": false
+      },
+      "ConnectQrPayload": {
+        "type": "object",
+        "properties": {
+          "v": { "type": "number", "const": 1 },
+          "kind": { "type": "string", "const": "connect" },
+          "urls": {
+            "minItems": 1,
+            "maxItems": 8,
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/ServerUrl" }
+          },
+          "ca": { "$ref": "#/components/schemas/CaFingerprint" },
+          "name": { "type": "string", "maxLength": 80 }
+        },
+        "required": ["v", "kind", "urls"],
         "additionalProperties": false
       },
       "ConsentPurpose": { "type": "string", "enum": ["DIGITAL_BILL_AND_FEEDBACK"] },

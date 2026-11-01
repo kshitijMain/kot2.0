@@ -234,7 +234,9 @@ test.describe.serial('[NFR-P07] taps and screen changes at the design capacityâ€
     };
 
     // A cashier seats table 11 and sends ten dishes from five sections of the menu.
-    await signIn(/^Neha \(Manager\)/, '3333', 'POS');
+    await signIn(/^Neha \(Manager\)/, '3333', 'Manage');
+    // A manager lands on Manage (ADR-0023 removed the cashier role); tables open on the POS.
+    await speed.go('Manage â†’ POS', page.getByRole('link', { name: t('modes.pos') }));
     await speed.tap('a free table', page.getByRole('button', { name: '11, Free' }));
     const open = page.getByRole('dialog', { name: t('pos.open.title', { table: '11' }) });
     await speed.tap(
@@ -242,6 +244,8 @@ test.describe.serial('[NFR-P07] taps and screen changes at the design capacityâ€
       open.getByRole('button', { name: t('pos.open.guestsCount', { count: 2 }) }),
     );
     await expect(page.getByText(t('pos.open.opened', { table: '11' }))).toBeVisible();
+    // Opening a table goes on to its order (P9-20); back to the floor as a cashier would.
+    await speed.go('order â†’ floor', page.getByRole('button', { name: t('pos.backToTables') }));
     await speed.tap('an occupied table', page.getByRole('button', { name: /^11, Occupied/ }));
     await speed.go(
       'table â†’ its order',
@@ -270,7 +274,8 @@ test.describe.serial('[NFR-P07] taps and screen changes at the design capacityâ€
     const ticket = page.getByRole('article', { name: /^KOT \d+, Table 11$/ });
     await speed.tap('all preparing', ticket.getByRole('button', { name: t('kds.allPreparing') }));
     await speed.tap('all ready', ticket.getByRole('button', { name: t('kds.allReady') }));
-    await speed.tap('bump', ticket.getByRole('button', { name: /^Bump KOT/ }));
+    // Ready food leaves with one tap at the pass (P9-21): the ticket goes once it is picked up.
+    await speed.tap('all picked up', ticket.getByRole('button', { name: t('kds.pickUpAll') }));
     await expect(ticket).toHaveCount(0);
     await speed.go('sign out', signOut);
 

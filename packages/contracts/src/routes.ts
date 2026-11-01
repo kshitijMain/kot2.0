@@ -119,6 +119,7 @@ import {
   PairDeviceRequest,
   PairedDevice,
   PairingCodeResponse,
+  ConnectInfoResponse,
   RenameDeviceRequest,
   SetDeviceStationsRequest,
   RevokeDeviceRequest,
@@ -185,6 +186,12 @@ import {
   SuspiciousActivityResponse,
   TableReportResponse,
 } from './reports.js';
+import {
+  BillHistoryInvoiceResponse,
+  BillHistoryParams,
+  BillHistoryQuery,
+  BillHistoryResponse,
+} from './history.js';
 import {
   CashMovementRequest,
   CloseShiftRequest,
@@ -1629,6 +1636,22 @@ export const ROUTES = [
         description: 'Not from the server PC, or a device is already paired.',
         schema: ApiError,
       },
+    },
+  },
+  {
+    operationId: 'getConnectInfo',
+    method: 'GET',
+    path: '/api/v1/devices/connect-info',
+    summary: 'Where phones find this PC, and the Connect QR code (P9-27)',
+    description:
+      'The PC’s addresses on the restaurant’s networks, its CA fingerprint and the Connect QR: one ' +
+      'scan tells a waiter phone where the PC is, with no address built into the app.',
+    tags: ['devices'],
+    requirements: ['AUTH-007'],
+    capability: 'DEVICE_PAIR',
+    responses: {
+      200: { description: 'Connect details.', schema: ConnectInfoResponse },
+      ...standardErrors,
     },
   },
   {
@@ -4721,6 +4744,39 @@ export const ROUTES = [
     responses: {
       200: { description: 'The report.', schema: InvoiceRegisterResponse },
       ...standardErrors,
+    },
+  },
+  {
+    operationId: 'getBillHistory',
+    method: 'GET',
+    path: '/api/v1/reports/bills',
+    summary: 'Find past bills by business dates, number or guest phone, newest first',
+    description:
+      'P9-27, DATA-012: every invoice still on the PC, 50 a page; pass `nextCursor` back as ' +
+      '`cursor` for the next page. Filters combine. A number of digits only matches the running ' +
+      'number in any series or year; a phone matches on its last ten digits.',
+    tags: ['reports'],
+    requirements: ['RPT-006', 'RPT-018', 'DATA-012'],
+    capability: 'REPORTS_VIEW_EXPORT',
+    request: { query: BillHistoryQuery },
+    responses: {
+      200: { description: 'A page of invoices.', schema: BillHistoryResponse },
+      ...standardErrors,
+    },
+  },
+  {
+    operationId: 'getBillHistoryInvoice',
+    method: 'GET',
+    path: '/api/v1/reports/bills/:id',
+    summary: 'One past invoice as issued, and its text as printed',
+    tags: ['reports'],
+    requirements: ['RPT-006', 'BILL-014'],
+    capability: 'REPORTS_VIEW_EXPORT',
+    request: { params: BillHistoryParams },
+    responses: {
+      200: { description: 'The invoice.', schema: BillHistoryInvoiceResponse },
+      ...standardErrors,
+      404: { description: 'No such invoice.', schema: ApiError },
     },
   },
   {

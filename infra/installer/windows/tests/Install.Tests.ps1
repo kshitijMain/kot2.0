@@ -33,6 +33,8 @@ Describe '[ONB-001] [NFR-I01] installing on a new PC' {
         Mock -ModuleName $ModuleName Test-Path { $true }
         Mock -ModuleName $ModuleName New-Item {}
         Mock -ModuleName $ModuleName Get-RPCurrentUserSid { $script:UserSid }
+        # No network unless a test gives one (P9-27), so the PC's own adapters never leak in.
+        Mock -ModuleName $ModuleName Get-RPNetworkAdapter { @() }
         Mock -ModuleName $ModuleName Read-RPInstallationFile { $null }
         Mock -ModuleName $ModuleName Get-RPVolume {
             @((New-TestVolume 'C:' -FreeGB 90), (New-TestVolume 'D:' -FreeGB 400), (New-TestVolume 'E:' -BusType 'USB'))
@@ -81,6 +83,22 @@ Describe '[ONB-001] [NFR-I01] installing on a new PC' {
             if ($FilePath -eq 'sc.exe' -and $ArgumentList[0] -eq 'stop') { $script:ServiceState[$ArgumentList[1]] = 'Stopped' }
             New-TestResult
         }
+    }
+
+    It 'remembers the network staff phones use, and tells the person to reserve its address (P9-27)' {
+        Mock -ModuleName $ModuleName Get-RPNetworkAdapter {
+            @(
+                [pscustomobject]@{ Name = 'vEthernet (WSL)'; InterfaceDescription = 'Hyper-V Virtual Ethernet Adapter'; IPv4Address = '172.20.0.1'; PrefixLength = 20; HasGateway = $false; PrefixOrigin = 'Manual' },
+                [pscustomobject]@{ Name = 'Wi-Fi'; InterfaceDescription = 'Intel Wi-Fi 6'; IPv4Address = '192.168.1.20'; PrefixLength = 24; HasGateway = $true; PrefixOrigin = 'Dhcp' }
+            )
+        }
+        $script:Logged = [System.Collections.ArrayList]::new()
+        Mock -ModuleName $ModuleName Write-RPLog { $null = $script:Logged.Add($Message) }
+        $null = Invoke-RPInstall -InstallDir $script:InstallDir -ProductVersion '1.0.0' -InstallationFile $script:InstallationFile
+        (Get-SetupCalls)[0] | Should -BeLike '* --lan-interface Wi-Fi *'
+        @($script:Logged) | Should -Contain 'Staff phones reach this PC on Wi-Fi (192.168.1.20).'
+        @($script:Logged | Where-Object { $_ -like 'Reserve 192.168.1.20 *' }) | Should -HaveCount 1
+        @($script:Logged | Where-Object { $_ -like 'On a staff phone, open https://192.168.1.20:8080 *' }) | Should -HaveCount 1
     }
 
     It 'sets up the data drive, secrets, database, services and firewall in order, and starts them' {
@@ -212,6 +230,8 @@ Describe '[NFR-I02] repairing an installation' {
         Mock -ModuleName $ModuleName Test-Path { $true }
         Mock -ModuleName $ModuleName New-Item {}
         Mock -ModuleName $ModuleName Get-RPCurrentUserSid { $script:UserSid }
+        # No network unless a test gives one (P9-27), so the PC's own adapters never leak in.
+        Mock -ModuleName $ModuleName Get-RPNetworkAdapter { @() }
         Mock -ModuleName $ModuleName Read-RPInstallationFile { [pscustomobject]@{ dataDir = 'F:\Old data' } }
         Mock -ModuleName $ModuleName Get-RPVolume { throw 'the drives are not looked at on repair' }
         Mock -ModuleName $ModuleName Register-RPUpdateTask { $null = $script:Calls.Add("updater task from $SetupDir into $ProgramDataDir") }

@@ -1602,11 +1602,14 @@ model Invoice {
 
   @@unique([restaurantId, invoiceNumber])
   @@unique([seriesId, financialYear, sequence])
-  @@index([restaurantId, businessDate])
+  /// Reports by business date, and the bill history newest first, a page at a time (P9-27).
+  @@index([restaurantId, businessDate, issuedAt, id])
   @@index([tableSessionId])
   @@index([billId])
   /// The invoice register and GST reports read by invoice date (RPT-006, RPT-018).
   @@index([restaurantId, invoiceDate])
+  /// The bill history finds an invoice by its running number in any series or year (P9-27).
+  @@index([restaurantId, sequence])
   @@map("invoices")
 }
 
@@ -1784,6 +1787,101 @@ model DayEnd {
   @@map("day_ends")
 }
 
+// ---------------------------------------------------------------- daily summaries (P9-27)
+// A closed business date's report figures, summed once when day-end closes it (in the same
+// transaction) so a report of past dates reads a few rows per day instead of every invoice.
+// Derived data: rebuilt whenever a change still reaches a closed date (an edited or voided
+// invoice), so rp_app may delete and rewrite these rows. Money is paise (BigInt sums).
+
+/// Which dates are summed. `stale` is set by a trigger on invoices and payments when a change
+/// reaches the date after it was summed; reports read the live tables for it until it is summed
+/// again (docs/runbooks/data-lifecycle.md).
+model DailySummary {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  restaurantId String   @map("restaurant_id") @db.Uuid
+  businessDate DateTime @map("business_date") @db.Date
+  stale        Boolean  @default(false)
+  builtAt      DateTime @map("built_at") @db.Timestamptz(3)
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([restaurantId, businessDate])
+  @@map("daily_summaries")
+}
+
+/// Sales of a closed date by hour of issue in restaurant time (RPT-001); the day is their sum.
+model DailySalesHour {
+  id            String   @id @default(uuid(7)) @db.Uuid
+  restaurantId  String   @map("restaurant_id") @db.Uuid
+  businessDate  DateTime @map("business_date") @db.Date
+  hour          Int
+  invoices      Int
+  grossSales    BigInt   @map("gross_sales")
+  discounts     BigInt
+  serviceCharge BigInt   @map("service_charge")
+  tax           BigInt
+  roundOff      BigInt   @map("round_off")
+  netSales      BigInt   @map("net_sales")
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt     DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([restaurantId, businessDate, hour])
+  @@map("daily_sales_hours")
+}
+
+/// Sales of a closed date by dish (RPT-002). Categories are the dishes' current ones, joined when
+/// read, as the live report does.
+model DailyItemSales {
+  id           String   @id @default(uuid(7)) @db.Uuid
+  restaurantId String   @map("restaurant_id") @db.Uuid
+  businessDate DateTime @map("business_date") @db.Date
+  itemId       String   @map("item_id") @db.Uuid
+  quantity     Int
+  gross        BigInt
+  discounts    BigInt
+  net          BigInt
+  tax          BigInt
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([restaurantId, businessDate, itemId])
+  @@map("daily_item_sales")
+}
+
+/// Payments of a closed date by mode (RPT-005).
+model DailyPaymentMode {
+  id           String      @id @default(uuid(7)) @db.Uuid
+  restaurantId String      @map("restaurant_id") @db.Uuid
+  businessDate DateTime    @map("business_date") @db.Date
+  mode         PaymentMode
+  modeLabel    String?     @map("mode_label")
+  payments     Int
+  amount       BigInt
+  createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt    DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([restaurantId, businessDate, mode, modeLabel])
+  @@map("daily_payment_modes")
+}
+
+/// Each person's part of a closed date (RPT-003): orders taken, bills issued and their value,
+/// and the sales of the dishes they ordered (as the staff report attributes them).
+model DailyStaffSales {
+  id             String   @id @default(uuid(7)) @db.Uuid
+  restaurantId   String   @map("restaurant_id") @db.Uuid
+  businessDate   DateTime @map("business_date") @db.Date
+  staffId        String   @map("staff_id") @db.Uuid
+  ordersCreated  Int      @map("orders_created")
+  invoicesIssued Int      @map("invoices_issued")
+  billed         BigInt
+  net            BigInt
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+  updatedAt      DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
+
+  @@unique([restaurantId, businessDate, staffId])
+  @@map("daily_staff_sales")
+}
+
 // ---------------------------------------------------------------- audit and messaging
 
 /// How far each durable event consumer has got (P0-12). Consumers handle events in sequence order,
@@ -1850,6 +1948,8 @@ model AuditLog {
   @@index([entityType, entityId])
   @@index([actorId])
   @@index([restaurantId, action, businessDate])
+  /// Entries of a stretch of time across business dates, for history lookups (P9-27).
+  @@index([restaurantId, occurredAt])
   @@map("audit_log")
 }
 

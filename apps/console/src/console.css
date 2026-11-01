@@ -2886,3 +2886,43 @@ body {
   outline: 3px solid var(--rp-color-focus, var(--rp-color-primary));
   outline-offset: 2px;
 }
+
+/* P9-27: the Connect QR for waiter phones on Manage → Devices (laid out inside the card's body). */
+.connect-phone > .rp-card__body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rp-space-5);
+}
+
+.connect-phone__text {
+  display: flex;
+  flex: 1 1 18rem;
+  flex-direction: column;
+  gap: var(--rp-space-2);
+}
+
+.connect-phone__title {
+  margin: 0;
+  font-size: var(--rp-font-size-lg);
+}
+
+.connect-phone__steps {
+  margin: 0;
+  padding-inline-start: var(--rp-space-5);
+}
+
+.connect-phone__address,
+.connect-phone__note {
+  margin: 0;
+  color: var(--rp-color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.connect-phone__qr {
+  flex: none;
+  padding: var(--rp-space-2);
+  border-radius: var(--rp-radius-md);
+  background: #ffffff;
+}

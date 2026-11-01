@@ -658,6 +658,84 @@ function Assert-RPAdministrator {
     }
 }
 
+# ------------------------------------------------------------------------ the staff network
+
+# Adapters that are never the restaurant's network (P9-27): VPNs, virtual machines, containers,
+# Bluetooth. The server ranks addresses the same way (apps/server/src/tls/tls-store.ts).
+$script:VirtualAdapterPattern = '(?i)(vEthernet|Hyper-V|VirtualBox|VMware|vmnet|Docker|WSL|Tailscale|ZeroTier|WireGuard|OpenVPN|TAP-Windows|Wintun|NordLynx|ProtonVPN|Bluetooth|Loopback|Npcap|Teredo|isatap)'
+
+function Test-RPUsableAddress {
+    <# Whether an IPv4 address can be the staff network's: not link-local, not carrier NAT. #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)] [string] $Address)
+    if ($Address -notmatch '^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$') { return $false }
+    $first = [int]$Matches[1]
+    $second = [int]$Matches[2]
+    if ($first -eq 169 -and $second -eq 254) { return $false }
+    if ($first -eq 100 -and $second -ge 64 -and $second -le 127) { return $false }
+    if ($first -eq 127) { return $false }
+    return $true
+}
+
+function Select-RPStaffNetwork {
+    <#
+    .SYNOPSIS
+        The adapter staff phones reach this PC on (P9-27).
+
+    .DESCRIPTION
+        From the PC's connected adapters, leaving out VPNs, virtual machines and Bluetooth: the
+        one named by -Preferred if it is there, else the one with the internet gateway, else the
+        first. Returns $null when there is none. Each adapter is an object with Name,
+        InterfaceDescription, IPv4Address, PrefixLength, HasGateway and PrefixOrigin (Dhcp,
+        Manual), as Get-RPNetworkAdapter gives them.
+    #>
+    [CmdletBinding()]
+    param(
+        [AllowNull()] [AllowEmptyCollection()] [object[]] $Adapter,
+        [string] $Preferred
+    )
+    $usable = @($Adapter | Where-Object {
+            $null -ne $_ -and
+            -not ("$($_.Name) $($_.InterfaceDescription)" -match $script:VirtualAdapterPattern) -and
+            (Test-RPUsableAddress -Address ([string]$_.IPv4Address))
+        })
+    if ($usable.Count -eq 0) { return $null }
+    $chosen = $null
+    if ($Preferred) {
+        $chosen = $usable | Where-Object { $_.Name -eq $Preferred.Trim() } | Select-Object -First 1
+    }
+    if ($null -eq $chosen) { $chosen = $usable | Where-Object { $_.HasGateway } | Select-Object -First 1 }
+    if ($null -eq $chosen) { $chosen = $usable[0] }
+    [pscustomobject]@{
+        Name         = [string]$chosen.Name
+        IPv4Address  = [string]$chosen.IPv4Address
+        PrefixLength = [int]$chosen.PrefixLength
+        Dhcp         = ([string]$chosen.PrefixOrigin -eq 'Dhcp')
+        Others       = @($usable | Where-Object { $_.Name -ne $chosen.Name } | ForEach-Object { [string]$_.Name })
+    }
+}
+
+function Get-RPNetworkAdapter {
+    <# The PC's connected adapters with an IPv4 address (Windows). #>
+    [CmdletBinding()]
+    param()
+    # Get-NetIPConfiguration is Windows-only; elsewhere (the tests' Linux runs) there is none.
+    if ($null -eq (Get-Command -Name Get-NetIPConfiguration -ErrorAction SilentlyContinue)) { return @() }
+    @(Get-NetIPConfiguration -ErrorAction SilentlyContinue | Where-Object {
+            $null -ne $_.IPv4Address -and $null -ne $_.NetAdapter -and $_.NetAdapter.Status -eq 'Up'
+        } | ForEach-Object {
+            $first = @($_.IPv4Address)[0]
+            [pscustomobject]@{
+                Name                 = [string]$_.InterfaceAlias
+                InterfaceDescription = [string]$_.InterfaceDescription
+                IPv4Address          = [string]$first.IPAddress
+                PrefixLength         = [int]$first.PrefixLength
+                HasGateway           = ($null -ne $_.IPv4DefaultGateway)
+                PrefixOrigin         = [string]$first.PrefixOrigin
+            }
+        })
+}
+
 # ----------------------------------------------------------------------------- the firewall
 
 function ConvertTo-RPRemoteAddress {
@@ -731,7 +809,14 @@ function Get-RPFirewallRuleSpec {
     $mqtt.DisplayName = 'Parossa pagers (MQTT over TLS)'
     $mqtt.Description = 'The waiters'' wrist pagers reach the server here.'
     $mqtt.LocalPort = [string]$MqttPort
-    @($https, $mqtt)
+    # P9-27: the PC answers phones looking for it on the Wi-Fi (mDNS), from the same networks.
+    $mdns = $common.Clone()
+    $mdns.Name = 'RP-Server-mDNS'
+    $mdns.DisplayName = 'Parossa server (found on the Wi-Fi)'
+    $mdns.Description = 'Waiter phones find the restaurant PC on the staff Wi-Fi by its mDNS answer.'
+    $mdns.Protocol = 'UDP'
+    $mdns.LocalPort = '5353'
+    @($https, $mqtt, $mdns)
 }
 
 function Remove-RPFirewallRule {
@@ -1012,6 +1097,7 @@ function Get-RPWriteInstallationArgument {
         RelayUrl        = '--relay-url'
         QrSiteUrl       = '--qr-site-url'
         ErrorDsn        = '--error-dsn'
+        LanInterface    = '--lan-interface'
     }
     $arguments = @('write-installation')
     foreach ($name in $names.Keys) {
@@ -1071,6 +1157,8 @@ function Invoke-RPInstall {
         [int] $PgPort,
         [string[]] $StaffSubnet,
         [string[]] $TlsHostnames,
+        # The adapter staff phones use (P9-27), like Wi-Fi; without one, the one with the gateway.
+        [string] $LanInterface,
         [string] $ControlPlaneUrl,
         [string] $RelayUrl,
         [string] $QrSiteUrl,
@@ -1130,6 +1218,20 @@ function Invoke-RPInstall {
     $options = @{}
     foreach ($key in $PSBoundParameters.Keys) { $options[$key] = $PSBoundParameters[$key] }
     $options.DataDir = $DataDir
+    # The staff network (P9-27): the adapter phones reach this PC on, offered to them first.
+    $network = Select-RPStaffNetwork -Adapter @(Get-RPNetworkAdapter) -Preferred $LanInterface
+    if ($null -eq $network) {
+        Write-RPLog 'Warning: no network connection found. Connect this PC to the restaurant''s router; phones cannot reach it until then.'
+    } else {
+        $options.LanInterface = $network.Name
+        Write-RPLog ('Staff phones reach this PC on {0} ({1}).' -f $network.Name, $network.IPv4Address)
+        if ($network.Dhcp) {
+            Write-RPLog ('Reserve {0} for this PC in the router (DHCP reservation), so phones always find it at the same address.' -f $network.IPv4Address)
+        }
+        if (@($network.Others).Count -gt 0) {
+            Write-RPLog ('Other networks on this PC, not offered to phones: {0}.' -f (@($network.Others) -join ', '))
+        }
+    }
     $null = Invoke-RPSetupCli -Cli $cli -InstallationFile $InstallationFile -ArgumentList (Get-RPWriteInstallationArgument -Option $options)
     $null = Invoke-RPSetupCli -Cli $cli -InstallationFile $InstallationFile -ArgumentList @('maintenance', 'on', '--minutes', '60', '--reason', $mode)
     try {
@@ -1192,6 +1294,9 @@ function Invoke-RPInstall {
         }
     }
     Write-RPLog ('The {0} is done. The server answers on port {1}.' -f $mode, $paths.ports.server)
+    if ($null -ne $network) {
+        Write-RPLog ('On a staff phone, open https://{0}:{1} to check it reaches this PC.' -f $network.IPv4Address, $paths.ports.server)
+    }
     [pscustomobject]@{
         Mode     = $mode
         DataDir  = $DataDir
@@ -2229,6 +2334,9 @@ Export-ModuleMember -Function @(
     'Get-RPProtectedConflict',
     'Get-RPProtectedFolder',
     'Get-RPFirewallRuleSpec',
+    'Get-RPNetworkAdapter',
+    'Select-RPStaffNetwork',
+    'Test-RPUsableAddress',
     'Get-RPFolderAclPlan',
     'Get-RPIcaclsArgument',
     'Get-RPInstallationPath',

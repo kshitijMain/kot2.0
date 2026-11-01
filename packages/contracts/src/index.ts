@@ -29,6 +29,7 @@ export * from './payments.js';
 export * from './photos.js';
 export * from './recommendations.js';
 export * from './reports.js';
+export * from './history.js';
 export * from './routes.js';
 export * from './service-requests.js';
 export * from './feedback.js';

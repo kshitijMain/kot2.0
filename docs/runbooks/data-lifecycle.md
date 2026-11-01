@@ -3,6 +3,56 @@
 How long the restaurant PC keeps each kind of data (BRD §9.3), and how it is removed: the
 automatic retention (P7-06a) and archive-then-purge of business records (DATA-008, P7-06b).
 
+## The four tiers (P9-27)
+
+| Tier | What                           | Where                               | Read by                                               |
+| ---- | ------------------------------ | ----------------------------------- | ----------------------------------------------------- |
+| 0    | Live: open tables, orders, KDS | The PC, pushed to the devices       | Every device                                          |
+| 1    | Today: the open business date  | The PC; devices keep only today     | Every device, and the reports (from the live tables)  |
+| 2    | History: every closed date     | The PC only, summed and paged       | The console's Reports and History, Owner and managers |
+| 3    | Archive: whole financial years | `.rpar` files, the cloud (DATA-008) | The archive viewer (DATA-009)                         |
+
+Phones and tablets never hold more than live and today's data. History stays on the PC and is read
+there, either summed (the reports) or a page at a time (the bill history), so a month ago opens at
+once however many years are kept. Old years leave as whole financial years (below).
+
+### Daily summaries (tier 2)
+
+When day-end closes a business date it sums the date, in the same transaction, into the daily
+summary tables (ADR-0027):
+
+| Table                 | One row per date and            | Figures                                                           |
+| --------------------- | ------------------------------- | ----------------------------------------------------------------- |
+| `daily_sales_hours`   | hour of issue (restaurant time) | invoices, gross, discounts, service charge, tax, round-off, net   |
+| `daily_item_sales`    | dish                            | quantity, gross, discounts, net, tax (category joined when read)  |
+| `daily_payment_modes` | payment mode (and its name)     | payments, amount                                                  |
+| `daily_staff_sales`   | person                          | orders taken, bills issued and their value, sales of their dishes |
+| `daily_summaries`     | (the date itself)               | when it was summed, and whether a later change made it stale      |
+
+Amounts are integer paise; voided invoices count in none of them, as in the reports.
+
+- **The reports** (sales, items, categories, payment modes) read the summaries for closed dates
+  and the live tables only for the rest: the open date, a date never closed, or one marked stale.
+  The two are built by the same queries, so the figures are the same either way.
+- **A late change.** An invoice of a closed date can still change: a table carried forward is
+  billed again after an edit, or an old bill is voided. A database trigger on `invoices` and
+  `payments` then marks the date stale, and the reports read it live until it is summed again.
+- **Summing again, and the backfill.** Thirty seconds after the server starts, then every 15
+  minutes, the server sums every closed date that has no summary (the days closed before summaries
+  existed) or a stale one, newest first, one date at a time. Nothing needs doing by hand; a summary
+  can always be rebuilt from the live tables.
+- **Archived years.** Archive-then-purge leaves the summaries in place: they hold no personal data,
+  and the reports keep showing an archived year's totals. The year's bills are in its archive.
+
+### The bill history (tier 2)
+
+Reports, then History, then Bills (the Owner and managers): every bill still on the PC, newest
+first, 50 at a time ("Show more"). Without a search it lists the period chosen above the reports;
+a bill number (as printed, or only its running number, "123") or the guest's phone number (however
+it was typed: its last ten digits are compared) searches all dates. A bill opens as printed and
+can be printed again on the bill printer, marked duplicate. Indexes on invoices make each of these
+quick: by business date and time of issue, by running number, and by the phone's last ten digits.
+
 ## What is kept, and for how long
 
 | Data                                                         | Kept                                              | How it goes                                              |

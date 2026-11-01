@@ -19,12 +19,18 @@ export const fakeServer = (): FakeServer => fakeLocalServer();
 export function newSession(
   server: Pick<FakeServer, 'fetch'> = fakeServer(),
   trust?: ServerTrust,
-  options: Pick<DeviceSessionOptions, 'followAlerts' | 'alertNotifier'> = {},
+  options: Partial<
+    Pick<
+      DeviceSessionOptions,
+      'followAlerts' | 'alertNotifier' | 'discovery' | 'wifi' | 'plainStore'
+    >
+  > = {},
 ) {
   const sockets = new SocketFactory();
   const session = new DeviceSession({
     secureStore: new MemoryStore(),
     plainStore: new MemoryStore(),
+    discoveryTimeoutMs: 10,
     keys: new FakeKeys(),
     ...(trust !== undefined && { trust }),
     fetch: server.fetch,

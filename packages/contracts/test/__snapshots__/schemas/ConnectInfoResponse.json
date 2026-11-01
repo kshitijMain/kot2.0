@@ -1,0 +1,43 @@
+{
+  "input": {
+    "type": "object",
+    "properties": {
+      "urls": {
+        "maxItems": 8,
+        "type": "array",
+        "items": { "type": "string", "maxLength": 200, "format": "uri" }
+      },
+      "caSha256": {
+        "anyOf": [
+          { "type": "string", "pattern": "^([0-9A-F]{2}:){31}[0-9A-F]{2}$" },
+          { "type": "null" }
+        ]
+      },
+      "restaurantName": { "type": "string" },
+      "qrPayload": { "type": "string" },
+      "announced": { "type": "boolean" }
+    },
+    "required": ["urls", "caSha256", "restaurantName", "qrPayload", "announced"]
+  },
+  "output": {
+    "type": "object",
+    "properties": {
+      "urls": {
+        "maxItems": 8,
+        "type": "array",
+        "items": { "type": "string", "maxLength": 200, "format": "uri" }
+      },
+      "caSha256": {
+        "anyOf": [
+          { "type": "string", "pattern": "^([0-9A-F]{2}:){31}[0-9A-F]{2}$" },
+          { "type": "null" }
+        ]
+      },
+      "restaurantName": { "type": "string" },
+      "qrPayload": { "type": "string" },
+      "announced": { "type": "boolean" }
+    },
+    "required": ["urls", "caSha256", "restaurantName", "qrPayload", "announced"],
+    "additionalProperties": false
+  }
+}

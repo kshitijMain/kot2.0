@@ -19,7 +19,23 @@ The Android pieces shared by the waiter app and the table tablet (P2-01c, P2-01d
   `GET /api/v1/tls/ca` with a client that checks no certificate, because nothing is trusted yet:
   it never carries credentials, and the CA it returns is pinned only once its fingerprint,
   computed on the device, matches the QR code or a person has compared it.
-- `AndroidServerTrust`: that module as `@rp/mobile-core`'s `ServerTrust`.
+- `AndroidServerTrust`: that module as `@rp/mobile-core`'s `ServerTrust`. The pin is bound to
+  the PC's host; when the PC gets a new address (P9-27), `DeviceSession` downloads the CA there,
+  and re-pins it for the new host only when its fingerprint is the one already trusted.
+- Finding the restaurant PC and a Wi-Fi without internet (P9-27, AUTH-007, NFR-A01):
+  - `RpLanDiscoveryModule.kt` and `AndroidLanDiscovery`: Android's `NsdManager` browses
+    `_parossa-pos._tcp` (`MDNS_SERVICE_TYPE` in `@rp/contracts`) while a Wi-Fi `MulticastLock` is
+    held, resolves each answer one at a time (IPv4 only) and stops after the timeout (4 s) or
+    0.6 s after the last answer. It returns `{ name, host, port, txt }`; `@rp/mobile-core` keeps
+    only answers whose `ca` TXT record is the CA it trusts and still checks the certificate.
+  - `WifiRoute.kt`, `RpWifiRouteModule.kt` and `AndroidWifiRoute`: `requestNetwork` for Wi-Fi
+    without requiring INTERNET. While that Wi-Fi lacks `NET_CAPABILITY_VALIDATED` and the PC
+    accepts a TCP connection through it (or no PC address is known yet), the app's process is
+    bound to it (`bindProcessToNetwork`): the app reaches the PC over Wi-Fi while the rest of the
+    phone uses mobile data. It is unbound when the Wi-Fi has internet or goes away; `onChange`
+    tells JavaScript `wifiWithoutInternet`, which the connect screen turns into a hint.
+  - Permissions: `ACCESS_WIFI_STATE`, `CHANGE_WIFI_MULTICAST_STATE`, `CHANGE_NETWORK_STATE`
+    (and `ACCESS_NETWORK_STATE`), in the library's manifest.
 - `secureStore()`: `expo-secure-store` (values encrypted with a Keystore key) for credentials.
 - `plainStore()`: AsyncStorage for the outbox, the menu cache and the server address.
 - `installRandomValues()`: gives Hermes the `crypto.getRandomValues` that `@rp/api-client` builds

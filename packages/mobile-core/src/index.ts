@@ -3,6 +3,7 @@ export * from './apk-updates.js';
 export * from './app-updates.js';
 export * from './client.js';
 export * from './device-session.js';
+export * from './lan-discovery.js';
 export * from './menu-cache.js';
 export * from './order-outbox.js';
 export * from './outbox.js';

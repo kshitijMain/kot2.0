@@ -4,14 +4,13 @@ BeforeAll {
 }
 
 Describe '[SEC-008] the firewall' {
-    It 'opens the HTTPS and MQTT ports for the server''s Node.js only, from the PC''s own networks' {
+    It 'opens the HTTPS, MQTT and mDNS ports for the server''s Node.js only, from the PC''s own networks' {
         $rules = Get-RPFirewallRuleSpec -Port 8080 -MqttPort 8883 -NodePath $script:Node
-        $rules | Should -HaveCount 2
+        $rules | Should -HaveCount 3
         foreach ($rule in $rules) {
             $rule.Group | Should -Be 'Restaurant Platform'
             $rule.Direction | Should -Be 'Inbound'
             $rule.Action | Should -Be 'Allow'
-            $rule.Protocol | Should -Be 'TCP'
             $rule.Program | Should -Be $script:Node
             @($rule.RemoteAddress) | Should -Be @('LocalSubnet')
             # Windows may call the restaurant's network public; the POS must still reach the server.
@@ -19,8 +18,14 @@ Describe '[SEC-008] the firewall' {
         }
         $rules[0].Name | Should -Be 'RP-Server-HTTPS'
         $rules[0].LocalPort | Should -Be '8080'
+        $rules[0].Protocol | Should -Be 'TCP'
         $rules[1].Name | Should -Be 'RP-Server-MQTT'
         $rules[1].LocalPort | Should -Be '8883'
+        $rules[1].Protocol | Should -Be 'TCP'
+        # P9-27: phones find the PC on the Wi-Fi by its mDNS answer.
+        $rules[2].Name | Should -Be 'RP-Server-mDNS'
+        $rules[2].Protocol | Should -Be 'UDP'
+        $rules[2].LocalPort | Should -Be '5353'
     }
 
     It 'opens them to the staff subnet only, when the installer is given one' {
@@ -42,6 +47,6 @@ Describe '[SEC-008] the firewall' {
         Mock -ModuleName $ModuleName Remove-RPFirewallRule { $null = $script:Calls.Add("remove $Group") }
         Mock -ModuleName $ModuleName Add-RPFirewallRule { $null = $script:Calls.Add("add $($Spec.Name)") }
         Set-RPFirewallRule -Spec (Get-RPFirewallRuleSpec -Port 8080 -MqttPort 8883 -NodePath $script:Node)
-        @($script:Calls) | Should -Be @('remove Restaurant Platform', 'add RP-Server-HTTPS', 'add RP-Server-MQTT')
+        @($script:Calls) | Should -Be @('remove Restaurant Platform', 'add RP-Server-HTTPS', 'add RP-Server-MQTT', 'add RP-Server-mDNS')
     }
 }

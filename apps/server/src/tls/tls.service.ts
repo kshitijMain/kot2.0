@@ -13,6 +13,7 @@ import type { TlsCaResponse } from '@rp/contracts';
 import { SECRET_STORE, type SecretStore } from '../auth/secret-store.js';
 import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
 import {
+  lanAddresses,
   lanServerUrls,
   localServerNames,
   serverTlsOptions,
@@ -110,6 +111,7 @@ export class TlsService implements OnApplicationBootstrap, OnModuleDestroy {
       tls: this.enabled,
       port: this.listeningPort(),
       hostnames: this.config.tlsHostnames,
+      addresses: lanAddresses(undefined, this.config.lanInterface),
     });
   }
 

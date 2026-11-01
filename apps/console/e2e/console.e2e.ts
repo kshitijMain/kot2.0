@@ -18,7 +18,8 @@ const t = createTranslator();
 const PEOPLE = [
   { name: 'Asha (Owner)', role: 'OWNER', pin: '1111', mode: 'manage' },
   { name: 'Vikram (Manager)', role: 'MANAGER', pin: '2222', mode: 'manage' },
-  { name: 'Neha (Manager)', role: 'MANAGER', pin: '3333', mode: 'pos' },
+  // Formerly the cashier (ADR-0023 removed the role): a manager now, landing on Manage.
+  { name: 'Neha (Manager)', role: 'MANAGER', pin: '3333', mode: 'manage' },
   { name: 'Ravi', role: 'WAITER', pin: '4444', mode: 'pos' },
   { name: 'Chef Imran', role: 'KITCHEN', pin: '6666', mode: 'kds' },
 ] as const;
@@ -160,11 +161,8 @@ test.describe.serial('the web console', () => {
       await expect(
         page.getByRole('heading', { level: 1, name: t(`modes.${person.mode}`) }),
       ).toBeVisible();
-      await expect(
-        page.getByText(
-          t('modes.signedInAs', { name: person.name, role: t(`roles.${person.role}`) }),
-        ),
-      ).toBeVisible();
+      // The header names who is signed in (P9-15 replaced "Signed in as …").
+      await expect(page.getByRole('banner').getByText(person.name, { exact: true })).toBeVisible();
       await page.getByRole('button', { name: t('login.signOut') }).click();
       await expect(page.getByRole('heading', { name: t('login.title') })).toBeVisible();
     }
@@ -173,6 +171,9 @@ test.describe.serial('the web console', () => {
   test('[NFR-P11] shows the offline banner while the server is down and recovers when it is back', async () => {
     await page.getByRole('button', { name: /^Neha \(Manager\)/ }).click();
     await page.keyboard.type('3333');
+    // A manager lands on Manage (ADR-0023 removed the cashier role); the POS is one tap away.
+    await expect(page).toHaveURL(/\/manage$/);
+    await page.getByRole('link', { name: t('modes.pos') }).click();
     await expect(page).toHaveURL(/\/pos$/);
     // Connected and in sync, with the floor read: no banner, and no read cut short by the stop.
     await expect(page.getByRole('region', { name: 'Main Hall' })).toBeVisible();
@@ -204,6 +205,8 @@ test.describe.serial('the web console', () => {
     const open = page.getByRole('dialog', { name: t('pos.open.title', { table: '1' }) });
     await open.getByRole('button', { name: t('pos.open.guestsCount', { count: 2 }) }).click();
     await expect(page.getByText(t('pos.open.opened', { table: '1' }))).toBeVisible();
+    // Opening a table goes on to its order (P9-20); back to the floor to move it.
+    await page.getByRole('button', { name: t('pos.backToTables') }).click();
     const occupied = hall.getByRole('button', { name: /^1, Occupied, 2 guests, 0 min, / });
     await expect(occupied).toBeVisible();
 
@@ -291,23 +294,23 @@ test.describe.serial('the web console', () => {
     await expect(ticket.getByRole('button', { name: t('kds.allReady') })).toBeVisible();
     await expect(ticket.getByRole('button', { name: /^Bump KOT/ })).toBeDisabled();
     await ticket.getByRole('button', { name: t('kds.allReady') }).click();
-    await expect(ticket.getByRole('button', { name: /^Bump KOT/ })).toBeEnabled();
+    // Food waiting at the pass: Bump waits until it is picked up (P9-21).
+    await expect(ticket.getByRole('button', { name: /^Bump KOT/ })).toBeDisabled();
     const pickUp = ticket.getByRole('button', {
       name: t('kds.stepFor', { step: t('kds.step.PICK_UP'), item: 'Chicken Tikka' }),
     });
     await pickUp.click();
     await expect(pickUp).toHaveCount(0);
 
-    await ticket.getByRole('button', { name: /^Bump KOT/ }).click();
-    await expect(ticket).toHaveCount(0);
+    // The rest can go in one tap; left at the pass here, as the next tests expect.
+    await expect(ticket.getByRole('button', { name: t('kds.pickUpAll') })).toBeVisible();
+    // Served, not bumped: nothing to recall (P9-21). Recall itself is covered by the server's
+    // KDS tests (bump and recall a ready ticket) and the console's.
     await page.getByRole('button', { name: t('kds.recall'), exact: true }).click();
     const recall = page.getByRole('dialog', { name: t('kds.recallTitle') });
-    await recall
-      .getByRole('button', { name: /^Recall KOT/ })
-      .first()
-      .click();
+    await expect(recall).toBeVisible();
     await recall.getByRole('button', { name: t('ui.dialog.close') }).click();
-    await expect(page.getByRole('article', { name: /^KOT \d+, Table 7$/ })).toBeVisible();
+    await expect(recall).toHaveCount(0);
   });
 
   test('[KDS-012] covers the board while disconnected and resyncs without duplicates', async () => {
@@ -401,6 +404,10 @@ test.describe.serial('the web console', () => {
     await page.getByRole('button', { name: t('login.signOut') }).click();
     await page.getByRole('button', { name: /^Neha \(Manager\)/ }).click();
     await page.keyboard.type('3333');
+    // A manager lands on Manage (ADR-0023 removed the cashier role); the POS is one tap away.
+    await expect(page).toHaveURL(/\/manage$/);
+    await page.getByRole('link', { name: t('modes.pos') }).click();
+    await expect(page).toHaveURL(/\/pos$/);
     await page.getByRole('button', { name: /^7, Occupied/ }).click();
     await page.getByRole('button', { name: t('pos.table.takeOrder') }).click();
     const sent = page.getByRole('region', { name: t('pos.sent.title') });
@@ -426,15 +433,14 @@ test.describe.serial('the web console', () => {
       }),
     ).toBeVisible();
 
-    // 20 % is above the cashier's 10 % limit: a manager approves with their PIN.
+    // A manager gives 20 % at once: managers have no discount limit, and the cashier role with
+    // one is gone (ADR-0023). Manager approval is covered by the void on the phone and the
+    // server's override tests.
     await page.getByRole('button', { name: t('billing.addDiscount') }).click();
     const discount = page.getByRole('dialog', { name: t('billing.discount.title') });
     await discount.getByLabel(t('billing.discount.percentValue')).fill('20');
     await discount.getByLabel(t('billing.discount.reason')).fill('Birthday');
     await discount.getByRole('button', { name: t('billing.discount.apply') }).click();
-    const approval = page.getByRole('dialog', { name: t('override.title') });
-    await approval.getByRole('button', { name: 'Vikram (Manager)' }).click();
-    await page.keyboard.type('2222');
     await expect(page.getByText(/Birthday/)).toBeVisible();
 
     await page.getByRole('button', { name: t('billing.printBill') }).click();
@@ -461,8 +467,7 @@ test.describe.serial('the web console', () => {
     await hall.getByRole('button', { name: '2, Free' }).click();
     const open = page.getByRole('dialog', { name: t('pos.open.title', { table: '2' }) });
     await open.getByRole('button', { name: t('pos.open.guestsCount', { count: 2 }) }).click();
-    await hall.getByRole('button', { name: /^2, Occupied/ }).click();
-    await page.getByRole('button', { name: t('pos.table.takeOrder') }).click();
+    // Opening a table goes straight on to its order (P9-20).
     await page.getByRole('button', { name: 'Breads', exact: true }).click();
     await page.getByRole('button', { name: /^Butter Naan, / }).click();
     await page.getByRole('button', { name: /^Butter Naan, / }).click();
@@ -581,6 +586,11 @@ test.describe.serial('the web console', () => {
     expect(Date.now() - deactivated).toBeLessThan(5_000);
     await expect(other.getByText(t('login.signedOut'))).toBeVisible();
     await expect(sunilTile).toHaveCount(0);
+    // Deactivated people are folded away under their own heading (P9-26).
+    await page
+      .locator('summary')
+      .filter({ hasText: t('staff.groups.INACTIVE') })
+      .click();
     await expect(sunil.getByRole('button', { name: t('staff.reactivate') })).toBeVisible();
     await other.close();
   });
@@ -769,7 +779,7 @@ test.describe.serial('the web console', () => {
     await expect(page).toHaveURL(/\/manage$/);
     await page
       .getByRole('navigation', { name: t('dashboard.navigation') })
-      .getByRole('link', { name: t('dashboard.section.menu') })
+      .getByRole('link', { name: t('dashboard.section.menu'), exact: true })
       .click();
     await expect(
       page.getByRole('heading', { level: 2, name: t('menuEditor.title') }),
@@ -842,6 +852,9 @@ test.describe.serial('the web console', () => {
     await page.getByRole('button', { name: t('login.signOut') }).click();
     await page.getByRole('button', { name: /^Neha \(Manager\)/ }).click();
     await page.keyboard.type('3333');
+    // A manager lands on Manage (ADR-0023 removed the cashier role); the POS is one tap away.
+    await expect(page).toHaveURL(/\/manage$/);
+    await page.getByRole('link', { name: t('modes.pos') }).click();
     await expect(page).toHaveURL(/\/pos$/);
     await page.getByRole('button', { name: t('pos.takeaway') }).click();
     await page.getByRole('button', { name: 'Breads', exact: true }).click();
@@ -995,10 +1008,10 @@ test.describe.serial('the web console', () => {
     await expect(page.getByText(t('auditPage.verify.intact'))).toBeVisible();
   });
 
-  test('[SEC-003] a cashier cannot open the Staff page', async () => {
+  test('[SEC-003] a waiter cannot open the Staff page', async () => {
     await page.getByRole('button', { name: t('login.signOut') }).click();
-    await page.getByRole('button', { name: /^Neha \(Manager\)/ }).click();
-    await page.keyboard.type('3333');
+    await page.getByRole('button', { name: /^Ravi/ }).click();
+    await page.keyboard.type('4444');
     await expect(page).toHaveURL(/\/pos$/);
     await page.goto(`${server.url}/manage/staff`);
     await expect(page.getByText(t('modes.notAllowed', { mode: t('modes.manage') }))).toBeVisible();

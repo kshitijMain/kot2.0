@@ -262,6 +262,14 @@ export const en = {
     browserFailed: 'This browser could not connect to the restaurant PC.',
     browserWifi: 'Check this device is on the restaurant Wi-Fi and the restaurant PC is on.',
     browserRemoved: 'This browser was unpaired. Connect it again to carry on.',
+    scan: 'Scan the code on the PC',
+    scanTitle: 'Scan the code on the PC',
+    scanHint: 'On the restaurant PC, open Manage → Devices and point the camera at the code there.',
+    scanCancel: 'Back',
+    notConnectCode:
+      'That is not the restaurant PC’s code. Open Manage → Devices on the PC and scan the code there.',
+    wifiNoInternet:
+      'This Wi-Fi has no internet. Keep Wi-Fi connected for the restaurant PC and turn on mobile data for everything else.',
   },
   pairing: {
     title: 'Pair this device',
@@ -687,8 +695,8 @@ export const en = {
     },
     devices: {
       title: 'Paired devices',
-      body: 'Phones, tablets and pagers that may use your system are listed here. Pair a new one with its QR code; remove one that is lost.',
-      tip: 'Revoke a lost device straight away.',
+      body: 'Screens, tablets and phones that use your system. Connect a phone with the code below; unpair one that is lost.',
+      tip: 'Unpair a lost device straight away.',
     },
     setup: {
       title: 'Getting ready for service',
@@ -1010,8 +1018,20 @@ export const en = {
   devices: {
     title: 'Devices',
     intro: 'Pagers are under Staff → Pagers.',
-    introSelf:
-      'Every screen and phone that talks to this restaurant’s PC. They connect by themselves on the restaurant’s Wi-Fi and staff sign in with their PIN; unpair one you no longer use.',
+    introSelf: 'Screens and phones connected to this PC. Unpair one you no longer use.',
+    /** P9-27: the Connect QR for waiter phones. */
+    connect: {
+      title: 'Connect a phone',
+      step1: 'Connect the phone to the staff Wi-Fi.',
+      step2: 'Open the waiter app. It usually finds this PC by itself.',
+      step3: 'If it doesn’t, tap Scan the code on the PC and scan this code.',
+      address: 'This PC’s address:',
+      qrLabel: 'Connect QR code for {name}',
+      announced: 'This PC announces itself on the Wi-Fi.',
+      notAnnounced: 'This PC is not announcing itself on the Wi-Fi: phones need the code.',
+      noNetwork: 'This PC has no network connection. Connect it to the restaurant’s router.',
+      loadFailed: 'The connect details could not be loaded.',
+    },
     pair: 'Pair a device',
     loadFailed: 'The devices could not be loaded.',
     none: 'No devices yet. Pair the screens, phones and tablets the restaurant uses.',
@@ -1902,6 +1922,43 @@ until you press Publish.
     },
   },
   /** The Reports area (P4-05d, RPT-001 to RPT-016). */
+  history: {
+    nav: 'History',
+    link: 'Bills',
+    title: 'Bills',
+    intro:
+      'Every bill kept on this PC, newest first. Search by bill number or the guest’s phone to look across all dates.',
+    number: 'Bill number',
+    phone: 'Guest’s phone',
+    search: 'Search',
+    clear: 'Clear',
+    allDates: 'Showing bills from all dates that match.',
+    table: 'Bills',
+    none: 'No bill matches.',
+    column: {
+      number: 'Bill',
+      when: 'Date and time',
+      where: 'Table or token',
+      total: 'Total',
+      status: 'Status',
+      paidBy: 'Paid by',
+    },
+    tableLabel: 'Table {table}',
+    token: 'Token {token}',
+    takeaway: 'Takeaway',
+    notPaid: 'Not paid',
+    shown: '{count, plural, one {# bill shown} other {# bills shown}}',
+    more: 'Show more',
+    openFor: 'Open bill {number}',
+    billTitle: 'Bill {number}',
+    printedText: 'The bill as printed',
+    printAgain: 'Print again',
+    close: 'Close',
+    printed: 'Printed.',
+    reprinted: 'Printed again, marked duplicate.',
+    notPrinted: 'It did not print: {error}',
+    voided: 'This bill was voided, so it cannot be printed again.',
+  },
   reportsPage: {
     title: 'Reports',
     navigation: 'Reports',

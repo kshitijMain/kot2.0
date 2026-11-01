@@ -75,6 +75,7 @@
     Var RPDataDir
     Var RPDataDirGiven
     Var RPStaffSubnet
+    Var RPLanInterface
     Var RPMinFreeGB
     Var RPRepair
     Var RPDriveList
@@ -221,6 +222,12 @@
     StrCpy $RPStaffSubnet ""
   ${EndIf}
   ClearErrors
+  ; P9-27: the adapter staff phones use, like Wi-Fi; without it, the one with the gateway.
+  ${GetOptions} $R0 "/LANINTERFACE=" $RPLanInterface
+  ${If} ${Errors}
+    StrCpy $RPLanInterface ""
+  ${EndIf}
+  ClearErrors
   ${GetOptions} $R0 "/MINFREEGB=" $RPMinFreeGB
   IntOp $RPMinFreeGB $RPMinFreeGB + 0
   ${If} ${Errors}
@@ -287,6 +294,9 @@
   ${EndIf}
   ${If} $RPStaffSubnet != ""
     StrCpy $0 '$0 -StaffSubnet "$RPStaffSubnet"'
+  ${EndIf}
+  ${If} $RPLanInterface != ""
+    StrCpy $0 '$0 -LanInterface "$RPLanInterface"'
   ${EndIf}
   !ifdef RP_CONTROL_PLANE_URL
     StrCpy $0 '$0 -ControlPlaneUrl "${RP_CONTROL_PLANE_URL}"'

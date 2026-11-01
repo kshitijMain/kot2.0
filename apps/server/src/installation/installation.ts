@@ -35,6 +35,11 @@ export const InstallationFile = z.strictObject({
       logLevel: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace']).default('info'),
       /** Extra names for the LAN certificate, e.g. `pos.local`. */
       tlsHostnames: z.array(z.string().regex(HOSTNAME)).default([]),
+      /**
+       * The network adapter staff phones use (P9-27), chosen by the installer, like "Wi-Fi" or
+       * "Ethernet": its address goes first to phones and in the Connect QR.
+       */
+      lanInterface: z.string().min(1).max(100).optional(),
     })
     .prefault({}),
   postgres: z
@@ -249,6 +254,9 @@ export function serverEnvironment(
   };
   if (installation.server.tlsHostnames.length > 0) {
     env.RP_TLS_HOSTNAMES = installation.server.tlsHostnames.join(',');
+  }
+  if (installation.server.lanInterface !== undefined) {
+    env.RP_LAN_INTERFACE = installation.server.lanInterface;
   }
   if (installation.updates.publisher !== null) {
     env.RP_UPDATE_PUBLISHER = installation.updates.publisher;
