@@ -155,7 +155,13 @@ export function PaymentSheet({
               setMode(id as Mode);
             }}
           />
-          <TextField label={t('payment.amount')} value={amount} onChangeText={setAmount} />
+          <TextField
+            label={t('payment.amount')}
+            value={amount}
+            onChangeText={setAmount}
+            // Numbers only (P9-21): the letter keyboard let "AUDITUPI1" into the amount.
+            keyboardType="decimal-pad"
+          />
           {mode === 'CASH' ? null : (
             <TextField
               label={t('payment.reference')}

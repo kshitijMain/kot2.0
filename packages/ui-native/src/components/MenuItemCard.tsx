@@ -64,7 +64,7 @@ export function MenuItemCard({
             <View style={[styles.markDot, { backgroundColor: mark }]} />
           )}
         </View>
-        <Text numberOfLines={2} style={[styles.name, { color: colors.text }]}>
+        <Text numberOfLines={3} style={[styles.name, { color: colors.text }]}>
           {name}
         </Text>
       </View>
@@ -122,10 +122,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     elevation: elevation[1].androidElevation,
   },
-  /** With a photo: a small square beside the name, so the list stays quick to scan. */
-  withPhoto: { flexDirection: 'row', alignItems: 'center', gap: spacing[3], padding: spacing[3] },
-  photo: { width: touchTarget.comfortable * 1.25, aspectRatio: 1, borderRadius: radius.md },
-  body: { flex: 1, gap: spacing[2] },
+  /**
+   * With a photo: a short strip above the name (P9-21). Beside it, in the phone's two columns, the
+   * name had a few letters' width and broke mid-word ("Pan eer …").
+   */
+  withPhoto: { padding: spacing[3] },
+  photo: { width: '100%', aspectRatio: 2, borderRadius: radius.md },
+  body: { gap: spacing[2] },
   top: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing[2] },
   mark: {
     width: 16,

@@ -262,7 +262,7 @@ interface BoardProps {
   onOpenRecall: () => void;
   onOpenStock: () => void;
   onStep: (ticket: KdsTicket, line: KdsTicketLine, event: KitchenStep) => void;
-  onTicketStep: (ticket: KdsTicket, event: 'START_PREPARING' | 'MARK_READY') => void;
+  onTicketStep: (ticket: KdsTicket, event: KitchenStep) => void;
   onBump: (ticket: KdsTicket) => void;
   onNotify: (ticket: KdsTicket) => void;
 }
@@ -561,7 +561,11 @@ function TicketCard({
               props.onTicketStep(ticket, wide);
             }}
           >
-            {wide === 'START_PREPARING' ? t('kds.allPreparing') : t('kds.allReady')}
+            {wide === 'START_PREPARING'
+              ? t('kds.allPreparing')
+              : wide === 'MARK_READY'
+                ? t('kds.allReady')
+                : t('kds.pickUpAll')}
           </Button>
         )}
         <Button

@@ -4053,11 +4053,11 @@ until you press Publish.
     noTables: 'No tables yet. A manager adds them in Manage → Floor.',
     summary: '{free} of {total} tables free',
     open: {
-      title: 'Open {table}',
+      title: 'Open table {table}',
       guests: 'Guests',
       guestsPad: 'Guests keypad',
       submit: 'Open table',
-      opened: '{table} is open',
+      opened: 'Table {table} is open',
       invalidGuests: 'Enter the number of guests, from 1 to 99.',
     },
     table: {

@@ -48,14 +48,23 @@ describe('[KDS-005] [KDS-007] kitchen steps and bump', () => {
     expect(linesFor(mixed, 'START_PREPARING').map((entry) => entry.name)).toEqual(['Dish 1']);
     expect(linesFor(mixed, 'MARK_READY').map((entry) => entry.name)).toEqual(['Dish 2']);
     expect(ticketStep(ticket(2, { lines: [line(4, { state: 'PREPARING' })] }))).toBe('MARK_READY');
-    expect(ticketStep(ticket(3, { lines: [line(5, { state: 'READY' })] }))).toBeUndefined();
+    // P9-21: ready food is picked up at the pass from the ticket too, which serves it.
+    expect(ticketStep(ticket(3, { lines: [line(5, { state: 'READY' })] }))).toBe('PICK_UP');
+    expect(linesFor(mixed, 'PICK_UP').map((entry) => entry.name)).toEqual(['Dish 3']);
+    expect(ticketStep(ticket(5, { lines: [line(6, { state: 'SERVED' })] }))).toBeUndefined();
     expect(ticketStep(ticket(4, { kind: 'CANCELLED' }))).toBeUndefined();
   });
 
-  it('bumps only when nothing is waiting or cooking; slips any time', () => {
+  it('bumps only when nothing is waiting, cooking or at the pass; slips any time', () => {
     expect(canBump(ticket(1))).toBe(false);
+    // P9-21: a ready dish bumped off the screen had stayed "Ready" for good.
     expect(
       canBump(ticket(2, { lines: [line(1, { state: 'READY' }), line(2, { state: 'CANCELLED' })] })),
+    ).toBe(false);
+    expect(
+      canBump(
+        ticket(2, { lines: [line(1, { state: 'PICKED_UP' }), line(2, { state: 'CANCELLED' })] }),
+      ),
     ).toBe(true);
     expect(canBump(ticket(3, { kind: 'MODIFIED' }))).toBe(true);
   });

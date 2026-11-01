@@ -46,10 +46,10 @@ describe('[TBL-003] opening a table', () => {
   it('opens a free table with the guests chosen, then lands on it to take the order', async () => {
     const { server, restaurant } = await signedInApp();
     await fireEvent.press(await tile('T1, Free'));
-    expect(screen.getByRole('header', { name: 'Open T1' })).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Open table T1' })).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'One more' }));
     await fireEvent.press(screen.getByTestId('open-table'));
-    expect(await screen.findByText('T1 is open')).toBeOnTheScreen();
+    expect(await screen.findByText('Table T1 is open')).toBeOnTheScreen();
     expect(server.callsTo('POST', `/api/v1/tables/${restaurant.table('T1').id}/open`)).toEqual([
       expect.objectContaining({ body: { covers: 3 } }),
     ]);
@@ -68,9 +68,9 @@ describe('[TBL-003] opening a table', () => {
     restaurant.table('T1').state = 'OCCUPIED';
     await fireEvent.press(screen.getByTestId('open-table'));
     expect(await screen.findByText('Someone has just opened this table.')).toBeOnTheScreen();
-    expect(screen.getByRole('header', { name: 'Open T1' })).toBeOnTheScreen();
+    expect(screen.getByRole('header', { name: 'Open table T1' })).toBeOnTheScreen();
     await fireEvent.press(screen.getByTestId('sheet-close'));
-    expect(screen.queryByRole('header', { name: 'Open T1' })).toBeNull();
+    expect(screen.queryByRole('header', { name: 'Open table T1' })).toBeNull();
   });
 });
 
@@ -116,7 +116,7 @@ describe('[TBL-004] a table that needs cleaning', () => {
     expect(screen.queryByTestId('open-table')).toBeNull();
     await fireEvent.press(screen.getByTestId('mark-clean'));
     await fireEvent.press(await screen.findByTestId('open-table'));
-    expect(await screen.findByText('T1 is open')).toBeOnTheScreen();
+    expect(await screen.findByText('Table T1 is open')).toBeOnTheScreen();
     expect(
       server.callsTo('POST', `/api/v1/tables/${restaurant.table('T1').id}/clean`),
     ).toHaveLength(1);
@@ -130,11 +130,15 @@ describe('[WTR-008] printing the bill from the app', () => {
     await fireEvent.press(await tile(/^T2, Occupied/));
     expect(await screen.findByRole('header', { name: 'Table T2' })).toBeOnTheScreen();
     expect(screen.queryByTestId('print-bill')).toBeNull();
+    expect(screen.getByRole('button', { name: 'Request bill' })).toBeOnTheScreen();
 
     restaurant.waiterMayPrint = true;
     await fireEvent.press(screen.getByRole('button', { name: 'Back to tables' }));
     await fireEvent.press(await tile(/^T2, Occupied/));
-    await fireEvent.press(await screen.findByTestId('print-bill'));
+    const print = await screen.findByTestId('print-bill');
+    // P9-21: who may print the bill prints it, without asking the managers for it first.
+    expect(screen.queryByRole('button', { name: 'Request bill' })).toBeNull();
+    await fireEvent.press(print);
     expect(await screen.findByText('Bill INV/26-27/000042 printed: ₹640.00')).toBeOnTheScreen();
     const sessionId = restaurant.table('T2').session?.id ?? '';
     expect(server.callsTo('POST', `/api/v1/table-sessions/${sessionId}/print-bill`)).toHaveLength(

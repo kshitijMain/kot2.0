@@ -707,6 +707,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-16 Audit of every screen and the bill journey; managers take payment on the phone
 - [x] P9-17 The waiter APK builds on this Mac
 - [x] P9-20 Full audit of every screen, link, button and workflow on the live pilot
+- [x] P9-21 The waiter app on a real phone: every flow to the kitchen, the bill and payment
 
 ## Decisions
 
@@ -4632,6 +4633,87 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-11-01: P9-21 The waiter app on a real phone: every flow to the kitchen, the bill and payment
+
+Asked by the Business Owner, with their Android phone on USB: test each button and flow of the
+waiter app, check that it reaches the kitchen and the manager, and check button placement for
+any Android phone.
+
+**How:**
+
+- **The phone:** a Nothing Phone (1), Android 16, driven over adb (UI dumps, taps, screenshots).
+  The scripts are in the session scratchpad, not the repository.
+- **Pairing:** the phone was paired as "Waiter phone 1" from Manage → Devices, with the address and
+  code typed, the fingerprint compared and confirmed.
+- **The journey, on the empty Table 5, in four places at once** (the phone, the Kitchen display as
+  Kitchen 6666, the POS and Manage as Manager 2222):
+  1. Waiter 1 PIN, with a wrong PIN first; the notification permission allowed.
+  2. Open the table for 3 guests. Add a suggestion and a dish with options (Hot, ×2, a note). Hold
+     one dish, send the KOT, then fire the held dish. Search the menu, "Again" a dish, send it.
+  3. On the kitchen display: start, ready (the phone's "Table 5 · Food ready" notification),
+     Notify manager (the alert clears once the food is collected), picked up, Expo, recall.
+  4. Go on break and come back. Request the bill.
+  5. In the console: the alert and "Open bill", a discount added and removed with a reason, the
+     invoice issued (no printer on this Mac, said plainly).
+  6. Manager on the phone: an over-payment refused, ₹500 by UPI with a reference, ₹676 in cash,
+     "Invoice … is paid", and the table free on the POS.
+- **Every Manage page** (17) was loaded and read.
+- **Other phones:** the phone was set to 720 × 1520 at 320 dpi with 130 % text, a small budget
+  phone with large text, then put back.
+
+**Found and fixed:**
+
+- **Kitchen display, live:** in PIN-only mode (ADR-0025) a browser pairs itself as a POS. The
+  Kitchen person on it heard no new tickets or dish changes, so the board changed only on a reload.
+  - Kitchen staff on a screen that is not a kitchen screen now join the all-stations room
+    (`apps/server/src/realtime/rooms.ts`).
+  - They see every station over REST already.
+- **Kitchen display, Bump:** bumping a ticket with ready food left those dishes "Ready" for good,
+  because the waiter app has no Served button (decision 803). Their "Food ready" alerts stayed open
+  too, as Tables 3 and 4's still did.
+  - A ticket whose dishes are ready now offers "Picked up, all of it", which serves them; the
+    ticket then leaves the screen by itself.
+  - Bump stays off while food is at the pass. The server is unchanged, so a kitchen with
+    `kds.pickupMarksServed` off can still bump.
+- **Waiter app layout:**
+  - Dish names broke mid-word ("Pan eer …") in the two-column menu: the photo now sits above the
+    name, and names get up to three lines.
+  - Edge to edge on Android 15 and later, the keyboard covered what was typed: the kitchen note in
+    the options sheet, the payment amount, and the notes on the order. Sheets and screens now rise
+    by the keyboard's height (`useKeyboardHeight` in `@rp/ui-native`).
+  - "Held: fire later" pushed "Remove" off the card, and "Hold" touched "+": the row wraps.
+  - The "2 dishes ready" badge ran past the tile with large text: it wraps inside it.
+  - The payment amount takes a number pad (letters were accepted).
+  - A closed table's header read "Table "; it keeps the table's name.
+  - "Request bill" is shown only to those who cannot print the bill. Managers had three buttons in a
+    row, broken mid-word on small phones.
+- **Words:** "Open table 5" with a "Guests" label (it was "Open 5" over a bare "2"), and
+  "Table 5 is open".
+- The APK was rebuilt (`.pilot/apk/parossa-waiter-preview.apk`) and reinstalled on the phone, which
+  stays paired.
+
+**Checked and left as they are:**
+
+- The waiter cannot mark a dish served (decision 803).
+- The Owner cannot sign in on a waiter phone (`SIGN_IN_ROLES`, by decision).
+- An empty table's "Request bill" is refused with "Nothing to bill yet."
+- The manager was signed out after inactivity, with a clear message.
+
+**Pilot state after the test:**
+
+- Table 5 was settled: INV/26-27/000004, ₹1,176, UPI ₹500 + cash ₹676 into the Manager's open
+  shift.
+- KOTs 5 to 8 were served.
+- Tables 1 and 2 were untouched; a dish put in Table 1's cart on the phone was removed unsent.
+
+**Gotchas:**
+
+- **Typing over adb:** Escape closes an open sheet, so hide the keyboard with its own key.
+- **Backups:** they fail on this Mac because `pg_dump` is not installed (PostgreSQL runs in
+  Docker), and the disk is 97 % full; both raise alerts.
+- **Devices list:** every new browser makes another "Browser N" device in PIN-only mode; unpair old
+  ones in Manage → Devices.
 
 ### 2026-11-01: P9-20 Full audit of every screen, link, button and workflow on the live pilot
 

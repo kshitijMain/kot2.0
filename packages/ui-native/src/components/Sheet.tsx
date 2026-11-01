@@ -1,6 +1,6 @@
 import { elevation, fontSize, fontWeight, radius, spacing, touchTarget } from '@rp/design-tokens';
-import type { ReactNode } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { type ReactNode, useEffect, useState } from 'react';
+import { Keyboard, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useScreenInsets } from '../insets.js';
 import { useUiStrings } from '../strings.js';
 import { useTheme, weight } from '../theme.js';
@@ -28,6 +28,7 @@ export function Sheet({ open, onClose, title, children, footer, dismissible = tr
   const strings = useUiStrings().dialog;
   // Drawn under the system bars (edge to edge): the last part keeps above the navigation bar.
   const { bottom } = useScreenInsets();
+  const keyboard = useKeyboardHeight(open);
   const close = () => {
     if (dismissible) onClose();
   };
@@ -40,7 +41,7 @@ export function Sheet({ open, onClose, title, children, footer, dismissible = tr
       navigationBarTranslucent
       onRequestClose={close}
     >
-      <View style={styles.backdrop}>
+      <View style={[styles.backdrop, { paddingBottom: keyboard }]}>
         <Pressable
           accessibilityRole="button"
           accessibilityLabel={strings.close}
@@ -71,6 +72,7 @@ export function Sheet({ open, onClose, title, children, footer, dismissible = tr
             </Pressable>
           </View>
           <ScrollView
+            keyboardShouldPersistTaps="handled"
             contentContainerStyle={[
               styles.body,
               footer === undefined && { paddingBottom: spacing[4] + bottom },
@@ -93,6 +95,30 @@ export function Sheet({ open, onClose, title, children, footer, dismissible = tr
       </View>
     </Modal>
   );
+}
+
+/**
+ * How tall the on-screen keyboard is while it is up (P9-21). The apps draw edge to edge, and
+ * Android 15 and later then no longer shrink the window for the keyboard: a note or an amount
+ * typed near the foot of a sheet or a screen was hidden under the keys. They rise by this much.
+ */
+export function useKeyboardHeight(active = true): number {
+  const [height, setHeight] = useState(0);
+  useEffect(() => {
+    if (!active) return undefined;
+    const shown = Keyboard.addListener('keyboardDidShow', (event) => {
+      setHeight(event.endCoordinates.height);
+    });
+    const hidden = Keyboard.addListener('keyboardDidHide', () => {
+      setHeight(0);
+    });
+    return () => {
+      shown.remove();
+      hidden.remove();
+      setHeight(0);
+    };
+  }, [active]);
+  return height;
 }
 
 const styles = StyleSheet.create({
