@@ -206,6 +206,24 @@ describe('[QR-007] where an order is', () => {
     expect(screen.getByText('Reason: The kitchen is closing')).toBeVisible();
   });
 
+  it('[ORD-004] shows the number the restaurant approved when it changed it (P9-24)', () => {
+    show(
+      [
+        order({
+          status: 'SENT_TO_KITCHEN',
+          detail: {
+            items: [
+              { clientLineId: '0199a0e0-0000-7000-8000-000000000b01', state: 'SENT', quantity: 3 },
+            ],
+          },
+        }),
+      ],
+      Date.parse('2026-10-02T08:00:30.000Z'),
+    );
+    expect(screen.getByText('3 × Dal Makhani')).toBeVisible();
+    expect(screen.getByText('Changed by the restaurant (you asked for 2)')).toBeVisible();
+  });
+
   it('[QR-004] orders a whole order, or one dish, again (P9-04)', () => {
     again.length = 0;
     show([order({ status: 'SENT_TO_KITCHEN' })], Date.parse('2026-10-02T08:00:30.000Z'));

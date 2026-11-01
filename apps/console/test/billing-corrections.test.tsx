@@ -297,6 +297,28 @@ describe('[BILL-013] [RPT-005] closing the day', () => {
     });
   });
 
+  it('names whose shift is open and does not offer closing until it is (P9-24)', async () => {
+    const fake = signsInAs(server(), 'MANAGER').on('GET', '/api/v1/day-end', () => ({
+      status: 200,
+      body: dayEnd({
+        blockers: {
+          openShifts: [{ shiftId: B.session, staffId: STAFF.MANAGER.staffId }],
+          openTables: [{ tableSessionId: B.session, tableLabel: 'T4' }],
+          unsettledInvoices: [],
+        },
+      }),
+    }));
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/day-end' });
+    expect(
+      await screen.findByText(
+        t('dayEnd.openShifts', { count: 1, names: STAFF.MANAGER.displayName }),
+      ),
+    ).toBeInTheDocument();
+    // Carrying the tables forward is not enough while a shift is open.
+    await user.click(screen.getByLabelText(t('dayEnd.carryForward')));
+    expect(screen.getByRole('button', { name: t('dayEnd.close') })).toBeDisabled();
+  });
+
   it('shows why the day cannot close', async () => {
     const fake = signsInAs(server(), 'MANAGER')
       .on('GET', '/api/v1/day-end', () => ({

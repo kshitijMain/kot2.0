@@ -81,6 +81,7 @@ nohup env NODE_ENV="$NODE_ENV" HOST="$HOST" PORT="$PORT" DATABASE_URL="$DATABASE
   RP_DATA_DIR="$RP_DATA_DIR" RP_CONSOLE_DIR="$RP_CONSOLE_DIR" RP_RELAY_URL="$RP_RELAY_URL" \
   RP_QR_SITE_URL="$RP_QR_SITE_URL" RP_TLS="$RP_TLS" RP_TLS_HOSTNAMES="$RP_TLS_HOSTNAMES" \
   RP_MQTT="$RP_MQTT" RP_AUTH_PIN_ONLY="${RP_AUTH_PIN_ONLY:-off}" LOG_LEVEL="$LOG_LEVEL" \
+  RP_PG_BIN="${RP_PG_BIN:-$ROOT/scripts/pilot/pg-bin}" \
   node "$ROOT/apps/server/dist/main.js" \
   >> "$STATE/logs/server.log" 2>&1 &
 echo $! > "$STATE/server.pid"

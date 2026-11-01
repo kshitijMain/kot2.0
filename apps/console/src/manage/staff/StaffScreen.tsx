@@ -1,5 +1,5 @@
 import type { StaffView } from '@rp/contracts';
-import { timeOfDayOf } from '@rp/domain';
+import { displayPhone, timeOfDayOf } from '@rp/domain';
 import {
   Badge,
   Button,
@@ -284,7 +284,9 @@ function StaffRow({
           ) : null}
         </p>
         {person.phone === null ? null : (
-          <p className="staff-row__contact">{t('staff.phone', { phone: person.phone })}</p>
+          <p className="staff-row__contact">
+            {t('staff.phone', { phone: displayPhone(person.phone) })}
+          </p>
         )}
         {person.email === null ? null : (
           <p className="staff-row__contact">{t('staff.email', { email: person.email })}</p>

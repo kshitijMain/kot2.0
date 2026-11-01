@@ -48,6 +48,8 @@ RP_TLS_HOSTNAMES=$IP
 RP_MQTT=off
 # PIN-only sign-in (ADR-0025): browsers on this network pair themselves; staff use their PINs.
 RP_AUTH_PIN_ONLY=1
+# Backups with the database container's own PostgreSQL 16 tools (P9-24): none on the Mac.
+RP_PG_BIN=$ROOT/scripts/pilot/pg-bin
 LOG_LEVEL=info
 EOF
 }

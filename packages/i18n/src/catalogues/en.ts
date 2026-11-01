@@ -129,6 +129,7 @@ export const en = {
     none: 'No open alerts. New ones ring here and on the pager.',
     bellLabel:
       '{count, plural, =0 {Alerts, none open} one {Alerts, # open} other {Alerts, # open}}',
+    button: '{count, plural, =0 {Alerts} other {Alerts · #}}',
     open: 'Open',
     openTable: 'Opens the table',
     atTable: 'Table {table} · {what}',
@@ -666,7 +667,7 @@ export const en = {
     alerts: {
       title: 'Things that need a person',
       body: 'Alerts appear when a guest calls, a dish is late or something needs approval. They stay here until someone resolves them.',
-      tip: 'Select Resolve once the matter is dealt with, so nobody repeats it.',
+      tip: 'Select Acknowledge once you have dealt with an alert, so nobody else does it again.',
     },
     reports: {
       title: 'Sales and service reports',
@@ -2416,6 +2417,8 @@ until you press Publish.
       REJECTED: 'The restaurant could not take this order.',
       reason: 'Reason: {reason}',
       line: '{quantity} × {name}',
+      /** P9-24: the restaurant approved a different number than the diner asked for. */
+      quantityChanged: 'Changed by the restaurant (you asked for {asked})',
       itemState: {
         PENDING_APPROVAL: 'Waiting',
         HELD: 'Held',
@@ -4227,7 +4230,7 @@ until you press Publish.
     free: {
       title: 'Free table {table}',
       description:
-        'For a table opened by mistake. Nothing has been ordered, so there is no bill, and the table shows as free again.',
+        'For a table opened by mistake, or one whose dishes were all cancelled: there is nothing to bill, and the table shows as free again.',
       reason: 'Why it was opened by mistake',
       confirm: 'Free the table',
       freed: 'Table {table} is free again.',
@@ -4359,7 +4362,8 @@ until you press Publish.
     blockers: 'Before closing',
     noBlockers: 'Nothing stands in the way. The day can be closed.',
     openShifts:
-      '{count, plural, one {# shift is} other {# shifts are}} still open. Close them first.',
+      '{count, plural, one {A shift is} other {# shifts are}} still open: {names}. Each person closes their own on the POS (Shift).',
+    someone: 'someone',
     openTables: 'Tables still open: {tables}',
     unsettled: 'Unpaid bills: {invoices}',
     carryForward: 'Carry the open tables forward to the next business day',
@@ -4450,7 +4454,8 @@ until you press Publish.
     openingFloat: 'Opening cash in the drawer (₹)',
     open: 'Open shift',
     opened: 'Shift opened',
-    status: 'Shift open since {time}',
+    status: 'Shift open since {time} on {date}',
+    openingCash: 'Opening cash',
     expected: 'Cash expected in the drawer',
     cashPayments: 'Cash payments',
     cashIn: 'Cash in',

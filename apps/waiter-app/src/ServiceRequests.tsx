@@ -179,6 +179,7 @@ const styles = StyleSheet.create({
   title: { fontSize: fontSize.md, fontWeight: weight(fontWeight.bold) },
   facts: { fontSize: fontSize.sm },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2], marginTop: spacing[1] },
-  grow: { flex: 1 },
+  // Natural width, filling the row; wraps rather than breaking a word (P9-24: "App rove").
+  grow: { flexGrow: 1 },
   failed: { gap: spacing[2] },
 });

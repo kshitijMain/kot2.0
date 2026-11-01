@@ -100,6 +100,13 @@ for a printed bill.
 This runs over plain http on the Wi-Fi: fine for a trial, never for diners on mobile data. The
 real pilot uses your server's https address.
 
+## Backups on a Mac without PostgreSQL
+
+The server's backups run `pg_dump`, `pg_restore` and `psql`. A Mac with no PostgreSQL 16 installed
+uses the wrappers in `pg-bin/`: they run the same commands inside the pilot's database container
+(`rp-pilot-pg`, or `RP_PG_CONTAINER`). Both pilot scripts pass `RP_PG_BIN=scripts/pilot/pg-bin` to
+the server, so Manage → System → "Back up now" works with only Docker.
+
 ## A diner's orders follow their number
 
 "My orders" and the bill's estimate come from the diner's mobile number, not the browser: scan

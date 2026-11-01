@@ -62,6 +62,8 @@ const BILLED: ReadonlySet<OrderItemState> = new Set([
 ]);
 
 const REMOVED_REASON = 'Removed with the diner’s agreement';
+/** The approval's audit reason when the manager changed it (a number, or a dish removed; P9-24). */
+const CHANGED_REASON = 'Changed with the diner’s agreement';
 
 const errors = {
   notATablet: () =>
@@ -330,7 +332,7 @@ export class OrderApprovalsService {
           lines: lines.map(({ line, quantity }) => ({ id: line.id, quantity })),
           changes,
         },
-        reason: changes.length === 0 ? null : REMOVED_REASON,
+        reason: changes.length === 0 ? null : CHANGED_REASON,
       });
       await this.emit(tx, approver.restaurantId, businessDate, order, {
         type: 'OrderApproved',

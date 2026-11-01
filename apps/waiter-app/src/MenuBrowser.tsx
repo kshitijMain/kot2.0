@@ -102,6 +102,13 @@ export function MenuBrowser({
 const styles = StyleSheet.create({
   menu: { gap: spacing[3] },
   categories: { gap: spacing[2] },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
-  cell: { flexBasis: '47%', flexGrow: 1 },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+    rowGap: spacing[2],
+  },
+  // Two to a row, always (P9-24): a lone search result had stretched across the screen with a
+  // photo strip as tall as a card.
+  cell: { width: '49%' },
 });

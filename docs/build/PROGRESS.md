@@ -709,7 +709,8 @@ Recommended next WPs (dependencies met):
 - [x] P9-20 Full audit of every screen, link, button and workflow on the live pilot
 - [x] P9-21 The waiter app on a real phone: every flow to the kitchen, the bill and payment
 - [x] P9-22 No pairing: the waiter app and browsers connect by themselves; Mannat's UPI ID
-- [ ] P9-23 Every flow again (QR diner, manager, kitchen): fixes; the manager phone's part waits for the phone
+- [x] P9-23 Every flow again (QR diner, manager, kitchen): fixes (the manager phone's part done in P9-24)
+- [x] P9-24 Everything in the manager's hands, live, checked in the database; fixes across every screen
 
 ## Decisions
 
@@ -4651,6 +4652,83 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-11-01: P9-24 Everything in the manager's hands, tried live and checked in the database
+
+Asked by the Business Owner: try everything the manager (and the owner) can do on the live pilot,
+check that each action really reaches the database and the other screens, take screenshots, and
+fix the UX of every interface (POS, kitchen, QR menu, manager, waiter app). The Business Owner
+confirmed the pilot data is test data: Claude may create, change and archive anything.
+
+**Set-up:** the Redmi A1 over wireless debugging (`adb connect`; USB was not detected). Browsers:
+the console as Manager, the Kitchen display as Kitchen, and the diner (Table 3, 360 × 800).
+
+**Tried live, each checked in the database (and the audit log):**
+
+- **Staff:** a new waiter registered (Audit Waiter); a PIN reset (their sessions ended, the old PIN
+  refused); the waiter deactivated with a reason.
+- **Menu and kitchen:** a new station and a new dish on it, published (v2), on the QR site at once;
+  its KOT went to the new station on the Kitchen display; the dish archived and the station
+  archived again with reasons, then published (v3).
+- **QR orders, both ways:** approved, rejected with a reason the diner sees, and changed on the
+  manager's phone (Garlic Naan 1 → 2, "The diner agreed to these changes").
+- **The manager's phone:** the approval and "food ready" notifications, a request acknowledged and
+  resolved, a bill printed and a UPI payment taken on the phone.
+- **Waiter actions:** a cancel with a quick reason; a void with the manager's PIN (the audit has
+  actor, approver and reason); a table freed.
+- **Money on the POS:**
+  - a discount added and removed;
+  - cash with change inside a shift; cash out; the shift closed with no difference;
+  - the Z-report matching the database; the sales report and its CSV; a takeaway with a token.
+- **The full QR journey for Table 3:** order → approved with a change → the kitchen → "Ask for the
+  bill" → printed (INV/26-27/000009, ₹389) → on the diner's phone with Pay by UPI → UPI recorded →
+  "Your bill is settled". The bill request ended when the bill printed.
+- **Admin:** a setting changed live (on the QR site and in the audit); a new table and its QR code;
+  a device renamed; stale alerts acknowledged; a manual backup (it had failed, see below).
+
+**Found and fixed:**
+
+- **The diner never saw a number the restaurant changed.** After "Approve with changes" (1 → 2) the
+  database said 2 and the diner's page still said 1, as did the bill estimate. The status the PC
+  sends the relay now carries each dish's quantity (`QrOrderStatusDetail.items[].quantity`,
+  optional, so older relays and PCs keep working). My orders shows "2 × Garlic Naan · Changed by
+  the restaurant (you asked for 1)" and the estimate counts 2.
+- **The approval's audit entry said "Removed with the diner's agreement"** even when a number went
+  up. It now says "Changed with the diner's agreement"; a removed dish's own reason is unchanged.
+- **Backups failed on this Mac:** no `pg_dump` (Homebrew could not install PostgreSQL 16 here).
+  `scripts/pilot/pg-bin/` wraps `pg_dump`, `pg_restore` and `psql` to run inside the pilot's
+  database container, and both pilot scripts pass `RP_PG_BIN`. A manual backup now completes.
+- **Day-end** let you press "Close the day" with open shifts; the button now waits until nothing
+  blocks it (open tables only with "carry forward"). An open shift is named by its person, with
+  how to close it.
+- **Kitchen display:** the Start/Ready button dropped under the dish whenever the state chip was
+  wide; name, state and button now stay on one row.
+- **Settings:** the "Why" typed for one setting appeared in the next setting's dialog.
+- **Audit trail:** actions read "Table QR codes issued", "Staff PIN set" (they read "Qr", "Pin"),
+  and the date and time no longer break mid-way.
+- **Shift:** "Shift open since 9:41 am on 1 Nov 2026" (the date was missing); "Opening cash" label.
+- **Staff:** phone numbers as `+91 98765 43210`.
+- **Phone, alert button:** "Alerts · 2" in words; its glyph had shown as a box.
+- **Waiter app:** the menu is two even columns; buttons no longer split words ("App rove",
+  "Cha nge") on a 720-px phone.
+- **Wording:** the alerts tip says Acknowledge (the button's name); "Free table" explains it also
+  serves a table whose dishes were all cancelled.
+
+**Checked and left as they are:**
+
+- **The 32 menu-check warnings** at publish are all dishes without a photo (test data).
+- **A printed bill reaches the diner's page in about 10 s** (the page polls).
+- **Owner-only actions (service charge, invoice details, tax groups, invoice series)** need the
+  Owner's password and authenticator. Setting them up was refused by the permission system in
+  this session, so they were not tried; see MANUAL_TASKS.md.
+
+**Checks:** `pnpm check` passes except the server's backup, restore and update tests, which need
+PostgreSQL 16's own programs on the machine. With the `pg-bin` wrappers on `PATH`
+(`RP_PG_CONTAINER=rp-pg16`), all but one of those pass too. `pg_restore`'s wrapper copies the files
+it is given into the container. The last one fails only because this Mac's disk is 93% full
+(DISK_FULL alert).
+
+**Questions for the Business Owner (still open):** "Call waiter" at a table nobody opened (P9-23).
 
 ### 2026-11-01: P9-23 Every flow again: the QR diner, the manager and the kitchen
 

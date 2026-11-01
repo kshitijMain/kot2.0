@@ -309,7 +309,8 @@ const styles = StyleSheet.create({
   },
   title: { fontSize: fontSize.md, fontWeight: weight(fontWeight.semibold) },
   line: { flexDirection: 'row', alignItems: 'center', gap: spacing[2] },
-  actions: { flexDirection: 'row', gap: spacing[2] },
-  grow: { flex: 1 },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
+  // Natural width, filling the row; wraps rather than breaking a word (P9-24: "App rove").
+  grow: { flexGrow: 1 },
   failed: { gap: spacing[2] },
 });

@@ -31,6 +31,15 @@ describe('[QR-007] what the diner’s QR page says', () => {
     expect(target.detail.items?.map((item) => item.state)).toEqual(['PREPARING', 'CANCELLED']);
   });
 
+  it('[ORD-004] tells the diner the number the restaurant took (P9-24)', () => {
+    const target = qrStatusOf({
+      outcome: 'CREATED',
+      rejectionReason: null,
+      lines: [{ ...line('SENT'), quantity: 2 }, line('SENT', 'b')],
+    });
+    expect(target.detail.items?.map((item) => item.quantity)).toEqual([2, undefined]);
+  });
+
   it('says rejected with the waiter’s reason, or why nothing could be made', () => {
     expect(
       qrStatusOf({

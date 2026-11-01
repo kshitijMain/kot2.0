@@ -37,12 +37,10 @@ export function orderedSoFar(
   for (const order of orders) {
     const status = shownStatus(order, now);
     if (status === 'REJECTED' || status === 'EXPIRED') continue;
-    const states = new Map(
-      (order.detail.items ?? []).map((line) => [line.clientLineId, line.state]),
-    );
+    const states = new Map((order.detail.items ?? []).map((line) => [line.clientLineId, line]));
     for (const line of order.lines) {
-      const state = states.get(line.clientLineId);
-      if (state !== undefined && GONE.has(state)) continue;
+      const told = states.get(line.clientLineId);
+      if (told !== undefined && GONE.has(told.state)) continue;
       const item = document.menu.items.find((candidate) => candidate.id === line.itemId);
       if (item === undefined) continue;
       const selection = {
@@ -54,7 +52,8 @@ export function orderedSoFar(
         itemId: item.id,
         name: item.name,
         summary: '',
-        quantity: line.quantity,
+        // The restaurant's number when it changed the diner's (ORD-004, P9-24).
+        quantity: told?.quantity ?? line.quantity,
         selection,
         instructions: '',
         unitPrice: unitPriceOf(selectable(document.menu, item), selection),

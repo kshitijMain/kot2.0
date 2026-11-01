@@ -23,9 +23,14 @@ import { readable, recorded, shortId } from './audit-view.js';
 /** Entries read at a time. */
 export const AUDIT_PAGE = 100;
 
+/** The date on one line and the time under it (P9-24): it had broken at every hyphen. */
 const when = (at: string) => {
   const { date, time } = displayDateTime(new Date(at));
-  return `${date} ${time}`;
+  return (
+    <span className="audit-when">
+      <span>{date}</span> <span>{time}</span>
+    </span>
+  );
 };
 
 function Changes({ entry }: { entry: AuditEntryView }) {
