@@ -1,5 +1,5 @@
 import type { BillView, InvoiceView } from '@rp/contracts';
-import { amountInWords } from '@rp/domain';
+import { amountInWords, displayPhone } from '@rp/domain';
 import { Badge, Button, Card, ErrorState, Icon, LoadingState, Money, useToast } from '@rp/ui-web';
 import { useState } from 'react';
 import { useConsole } from '../app/console-context.js';
@@ -572,7 +572,11 @@ function OpenBillActions({
         }
       >
         <p>
-          {[bill.customer.name, bill.customer.phone, bill.customer.gstin]
+          {[
+            bill.customer.name,
+            bill.customer.phone === null ? null : displayPhone(bill.customer.phone),
+            bill.customer.gstin,
+          ]
             .filter((part): part is string => part !== null)
             .join(' · ')}
         </p>

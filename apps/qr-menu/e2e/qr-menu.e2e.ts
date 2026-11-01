@@ -184,9 +184,9 @@ test.describe('[QR-011] call waiter and request bill', () => {
   test('calls a waiter and follows the answer', async ({ page }) => {
     await tablePage(page, 'T2');
     await page.getByRole('button', { name: s.help.WAITER }).click();
-    const status = (state: string) =>
-      s.help.line.replace('{what}', s.help.WAITER).replace('{status}', state);
-    await expect(page.getByText(status(s.help.status.SUBMITTED))).toBeVisible();
+    // Each stage said as a sentence (P9-23).
+    const said = s.help.said.WAITER;
+    await expect(page.getByText(said.SUBMITTED)).toBeVisible();
     // The restaurant picks it up, then the waiter is on the way.
     const { requests } = await asServer<{ requests: { id: string; type: string }[] }>(
       'GET',
@@ -195,9 +195,9 @@ test.describe('[QR-011] call waiter and request bill', () => {
     const request = requests.find((entry) => entry.type === 'WAITER');
     if (request === undefined) throw new Error('nothing to pick up');
     await asServer('POST', `service-requests/${request.id}/status`, { status: 'RECEIVED' });
-    await expect(page.getByText(status(s.help.status.RECEIVED))).toBeVisible();
+    await expect(page.getByText(said.RECEIVED)).toBeVisible();
     await asServer('POST', `service-requests/${request.id}/status`, { status: 'ACKNOWLEDGED' });
-    await expect(page.getByText(status(s.help.status.ACKNOWLEDGED))).toBeVisible();
+    await expect(page.getByText(said.ACKNOWLEDGED)).toBeVisible();
   });
 });
 
@@ -452,11 +452,7 @@ test.describe('[P9] Mannat: the whole table on a phone (ADR-0024)', () => {
     await expect(page.getByRole('img', { name: /QR code to pay ₹290\.00/ })).toBeVisible();
     await expectAccessible(page);
     await page.getByRole('button', { name: s.help.PAID }).click();
-    await expect(
-      page.getByText(
-        s.help.line.replace('{what}', s.help.PAID).replace('{status}', s.help.status.SUBMITTED),
-      ),
-    ).toBeVisible();
+    await expect(page.getByText(s.help.said.PAID.SUBMITTED)).toBeVisible();
     const { requests } = await asMannat<{ requests: { type: string }[] }>(
       'GET',
       'service-requests',

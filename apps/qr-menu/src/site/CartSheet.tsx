@@ -2,7 +2,7 @@
 
 import type { MenuSnapshot } from '@rp/contracts';
 import type { QrPhoneAsk } from '@rp/contracts/relay';
-import { formatRupees, type PriceMode } from '@rp/domain';
+import { displayPhone, formatRupees, type PriceMode } from '@rp/domain';
 import { type CartLine, estimateCart } from '@rp/ordering';
 import { Button, IconButton, Icon, QuantityStepper, Sheet, TextField } from '@rp/ui-web';
 import { useT } from './i18n';
@@ -153,7 +153,7 @@ export function CartSheet({
             <span>
               {phone === ''
                 ? t('qrSite.cart.noPhone')
-                : t('qrSite.cart.phoneOnBill', { phone: phone.replace(/^\+91/, '+91 ') })}
+                : t('qrSite.cart.phoneOnBill', { phone: displayPhone(phone) })}
             </span>
             <Button variant="ghost" onClick={onChangePhone}>
               {phone === '' ? t('qrSite.cart.addPhone') : t('qrSite.welcome.change')}

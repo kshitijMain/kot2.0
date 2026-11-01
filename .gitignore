@@ -23,6 +23,7 @@ apps/waiter-app/android/
 apps/table-tablet/android/
 # Next.js
 .next/
+.next-pilot/
 out/
 # Storybook workbench build (packages/ui-web)
 storybook-static/

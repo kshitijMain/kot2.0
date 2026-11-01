@@ -178,6 +178,40 @@ describe('[MGR-008] [NTF-006] alerts on the POS, live', () => {
     expect(within(sheet).getByRole('button', { name: t('alerts.nudge.open') })).toBeVisible();
   });
 
+  it('takes an alert’s toast away once the alert is dealt with elsewhere (P9-23)', async () => {
+    const food = alertView(31);
+    const escalated: AlertView = {
+      ...food,
+      escalatedAt: food.createdAt,
+      escalatedTo: [STAFF.MANAGER.staffId],
+      recipientIds: [...food.recipientIds, STAFF.MANAGER.staffId],
+    };
+    const fake = alertsServer(
+      'MANAGER',
+      [],
+      [escalated],
+      [{ ...escalated, status: 'ACKNOWLEDGED' }],
+    );
+    const { sockets } = await renderConsole({ fake, path: '/pos', signedIn: 'MANAGER' });
+    expect(await alertsButton(0)).toBeInTheDocument();
+    act(() => {
+      sockets.sync(0);
+      sockets.last.fire('event', alertEvent(1, 'AlertEscalated', escalated));
+    });
+    // An escalation stays until dismissed...
+    expect(await within(toasts()).findByRole('alert')).toHaveTextContent('Table 5 · Food ready');
+    // ...unless someone deals with it meanwhile: then it goes by itself.
+    act(() => {
+      sockets.last.fire(
+        'event',
+        alertEvent(2, 'AlertAcknowledged', { ...escalated, status: 'ACKNOWLEDGED' }),
+      );
+    });
+    await waitFor(() => {
+      expect(within(toasts()).queryByRole('alert')).toBeNull();
+    });
+  });
+
   it('[NTF-005] pops up an escalation to the manager on the POS and keeps it up', async () => {
     const food = alertView(30);
     const escalated: AlertView = {

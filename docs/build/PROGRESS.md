@@ -709,6 +709,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-20 Full audit of every screen, link, button and workflow on the live pilot
 - [x] P9-21 The waiter app on a real phone: every flow to the kitchen, the bill and payment
 - [x] P9-22 No pairing: the waiter app and browsers connect by themselves; Mannat's UPI ID
+- [ ] P9-23 Every flow again (QR diner, manager, kitchen): fixes; the manager phone's part waits for the phone
 
 ## Decisions
 
@@ -4650,6 +4651,79 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-11-01: P9-23 Every flow again: the QR diner, the manager and the kitchen
+
+Asked by the Business Owner: test each manager function, each manager alert on the phone, QR
+ordering, approvals, KOTs and the kitchen, and how every screen looks (fonts, buttons, wording),
+and fix what is wrong.
+
+**The phone:** the new Redmi A1 (Android 12, 720 × 1600) installed the app and connected by itself
+("Phone 2", no pairing). The Manager signed in. Then the USB connection dropped and did not come
+back, so the manager phone's part (its notifications, approving on the phone) **waits for the
+phone**. Table 4's QR order (KOT 10) and its open "Call waiter" request were left for it.
+
+**Tested in browsers:**
+
+- **Diner:** Table 3 at 360 × 800, with Table 4 again after the fixes.
+- **Staff:** the POS and alerts as Manager, and the Kitchen display as Kitchen.
+- **The QR journey:**
+  1. Number, menu, a dish with options and a note, send.
+  2. "Order to approve" on the POS and the Manager's alert, then Approve.
+  3. Live on the diner's page: accepted, cooking, ready, served.
+  4. Call waiter → "On my way" → Done.
+  5. Ask for the bill → print (₹578, round-off +₹0.50), then the bill on the phone with Pay by
+     UPI to `7683072807@ptsbi`, the app buttons and the QR code.
+  6. "I have paid" → the manager's alert, then UPI recorded on the POS: the table is free.
+- **Alert recipients**, checked in the database at each step.
+
+**Found and fixed:**
+
+- **The kitchen display signed itself out after 10 idle minutes.** In PIN-only mode the kitchen is
+  a person, and AUTH-005's POS timeout applied. Kitchen sessions now have no inactivity timeout,
+  as a station-mode kitchen screen has none; only the session's lifetime ends them
+  (`SessionService.inactivityMs`).
+- **A diner's "Bill" request stayed open after the bill was printed**, with its alert on every
+  manager's list; a waiter's already cleared. The service-request consumer now also hears
+  `BillPrinted` and resolves the table's open bill requests (`ServiceRequestsService.billPrinted`).
+- **"Food ready" alerts were raised for tables that had paid and left**, and stayed open for good;
+  none is raised now.
+- **Console alert pop-ups stayed up** after their alert was acknowledged or cleared elsewhere (food
+  picked up, request done). They now go with the alert.
+- **The QR site broke ("This page couldn't load") whenever the site was rebuilt for tests**: the
+  running pilot lost its files.
+  - The pilot now builds and serves its own copy (`NEXT_DIST_DIR=.next-pilot`, set in
+    `next.config.ts`, `mannat-local.sh`, `mannat-ngrok.sh`), ignored like `.next`.
+- **Seven dishes were still "out of stock"** (all beverages, both desserts, so the Thali too). They
+  were left by the P9-20 probe; they were marked available again in Menu availability.
+- **QR site wording and layout:**
+  - **Requests:** "Call waiter: Done" and the other bare blue lines are now a card with an icon,
+    in a sentence for each request and stage ("A waiter is on the way.", "You asked for the bill.
+    It appears here as soon as it is printed."). A request dealt with says nothing more; a refusal
+    stays 20 s. A request still open hides its button (no second "Ask for the bill").
+  - **Order banner:** it follows the order (cooking, ready, "Everything is served. Enjoy your
+    meal!"); it had stayed on "accepted".
+  - **Dishes in My orders:** the name keeps the row's width, with the dish's choices ("Hot"), its
+    note and its state under it; the name had broken into three lines.
+  - **Bill estimate:** the dishes and the estimated taxes are shown above the total. The total had
+    jumped from ₹550 to ₹577.50 with nothing to say why.
+  - **Suggestion row:** it starts at its first card again after a dish is added.
+  - **Focus ring:** it is in the restaurant's colour, no longer the console's teal.
+- **Phone numbers** read `+91 90000 00003` on the console bill and the QR cart (`displayPhone`).
+
+**Checked and left as they are:**
+
+- **"Call waiter" before the table is open** is refused with "This table is not open yet. Please
+  wave to a waiter to be seated." A request needs an open table; a question for the Business
+  Owner (below).
+- **Food-ready and request alerts** go to the person who sent the KOT and, with no waiter on duty,
+  to the managers.
+- **The diner sees "Order 1"** (their own count) where the POS says "Order 7".
+
+**Questions for the Business Owner:**
+
+- Should "Call waiter" at a table nobody has opened yet open the table, or alert the staff without
+  one? (Today it is refused.)
 
 ### 2026-11-01: P9-22 No pairing: the waiter app and browsers connect by themselves; Mannat's UPI ID
 

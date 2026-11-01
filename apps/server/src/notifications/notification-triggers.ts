@@ -205,12 +205,15 @@ export class NotificationTriggers implements OnModuleInit {
   ): Promise<void> {
     const order = await tx.order.findUnique({
       where: { id: change.orderId },
-      select: { tableId: true, tableSessionId: true },
+      select: { tableId: true, tableSessionId: true, tableSession: { select: { status: true } } },
     });
     if (order === null) return;
     if (change.to === 'READY') {
       // Takeaway food is called by its token on the counter display, not by a waiter's pager.
       if (order.tableSessionId === null) return;
+      // Nobody carries food to guests who have paid and left (P9-23): the alert would stay open
+      // for good, as no table closes after it to clear it.
+      if (order.tableSession?.status === 'CLOSED') return;
       const item = await tx.orderItem.findUnique({
         where: { id: change.orderItemId },
         select: { name: true, parentOrderItemId: true },

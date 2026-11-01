@@ -16,6 +16,7 @@ export default tseslint.config(
       '**/coverage/**',
       '**/.turbo/**',
       '**/.next/**',
+      '**/.next-pilot/**',
       '**/.expo/**',
       '**/generated/**',
       '**/storybook-static/**',

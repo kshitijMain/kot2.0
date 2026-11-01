@@ -18,6 +18,16 @@ export function indianMobile(text: string): string | undefined {
   return /^[6-9]\d{9}$/.test(digits) ? `+91${digits}` : undefined;
 }
 
+/**
+ * A number as people read it (P9-23): an Indian mobile as `+91 98765 43210`, anything else as it
+ * was given. It had shown as `+919876543210` on the bill.
+ */
+export function displayPhone(phone: string): string {
+  const mobile = indianMobile(phone);
+  if (mobile === undefined) return phone;
+  return `+91 ${mobile.slice(3, 8)} ${mobile.slice(8)}`;
+}
+
 /** A number with all but its last four digits hidden: `+91 ******3210`. */
 export function maskPhone(phone: string): string {
   const digits = phone.replace(/\D/g, '');

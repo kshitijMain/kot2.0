@@ -1,11 +1,12 @@
 'use client';
 
-import type { MenuItem, OrderLineRequest } from '@rp/contracts';
+import type { MenuItem, MenuSnapshot, OrderLineRequest } from '@rp/contracts';
 import type { QrOrderView } from '@rp/contracts/relay';
 import { displayDateTime } from '@rp/domain';
+import { summaryOf } from '@rp/ordering';
 import { Button, Icon, StatusChip } from '@rp/ui-web';
 import { useT } from './i18n';
-import { ORDER_STEPS, orderStep } from './progress';
+import { ORDER_STEPS, type OrderStep, orderStep } from './progress';
 import { CardSkeleton } from './Skeletons';
 import { QrEmpty } from './States';
 
@@ -24,6 +25,7 @@ export function shownStatus(order: QrOrderView, now: number): QrOrderView['statu
 export function Orders({
   orders,
   items,
+  menu,
   now,
   readOnly,
   loading = false,
@@ -35,6 +37,8 @@ export function Orders({
 }: {
   orders: readonly QrOrderView[];
   items: ReadonlyMap<string, MenuItem>;
+  /** The menu, to say each dish's choices ("Hot") under its name (P9-23). */
+  menu?: MenuSnapshot;
   now: number;
   readOnly: boolean;
   /** Still finding this number's orders: a placeholder, not "nothing yet" (P9-11). */
@@ -133,7 +137,7 @@ export function Orders({
                           : 'send'
                   }
                 />
-                <span>{t(`qrSite.orders.${status}`)}</span>
+                <span>{bannerOf(status, orderStep(order, status), t)}</span>
               </p>
               <Progress step={orderStep(order, status)} />
               {status === 'REJECTED' && order.detail.rejectionReason !== undefined ? (
@@ -144,15 +148,37 @@ export function Orders({
               <ul className="qr-order__lines">
                 {order.lines.map((line) => {
                   const state = states.get(line.clientLineId);
-                  const name = items.get(line.itemId)?.name ?? '?';
+                  const item = items.get(line.itemId);
+                  const name = item?.name ?? '?';
+                  // The dish's choices and note under its name, as in the cart (P9-23).
+                  const choices =
+                    menu === undefined || item === undefined
+                      ? ''
+                      : summaryOf(
+                          menu,
+                          item,
+                          {
+                            ...(line.variantId !== undefined && { variantId: line.variantId }),
+                            modifiers: line.modifiers,
+                          },
+                          line.comboChoices,
+                        );
                   return (
                     <li key={line.clientLineId}>
-                      <span className="qr-order__line">
-                        {t('qrSite.orders.line', { quantity: line.quantity, name })}
-                      </span>
-                      {state === undefined ? null : (
-                        <StatusChip state={state} label={t(`qrSite.orders.itemState.${state}`)} />
-                      )}
+                      {/* The name keeps the row's width; the state goes under it (P9-23): beside it
+                          the name broke into three lines on a small phone. */}
+                      <div className="qr-order__dish">
+                        <span className="qr-order__line">
+                          {t('qrSite.orders.line', { quantity: line.quantity, name })}
+                        </span>
+                        {choices === '' ? null : <span className="qr-muted">{choices}</span>}
+                        {line.instructions === undefined || line.instructions === '' ? null : (
+                          <span className="qr-muted">“{line.instructions}”</span>
+                        )}
+                        {state === undefined ? null : (
+                          <StatusChip state={state} label={t(`qrSite.orders.itemState.${state}`)} />
+                        )}
+                      </div>
                       <button
                         type="button"
                         className="qr-again-one"
@@ -211,4 +237,17 @@ function Progress({ step }: { step: number | undefined }) {
       ))}
     </ol>
   );
+}
+
+/** What the order's banner says: where the whole order is, step by step once it is accepted. */
+function bannerOf(
+  status: QrOrderView['status'],
+  step: number | undefined,
+  t: ReturnType<typeof useT>,
+): string {
+  if (status !== 'SENT_TO_KITCHEN' || step === undefined) return t(`qrSite.orders.${status}`);
+  const reached: OrderStep | undefined = ORDER_STEPS[step];
+  return reached === undefined || reached === 'sent' || reached === 'accepted'
+    ? t('qrSite.orders.SENT_TO_KITCHEN')
+    : t(`qrSite.orders.stage.${reached}`);
 }

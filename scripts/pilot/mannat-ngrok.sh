@@ -48,6 +48,10 @@ perl -pi -e "s|^RP_QR_SITE_URL=.*|RP_QR_SITE_URL=$NGROK|" "$STATE/server.env"
 # PIN-only sign-in (ADR-0025) for a pilot set up before it existed.
 grep -q '^RP_AUTH_PIN_ONLY=' "$STATE/server.env" || echo 'RP_AUTH_PIN_ONLY=1' >> "$STATE/server.env"
 
+# The pilot's own build of the QR site (P9-23), made when missing.
+[[ -d "$ROOT/apps/qr-menu/.next-pilot" ]] || (cd "$ROOT/apps/qr-menu" && \
+  NEXT_DIST_DIR=.next-pilot NEXT_TELEMETRY_DISABLED=1 ./node_modules/.bin/next build >/dev/null)
+
 echo "== Restart relay, site, server with ngrok URLs"
 for name in relay-host qr-site server; do
   [[ -f "$STATE/$name.pid" ]] && kill "$(cat "$STATE/$name.pid")" 2>/dev/null || true
@@ -66,7 +70,7 @@ nohup env RELAY_DB_URL="$RELAY_DB_URL" RELAY_JOBS_DB_URL="$RELAY_JOBS_DB_URL" \
 echo $! > "$STATE/relay-host.pid"
 
 nohup env RELAY_URL="$NGROK/functions/v1" NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production \
-  "$ROOT/apps/qr-menu/node_modules/.bin/next" start "$ROOT/apps/qr-menu" -p 3100 -H 0.0.0.0 \
+  NEXT_DIST_DIR=.next-pilot "$ROOT/apps/qr-menu/node_modules/.bin/next" start "$ROOT/apps/qr-menu" -p 3100 -H 0.0.0.0 \
   >> "$STATE/logs/qr-site.log" 2>&1 &
 echo $! > "$STATE/qr-site.pid"
 

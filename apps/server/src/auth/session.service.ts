@@ -85,7 +85,12 @@ export class SessionService {
     private readonly audit: AuditService,
   ) {}
 
-  inactivityMs(settings: AuthSettings, device: AuthenticatedDevice): number {
+  inactivityMs(settings: AuthSettings, device: AuthenticatedDevice, role: Role): number {
+    // AUTH-005: kitchen screens stay on (station mode has no inactivity timeout). A kitchen person
+    // signed in on one, as in PIN-only mode (ADR-0025), is the kitchen screen: only the session's
+    // lifetime ends it (P9-23). It had been signed out after 10 idle minutes, and the next
+    // tickets then waited on a sign-in screen.
+    if (role === 'KITCHEN') return settings.sessionMaxHours * 60 * 60_000;
     const minutes =
       device.type === 'MANAGER_BROWSER'
         ? settings.managerBrowserInactivityMinutes
@@ -158,7 +163,8 @@ export class SessionService {
       session: {
         id: session.id,
         expiresAt: session.expiresAt.toISOString(),
-        inactivityTimeoutSeconds: this.inactivityMs(settings, input.device) / 1000,
+        inactivityTimeoutSeconds:
+          this.inactivityMs(settings, input.device, input.staff.role) / 1000,
       },
       staff: {
         id: input.staff.id,
@@ -185,7 +191,8 @@ export class SessionService {
       session: {
         id: session.id,
         expiresAt: session.expiresAt.toISOString(),
-        inactivityTimeoutSeconds: this.inactivityMs(settings, device) / 1000,
+        inactivityTimeoutSeconds:
+          this.inactivityMs(settings, device, session.staff.role.baseRole) / 1000,
       },
       staff: {
         id: session.staffId,
@@ -307,7 +314,10 @@ export class SessionService {
     // A session on a table tablet or a pager counts for nothing (AUTH-009, SEC-003).
     if (!isStaffDevice(device)) return authErrors.deviceNotAllowed();
     const idleFor = now.getTime() - session.lastActiveAt.getTime();
-    if (session.expiresAt <= now || idleFor > this.inactivityMs(settings, device)) {
+    if (
+      session.expiresAt <= now ||
+      idleFor > this.inactivityMs(settings, device, session.staff.role.baseRole)
+    ) {
       await this.revoke(session.id, session.expiresAt <= now ? 'EXPIRED' : 'INACTIVITY');
       return authErrors.sessionExpired();
     }
@@ -359,7 +369,10 @@ export class SessionService {
     if (session.revokedAt !== null) throw authErrors.sessionRevoked();
     const settings = await this.settings.get(session.restaurantId);
     const idleFor = now.getTime() - session.lastActiveAt.getTime();
-    if (session.expiresAt <= now || idleFor > this.inactivityMs(settings, device)) {
+    if (
+      session.expiresAt <= now ||
+      idleFor > this.inactivityMs(settings, device, session.staff.role.baseRole)
+    ) {
       await this.revoke(session.id, session.expiresAt <= now ? 'EXPIRED' : 'INACTIVITY');
       throw authErrors.sessionExpired();
     }

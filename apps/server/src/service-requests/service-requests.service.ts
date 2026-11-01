@@ -309,6 +309,27 @@ export class ServiceRequestsService {
   }
 
   /**
+   * The bill was printed (P9-23): a diner's open "Bill" request is dealt with, and its alert goes,
+   * as a waiter's bill request does. It had stayed on every manager's list after the bill was out.
+   */
+  async billPrinted(tx: TransactionClient, invoiceId: string): Promise<void> {
+    const invoice = await tx.invoice.findUnique({
+      where: { id: invoiceId },
+      select: { tableSessionId: true },
+    });
+    const tableSessionId = invoice?.tableSessionId ?? null;
+    if (tableSessionId === null) return;
+    const open = await tx.serviceRequest.findMany({
+      where: { tableSessionId, type: 'BILL', state: { in: OPEN_STATES } },
+      select: { id: true, restaurantId: true },
+    });
+    for (const { id, restaurantId } of open) {
+      const row = await this.lock(tx, restaurantId, id);
+      if (row !== null) await this.apply(tx, row, resolveEvents(row.state), {});
+    }
+  }
+
+  /**
    * The table closed (paid, or closed without a bill): its open requests end as a Cancel on the
    * tablet would end them, so nothing stays on for the next guests.
    */
