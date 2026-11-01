@@ -1,5 +1,5 @@
 import type { BillView, InvoiceView } from '@rp/contracts';
-import { amountInWords, displayPhone } from '@rp/domain';
+import { amountInWords, displayPhone, taxByCodeAndRate } from '@rp/domain';
 import { Badge, Button, Card, ErrorState, Icon, LoadingState, Money, useToast } from '@rp/ui-web';
 import { useState } from 'react';
 import { useConsole } from '../app/console-context.js';
@@ -453,15 +453,14 @@ function BillPreview({ bill }: { bill: BillView }) {
             </dd>
           </>
         ) : null}
-        {bill.taxLines.flatMap((line) =>
-          line.components.map((component) => (
-            <FragmentRow
-              key={`${line.taxGroupId}-${line.source}-${component.code}`}
-              label={`${component.code} ${(component.rateBp / 100).toFixed(2).replace(/\.?0+$/, '')}%`}
-              paise={component.amount}
-            />
-          )),
-        )}
+        {/* One line per tax and rate: the service charge's CGST joins the dishes' (P9-25). */}
+        {taxByCodeAndRate(bill.taxLines.flatMap((line) => line.components)).map((tax) => (
+          <FragmentRow
+            key={`${tax.code}-${String(tax.rateBp)}`}
+            label={`${tax.code} ${(tax.rateBp / 100).toFixed(2).replace(/\.?0+$/, '')}%`}
+            paise={tax.amount}
+          />
+        ))}
         {bill.roundOff === 0 ? null : (
           <FragmentRow label={t('billing.roundOff')} paise={bill.roundOff} />
         )}

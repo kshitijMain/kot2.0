@@ -711,6 +711,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-22 No pairing: the waiter app and browsers connect by themselves; Mannat's UPI ID
 - [x] P9-23 Every flow again (QR diner, manager, kitchen): fixes (the manager phone's part done in P9-24)
 - [x] P9-24 Everything in the manager's hands, live, checked in the database; fixes across every screen
+- [x] P9-25 The Owner by PIN only; call a waiter at an unopened table; Owner settings set up; prints saved to a folder (test)
 
 ## Decisions
 
@@ -4653,6 +4654,90 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
 
 ## Session log (newest first)
 
+### 2026-11-01: P9-25 The Owner by PIN only; call a waiter at an unopened table; Owner settings live
+
+The Business Owner decided:
+
+- **No password or authenticator for the Owner:** "we don't need an authenticator app… keep the
+  PIN thing only for the owners as well." Removed totally (ADR-0026, overriding AUTH-006).
+- **"Call waiter" at a table nobody has opened** (the P9-23 question): ping the waiters and the
+  manager.
+- **Owner settings:** Claude sets them as a normal restaurant would, and tests them live.
+- **Prints, for this test only:** saved to a folder instead of a printer, to check every print
+  button.
+
+**Built:**
+
+- **The Owner by PIN only (ADR-0026).**
+  - Gone: the `owner-login`, `step-up` and `owner/totp/*` endpoints; `owner/security` and
+    `owner/password`; the console's Security page and step-up dialogs; `secondFactorValidUntil`;
+    the `SECOND_FACTOR_REQUIRED` error.
+  - Owner-only actions still refuse a Manager (`OWNER_ONLY_CAPABILITIES`, renamed from
+    `OWNER_SECOND_FACTOR_CAPABILITIES`), and threat PC-E4 is Accepted.
+  - Done by a helper agent in a worktree based on an old commit. After merging:
+    - its ADR became 0026, since 0024 and 0025 were taken;
+    - P9-21 to P9-24 code was checked for leftovers (two fixed);
+    - the merged tree was re-checked.
+- **A call at a table nobody opened.** Calling a waiter, or asking for water, from the QR page or
+  a tablet is taken, no longer refused:
+  - A `GUEST_WAITING` alert goes to every waiter on duty and the managers on duty (with nobody on
+    duty, straight to the managers). Pager text: "T4 NEW GUEST".
+  - The POS and the phone say "Table not opened yet: seat the guests".
+  - Opening the table ends the call, in the name of whoever opened it.
+  - Bill and Paid still need an open table.
+  - `service_requests.table_session_id` is now nullable (migration; ON DELETE RESTRICT kept).
+- **Prints saved to a folder** (`RP_PRINT_TO_FOLDER`, test only, set by the pilot scripts to
+  `.pilot/printouts/`). Each job is saved as `.txt` (what the slip says) and `.bin` (the printer's
+  bytes). Delete the variable to use a real printer.
+
+**Found live and fixed:**
+
+- **A station set to print did not print** until the menu was published again: new KOTs read the
+  published menu's copy of the station; they now read the station.
+- **The kitchen screen was signed out by a server restart.**
+  - Cause: its token refresh was saved but the reply was lost, so the retry looked like a stolen
+    token (`REFRESH_TOKEN_REUSED`).
+  - Fix: the same device may present the token it just replaced for 30 s (`sessions.rotated_at`,
+    migration). Any other reuse still ends the session.
+  - Checked: a restart no longer signs anyone out.
+- **CGST/SGST at the same rate appeared twice** when a service charge was on (once on the dishes,
+  once on the charge). The console bill, the printed bill and the diner's QR bill now show one line
+  per tax and rate (`taxByCodeAndRate`).
+- **The phone app could not read requests** once one had no table session: the installed APK was
+  built against the old contract. The APK was rebuilt and installed.
+
+**Owner settings, set live as the Owner (PIN 1111 only), each checked in the database and audit
+log:**
+
+- **Invoice particulars:**
+  - legal name, address, GSTIN `27AAPFU0939F1ZV` (the format's standard sample) and FSSAI
+    `21526999000123`, all marked as test data;
+  - phone and email on the profile;
+  - the bill now prints as **TAX INVOICE** with all of them.
+- **Tax groups:** standalone restaurant, so everything is GST 5% (CGST 2.5% + SGST 2.5%, SAC 996331,
+  no input credit). Packaged Water moved from 18% to 5%, the menu was published (v4), and GST 18%
+  was archived.
+- **Service charge:** stays Off (the CCPA's 2022 guidelines: voluntary only). It was switched on (the
+  open bill showed a 5% charge with GST and "Remove service charge"), then off again; both changes
+  are audited.
+- **Invoice series:** one unbroken series for every bill, renamed "All bills" (`INV/26-27/000001`,
+  restarting each April); the unused Takeaway series was archived (takeaway bills already used INV).
+- **A Manager** sees these sections read-only.
+
+**Tried live end to end:**
+
+- **QR calls:** Tables 4 and 6. Table 4 was acknowledged on the phone (the diner saw "A waiter is on
+  the way") and resolved by seating; Table 6 was resolved when Waiter 1 seated it.
+- **Prints, all saved and read back:**
+  - a test page;
+  - KOTs from the POS and the phone;
+  - bills from the POS and the phone;
+  - "Print again" (marked DUPLICATE, print count 2, audited).
+- **Payments:** INV/26-27/000010 and 000011 paid by UPI and settled.
+
+**Checks:** `pnpm check` passes except the server tests that need PostgreSQL's own programs or a
+disk under 90% full (the same 21 as P9-24).
+
 ### 2026-11-01: P9-24 Everything in the manager's hands, tried live and checked in the database
 
 Asked by the Business Owner: try everything the manager (and the owner) can do on the live pilot,
@@ -4800,7 +4885,8 @@ phone**. Table 4's QR order (KOT 10) and its open "Call waiter" request were lef
 
 **Questions for the Business Owner:**
 
-- Should "Call waiter" at a table nobody has opened yet open the table, or alert the staff without
+- (Answered in P9-25: alert every waiter on duty and the managers, without opening the table.)
+  Should "Call waiter" at a table nobody has opened yet open the table, or alert the staff without
   one? (Today it is refused.)
 
 ### 2026-11-01: P9-22 No pairing: the waiter app and browsers connect by themselves; Mannat's UPI ID

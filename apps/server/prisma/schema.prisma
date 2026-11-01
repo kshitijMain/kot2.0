@@ -448,6 +448,9 @@ model Session {
   tokenHash         String    @unique @map("token_hash")
   /// SHA-256 of the refresh token this one replaced; presenting it again revokes the session.
   previousTokenHash String?   @unique @map("previous_token_hash")
+  /// When the refresh token last rotated: the same device may present the one before for a few
+  /// seconds after, as when the reply was lost to a restart (P9-25).
+  rotatedAt         DateTime? @map("rotated_at") @db.Timestamptz(3)
   /// When the Owner last confirmed password + second factor in this session (AUTH-006 step-up).
   secondFactorAt    DateTime? @map("second_factor_at") @db.Timestamptz(3)
   expiresAt         DateTime  @map("expires_at") @db.Timestamptz(3)
