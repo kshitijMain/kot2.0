@@ -1,5 +1,5 @@
 import type { ShiftView } from '@rp/contracts';
-import { countDenominations, formatRupees } from '@rp/domain';
+import { countDenominations, displayDateTime, formatRupees } from '@rp/domain';
 import {
   Button,
   Card,
@@ -217,11 +217,12 @@ function OpenShiftView({ shift, onChanged }: { shift: ShiftView; onChanged: () =
   return (
     <div className="bill">
       <Card
-        title={t('shift.status', { time: new Date(shift.openedAt).toLocaleTimeString() })}
+        // In IST, without seconds (P9-24): the browser's own clock format had shown "12:10:29".
+        title={t('shift.status', displayDateTime(new Date(shift.openedAt)))}
         headingLevel={3}
       >
         <dl className="bill__totals">
-          <dt>{t('shift.openingFloat')}</dt>
+          <dt>{t('shift.openingCash')}</dt>
           <dd>
             <Money paise={shift.openingFloat} />
           </dd>

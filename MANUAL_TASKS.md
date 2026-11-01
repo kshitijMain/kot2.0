@@ -25,6 +25,12 @@ can be updated. Never paste secrets, keys or passwords into a Claude session or 
       Same file. Checked 2026-10-11: `main` is not protected yet; the `release-signing`
       environment for the code-signing certificate (SEC-013) exists.
 
+- [ ] **Set the Owner's password and authenticator on the pilot** (2026-11-01, P9-24). Owner-only
+      changes (service charge, invoice details, tax groups, invoice series) ask for them, and
+      Claude's session was not allowed to set them. Sign in to the console as Owner (PIN 1111),
+      open Manage → Security (`/manage/security`) → "Set password", then set up the
+      authenticator app with the QR code shown. Keep both to yourself; tell Claude when it is done.
+
 ## 2. Accounts and keys (Business Owner)
 
 The full list with what each one unblocks is in

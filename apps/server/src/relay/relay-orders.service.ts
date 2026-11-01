@@ -376,7 +376,7 @@ export class RelayOrdersService implements OnModuleInit, OnApplicationBootstrap,
             items: {
               where: { parentOrderItemId: null },
               orderBy: { createdAt: 'asc' },
-              select: { clientLineId: true, state: true, endReason: true },
+              select: { clientLineId: true, state: true, endReason: true, quantity: true },
             },
           },
         },

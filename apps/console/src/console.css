@@ -595,18 +595,19 @@ body {
   border-inline-start: 3px solid var(--rp-color-border-strong);
 }
 
+/* Name, state and step on one row, the name wrapping in its own column (P9-24): with flex-wrap
+   the step button dropped under the dish whenever the state chip was wide ("Preparing"). */
 .kds-line {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
   gap: var(--rp-space-2);
 }
 
 .kds-line__main {
   display: flex;
-  flex: 1;
   flex-direction: column;
-  min-width: 10rem;
+  min-width: 0;
 }
 
 .kds-line__modifiers {
@@ -2001,6 +2002,13 @@ body {
   font-weight: var(--rp-font-weight-semibold);
   text-decoration: underline;
   text-underline-offset: 4px;
+}
+
+/* The audit trail's date and time, each kept whole (P9-24). */
+.audit-when {
+  display: inline-flex;
+  flex-direction: column;
+  white-space: nowrap;
 }
 
 .audit-changes > summary {

@@ -211,5 +211,6 @@ const styles = StyleSheet.create({
     gap: spacing[2],
   },
   actions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing[2] },
-  grow: { flex: 1 },
+  // Natural width, filling the row; wraps rather than breaking a word (P9-24: "App rove").
+  grow: { flexGrow: 1 },
 });

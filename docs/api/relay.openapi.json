@@ -1490,7 +1490,8 @@
                     "CANCELLED",
                     "VOIDED"
                   ]
-                }
+                },
+                "quantity": { "type": "integer", "exclusiveMinimum": 0, "maximum": 999 }
               },
               "required": ["clientLineId", "state"],
               "additionalProperties": false

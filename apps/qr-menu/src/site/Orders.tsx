@@ -107,7 +107,7 @@ export function Orders({
         {orders.map((order, index) => {
           const status = shownStatus(order, now);
           const states = new Map(
-            (order.detail.items ?? []).map((line) => [line.clientLineId, line.state]),
+            (order.detail.items ?? []).map((line) => [line.clientLineId, line]),
           );
           const tone =
             status === 'SENT_TO_KITCHEN'
@@ -147,7 +147,10 @@ export function Orders({
               ) : null}
               <ul className="qr-order__lines">
                 {order.lines.map((line) => {
-                  const state = states.get(line.clientLineId);
+                  const told = states.get(line.clientLineId);
+                  const state = told?.state;
+                  // The restaurant's number when it changed the diner's (ORD-004, P9-24).
+                  const quantity = told?.quantity ?? line.quantity;
                   const item = items.get(line.itemId);
                   const name = item?.name ?? '?';
                   // The dish's choices and note under its name, as in the cart (P9-23).
@@ -169,8 +172,13 @@ export function Orders({
                           the name broke into three lines on a small phone. */}
                       <div className="qr-order__dish">
                         <span className="qr-order__line">
-                          {t('qrSite.orders.line', { quantity: line.quantity, name })}
+                          {t('qrSite.orders.line', { quantity, name })}
                         </span>
+                        {quantity === line.quantity ? null : (
+                          <span className="qr-muted">
+                            {t('qrSite.orders.quantityChanged', { asked: line.quantity })}
+                          </span>
+                        )}
                         {choices === '' ? null : <span className="qr-muted">{choices}</span>}
                         {line.instructions === undefined || line.instructions === '' ? null : (
                           <span className="qr-muted">“{line.instructions}”</span>

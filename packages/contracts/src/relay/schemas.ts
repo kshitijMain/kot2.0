@@ -179,9 +179,18 @@ export type QrOrderStatus = z.infer<typeof QrOrderStatus>;
 export const QrOrderStatusDetail = z.strictObject({
   /** Why the waiter rejected it, as the diner should read it (ORD-004). */
   rejectionReason: z.string().min(1).max(200).optional(),
-  /** QR-007 (S): each line's state in the kitchen. */
+  /**
+   * QR-007 (S): each line's state in the kitchen, and how many the restaurant took: a manager
+   * approving with changes (ORD-004) may have changed it (P9-24), and the diner sees that.
+   */
   items: z
-    .array(z.strictObject({ clientLineId: z.uuid(), state: OrderItemState }))
+    .array(
+      z.strictObject({
+        clientLineId: z.uuid(),
+        state: OrderItemState,
+        quantity: z.int().positive().max(999).optional(),
+      }),
+    )
     .max(200)
     .optional(),
 });

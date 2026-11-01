@@ -336,6 +336,9 @@ export function SettingsScreen() {
       {content}
       {editing !== undefined && data.status === 'ready' ? (
         <SettingDialog
+          // A fresh dialog per setting (P9-24): moving from one to another had kept the first's
+          // reason in the second's "Why".
+          key={editing.setting.key}
           setting={editing.setting}
           editor={editing.editor}
           name={label(editing.setting.key)}

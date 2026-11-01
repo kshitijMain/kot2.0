@@ -18,6 +18,8 @@ export interface QrOrderRecord {
     readonly clientLineId: string | null;
     readonly state: OrderItemState;
     readonly endReason: string | null;
+    /** How many the restaurant took (it may have changed the diner's number, ORD-004). */
+    readonly quantity?: number;
   }[];
 }
 
@@ -57,7 +59,11 @@ export function qrStatusOf(record: QrOrderRecord): QrStatusTarget {
     return {
       status: 'SENT_TO_KITCHEN',
       detail: {
-        items: lines.map((line) => ({ clientLineId: line.clientLineId, state: line.state })),
+        items: lines.map((line) => ({
+          clientLineId: line.clientLineId,
+          state: line.state,
+          ...(line.quantity !== undefined && { quantity: line.quantity }),
+        })),
       },
     };
   }

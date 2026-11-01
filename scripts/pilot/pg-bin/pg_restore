@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# The pilot's PostgreSQL 16 client programs on a Mac without them (P9-24): run inside the database's
+# own Docker container, which has them. The server (RP_PG_BIN=scripts/pilot/pg-bin) passes the
+# connection in libpq's environment (PGUSER, PGPASSWORD, PGDATABASE); inside the container the
+# server is on localhost:5432. Data flows through stdin and stdout, as with the real programs.
+# RP_PG_CONTAINER picks the container (default rp-pilot-pg; rp-pg16 for the test database).
+#
+# A restore names files on this Mac (the dump, `--use-list=` lists) and reads them in parallel, so
+# they cannot come through stdin: each one is copied into the container first, and removed after.
+set -euo pipefail
+container="${RP_PG_CONTAINER:-rp-pilot-pg}"
+inside="/tmp/rp-pg-restore-$$"
+args=()
+copied=0
+copy_in() {
+  if [[ $copied -eq 0 ]]; then
+    docker exec "$container" mkdir -p "$inside"
+    copied=1
+  fi
+  local target="$inside/$(basename "$1")"
+  docker cp -q "$1" "$container:$target"
+  printf '%s' "$target"
+}
+for arg in "$@"; do
+  if [[ "$arg" == --use-list=* && -f "${arg#--use-list=}" ]]; then
+    args+=("--use-list=$(copy_in "${arg#--use-list=}")")
+  elif [[ "$arg" != -* && -f "$arg" ]]; then
+    args+=("$(copy_in "$arg")")
+  else
+    args+=("$arg")
+  fi
+done
+status=0
+docker exec -i \
+  -e PGUSER="${PGUSER:-postgres}" -e PGPASSWORD="${PGPASSWORD:-}" -e PGDATABASE="${PGDATABASE:-postgres}" \
+  -e PGHOST=127.0.0.1 -e PGPORT=5432 -e PGCONNECT_TIMEOUT=10 \
+  "$container" pg_restore "${args[@]+"${args[@]}"}" || status=$?
+if [[ $copied -eq 1 ]]; then
+  docker exec "$container" rm -rf "$inside" || true
+fi
+exit "$status"

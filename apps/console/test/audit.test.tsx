@@ -173,6 +173,9 @@ describe('[AUD-005] the audit trail as shown', () => {
   it('makes recorded codes readable and shows what was stored', () => {
     expect(readable('INVOICE_VOIDED')).toBe('Invoice voided');
     expect(readable('order_item')).toBe('Order item');
+    // P9-24: letters stay letters.
+    expect(readable('TABLE_QR_CODES_ISSUED')).toBe('Table QR codes issued');
+    expect(readable('STAFF_PIN_SET')).toBe('Staff PIN set');
     expect(recorded(null)).toBeUndefined();
     expect(recorded({})).toBeUndefined();
     expect(recorded({ value: 12 })).toBe('{\n  "value": 12\n}');

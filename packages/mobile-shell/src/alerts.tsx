@@ -2,7 +2,7 @@ import type { AlertView } from '@rp/contracts';
 import { fontSize, fontWeight, radius, spacing, touchTarget } from '@rp/design-tokens';
 import type { AlertCenterSnapshot } from '@rp/mobile-core';
 import { alertAge, describeAlert } from '@rp/ordering';
-import { Button, Glyph, Sheet, Text, useTheme, weight } from '@rp/ui-native';
+import { Button, Sheet, Text, useTheme, weight } from '@rp/ui-native';
 import { useCallback, useState, useSyncExternalStore } from 'react';
 import { Pressable, StyleSheet, View } from 'react-native';
 import { useDeviceSession, useT } from './context.js';
@@ -27,7 +27,6 @@ export function useAlerts(): AlertCenterSnapshot {
 export function AlertBell({ onOpenTable }: { onOpenTable?: (tableSessionId: string) => void }) {
   const { holder, alerts } = useAlerts();
   const t = useT();
-  const { colors } = useTheme();
   const [open, setOpen] = useState(false);
   const close = useCallback(() => {
     setOpen(false);
@@ -36,22 +35,17 @@ export function AlertBell({ onOpenTable }: { onOpenTable?: (tableSessionId: stri
   const count = alerts.length;
   return (
     <>
+      {/* The word, not a symbol (P9-24): the text glyph for a bell is a diamond, and "◆ 4" did not
+          read as alerts. */}
       <Button
         variant={count > 0 ? 'primary' : 'ghost'}
-        startIcon={
-          <Glyph
-            name="bell"
-            color={count > 0 ? colors.onPrimary : colors.text}
-            size={fontSize.md}
-          />
-        }
         accessibilityLabel={t('alerts.bellLabel', { count })}
         testID="alert-bell"
         onPress={() => {
           setOpen(true);
         }}
       >
-        {String(count)}
+        {t('alerts.button', { count })}
       </Button>
       {open ? (
         <AlertsSheet
