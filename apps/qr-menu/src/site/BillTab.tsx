@@ -170,7 +170,19 @@ export function BillTab({
                 </li>
               ))}
             </ul>
+            {/* The dishes and the taxes the total adds, as the cart shows them (P9-23): the total
+                had jumped from ₹550 to ₹577.50 with nothing to say why. */}
             <dl className="qr-totals">
+              <div>
+                <dt>{t('qrSite.cart.subtotal')}</dt>
+                <dd>{formatRupees(soFar.estimate.subtotal)}</dd>
+              </div>
+              {soFar.estimate.tax === 0 ? null : (
+                <div>
+                  <dt>{t('qrSite.cart.tax')}</dt>
+                  <dd>{formatRupees(soFar.estimate.tax)}</dd>
+                </div>
+              )}
               <div className="qr-totals__total">
                 <dt>{t('qrSite.bill.estimate')}</dt>
                 <dd>{formatRupees(soFar.estimate.total)}</dd>

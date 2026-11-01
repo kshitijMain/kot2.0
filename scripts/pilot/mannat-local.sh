@@ -52,6 +52,14 @@ LOG_LEVEL=info
 EOF
 }
 
+# The QR site the pilot serves, built on its own (.next-pilot): `pnpm check` rebuilding .next for
+# tests used to pull the files from under the running site, which then showed "This page couldn't
+# load" (P9-23). Run it again after changing the site.
+pilot_site_build() {
+  (cd "$ROOT/apps/qr-menu" && NEXT_DIST_DIR=.next-pilot NEXT_TELEMETRY_DISABLED=1 \
+    ./node_modules/.bin/next build >/dev/null)
+}
+
 setup() {
   mkdir -p "$STATE/logs" "$STATE/server-data" "$STATE/photos"
   chmod 700 "$STATE"
@@ -78,6 +86,7 @@ setup() {
   COREPACK_ENABLE_DOWNLOAD_PROMPT=0 pnpm turbo run build \
     --filter=@rp/server... --filter=@rp/relay --filter=@rp/qr-menu... --filter=@rp/console... \
     --output-logs=errors-only
+  pilot_site_build
 
   echo "== The KOT server's database"
   (cd apps/server && DATABASE_URL="$(pg_url rp_mannat)" pnpm exec prisma migrate deploy >/dev/null)
@@ -150,7 +159,7 @@ start() {
   launch relay-host env $(grep -v '^#' "$STATE/relay-host.env" | xargs) \
     node infra/supabase/dist/relay-host.mjs
   launch qr-site env RELAY_URL="$RELAY" NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production \
-    "$ROOT/apps/qr-menu/node_modules/.bin/next" start "$ROOT/apps/qr-menu" -p "$SITE_PORT" -H 0.0.0.0
+    NEXT_DIST_DIR=.next-pilot "$ROOT/apps/qr-menu/node_modules/.bin/next" start "$ROOT/apps/qr-menu" -p "$SITE_PORT" -H 0.0.0.0
   launch server env $(server_env | xargs) node apps/server/dist/main.js
   sleep 4
   status

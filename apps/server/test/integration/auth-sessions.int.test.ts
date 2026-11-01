@@ -106,6 +106,18 @@ describe('[AUTH-005] inactivity', () => {
   });
 });
 
+describe('[AUTH-005] [KDS-001] a kitchen person on a kitchen screen (P9-23)', () => {
+  it('is not signed out for being idle, as station mode is not; the lifetime still ends it', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    const session = await signIn(app, kit, 'KITCHEN');
+    expect(session.session.inactivityTimeoutSeconds).toBeGreaterThan(60 * 60);
+    // A quiet hour between lunch and dinner: the screen still shows the next tickets.
+    minutes(90);
+    const renewed = LoginResponse.parse((await refresh(kit.deviceId, session.refreshToken)).body);
+    expect((await me(kit.deviceId, renewed.accessToken)).status).toBe(200);
+  });
+});
+
 describe('[AUTH-005] refresh tokens', () => {
   it('revoke the whole session when a replaced refresh token is used again', async () => {
     const session = await signIn(app, kit, 'MANAGER');

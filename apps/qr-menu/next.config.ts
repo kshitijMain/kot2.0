@@ -9,6 +9,9 @@ import type { NextConfig } from 'next';
  * anywhere, since the address holds the table's code.
  */
 const config: NextConfig = {
+  // The pilot serves its own build (NEXT_DIST_DIR=.next-pilot, scripts/pilot), so rebuilding the
+  // site for tests never pulls the files from under the running pilot (P9-23).
+  distDir: process.env.NEXT_DIST_DIR ?? '.next',
   poweredByHeader: false,
   reactStrictMode: true,
   headers() {

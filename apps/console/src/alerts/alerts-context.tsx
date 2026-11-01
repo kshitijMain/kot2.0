@@ -57,6 +57,8 @@ export function AlertsProvider({ person, children }: { person: AlertPerson; chil
   const [names, setNames] = useState<ReadonlyMap<string, string>>(() => new Map());
   const [panel, setPanel] = useState<AlertPanel>();
   const seen = useRef<ReadonlyMap<string, boolean> | undefined>(undefined);
+  /** The toast each announced alert is showing, so it goes when the alert is dealt with. */
+  const toasts = useRef(new Map<string, string>());
 
   useEffect(() => {
     let live = true;
@@ -77,9 +79,19 @@ export function AlertsProvider({ person, children }: { person: AlertPerson; chil
     if (alerts.status !== 'ready') return;
     const changed = arrivals(seen.current, alerts.value, person.id);
     seen.current = changed.seen;
+    // An alert acknowledged or cleared anywhere takes its toast with it (P9-23): toasts for food
+    // already picked up and requests already done had stayed piled up on the screen.
+    const open = new Set(
+      alerts.value.filter((alert) => alert.status === 'OPEN').map((alert) => alert.id),
+    );
+    for (const [alertId, toastId] of toasts.current) {
+      if (open.has(alertId)) continue;
+      toast.dismiss(toastId);
+      toasts.current.delete(alertId);
+    }
     for (const alert of changed.announce) {
       const { title, detail } = describeAlert(alert, t);
-      toast.show({
+      const shown = toast.show({
         title,
         ...(detail !== null && { description: detail }),
         // An escalation stays until dismissed (danger toasts do); the rest go after a while.
@@ -91,6 +103,9 @@ export function AlertsProvider({ person, children }: { person: AlertPerson; chil
           },
         },
       });
+      const before = toasts.current.get(alert.id);
+      if (before !== undefined) toast.dismiss(before);
+      toasts.current.set(alert.id, shown);
     }
   }, [alerts, person.id, t, toast]);
 

@@ -12,7 +12,9 @@ const tableId = randomUUID();
 const orderId = randomUUID();
 const kotId = randomUUID();
 
-function setup(options: { readyLeft?: number; tableSessionId?: string | null } = {}) {
+function setup(
+  options: { readyLeft?: number; tableSessionId?: string | null; closed?: boolean } = {},
+) {
   const raise = vi.fn().mockResolvedValue({ alertId: 'a', alreadyOpen: false });
   const clear = vi.fn().mockResolvedValue(1);
   const tx = {
@@ -20,6 +22,7 @@ function setup(options: { readyLeft?: number; tableSessionId?: string | null } =
       findUnique: vi.fn().mockResolvedValue({
         tableId,
         tableSessionId: options.tableSessionId === undefined ? sessionId : options.tableSessionId,
+        tableSession: { status: options.closed === true ? 'CLOSED' : 'OPEN' },
       }),
     },
     orderItem: {
@@ -66,6 +69,12 @@ describe('[NTF-003] [ORD-005] [KDS-006] what raises and clears alerts', () => {
     const takeaway = setup({ tableSessionId: null });
     await takeaway.triggers.handle(changed('READY'), takeaway.tx);
     expect(takeaway.raise).not.toHaveBeenCalled();
+  });
+
+  it('raises no "ready" alert for a table that has paid and left (P9-23)', async () => {
+    const left = setup({ closed: true });
+    await left.triggers.handle(changed('READY'), left.tx);
+    expect(left.raise).not.toHaveBeenCalled();
   });
 
   it('clears the ready and "not collected" alerts once nothing waits at the pass', async () => {

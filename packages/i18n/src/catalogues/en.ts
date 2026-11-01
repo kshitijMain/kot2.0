@@ -2400,6 +2400,12 @@ until you press Publish.
       RECEIVED: 'Received. Waiting for the restaurant to accept it.',
       SENT_TO_KITCHEN: 'Your order is accepted and has gone to the kitchen.',
       acceptedBanner: 'Your order is accepted. The kitchen is preparing it.',
+      /** P9-23: the order's banner follows it to the table. */
+      stage: {
+        preparing: 'The kitchen is cooking your order.',
+        ready: 'Your food is ready and on its way to you.',
+        served: 'Everything is served. Enjoy your meal!',
+      },
       again: 'Order again',
       againOne: 'Add {name} again',
       againAdded:
@@ -2437,8 +2443,30 @@ until you press Publish.
         REJECTED: 'Not sent: {reason}',
         EXPIRED: 'We couldn’t reach the restaurant right now. Please call a waiter.',
       },
-      line: '{what}: {status}',
       failed: 'That didn’t go through. Please call a waiter.',
+      /** P9-23: where each request stands, said as a sentence (not "Call waiter: Done"). */
+      said: {
+        WAITER: {
+          SUBMITTED: 'Calling a waiter…',
+          RECEIVED: 'A waiter has been called.',
+          ACKNOWLEDGED: 'A waiter is on the way.',
+        },
+        BILL: {
+          SUBMITTED: 'Asking for the bill…',
+          RECEIVED: 'You asked for the bill. It appears here as soon as it is printed.',
+          ACKNOWLEDGED: 'A waiter is bringing your bill.',
+        },
+        WATER: {
+          SUBMITTED: 'Asking for water…',
+          RECEIVED: 'You asked for water.',
+          ACKNOWLEDGED: 'A waiter is bringing water.',
+        },
+        PAID: {
+          SUBMITTED: 'Telling the staff…',
+          RECEIVED: 'The staff have been told. They will check your payment and confirm it.',
+          ACKNOWLEDGED: 'The staff are checking your payment.',
+        },
+      },
     },
     /** P9-03, P9-04: the bill on the diner's phone and paying it by UPI. */
     bill: {

@@ -42,7 +42,9 @@ export function Suggestions({
   return (
     <section className="qr-suggestions" aria-label={title}>
       <h2 className="qr-section__title">{title}</h2>
-      <ul>
+      {/* A new list starts at its first card (P9-23): it had kept the old one's scroll and showed
+          the first card cut off at the edge. */}
+      <ul key={suggestions.map((suggestion) => suggestion.itemId).join(',')}>
         {shown.map(({ suggestion, item }) => (
           <li key={item.id} className="qr-suggestion">
             <p className="qr-suggestion__name">{item.name}</p>

@@ -197,7 +197,8 @@ describe('[QR-007] where an order is', () => {
       ],
       Date.parse('2026-10-02T08:00:30.000Z'),
     );
-    expect(screen.getByText(en.qrSite.orders.SENT_TO_KITCHEN)).toBeVisible();
+    // Every dish is ready: the banner says so, not only that it was accepted (P9-23).
+    expect(screen.getByText(en.qrSite.orders.stage.ready)).toBeVisible();
     // The dish's own chip; the tracker above names the step "Ready" too.
     expect(
       screen.getByText(en.qrSite.orders.itemState.READY, { selector: '.rp-status-chip' }),
@@ -462,6 +463,44 @@ describe('[QR-011] the bill on the diner’s phone and UPI (P9-03, P9-04)', () =
     expect(await screen.findByText(en.qrSite.bill.estimate)).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: en.qrSite.help.BILL }));
     expect(asked).toEqual(['BILL']);
+  });
+
+  it('says where a bill request stands, and offers no second press while it is open (P9-23)', async () => {
+    answer(null);
+    const asked: string[] = [];
+    const open: ServiceRequests = {
+      ...requests(asked),
+      latest: (type) =>
+        type === 'BILL'
+          ? {
+              id: '0199a0e0-0000-7000-8000-000000000c01',
+              type: 'BILL',
+              status: 'RECEIVED',
+              submittedAt: '2026-10-02T08:00:00.000Z',
+              expiresAt: '2026-10-02T08:10:00.000Z',
+              rejectionReason: null,
+            }
+          : undefined,
+      open: (type) => type === 'BILL',
+    };
+    render(
+      <I18nProvider>
+        <BillTab
+          token={TOKEN}
+          relayUrl="https://relay.invalid/functions/v1"
+          document={document}
+          orders={[sentOrder('SENT_TO_KITCHEN')]}
+          requests={open}
+          readOnly={false}
+          active
+          now={Date.now()}
+        />
+      </I18nProvider>,
+    );
+    expect(await screen.findByText(en.qrSite.help.said.BILL.RECEIVED)).toBeVisible();
+    expect(screen.queryByRole('button', { name: en.qrSite.help.BILL })).toBeNull();
+    // The estimate says what the taxes add to the dishes.
+    expect(screen.getByText(en.qrSite.cart.tax)).toBeVisible();
   });
 
   it('shows the printed bill with Pay by UPI, the amount filled in, and "I have paid"', async () => {

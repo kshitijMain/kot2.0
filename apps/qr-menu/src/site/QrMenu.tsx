@@ -45,6 +45,7 @@ import { DishPhoto } from './DishPhoto';
 import { ItemSheet } from './ItemSheet';
 import { Orders, shownStatus } from './Orders';
 import { PhoneGate } from './PhoneGate';
+import { RequestNote } from './RequestNote';
 import { useServiceRequests } from './requests';
 import { sourceOf, Suggestions } from './Suggestions';
 import { fetchMenu, fetchOrder, fetchTableOrders, RelayCallError, submitOrder } from './relay';
@@ -666,16 +667,7 @@ function MenuPage({
           {t('qrSite.readOnly')}
         </p>
       ) : null}
-      {requests.latest('WAITER') === undefined ? null : (
-        <p role="status" className="qr-help__status qr-call-status">
-          {t('qrSite.help.line', {
-            what: t('qrSite.help.WAITER'),
-            status: t(`qrSite.help.status.${requests.latest('WAITER')?.status ?? 'SUBMITTED'}`, {
-              reason: requests.latest('WAITER')?.rejectionReason ?? '',
-            }),
-          })}
-        </p>
-      )}
+      <RequestNote request={requests.latest('WAITER')} />
       {accepted ? (
         <p role="alert" className="qr-accepted">
           <Icon name="check" />
@@ -811,6 +803,7 @@ function MenuPage({
         <Orders
           orders={shownOrders}
           items={byId}
+          menu={document.menu}
           now={now}
           readOnly={menu.readOnly}
           loading={ordersLoading}
