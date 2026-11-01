@@ -94,6 +94,55 @@ export function parsePairingQr(text: string): PairingQrPayload | undefined {
   return parsed.success ? parsed.data : undefined;
 }
 
+/**
+ * How phones find the restaurant PC on the Wi-Fi without a built-in address (P9-27): the PC
+ * announces this DNS-SD service (mDNS) with TXT records `v=1`, `tls=1|0`, `ca=<CA fingerprint
+ * without colons>` and its instance name is the restaurant's. The app keeps only answers whose
+ * `ca` matches the PC it trusts (or, first time, the Connect QR's).
+ */
+export const MDNS_SERVICE_TYPE = 'parossa-pos';
+export const MDNS_PROTOCOL = 'tcp';
+
+/**
+ * The Connect QR code (P9-27), shown in Manage → Devices: one scan tells a phone where the
+ * restaurant PC is and which certificate is its own. No code to type and nothing secret in it:
+ * the staff PIN is what lets anyone in (ADR-0025).
+ * `{"v":1,"kind":"connect","urls":["https://192.168.1.20:8080"],"ca":"3A:7F:…","name":"Mannat"}`
+ */
+export const ConnectQrPayload = z.object({
+  v: z.literal(1),
+  kind: z.literal('connect'),
+  urls: z.array(ServerUrl).min(1).max(8),
+  ca: CaFingerprint.optional(),
+  name: z.string().max(80).optional(),
+});
+export type ConnectQrPayload = z.infer<typeof ConnectQrPayload>;
+
+/** The connect details in a scanned QR code, or undefined when it is not a Connect QR. */
+export function parseConnectQr(text: string): ConnectQrPayload | undefined {
+  let value: unknown;
+  try {
+    value = JSON.parse(text);
+  } catch {
+    return undefined;
+  }
+  const parsed = ConnectQrPayload.safeParse(value);
+  return parsed.success ? parsed.data : undefined;
+}
+
+/** What Manage → Devices shows for connecting phones (P9-27). */
+export const ConnectInfoResponse = z.object({
+  /** The PC's addresses on the restaurant's networks, best first. */
+  urls: z.array(ServerUrl).max(8),
+  caSha256: CaFingerprint.nullable(),
+  restaurantName: z.string(),
+  /** The Connect QR's text (a `ConnectQrPayload` as JSON). */
+  qrPayload: z.string(),
+  /** Whether the PC announces itself on the Wi-Fi (mDNS). */
+  announced: z.boolean(),
+});
+export type ConnectInfoResponse = z.infer<typeof ConnectInfoResponse>;
+
 export const PairingCodeResponse = z.object({
   code: PairingCode,
   expiresAt: Timestamp,

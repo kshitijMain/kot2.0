@@ -41,6 +41,7 @@ The installer runs these in order; each can run again (repair) without losing da
 write-installation  writes the installation file. Options: --install-dir, --data-dir,
                     --product-version, --port, --mqtt-port, --pg-port, --control-plane-url,
                     --relay-url, --qr-site-url, --error-dsn, --tls-hostnames (comma-separated),
+                    --lan-interface (the adapter staff phones use, like Wi-Fi),
                     --update-publisher (the signer updates must carry), --update-issuer (its certificate's issuer), --allow-unsigned-updates
                     on|off (test builds only). On repair, values not given are kept.
 secrets             makes the secrets that are missing (Windows DPAPI on the restaurant PC).
@@ -82,6 +83,7 @@ const OPTIONS = {
   'qr-site-url': { type: 'string' },
   'error-dsn': { type: 'string' },
   'tls-hostnames': { type: 'string' },
+  'lan-interface': { type: 'string' },
   'update-publisher': { type: 'string' },
   'update-issuer': { type: 'string' },
   'allow-unsigned-updates': { type: 'string' },
@@ -134,6 +136,10 @@ async function installationFrom(path: string, values: Values): Promise<Installat
               .split(',')
               .map((name) => name.trim().toLowerCase())
               .filter((name) => name !== ''),
+      lanInterface:
+        values['lan-interface'] === undefined || values['lan-interface'].trim() === ''
+          ? existing?.server.lanInterface
+          : values['lan-interface'].trim(),
     },
     postgres: {
       port: port(values['pg-port']) ?? existing?.postgres.port,

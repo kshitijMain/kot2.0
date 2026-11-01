@@ -101,7 +101,9 @@ try {
     Assert-That ((Get-HostStatus).phase -eq 'RUNNING') 'the service host says the server runs'
     Assert-That ($null -ne (Wait-Until { Test-Health $port } 60)) 'the server answers over HTTPS'
     $rules = @(Get-NetFirewallRule -Group 'Restaurant Platform' -ErrorAction SilentlyContinue)
-    Assert-That ($rules.Count -eq 2) 'the firewall admits the server and the pagers'
+    $ruleNames = @($rules | ForEach-Object { $_.Name } | Sort-Object)
+    Assert-That (($ruleNames -join ',') -eq 'RP-Server-HTTPS,RP-Server-mDNS,RP-Server-MQTT') `
+        ('the firewall admits the server, the pagers and mDNS so phones find the PC (it has {0})' -f ($ruleNames -join ', '))
     Assert-That (Test-Path (Join-Path $InstallDir 'Restaurant Platform.exe')) 'the POS window is installed'
 
     Write-Step ('The server process ended: back within {0} seconds (NFR-A04)' -f $RecoverySeconds)

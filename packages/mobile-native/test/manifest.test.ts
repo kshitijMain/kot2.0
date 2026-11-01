@@ -67,6 +67,9 @@ describe('[SEC-010] [MOBILE-T3] what the apps’ manifest exports', () => {
     expect(permissions.sort()).toEqual(
       [
         'android.permission.ACCESS_NETWORK_STATE',
+        'android.permission.ACCESS_WIFI_STATE',
+        'android.permission.CHANGE_NETWORK_STATE',
+        'android.permission.CHANGE_WIFI_MULTICAST_STATE',
         'android.permission.FOREGROUND_SERVICE',
         'android.permission.FOREGROUND_SERVICE_SPECIAL_USE',
         'android.permission.POST_NOTIFICATIONS',

@@ -110,13 +110,14 @@ Describe 'on Windows' -Tag 'Windows' -Skip:(-not $OnWindows) {
         try {
             Set-RPFirewallRule -Group $group -Spec (Get-RPFirewallRuleSpec -Port 18080 -MqttPort 18883 -NodePath $node -Group $group)
             $rules = @(Get-NetFirewallRule -Group $group)
-            $rules | Should -HaveCount 2
+            # HTTPS and MQTT on TCP, mDNS (UDP 5353) so phones find the PC (P9-27).
+            $rules | Should -HaveCount 3
             $ports = @($rules | Get-NetFirewallPortFilter | ForEach-Object { $_.LocalPort } | Sort-Object)
-            $ports | Should -Be @('18080', '18883')
+            $ports | Should -Be @('18080', '18883', '5353')
             @($rules | Get-NetFirewallAddressFilter | ForEach-Object { $_.RemoteAddress } | Select-Object -Unique) | Should -Be @('LocalSubnet')
-            # Repair leaves the same two.
+            # Repair leaves the same three.
             Set-RPFirewallRule -Group $group -Spec (Get-RPFirewallRuleSpec -Port 18080 -MqttPort 18883 -NodePath $node -Group $group)
-            @(Get-NetFirewallRule -Group $group) | Should -HaveCount 2
+            @(Get-NetFirewallRule -Group $group) | Should -HaveCount 3
         } finally {
             Remove-RPFirewallRule -Group $group
         }

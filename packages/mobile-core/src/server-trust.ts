@@ -1,3 +1,4 @@
+import { sameFingerprint } from './lan-discovery.js';
 import { InvalidServerAddressError, normalizeServerUrl } from './server-url.js';
 
 /** A server's LAN certificate authority as downloaded before pairing (ADR-0011). */
@@ -19,6 +20,8 @@ export interface ServerTrust {
   pin(certificate: string, serverUrl: string): Promise<string>;
   /** Forgets the pinned CA (the device was unpaired). */
   clear(): Promise<void>;
+  /** The pinned CA's fingerprint, if any: how a device paired earlier recognises its PC (P9-27). */
+  pinnedFingerprint?(): Promise<string | undefined>;
 }
 
 /** Where a device may pair: an address a person typed, or those in the manager's QR code. */
@@ -92,7 +95,9 @@ export async function findServer(
   const probes = urls.map(async (serverUrl): Promise<FoundServer> => {
     if (trust !== undefined && serverUrl.startsWith('https:')) {
       const authority = await trust.fetchAuthority(serverUrl);
-      if (expected !== undefined && authority.sha256 !== expected) throw new ServerMismatchError();
+      if (expected !== undefined && !sameFingerprint(authority.sha256, expected)) {
+        throw new ServerMismatchError();
+      }
       return { serverUrl, authority, verified: expected !== undefined };
     }
     // Without TLS (a development server) any answer will do; one address needs no probe.

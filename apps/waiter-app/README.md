@@ -66,12 +66,18 @@ the reminders on the pager and the phone; Resolve clears the request, as Cancel 
 Where things are:
 
 - `src/App.tsx`: connecting → login → signed in, from the device session's state. Nobody pairs a
-  phone (ADR-0025, Business Owner 2026-11-01): `@rp/mobile-shell` `ConnectScreen` connects to the
-  restaurant PC the build names (`RP_RESTAURANT_SERVERS`, comma-separated addresses, and
-  `RP_RESTAURANT_CA`, the PC's certificate fingerprint; neither is secret) with
-  `DeviceSession.connectByItself`, which asks the PC for its own waiter phone's code. The PC
-  answers only where it runs `RP_AUTH_PIN_ONLY`. When the PC does not answer, the screen says
-  what to check and takes its address.
+  phone (ADR-0025, Business Owner 2026-11-01): `@rp/mobile-shell` `ConnectScreen` finds the
+  restaurant PC with `DeviceSession.connectByItself`, which asks the PC for its own waiter phone's
+  code. The PC answers only where it runs `RP_AUTH_PIN_ONLY`. Since P9-27 one APK serves every
+  restaurant; the PC is looked for, in order, at the address that worked last, by mDNS on the
+  Wi-Fi (`_parossa-pos._tcp`, keeping only answers whose `ca` is the PC's certificate), at the
+  addresses of the Connect QR code a person scans ("Scan the code on the PC", Manage → Devices),
+  then at the addresses the build names (`RP_RESTAURANT_SERVERS` and `RP_RESTAURANT_CA`: optional,
+  pilot builds only; neither is secret). When the router gives the PC a new address, the phone
+  finds it by mDNS and follows it if its certificate is the same. On a Wi-Fi without internet the
+  app's own traffic stays on the Wi-Fi and the screen says to turn on mobile data
+  (`@rp/mobile-native` `AndroidWifiRoute`). When nothing answers, the screen says what to check
+  and takes the PC's address.
 - `src/SignedIn.tsx`: the tables and one table's screen, the new items of every table kept while
   the waiter is signed in (`src/carts.tsx`), a note when a kept order reaches the kitchen later,
   and the table a tapped notification asks for (`AlertTableOpener` from `@rp/mobile-native`).

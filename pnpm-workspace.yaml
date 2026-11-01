@@ -13,6 +13,10 @@ onlyBuiltDependencies:
 # Security overrides for transitive dependencies with no fixed parent release yet (SEC-013).
 # Remove each one when the parent ships the fix.
 overrides:
+  # CVE-2026-111181 (denial of service), via express 5 in the server and the Control Plane.
+  body-parser@>=2.0.0 <2.4.0: ^2.4.0
+  # CVE-2026-113872 (denial of service on an aborted upload), via @nestjs/platform-express.
+  multer@<2.5.0: ^2.5.0
   # GHSA-3f6p-5ww8-9rcr, via prisma 7.10.0.
   mysql2@<3.22.0: ^3.22.0
   # GHSA-ggr8-5vv4-36mx, via @prisma/config 7.10.0.

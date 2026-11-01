@@ -78,18 +78,78 @@ export function localServerNames(
 const MAX_PAIRING_URLS = 8;
 
 /**
+ * Adapters that are not the restaurant's network (P9-27): VPNs, virtual machines, containers,
+ * Bluetooth and Apple's peer-to-peer links. A phone on the staff Wi-Fi can never reach them, so
+ * they are not offered as the PC's address (the certificate may still cover them).
+ */
+const VIRTUAL_ADAPTER =
+  /^(vethernet|virtualbox|vmware|vmnet|vboxnet|hyper-v|docker|br-|veth|utun|tun|tap|zerotier|tailscale|wireguard|wg\d|nordlynx|protonvpn|openvpn|bluetooth|loopback|llw|awdl|anpi|bridge|ham|npcap)/i;
+
+/** IPv4 as a number, for range checks. */
+function ipv4(address: string): number {
+  return address.split('.').reduce((value, part) => value * 256 + Number(part), 0);
+}
+
+function inRange(address: string, base: string, bits: number): boolean {
+  const size = 2 ** (32 - bits);
+  return Math.floor(ipv4(address) / size) === Math.floor(ipv4(base) / size);
+}
+
+/** How likely an address is the restaurant's Wi-Fi or LAN: lower is better; undefined: never. */
+function lanRank(address: string): number | undefined {
+  if (inRange(address, '169.254.0.0', 16)) return undefined; // no DHCP answer: unreachable
+  if (inRange(address, '100.64.0.0', 10)) return undefined; // carrier NAT, Tailscale
+  if (inRange(address, '192.168.0.0', 16)) return 0;
+  if (inRange(address, '10.0.0.0', 8)) return 1;
+  if (inRange(address, '172.16.0.0', 12)) return 2;
+  return 3;
+}
+
+/**
+ * The PC's addresses on the restaurant's networks, best first (P9-27): IPv4 on real adapters only,
+ * the adapter the installer was told staff phones use (`RP_LAN_INTERFACE`) first, then the usual
+ * home and office ranges (192.168, 10, 172.16).
+ */
+export function lanAddresses(
+  interfaces: ReturnType<typeof networkInterfaces> = networkInterfaces(),
+  preferredInterface?: string,
+): string[] {
+  const found: { address: string; rank: number }[] = [];
+  for (const [name, entries] of Object.entries(interfaces)) {
+    if (VIRTUAL_ADAPTER.test(name.trim())) continue;
+    const preferred = name.trim().toLowerCase() === preferredInterface?.trim().toLowerCase();
+    for (const entry of entries ?? []) {
+      if (entry.family !== 'IPv4' || entry.internal) continue;
+      const rank = lanRank(entry.address);
+      if (rank === undefined) continue;
+      found.push({ address: entry.address, rank: preferred ? -1 : rank });
+    }
+  }
+  return [...new Set(found.sort((a, b) => a.rank - b.rank).map((entry) => entry.address))];
+}
+
+/**
  * The base URLs devices can reach this server at, for pairing without typing (AUTH-007): each LAN
  * address, then each configured host name. Loopback and the computer's own names are left out: a
  * phone cannot reach `127.0.0.1`, and `.local` names do not resolve on every phone.
  */
 export function lanServerUrls(
   names: ServerNames,
-  options: { readonly tls: boolean; readonly port: number; readonly hostnames: readonly string[] },
+  options: {
+    readonly tls: boolean;
+    readonly port: number;
+    readonly hostnames: readonly string[];
+    /** The PC's real LAN addresses, best first (`lanAddresses`); all covered names otherwise. */
+    readonly addresses?: readonly string[];
+  },
 ): string[] {
-  const hosts = new Set([
-    ...names.ipAddresses.filter((address) => address !== '127.0.0.1'),
-    ...options.hostnames.map((name) => name.toLowerCase()),
-  ]);
+  const covered = names.ipAddresses.filter((address) => address !== '127.0.0.1');
+  // Only addresses the certificate covers (with TLS), in the order `lanAddresses` ranks them.
+  const ranked =
+    options.addresses === undefined
+      ? covered
+      : options.addresses.filter((address) => !options.tls || covered.includes(address));
+  const hosts = new Set([...ranked, ...options.hostnames.map((name) => name.toLowerCase())]);
   const scheme = options.tls ? 'https' : 'http';
   return [...hosts]
     .slice(0, MAX_PAIRING_URLS)

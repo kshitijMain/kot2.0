@@ -6,7 +6,9 @@
       "com.rp.mobilenative.RpLanTrustModule",
       "com.rp.mobilenative.RpAlertsModule",
       "com.rp.mobilenative.RpKioskModule",
-      "com.rp.mobilenative.RpApkInstallerModule"
+      "com.rp.mobilenative.RpApkInstallerModule",
+      "com.rp.mobilenative.RpLanDiscoveryModule",
+      "com.rp.mobilenative.RpWifiRouteModule"
     ]
   }
 }

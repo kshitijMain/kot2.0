@@ -295,7 +295,9 @@ describe('[AUTH-007] the waiter app connects by itself (ADR-0025, 2026-11-01)', 
     };
     const { session } = setup({ fetch: recording }, newDevice(), trust);
     await session.start();
-    await session.connectByItself({ servers: [ELSEWHERE, LAN], caSha256: LAN_CA.sha256 });
+    await session.connectByItself({
+      builtIn: { servers: [ELSEWHERE, LAN], caSha256: LAN_CA.sha256 },
+    });
     // Its code only ever goes to the PC whose certificate was pinned first.
     expect(pinnedAtFirstRequest).toEqual({ certificate: LAN_CA.certificate, serverUrl: LAN });
     expect(session.getSnapshot()).toMatchObject({ phase: 'paired', serverUrl: LAN });
@@ -307,7 +309,7 @@ describe('[AUTH-007] the waiter app connects by itself (ADR-0025, 2026-11-01)', 
     const trust = new FakeTrust().serve(LAN, LAN_CA);
     const { session } = setup(server(), newDevice(), trust);
     await session.start();
-    await session.connectByItself({ servers: [LAN] });
+    await session.connectByItself({ builtIn: { servers: [LAN] } });
     expect(trust.pinned).toEqual({ certificate: LAN_CA.certificate, serverUrl: LAN });
     expect(session.getSnapshot().phase).toBe('paired');
   });
@@ -318,7 +320,7 @@ describe('[AUTH-007] the waiter app connects by itself (ADR-0025, 2026-11-01)', 
     const { session } = setup(fake, newDevice(), trust);
     await session.start();
     await expect(
-      session.connectByItself({ servers: [LAN], caSha256: LAN_CA.sha256 }),
+      session.connectByItself({ builtIn: { servers: [LAN], caSha256: LAN_CA.sha256 } }),
     ).rejects.toBeInstanceOf(ServerMismatchError);
     expect(fake.callsTo('POST', '/api/v1/devices/pairing-codes/phone')).toHaveLength(0);
     expect(session.getSnapshot().phase).toBe('unpaired');
