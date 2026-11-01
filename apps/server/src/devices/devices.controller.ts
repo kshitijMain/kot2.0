@@ -79,6 +79,14 @@ export class DevicesController {
     return this.devices.createBootstrapCode(LOOPBACK.has(address ?? ''), address);
   }
 
+  // Public: the waiter app has nothing to sign in with yet; only in PIN-only mode and only from the
+  // restaurant's network (DevicesService.createPhoneCode, ADR-0025).
+  @Post('pairing-codes/phone')
+  @Public()
+  createPhoneCode(@Req() request: Request): Promise<PairingCodeResponse> {
+    return this.devices.createPhoneCode(request.socket.remoteAddress);
+  }
+
   // Public: the device has no credential yet; the one-time code is the credential.
   @Post('pair')
   @Public()

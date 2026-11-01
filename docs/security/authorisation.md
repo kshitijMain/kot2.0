@@ -87,16 +87,17 @@ device may send at most 16 KB, which every public endpoint needs a few hundred b
 paired devices may send more (1 MB, and photos, menu files and AI imports on their own paths;
 PC-D1, `apps/server/src/http/body-limits.ts`).
 
-| Endpoint                                         | Why it is public                                                                                   |
-| ------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
-| `GET /health`, `GET /version`                    | The watchdog, support and devices before sign-in; no business data.                                |
-| `GET /first-run`, `POST /first-run`              | Nothing to sign in with yet; the POST only from the PC itself and only while no restaurant exists. |
-| `GET /tls/ca`                                    | A device needs the CA to pin before pairing (ADR-0011).                                            |
-| `POST /devices/pairing-codes/bootstrap`          | The installer pairs the PC's own POS: loopback only, only while no device is paired.               |
-| `POST /devices/pair`                             | The one-time code (10 minutes) is the credential; rate-limited (SEC-009).                          |
-| `POST /devices/challenge`, `POST /devices/token` | Device authentication: a signature over a fresh challenge with the paired key.                     |
-| `GET /photos/:id/:width`                         | Menu photos in `<img>` tags; they are shown to diners anyway.                                      |
-| `GET /pager-firmware/:token`                     | A 15-minute token sent to one pager on its own MQTT topic; the image is signed (secure boot).      |
+| Endpoint                                         | Why it is public                                                                                               |
+| ------------------------------------------------ | -------------------------------------------------------------------------------------------------------------- |
+| `GET /health`, `GET /version`                    | The watchdog, support and devices before sign-in; no business data.                                            |
+| `GET /first-run`, `POST /first-run`              | Nothing to sign in with yet; the POST only from the PC itself and only while no restaurant exists.             |
+| `GET /tls/ca`                                    | A device needs the CA to pin before pairing (ADR-0011).                                                        |
+| `POST /devices/pairing-codes/bootstrap`          | The installer pairs the PC's own POS: loopback only, only while no device is paired.                           |
+| `POST /devices/pairing-codes/phone`              | PIN-only pilots only (ADR-0025): a waiter phone on the restaurant's network pairs itself; the PIN is the gate. |
+| `POST /devices/pair`                             | The one-time code (10 minutes) is the credential; rate-limited (SEC-009).                                      |
+| `POST /devices/challenge`, `POST /devices/token` | Device authentication: a signature over a fresh challenge with the paired key.                                 |
+| `GET /photos/:id/:width`                         | Menu photos in `<img>` tags; they are shown to diners anyway.                                                  |
+| `GET /pager-firmware/:token`                     | A 15-minute token sent to one pager on its own MQTT topic; the image is signed (secure boot).                  |
 
 ### Object-level checks
 

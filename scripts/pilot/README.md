@@ -10,10 +10,9 @@ server stays on the restaurant PC.
 scripts/pilot/mannat-local.sh setup     # once (about 3 minutes)
 scripts/pilot/mannat-local.sh start
 scripts/pilot/mannat-local.sh status
-scripts/pilot/mannat-local.sh pair      # the first screen's pairing code (run on this computer)
 scripts/pilot/mannat-local.sh stop
 scripts/pilot/mannat-local.sh reset     # delete everything set up here and start again
-scripts/pilot/mannat-local.sh fresh     # clear orders, KOTs, approvals; keep QR codes and pairing
+scripts/pilot/mannat-local.sh fresh     # clear orders, KOTs, approvals; keep QR codes and devices
 ```
 
 Needs Docker (for PostgreSQL 16), Node 24 and pnpm (`corepack enable`). Optional:
@@ -54,49 +53,49 @@ Devices. Never set the flag on a real restaurant's installation.
 
 ## The waiter app on a phone (APK built on this Mac)
 
-Build it (Android SDK in `~/Library/Android/sdk`; about 45 s once Gradle's caches are warm, the
-first time much longer):
+Nobody pairs a phone (ADR-0025, 2026-11-01). The app is built with this Mac's address and its
+certificate's fingerprint, and connects by itself; staff only tap their name and type their PIN.
+Build it with the pilot server running (Android SDK in `~/Library/Android/sdk`; a few minutes):
 
 ```bash
-cd apps/waiter-app && APP_ENV=preview ANDROID_HOME=~/Library/Android/sdk pnpm prebuild
-cd android && APP_ENV=preview NODE_ENV=production ANDROID_HOME=~/Library/Android/sdk ./gradlew assembleRelease
-cp app/build/outputs/apk/release/app-release.apk ../../../.pilot/apk/parossa-waiter-preview.apk
+scripts/pilot/build-waiter-apk.sh                 # the address in .pilot/server.env
+scripts/pilot/build-waiter-apk.sh 192.168.1.20    # or another address of this Mac
 ```
 
+Build it again whenever the Mac's Wi-Fi address changes. (If the address changed and the app was
+not rebuilt, the app says it cannot connect and takes the new address in **Restaurant PC
+address**.)
+
 It is "Parossa Captain (preview)" (`in.rp.waiter.preview`), signed with the debug key, so it is
-installed directly, not from the Play Store. To put it on a phone on this Wi-Fi:
+installed directly, not from the Play Store. Over USB:
+`~/Library/Android/sdk/platform-tools/adb install -r .pilot/apk/parossa-waiter-preview.apk`.
+Or on this Wi-Fi:
 
 ```bash
 python3 -m http.server 8099 --directory .pilot/apk    # stop with Ctrl-C when done
 ```
 
-then open `http://<this Mac's IP>:8099/parossa-waiter-preview.apk` on the phone. Pair it from the
-POS (Manage → Devices → Pair a device → Waiter phone, scan the code with the app) and sign in with
-a PIN. A manager signed in on it takes payment for a printed bill.
+then open `http://<this Mac's IP>:8099/parossa-waiter-preview.apk` on the phone. Open the app: it
+connects to the restaurant PC by itself. Sign in with a PIN. A manager signed in on it takes payment
+for a printed bill.
 
 ## Trying it
 
-1. `start`, then pair the first POS screen. Either:
-   - on this computer, open `https://localhost:8080` and press **Pair this PC**; or
-   - run `scripts/pilot/mannat-local.sh pair`, open `https://<this computer's IP>:8080` in any
-     browser on the Wi-Fi, and type the code it prints (8 characters like `ZRWV-TYLP`, **not** a
-     PIN) in **Pairing code**.
-
-   The browser warns about the restaurant's own certificate; continue. Then sign in as
-   **Manager** (2222). Every other screen or phone gets its code from **Manage → Devices → Pair
-   a device** on this POS.
+1. `start`, then open `https://<this computer's IP>:8080` (or `https://localhost:8080` on this
+   computer) in any browser on the Wi-Fi. The browser warns about the restaurant's own
+   certificate; continue. It connects by itself (PIN-only, no code); sign in as **Manager** (2222).
+   Every other browser and phone connects the same way: nobody pairs a device.
 
 2. On a phone on the same Wi-Fi, scan table 2's tent (or open its address from `mannat.txt`).
    Mannat's page asks for a mobile number, then shows the menu.
 3. Add dishes and send. The order appears on the POS under **Order to approve** within a second.
-   The manager's phone rings too if it is paired (step 5). Press **Approve**: table 2 opens, the
+   The manager's phone rings too if the waiter app is on it (step 5). Press **Approve**: table 2 opens, the
    kitchen gets the KOT (**Kitchen display**), and the diner's page says it is accepted.
 4. On the phone: **My orders** → **Order again**; **Bill** → **Ask for the bill**. On the POS:
    table 2 → **Bill** → **Print bill**. The phone shows the bill with **Pay with UPI** (when a UPI
    ID is set) and **I have paid**.
-5. The manager's phone: install the waiter app, pair it from **Manage → Devices → Pair a
-   device**, and sign in as Manager. Every QR order then rings it, to accept or reject at the
-   table.
+5. The manager's phone: install the waiter app (above); it connects by itself. Sign in as
+   Manager. Every QR order then rings it, to accept or reject at the table.
 
 This runs over plain http on the Wi-Fi: fine for a trial, never for diners on mobile data. The
 real pilot uses your server's https address.

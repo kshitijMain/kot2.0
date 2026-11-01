@@ -69,3 +69,29 @@ What stays:
   extending PIN-only to them is a follow-up if a pilot needs it.
 - **To revisit before a paying restaurant:** remove the flag from its environment, pair its
   screens as AUTH-007 says, and turn kitchen station mode back on if wanted.
+
+## Amendment (2026-11-01): no pairing anywhere, the waiter app included
+
+The Business Owner decided that nobody pairs a device for anyone: no manager, waiter, owner or
+kitchen person makes or types a pairing code. The follow-up above is therefore done:
+
+- **The waiter app connects by itself.**
+  - `POST /api/v1/devices/pairing-codes/phone` (public) gives a waiter phone's code. Only where the
+    server runs PIN-only, and only to the restaurant's network, as for browsers. It is rate-limited
+    per address and audited like every code; the phone is "Phone N".
+  - The app pairs with it at once, with a new Keystore key (`DeviceSession.connectByItself`). The
+    device-bound token and per-device revocation stay.
+  - The app finds the restaurant PC at the addresses its build names (`RP_RESTAURANT_SERVERS`). It
+    pins the PC's certificate against the fingerprint the build names (`RP_RESTAURANT_CA`), or
+    trusts it on first use when none is given. Neither value is secret.
+  - The pairing screen (code, QR scan, fingerprint check) is gone from the waiter app. When the PC
+    does not answer, the app says what to check and takes the PC's address.
+- **The console offers no pairing.** Where the server is PIN-only, Manage → Devices has no "Pair a
+  device". A browser that cannot connect by itself shows "Try again", not a code field.
+- **Unpairing stays.** It removes a device someone no longer uses. A removed phone or browser
+  connects again only when a person presses Connect or Try again.
+- **Unchanged:**
+  - Without the flag the server keeps AUTH-007 pairing, for the table tablet and for any
+    installation that wants it.
+  - The table tablet (a diner device bound to a table) still pairs with a code. It is not used in
+    the pilot.

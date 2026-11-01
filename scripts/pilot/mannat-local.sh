@@ -6,10 +6,9 @@
 #   scripts/pilot/mannat-local.sh setup    # once: databases, build, Mannat, its 5 QR codes, tents
 #   scripts/pilot/mannat-local.sh start    # the relay, the site and the server, in the background
 #   scripts/pilot/mannat-local.sh status   # what is running, and the addresses
-#   scripts/pilot/mannat-local.sh pair     # a pairing code for the first screen (POS), on this PC
 #   scripts/pilot/mannat-local.sh stop
 #   scripts/pilot/mannat-local.sh reset    # stop and delete everything set up here
-#   scripts/pilot/mannat-local.sh fresh    # clear orders/KOTs/approvals; keep QR codes and pairing
+#   scripts/pilot/mannat-local.sh fresh    # clear orders/KOTs/approvals; keep QR codes and devices
 #
 # Settings (environment): PILOT_IP (default: this Mac's Wi-Fi address), PILOT_UPI_ID (the
 # restaurant's business UPI ID; without it the bill has no Pay button). Secrets stay in .pilot/
@@ -181,31 +180,8 @@ status() {
 QR menu site:      $SITE   (each table: see .pilot/mannat.txt; tents: .pilot/mannat-tents.pdf)
 POS and dashboard: https://$IP:$SERVER_PORT   (the browser warns about the restaurant's own certificate)
 Sign in on any browser on this network: tap a name, then the PIN (no pairing, ADR-0025).
-Waiter / manager phone: pair the waiter app with the code from Manage → Devices.
+Waiter / manager phone: install the waiter app (scripts/pilot/build-waiter-apk.sh); it connects by itself.
 EOF
-}
-
-# The first screen's pairing code, made by the server for this PC only (AUTH-007, ONB-001): type
-# it into the POS opened at the PC's address on any browser. Once one screen is paired, codes for
-# the others (the manager's phone, the kitchen screen) come from Manage → Devices on it.
-pair() {
-  local answer code
-  answer="$(curl -sk -X POST "https://127.0.0.1:$SERVER_PORT/api/v1/devices/pairing-codes/bootstrap")" || {
-    echo "The server is not answering: scripts/pilot/mannat-local.sh start" >&2
-    exit 1
-  }
-  code="$(printf '%s' "$answer" | node -e 'let s="";process.stdin.on("data",(d)=>{s+=d}).on("end",()=>{try{process.stdout.write(JSON.parse(s).code ?? "")}catch{}})')"
-  if [[ -z "$code" ]]; then
-    echo "No code: a screen is paired already. On it, open Manage → Devices → Pair a device." >&2
-    echo "(Server said: $answer)" >&2
-    exit 1
-  fi
-  echo "Pairing code for the first POS screen: $code   (one use, expires soon)"
-  echo
-  echo "1. Open https://$IP:$SERVER_PORT on this PC or any computer on the Wi-Fi"
-  echo "   (the browser warns about the restaurant's own certificate: continue)."
-  echo "2. Type the code in \"Pairing code\" and press Pair device. Then sign in: Manager, PIN 2222."
-  echo "3. Every other screen or phone: Manage → Devices → Pair a device, on that POS."
 }
 
 reset() {
@@ -227,7 +203,7 @@ fresh() {
   psql_in rp_mannat < "$ROOT/scripts/pilot/mannat-fresh-mannat.sql"
   start
   echo
-  echo "Service data cleared. Same table QR codes (.pilot/mannat.txt) and paired devices remain."
+  echo "Service data cleared. Same table QR codes (.pilot/mannat.txt) and devices remain."
   echo "On each phone: close the QR tab or clear site data for $SITE so cart and phone cache reset."
 }
 
@@ -236,8 +212,7 @@ case "${1:-}" in
   start) start ;;
   stop) stop ;;
   status) status ;;
-  pair) pair ;;
   reset) reset ;;
   fresh) fresh ;;
-  *) sed -n '2,17p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+  *) sed -n '2,15p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
 esac

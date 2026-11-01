@@ -3651,6 +3651,38 @@
         "x-requirements": ["AUTH-007", "ONB-001"]
       }
     },
+    "/api/v1/devices/pairing-codes/phone": {
+      "post": {
+        "operationId": "createPhonePairingCode",
+        "summary": "Pairing code a waiter phone asks for by itself, where the server runs PIN-only",
+        "description": "Public because the phone has nothing to sign in with yet. Only where the server runs PIN-only (ADR-0025) and only from the restaurant's network: the waiter app connects by itself and the PIN is what lets anyone in. Rate-limited per address.",
+        "tags": ["devices"],
+        "responses": {
+          "201": {
+            "description": "Pairing code for a waiter phone.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/PairingCodeResponse" }
+              }
+            }
+          },
+          "403": {
+            "description": "Not PIN-only, or not from the restaurant's network.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "429": {
+            "description": "Too many codes from this address.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        },
+        "x-capability": "PUBLIC",
+        "x-requirements": ["AUTH-007"]
+      }
+    },
     "/api/v1/devices/token": {
       "post": {
         "operationId": "issueDeviceToken",

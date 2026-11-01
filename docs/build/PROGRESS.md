@@ -708,6 +708,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-17 The waiter APK builds on this Mac
 - [x] P9-20 Full audit of every screen, link, button and workflow on the live pilot
 - [x] P9-21 The waiter app on a real phone: every flow to the kitchen, the bill and payment
+- [x] P9-22 No pairing: the waiter app and browsers connect by themselves; Mannat's UPI ID
 
 ## Decisions
 
@@ -995,6 +996,22 @@ Decided 2026-10-30 (operations changes at the Business Owner's request, ADR-0023
      `ALL_WAITERS` (migration `20261030120000_any_waiter_any_table`).
 834. The waiter app's home shows all tables by floor area, with "Tables I sent KOTs to today"
      (`GET /api/v1/tables/my-kots-today`, ORDER_CREATE).
+
+Decided 2026-11-01 (P9-22, at the Business Owner's request: "we are not going to pair any device for
+anyone"; ADR-0025 amended):
+
+835. Nobody pairs a device. Where the server runs PIN-only, the waiter app connects by itself: it
+     asks `POST /api/v1/devices/pairing-codes/phone` for a waiter phone's code (local network only,
+     5 a minute per address) and pairs with it. The app has no pairing screen; when the PC does not
+     answer, it says what to check and takes the PC's address.
+836. The waiter app's build names the restaurant PC: `RP_RESTAURANT_SERVERS` (addresses) and
+     `RP_RESTAURANT_CA` (certificate fingerprint, pinned; trusted on first use when missing). For
+     the pilot, `scripts/pilot/build-waiter-apk.sh` fills both from the running server.
+837. The console offers no pairing where the server is PIN-only. Manage → Devices has no "Pair a
+     device", and a browser that cannot connect by itself shows "Try again". Unpairing stays, to
+     remove devices no longer used; a removed device connects again only when someone asks.
+838. Unchanged without the flag: AUTH-007 pairing, and the table tablet, which still pairs with a
+     code (no tablets in the pilot).
 
 Decided 2026-10-25 (the menu, at the Business Owner's request: a guided editor, by hand or Excel):
 
@@ -4633,6 +4650,62 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-11-01: P9-22 No pairing: the waiter app and browsers connect by themselves; Mannat's UPI ID
+
+Asked by the Business Owner:
+
+- set Mannat's UPI ID (7683072807@ptsbi);
+- remove pairing everywhere: "we are not going to pair any device for anyone, whether it is a
+  manager, waiter, owner, kitchen".
+
+The phone was not connected, so this was built and tested in code. The phone test waits for the
+phone (see below).
+
+**Done:**
+
+- **UPI ID:** set to `7683072807@ptsbi` by the Owner in Manage → Settings, with the reason in the
+  audit trail. Diners now see **Pay by UPI** on the printed bill in the QR menu. The setting warns
+  that UPI apps may decline links to a personal (non-merchant) ID; this one looks like a personal,
+  mobile-number ID.
+- **Server:**
+  - new public `POST /api/v1/devices/pairing-codes/phone` (`createPhonePairingCode`), PIN-only and
+    local-network only;
+  - self-pairing is rate-limited per device type and address;
+  - any other caller gets 403 `SELF_PAIR_CLOSED`;
+  - the endpoint is listed in `docs/security/authorisation.md` and the authorisation sweep, and
+    `docs/api/openapi.json` was regenerated.
+- **`@rp/mobile-core`:** `DeviceSession.connectByItself`. It finds the PC, pins its certificate
+  (against the build's fingerprint, else on first use), asks for the code, then pairs with a new
+  Keystore key.
+- **`@rp/mobile-shell`:** `ConnectScreen` connects as it opens and shows "Connecting to the
+  restaurant PC…". On failure it says what to check, with "Try again" and the PC's address. After
+  a manager removed the phone, it connects only when someone presses Connect.
+- **Waiter app:** `ConnectScreen` replaces `PairingScreen`. The restaurant PC comes from
+  `extra.restaurantServers` / `extra.restaurantCa` (`RP_RESTAURANT_SERVERS`, `RP_RESTAURANT_CA`).
+  The Maestro smoke flow and the README were updated.
+- **Console:**
+  - the state knows `pinOnly`;
+  - Manage → Devices hides "Pair a device" and says devices connect by themselves;
+  - the pairing screen, in PIN-only, is "Try again" (`connectByItself`) with no code field.
+- **Pilot:**
+  - `scripts/pilot/build-waiter-apk.sh` builds the APK with this Mac's address and certificate;
+  - `mannat-local.sh pair` was removed, and the READMEs no longer mention pairing;
+  - the server was restarted, and the new route answers on the Wi-Fi address with the PC's
+    fingerprint;
+  - Manage → Devices on the pilot shows no "Pair a device".
+- **Tests:**
+  - server: the phone connects by itself and both phone roles sign in; refused from outside and
+    without the flag;
+  - mobile-core: pinned before the code is sent, trusted on first use, refused on a wrong
+    certificate;
+  - waiter app: connects with no code; says what to check and connects to a typed address;
+  - console: "Try again" with no code field; no "Pair a device" in PIN-only.
+
+**Waiting for the phone:** install the new APK (`adb install -r`). The phone that is already paired
+keeps working. To see the new start, clear the app's data (`adb shell pm clear
+in.rp.waiter.preview`): it should go straight from "Connecting to the restaurant PC…" to "Tap your
+name".
 
 ### 2026-11-01: P9-21 The waiter app on a real phone: every flow to the kitchen, the bill and payment
 

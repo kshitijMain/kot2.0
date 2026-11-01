@@ -2,7 +2,7 @@
   "name": "@rp/waiter-app",
   "version": "0.1.0",
   "private": true,
-  "description": "Waiter (Captain) app for Android: paired device, staff PIN login, My tables, each table's orders with the menu, Send KOT through an offline outbox and Again, and the waiter's pager (C5, P2-01c, P2-02).",
+  "description": "Waiter (Captain) app for Android: connects to the restaurant PC by itself, staff PIN login, My tables, each table's orders with the menu, Send KOT through an offline outbox and Again, and the waiter's pager (C5, P2-01c, P2-02).",
   "main": "index.ts",
   "scripts": {
     "start": "expo start --dev-client",

@@ -87,6 +87,27 @@ describe('[ONB-001] [ONB-004] the first run on the restaurant PC', () => {
     });
   });
 
+  it('[AUTH-007] asks for no code where the server is PIN-only, and connects again on Try again', async () => {
+    let refused = true;
+    const fake = server()
+      .on('GET', '/api/v1/first-run', () => ({
+        status: 200,
+        body: { needed: false, pinLength: 4, pinOnly: true },
+      }))
+      .on('POST', '/api/v1/devices/pairing-codes/bootstrap', () =>
+        refused
+          ? { status: 403, body: { code: 'BOOTSTRAP_CLOSED', message: 'Not from here.' } }
+          : bootstrap(),
+      );
+    const { user } = await renderConsole({ fake, pair: false });
+    // Business Owner, 2026-11-01: nobody pairs a device, so no code field and no Pair button.
+    expect(await screen.findByText(t('connect.browserFailed'))).toBeVisible();
+    expect(screen.queryByLabelText(t('pairing.codeLabel'))).toBeNull();
+    refused = false;
+    await user.click(screen.getByRole('button', { name: t('connect.retry') }));
+    expect(await screen.findByRole('heading', { name: t('login.title') })).toBeInTheDocument();
+  });
+
   it('asks for a code as usual where the server is not PIN-only', async () => {
     const fake = server().on('GET', '/api/v1/first-run', () => ({
       status: 200,
