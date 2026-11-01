@@ -250,43 +250,45 @@ export function ArchivesPanel() {
             </ul>
           )}
           {view.runs.length === 0 ? null : (
-            <table className="backups-table">
-              <caption>{t('archives.made')}</caption>
-              <thead>
-                <tr>
-                  <th scope="col">{t('archives.column.year')}</th>
-                  <th scope="col">{t('archives.column.started')}</th>
-                  <th scope="col">{t('archives.column.status')}</th>
-                  <th scope="col">{t('archives.column.where')}</th>
-                  <th scope="col">{t('archives.column.open')}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {view.runs.map((run) => (
-                  <tr key={run.id}>
-                    <td>{run.financialYear}</td>
-                    <td>{at(run.startedAt)}</td>
-                    <td>
-                      <Badge tone={STATUS_TONE[run.status]}>
-                        {t(`archives.status.${run.status}`)}
-                      </Badge>
-                    </td>
-                    <td className="backups__path">{run.error ?? run.folder ?? ''}</td>
-                    <td>
-                      {run.status === 'DONE' ? (
-                        <Link
-                          className="console-link"
-                          to={`/manage/archives/${run.id}`}
-                          aria-label={t('archives.openYear', { year: run.financialYear })}
-                        >
-                          {t('archives.open')}
-                        </Link>
-                      ) : null}
-                    </td>
+            <div className="table-scroll">
+              <table className="backups-table">
+                <caption>{t('archives.made')}</caption>
+                <thead>
+                  <tr>
+                    <th scope="col">{t('archives.column.year')}</th>
+                    <th scope="col">{t('archives.column.started')}</th>
+                    <th scope="col">{t('archives.column.status')}</th>
+                    <th scope="col">{t('archives.column.where')}</th>
+                    <th scope="col">{t('archives.column.open')}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {view.runs.map((run) => (
+                    <tr key={run.id}>
+                      <td>{run.financialYear}</td>
+                      <td>{at(run.startedAt)}</td>
+                      <td>
+                        <Badge tone={STATUS_TONE[run.status]}>
+                          {t(`archives.status.${run.status}`)}
+                        </Badge>
+                      </td>
+                      <td className="backups__path">{run.error ?? run.folder ?? ''}</td>
+                      <td>
+                        {run.status === 'DONE' ? (
+                          <Link
+                            className="console-link"
+                            to={`/manage/archives/${run.id}`}
+                            aria-label={t('archives.openYear', { year: run.financialYear })}
+                          >
+                            {t('archives.open')}
+                          </Link>
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </>
       )}

@@ -355,3 +355,35 @@ Acceptance:
   - no CSP or Trusted Types violation.
 - `/phone/` routes and headers (integration). The Owner signs in on a phone; the kitchen does not
   (domain, integration). Browser keys, storage and alerts (unit). Browser back (unit).
+
+## P9-29 The phone web app checked flow by flow; fixes and polish
+
+Requirements: as P9-28, plus BILL-008, TBL-005, WTR-013, AUTH-004.
+
+Every waiter, manager and Owner flow in the browser, live on the pilot, in WebKit at iPhone sizes
+(the Business Owner's iPhone over USB once it trusts the PC). Fix what is wrong and polish the UI.
+
+Deliverables:
+
+- Browser:
+  - back closes sheets first;
+  - sheets lift above the iPhone's keyboard;
+  - clicks and keys count as activity;
+  - a keyboard types the PIN.
+- Toasts above screen footers. Lone footer buttons fill the footer. Clear dish actions. The
+  approver's name on the approval PIN.
+- No photo placeholders on a menu without photos. A tidy Menu sheet. The payment sheet stays open
+  after a part payment.
+- Console on a phone: one header row; System's tables scroll in their box.
+- The phone e2e covers the flows above.
+
+Acceptance:
+
+- Phone e2e 18/18 on WebKit (iPhone) and Chrome (Android).
+- Unit tests:
+  - toast clearance;
+  - no placeholders;
+  - dish action labels;
+  - the approver's name;
+  - part payment with a new key;
+  - back.

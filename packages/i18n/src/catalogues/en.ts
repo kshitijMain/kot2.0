@@ -469,9 +469,10 @@ export const en = {
     item: {
       more: 'More',
       moreOf: 'More for {name}',
-      cancel: 'Cancel',
+      /** P9-28: never just "Cancel", which reads as closing the sheet. */
+      cancel: 'Cancel this dish',
       cancelOf: 'Cancel {name}',
-      void: 'Void',
+      void: 'Void this dish',
       voidOf: 'Void {name}',
       cancelTitle: 'Cancel {name}?',
       voidTitle: 'Void {name}?',
@@ -4371,6 +4372,8 @@ until you press Publish.
     approved: 'Approved by {name}',
     noManagers: 'No manager can approve on this device.',
     otherManager: 'Another manager',
+    /** P9-28: whose PIN the pad wants, on screen, not only to a screen reader. */
+    enterPin: '{name}, enter your PIN.',
   },
   payment: {
     title: 'Payment for invoice {number}',

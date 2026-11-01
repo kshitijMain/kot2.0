@@ -29,6 +29,9 @@ export function MenuBrowser({
       ? null
       : { uri: `${serverUrl}${photoUrl(item.photoId, 160)}` };
   const items = useMemo(() => channelItems(menu, 'WAITER_APP'), [menu]);
+  // A menu without photos has no photo areas (P9-28): grey placeholders filled half of each card
+  // and halved the dishes on a screen. With some photos, every card keeps the area, aligned.
+  const withPhotos = useMemo(() => items.some((item) => item.photoId !== undefined), [items]);
   const categories = useMemo(() => menuCategories(menu, items), [menu, items]);
   const [query, setQuery] = useState('');
   const [chosenCategory, setChosenCategory] = useState<string | undefined>();
@@ -84,7 +87,7 @@ export function MenuBrowser({
                 price={displayPrice(item)}
                 foodType={item.foodType}
                 foodTypeLabel={t(`pos.menu.foodType.${item.foodType}`)}
-                photo={photoOf(item)}
+                {...(withPhotos && { photo: photoOf(item) })}
                 testID={`dish-${item.id}`}
                 {...menuNote(menu, item, t, now)}
                 onSelect={() => {

@@ -101,17 +101,47 @@ test.describe.serial('[P9-28] the waiter app in a phone’s browser', () => {
   });
 
   test('[WTR-002] [WTR-003] [TBL-003] a waiter opens a table, sends a KOT and asks for the bill', async () => {
-    await signIn(page, WAITER);
+    // A keyboard types the PIN too (P9-28).
+    await page.getByText(WAITER.name, { exact: true }).click();
+    await page.keyboard.type(WAITER.pin);
+    await expect(page.getByText('All tables', { exact: true })).toBeVisible();
     await tableTile(page, '1').click();
     await page.getByTestId('open-table').click();
     await expect(page.getByText('Table 1 is open')).toBeVisible();
     await page.getByText('Add from the menu').click();
+    // The browser's back closes a dish's options, not the menu under it.
+    await page.getByTestId('menu-search').fill('Paneer Butter');
+    await page.getByText('Paneer Butter Masala', { exact: true }).first().click();
+    await expect(page.getByTestId('item-add')).toBeVisible();
+    await page.goBack();
+    await expect(page.getByTestId('item-add')).toHaveCount(0);
+    await expect(page.getByTestId('menu-search')).toBeVisible();
     await page.getByTestId('menu-search').fill('Spring');
     await page.getByText(DISH, { exact: true }).first().click();
-    await expect(page.getByText(/1 new item/)).toBeVisible();
+    await page.getByTestId('menu-search').fill('Gulab');
+    await page.getByText('Gulab Jamun', { exact: true }).first().click();
+    await expect(page.getByText(/2 new items/)).toBeVisible();
+    await page
+      .getByText(/^Order \(/)
+      .first()
+      .click();
+    // Dessert later: held, then sent when the table is ready for it.
+    await page.getByRole('button', { name: 'Hold Gulab Jamun for later' }).click();
     await page.getByTestId('send-kot').click();
     await expect(page.getByText(/Order \d+ sent to the kitchen/).first()).toBeVisible();
     await expect(page.getByText(/^KOT \d+/).first()).toBeVisible();
+    await page
+      .getByTestId(/^fire-/)
+      .first()
+      .click();
+    await expect(page.getByText('Held items sent to the kitchen')).toBeVisible();
+    // The kitchen has not started the roll: it is cancelled with a reason.
+    await page.getByRole('button', { name: `More for ${DISH}` }).click();
+    await expect(page.getByText('Cancel this dish', { exact: true })).toBeVisible();
+    await page.getByText('Cancel this dish', { exact: true }).click();
+    await page.getByText('Ordered by mistake', { exact: true }).click();
+    await page.getByTestId('end-item-confirm').click();
+    await expect(page.getByText(`${DISH} cancelled`)).toBeVisible();
     await page.getByText('Request bill', { exact: true }).click();
     await expect(page.getByText('Bill requested for 1.')).toBeVisible();
   });
@@ -123,7 +153,28 @@ test.describe.serial('[P9-28] the waiter app in a phone’s browser', () => {
     await expect(page.getByText('Bill requested', { exact: true })).toBeVisible();
   });
 
-  test('[BILL-005] a manager prints the bill and takes payment on the phone', async () => {
+  test('[TBL-005] [WTR-013] a waiter moves a table and sends a takeaway', async () => {
+    await tableTile(page, '5').click();
+    await page.getByTestId('open-table').click();
+    await page.getByText('Move table', { exact: true }).click();
+    await page
+      .getByTestId(/^move-to-/)
+      .first()
+      .click();
+    await expect(page.getByText(/^5 moved to \S+/)).toBeVisible();
+    await page.getByText('Back', { exact: true }).first().click();
+    await page.getByTestId('home-menu').click();
+    await page.getByTestId('new-takeaway').click();
+    await page.getByTestId('menu-search').fill('Chai');
+    await page.getByText('Masala Chai', { exact: true }).first().click();
+    await page.getByLabel('Customer name (optional)').fill('Meera');
+    await page.getByTestId('send-takeaway').click();
+    await expect(page.getByText(/Token \d+: order \d+ sent to the kitchen/)).toBeVisible();
+    await page.goBack();
+    await expect(page.getByText('All tables', { exact: true })).toBeVisible();
+  });
+
+  test('[BILL-005] [BILL-008] a manager prints the bill and takes it in two payments on the phone', async () => {
     await signOut(page);
     await signIn(page, MANAGER);
     await tableTile(page, '1').click();
@@ -131,7 +182,13 @@ test.describe.serial('[P9-28] the waiter app in a phone’s browser', () => {
     // No printer in the tests: the bill is issued all the same, and says so.
     await expect(page.getByText(/^Bill \S+ (printed|issued)/)).toBeVisible();
     await page.getByText('Take payment', { exact: true }).click();
-    await page.getByText('Record payment', { exact: true }).click();
+    // Part by UPI: the sheet stays open with the rest filled in (P9-28).
+    await page.getByLabel('Amount (₹)').fill('50');
+    await page.getByTestId('record-payment').click();
+    await expect(page.getByTestId('payment-recorded')).toContainText('still to pay');
+    await expect(page.getByLabel('Amount (₹)')).not.toHaveValue('50');
+    await page.getByText('Card', { exact: true }).click();
+    await page.getByTestId('record-payment').click();
     await expect(page.getByText(/Invoice \S+ is paid/)).toBeVisible();
     await page.goBack();
     await expect(page.getByText('All tables', { exact: true })).toBeVisible();
