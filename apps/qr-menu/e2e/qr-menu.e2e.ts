@@ -93,7 +93,8 @@ test.describe('[QR-002] [QR-006] [QR-007] ordering from the table', () => {
       status: 'SENT_TO_KITCHEN',
       detail: { items: [{ clientLineId: order.lines[0]?.clientLineId, state: 'PREPARING' }] },
     });
-    await expect(page.getByText(s.orders.SENT_TO_KITCHEN)).toBeVisible();
+    // Accepted with a dish on the stove: the banner says what the kitchen is doing (P9-23).
+    await expect(page.getByText(s.orders.stage.preparing)).toBeVisible();
     await expect(page.getByText(s.orders.itemState.PREPARING)).toBeVisible();
   });
 
@@ -385,7 +386,7 @@ test.describe('[P9] Mannat: the whole table on a phone (ADR-0024)', () => {
     await inMenu(page, 'Add Dal Makhani').click();
     await page.getByRole('button', { name: /Your order · 1 item/ }).click();
     const cart = page.getByRole('dialog', { name: s.cart.title });
-    await expect(cart.getByText('On your bill: +91 9876543210')).toBeVisible();
+    await expect(cart.getByText('On your bill: +91 98765 43210')).toBeVisible();
     await cart.getByRole('button', { name: s.cart.send }).click();
     // Sent: the page shows My orders.
     await expect(page.getByText(s.orders.SUBMITTED)).toBeVisible();
@@ -407,7 +408,7 @@ test.describe('[P9] Mannat: the whole table on a phone (ADR-0024)', () => {
     await expect(
       page.getByRole('alert').filter({ hasText: s.orders.acceptedBanner }),
     ).toBeVisible();
-    await expect(page.getByText(s.orders.SENT_TO_KITCHEN)).toBeVisible();
+    await expect(page.getByText(s.orders.stage.preparing)).toBeVisible();
 
     // Order again: the same dish back in the cart.
     await page.getByRole('button', { name: s.orders.again }).click();
