@@ -101,12 +101,13 @@ echo "Public base URL: $NGROK"
 echo "Relay health:    $(curl -s http://127.0.0.1:8787/healthz || echo down)"
 echo
 echo "Phone — open one table (use mobile data to test ngrok):"
-TOKENS=$(grep -o '/t/[A-Za-z0-9_-]\+' "$STATE/mannat.txt" | sed 's|^/t/||')
-i=1
-for tok in $TOKENS; do
-  echo "  Table $i  $NGROK/t/$tok"
-  i=$((i + 1))
-done
+# Every table now, from the database (P9-26): tables added after setup are listed too.
+docker exec -e PGPASSWORD="$(cat "$STATE/pg-password")" "${PG_CONTAINER:-rp-pilot-pg}" \
+  psql -U postgres -d rp_mannat -tA -F ' ' -c \
+  "SELECT label, qr_token FROM tables WHERE archived_at IS NULL AND qr_token IS NOT NULL ORDER BY display_order, label" |
+  while read -r label tok; do
+    [[ -n "$tok" ]] && echo "  Table $label  $NGROK/t/$tok"
+  done
 echo
 echo "POS, dashboard, kitchen: https://$(ipconfig getifaddr en0 2>/dev/null || echo 127.0.0.1):8080  (tap a name, then the PIN)"
 echo "  PINs: Owner 1111 · Manager 2222 · Waiter 1 4444 · Waiter 2 5555 · Kitchen 6666 (pilot only)"

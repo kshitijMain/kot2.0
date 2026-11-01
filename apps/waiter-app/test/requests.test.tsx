@@ -38,21 +38,21 @@ describe('[WTR-005] the service request inbox', () => {
     expect(within(water).getByText('Table T2 · Water requested')).toBeOnTheScreen();
     expect(within(water).getByText('4 min ago')).toBeOnTheScreen();
     expect(
-      within(water).getByRole('button', { name: 'Acknowledge Table T2 · Water requested' }),
+      within(water).getByRole('button', { name: 'On my way: Table T2 · Water requested' }),
     ).toBeOnTheScreen();
     expect(
-      within(water).getByRole('button', { name: 'Resolve Table T2 · Water requested' }),
+      within(water).getByRole('button', { name: 'Done: Table T2 · Water requested' }),
     ).toBeOnTheScreen();
-    // Someone is on the way to T3: only Resolve is left.
+    // Someone is on the way to T3: only Done is left.
     expect(within(all).getByText('2 min ago · Kiran is on the way')).toBeOnTheScreen();
-    expect(within(all).queryByRole('button', { name: /^Acknowledge Table T3/ })).toBeNull();
+    expect(within(all).queryByRole('button', { name: /^On my way: Table T3/ })).toBeNull();
     const [first, second, third] = within(all).getAllByText(/^Table T/);
     expect(first).toHaveTextContent('Table T2 · Water requested');
     expect(second).toHaveTextContent('Table T5 · Waiter called');
     expect(third).toHaveTextContent('Table T3 · Bill requested');
 
     // The tables Ravi sent a KOT to today: T2 only.
-    await fireEvent.press(screen.getByRole('tab', { name: 'Tables I sent KOTs to today' }));
+    await fireEvent.press(screen.getByRole('tab', { name: 'My tables' }));
     const mine = await inbox();
     expect(within(mine).getByRole('header', { name: '1 request from a table' })).toBeOnTheScreen();
     expect(within(mine).queryByText(/Table T5/)).toBeNull();
@@ -135,7 +135,7 @@ describe('[WTR-005] the service request inbox', () => {
     await inbox();
     await fireEvent.press(screen.getByTestId(`request-${T2_WATER}-acknowledge`));
     expect(
-      await screen.findByText('Not acknowledged: The server had a problem.'),
+      await screen.findByText('Didn’t go through: The server had a problem.'),
     ).toBeOnTheScreen();
     expect(screen.getByTestId(`request-${T2_WATER}-acknowledge`)).toBeOnTheScreen();
   });

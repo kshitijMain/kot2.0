@@ -712,6 +712,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-23 Every flow again (QR diner, manager, kitchen): fixes (the manager phone's part done in P9-24)
 - [x] P9-24 Everything in the manager's hands, live, checked in the database; fixes across every screen
 - [x] P9-25 The Owner by PIN only; call a waiter at an unopened table; Owner settings set up; prints saved to a folder (test)
+- [x] P9-26 Staff roles live (managers add managers); a UX and wording pass across the console, waiter app and kitchen
 
 ## Decisions
 
@@ -4653,6 +4654,86 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-11-01: P9-26 Staff roles tried live; a UX and wording pass across the apps
+
+Asked by the Business Owner: test everything the Owner, managers and waiters can do on the full
+pilot (QR menu over ngrok, everything else on the restaurant PC and the phone), and make the UX
+polished: question every sentence and warning, and fix what is vague or not needed.
+
+**Decided (the Business Owner's words):** "A manager can create another manager." A manager may
+now add a manager; promoting, demoting, deactivating or reactivating one stays the Owner's
+(`decideStaffChange`), and a manager still cannot change another manager's PIN. Additions are
+audited in the manager's name.
+
+**Tried live, each checked in the database and audit log:**
+
+- **Manager:**
+  - added a waiter (Ravi Kumar) and a manager (Priya Sharma);
+  - changed Ravi's PIN: 1234 was refused as easy; the old PIN stopped working and the new one
+    signed him in.
+- **Owner:**
+  - changed Priya's PIN, and she signed in with it;
+  - deactivated her while she was signed in (signed out within seconds, her tile gone), then
+    reactivated her.
+- **Lock-out:**
+  - five wrong PINs locked Waiter 2, the Owner was alerted, and the Staff page showed "Locked until
+    17:52";
+  - Unlock let them sign in.
+- **Owner's data:** the overview's new Today card matched the database (₹5,374.00, 10 bills,
+  average ₹537.40, Cash ₹944, UPI ₹4,430).
+- **Waiter on the phone (Ravi):**
+  - a diner on the public ngrok address called a waiter at an unopened Table 5, and Ravi's phone
+    showed it with On my way / Done;
+  - seating the table resolved the call in his name;
+  - KOT 22 printed "Sent by Ravi Kumar";
+  - Request bill alerted the Owner and the Manager, who printed and settled it (INV 000014).
+- **Clean-up:** Tables 1 and 2, left open 21 hours by earlier tests, were billed and settled.
+
+**Found and fixed:**
+
+- **The kitchen display kept tickets of tables that had paid and left**, marked late, for good. A
+  dine-in table's tickets now leave once its sitting closes; a takeaway (paid before it is cooked)
+  stays.
+- **The phone and the POS used different words** for the same request (Acknowledge / Resolve vs
+  On my way / Done): the phone now says On my way / Done.
+- `pilot` scripts listed only the tables made at set-up; they read the tables from the database.
+
+**UX, screen by screen:**
+
+- **Staff:**
+  - grouped as Owner and managers, Waiters and Kitchen, with deactivated people folded away;
+  - one compact row each, with an initial;
+  - when each person was last here ("Signed in now", "Last seen today, 16:48", "Never signed
+    in"), from a new `lastSeenAt` / `signedIn` on `StaffView`;
+  - badges only for what needs attention (no PIN, locked);
+  - Deactivate is the quieter button;
+  - a summary line ("7 people · 3 signed in now") instead of an intro restating the title.
+- **Overview:**
+  - a Today card first (sales, bills, average, cash / UPI / card), live on every bill;
+  - "Nothing…" lines are hidden;
+  - the floor hint that repeated the tip is gone;
+  - the cards fit one row.
+- **Open table:** one tap on 1–8 guests opens the table; a bigger party is typed (it took a field
+  and a calculator keypad).
+- **Header and sign-in:**
+  - the device name ("Browser 8") is gone from the header; a station-mode kitchen screen still
+    shows its own name;
+  - sign-in tiles no longer repeat a role the name says ("Kitchen / Kitchen").
+- **Settings:**
+  - the value sits beside Change, and badges beside the name; rows are half as tall;
+  - every "(our default …)" and requirement ID is gone from the descriptions;
+  - jargon labels are plain ("Escalate to the manager after (N)" → "Escalate to a manager after";
+    "Access token lifetime" → "Re-check sign-in every").
+- **Wording:** about 230 strings, from a full review (P9-26 report in the session):
+  - "server" → "restaurant PC" everywhere staff read it;
+  - "Fire" → "Send";
+  - "Wrong PIN. 4 tries left before you are locked out.";
+  - help text that was wrong is fixed (licence renewal, backups, menu publishing);
+  - audit-trail hints are gone from reason fields, and every reason dialog now has Cancel.
+
+**Checks:** `pnpm check` (see the commit) passes except the same environment-only server tests as
+P9-24 and P9-25.
 
 ### 2026-11-01: P9-25 The Owner by PIN only; call a waiter at an unopened table; Owner settings live
 

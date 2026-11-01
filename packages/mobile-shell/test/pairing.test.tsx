@@ -94,7 +94,7 @@ describe('[AUTH-007] [SEC-010] pairing with the QR code (ADR-0011)', () => {
     );
     expect(session.getSnapshot().phase).toBe('unpaired');
     // The address stays filled in, to correct and try again.
-    expect(screen.getByLabelText('Server address')).toHaveDisplayValue(LAN);
+    expect(screen.getByLabelText('Restaurant PC address')).toHaveDisplayValue(LAN);
     expect(screen.getByLabelText('Pairing code')).toHaveDisplayValue('ABCD-EFGH');
   });
 
@@ -105,7 +105,7 @@ describe('[AUTH-007] [SEC-010] pairing with the QR code (ADR-0011)', () => {
     expect(screen.getByTestId('pairing-hint')).toHaveTextContent(translator('pairing.enterServer'));
     expect(screen.getByLabelText('Pairing code')).toHaveDisplayValue('ABCD-EFGH');
 
-    await fireEvent.changeText(screen.getByLabelText('Server address'), '192.168.1.20:8443');
+    await fireEvent.changeText(screen.getByLabelText('Restaurant PC address'), '192.168.1.20:8443');
     await fireEvent.press(screen.getByTestId('pairing-submit'));
 
     await waitFor(() => {
@@ -132,7 +132,7 @@ describe('[AUTH-007] [SEC-010] pairing with a typed address over TLS', () => {
   it('shows the server’s certificate fingerprint for a person to compare before pairing', async () => {
     const trust = new FakeTrust().serve(LAN, LAN_CA);
     const { server, session } = await setup(trust);
-    await fireEvent.changeText(screen.getByLabelText('Server address'), '192.168.1.20:8443');
+    await fireEvent.changeText(screen.getByLabelText('Restaurant PC address'), '192.168.1.20:8443');
     await fireEvent.changeText(screen.getByLabelText('Pairing code'), 'ABCDEFGH');
     await fireEvent.press(screen.getByTestId('pairing-submit'));
 

@@ -101,7 +101,8 @@ describe('[RPT-016] the Reports area', () => {
     expect(
       await screen.findByRole('heading', { level: 3, name: t('reportsPage.report.sales') }),
     ).toBeVisible();
-    expect(fake.callsTo('GET', `/api/v1/reports/sales?from=${TODAY}&to=${TODAY}`)).toHaveLength(1);
+    // The overview's Today card (P9-26) read today's sales too, before the report did.
+    expect(fake.callsTo('GET', `/api/v1/reports/sales?from=${TODAY}&to=${TODAY}`)).toHaveLength(2);
     expect(screen.getAllByText('₹1,234.56').length).toBeGreaterThan(0);
     // One day: the chart is by hour.
     expect(screen.getByText(t('reportsPage.sales.chartByHour'))).toBeVisible();

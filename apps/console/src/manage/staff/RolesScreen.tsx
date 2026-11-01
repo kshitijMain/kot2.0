@@ -96,11 +96,12 @@ export function RolesScreen() {
             <h4 className="staff-row__name">
               {role.builtIn ? t(`roles.${role.baseRole}`) : role.name}
             </h4>
-            <p className="staff-row__role">
-              {role.builtIn
-                ? t('customRoles.builtIn')
-                : t('customRoles.onBase', { role: t(`roles.${role.baseRole}`) })}
-            </p>
+            {/* Under "Built-in roles" a built-in role needs no label of its own (P9-26). */}
+            {role.builtIn ? null : (
+              <p className="staff-row__role">
+                {t('customRoles.onBase', { role: t(`roles.${role.baseRole}`) })}
+              </p>
+            )}
             {role.capabilities.length === 0 ? null : (
               <p className="staff-row__contact">
                 {t('customRoles.adds', { list: capabilityList(role.capabilities) })}
@@ -186,10 +187,7 @@ export function RolesScreen() {
           </Button>
         ) : null}
       </div>
-      <p className="dashboard-section__hint">
-        {t('customRoles.intro')}
-        {isOwner ? null : ` ${t('customRoles.ownerOnly')}`}
-      </p>
+      {isOwner ? null : <p className="dashboard-section__hint">{t('customRoles.ownerOnly')}</p>}
       {content}
       {(open?.kind === 'ADD' || open?.kind === 'EDIT') && data.status === 'ready' ? (
         <RoleDialog
@@ -324,7 +322,6 @@ function RoleDialog({
         )}
         <ChoiceGroup
           legend={t('customRoles.form.add')}
-          hint={t('customRoles.form.addHint')}
           mode="multiple"
           options={addable(form.baseRole).map((capability) => ({
             id: capability,

@@ -37,6 +37,10 @@ export const StaffView = z.object({
   hasPin: z.boolean(),
   /** Until when their sign-in is locked after failed attempts (AUTH-003); null when it is not. */
   lockedUntil: Timestamp.nullable(),
+  /** When they last used the system on any device (P9-26); null when they never signed in. */
+  lastSeenAt: Timestamp.nullable().optional(),
+  /** Signed in on a device and active in the last half hour (P9-26). */
+  signedIn: z.boolean().optional(),
   createdAt: Timestamp,
   updatedAt: Timestamp,
 });

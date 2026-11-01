@@ -888,8 +888,9 @@ signed-in staff may do.
 
 A manager, or someone with the Owner's PIN, changes tax groups, invoice series or purges data.
 
-- Mitigation: Owner-only capabilities (`OWNER_ONLY_CAPABILITIES`) and creating or removing managers
-  and custom roles are granted to the Owner alone, never to a manager or a custom role; the
+- Mitigation: Owner-only capabilities (`OWNER_ONLY_CAPABILITIES`), removing, promoting or demoting
+  managers, and custom roles are granted to the Owner alone, never to a manager or a custom role
+  (a manager may add a manager, P9-26, audited in their name, but cannot take one away); the
   Owner's PIN locks after five wrong tries, counts against the device and alerts on lockout
   (PC-S5); `auth.pinLength` can ask for 6 digits; every Owner action is audited with who, where
   and why. There is no password or authenticator step-up: the Business Owner chose PIN-only
@@ -899,7 +900,8 @@ A manager, or someone with the Owner's PIN, changes tax groups, invoice series o
   `packages/domain/src/staff.ts` (`decideStaffChange`).
 - Tests: `apps/server/test/integration/auth-owner.int.test.ts` "does every Owner-only action with
   the PIN session alone; a manager is refused"; `apps/server/test/integration/staff.int.test.ts`
-  "refuses managers, and lets the Owner do it with their PIN session alone (ADR-0026)".
+  "lets the Owner add, change and demote managers with their PIN session alone (ADR-0026)", "lets a
+  manager add another manager, audited in their name (P9-26)".
 - Risk: likelihood Low, impact High: Medium.
 - Status: Accepted: the Business Owner chose PIN-only sign-in for the Owner (ADR-0026); someone who
   learns the Owner's PIN can act as the Owner until it is changed, which lockouts, alerts and the

@@ -37,15 +37,21 @@ export function ReasonDialog({
       title={title}
       description={description}
       footer={
-        <Button
-          type="submit"
-          form={formId}
-          variant={tone}
-          loading={busy}
-          disabled={reason.trim().length < 3}
-        >
-          {confirmLabel ?? t('billing.confirm')}
-        </Button>
+        <>
+          {/* A way out beside the action, as in every other dialog (P9-26). */}
+          <Button variant="secondary" disabled={busy} onClick={onClose}>
+            {t('billing.cancel')}
+          </Button>
+          <Button
+            type="submit"
+            form={formId}
+            variant={tone}
+            loading={busy}
+            disabled={reason.trim().length < 3}
+          >
+            {confirmLabel ?? t('billing.confirm')}
+          </Button>
+        </>
       }
     >
       <form

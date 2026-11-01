@@ -106,7 +106,8 @@ describe('[MGR-004] staff management rules', () => {
   it('offers the roles each person can give', () => {
     // No cashier any more (ADR-0023): managers do the billing.
     expect(ASSIGNABLE_ROLES).toEqual(['MANAGER', 'WAITER', 'KITCHEN']);
-    expect(rolesOffered(manager)).toEqual(['WAITER', 'KITCHEN']);
+    // A manager may add a manager too (P9-26), but not make a waiter one.
+    expect(rolesOffered(manager)).toEqual(ASSIGNABLE_ROLES);
     expect(rolesOffered(owner)).toEqual(ASSIGNABLE_ROLES);
     expect(rolesOffered(manager, waiter)).toEqual(['WAITER', 'KITCHEN']);
     expect(rolesOffered(owner, waiter)).toEqual(ASSIGNABLE_ROLES);
@@ -121,9 +122,12 @@ describe('[MGR-004] staff management rules', () => {
   });
 });
 
-describe('[MGR-004] creating or removing managers is the Owner’s alone', () => {
+describe('[MGR-004] removing or promoting managers is the Owner’s alone', () => {
+  it('lets a manager add another manager (the Business Owner, P9-26)', () => {
+    expect(decide(manager, null, { kind: 'CREATE', role: 'MANAGER' })).toBe('ALLOWED');
+  });
+
   const managerChanges: [StaffTarget | null, StaffChange][] = [
-    [null, { kind: 'CREATE', role: 'MANAGER' }],
     [waiter, { kind: 'CHANGE_ROLE', role: 'MANAGER' }],
     [otherManager, { kind: 'CHANGE_ROLE', role: 'WAITER' }],
     [otherManager, { kind: 'DEACTIVATE' }],

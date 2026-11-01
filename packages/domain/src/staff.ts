@@ -58,13 +58,14 @@ const ALLOWED: StaffDecision = { allowed: true };
 const refuse = (reason: StaffRefusal): StaffDecision => ({ allowed: false, reason });
 
 /**
- * Creating or removing a manager (Owner only): adding one, making someone one or no longer one, and
- * deactivating or reactivating one.
+ * Changing who is a manager (Owner only): making someone one or no longer one, and deactivating or
+ * reactivating one. Adding a new manager is not among them: a manager may add one too (the
+ * Business Owner, 2026-11-01, P9-26), while only the Owner can take one away.
  */
 function changesManagers(change: StaffChange, target: StaffTarget | null): boolean {
   switch (change.kind) {
     case 'CREATE':
-      return change.role === 'MANAGER';
+      return false;
     case 'CHANGE_ROLE':
       return (
         target !== null &&
@@ -83,10 +84,10 @@ function changesManagers(change: StaffChange, target: StaffTarget | null): boole
 
 /**
  * May `actor` make `change` to `target` (null when creating)? Managers look after waiters and
- * kitchen staff. Anything that creates or removes a manager needs the Owner (signed in with
- * their PIN, ADR-0026); a manager's other details, PIN and lock are changed by the Owner
- * or by that manager, and the Owner's own record only by the Owner. Permission comes before state, so a
- * refused person learns nothing about the record.
+ * kitchen staff, and may add another manager (P9-26). Promoting, demoting, deactivating or
+ * reactivating a manager needs the Owner; a manager's details, PIN and lock are changed by the
+ * Owner or by that manager, and the Owner's own record only by the Owner. Permission comes before
+ * state, so a refused person learns nothing about the record.
  */
 export function decideStaffChange(
   actor: StaffActor,
@@ -114,8 +115,8 @@ export function decideStaffChange(
 }
 
 /**
- * The roles `actor` can give a new person or `target` (the Owner offers Manager too; a manager
- * does not).
+ * The roles `actor` can give a new person (Manager, Waiter, Kitchen for the Owner and managers) or
+ * `target` (only the Owner moves someone into or out of Manager).
  */
 export function rolesOffered(
   actor: StaffActor,

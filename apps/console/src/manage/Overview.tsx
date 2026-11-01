@@ -1,11 +1,13 @@
-import { summarizeOrderFeed } from '@rp/domain';
+import { businessDateOf, formatRupees, summarizeOrderFeed } from '@rp/domain';
 import { floorSections, tileAlert, tileDetails } from '@rp/ordering';
 import { Button, EmptyState, ErrorState, Icon, LoadingState, TableTile } from '@rp/ui-web';
 import type { ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { useAlerts } from '../alerts/alerts-context.js';
+import { useConsole, useConsoleState } from '../app/console-context.js';
 import { useT } from '../app/i18n.js';
-import type { LiveData } from '../app/use-live.js';
+import { grantOf } from '../app/modes.js';
+import { type LiveData, useLive } from '../app/use-live.js';
 import { messageOf } from '../app/messages.js';
 import { useNow } from '../app/use-now.js';
 import { Approvals } from '../pos/Approvals.js';
@@ -42,6 +44,7 @@ export function Overview() {
           {t('dashboard.overview.glance')}
         </h2>
         <ul className="dashboard-glance">
+          <TodayGlance />
           <TablesGlance data={floor.data} reload={floor.reload} />
           <OrdersGlance data={feed.data} reload={feed.reload} now={now} />
           <AlertsGlance />
@@ -78,6 +81,82 @@ function GlancePending({
         {t('states.retry')}
       </Button>
     </>
+  );
+}
+
+/** Payment modes in the order a cashier counts them. */
+const MODE_ORDER = ['CASH', 'UPI', 'CARD', 'OTHER'] as const;
+
+/**
+ * Today's takings (P9-26), first on the page for those who may read reports: sales so far, the
+ * bills and their average, and how they were paid. Read again whenever a bill is settled.
+ */
+function TodayGlance() {
+  const t = useT();
+  const controller = useConsole();
+  const { person } = useConsoleState();
+  const allowed = person !== undefined && grantOf(person, 'REPORTS_VIEW_EXPORT') !== 'DENY';
+  const { data, reload } = useLive(
+    async () => {
+      if (!allowed) return null;
+      const restaurant = await controller.api.getRestaurant();
+      const today = businessDateOf(new Date(), {
+        cutoff: restaurant.businessDayCutoff,
+        timeZone: restaurant.timeZone,
+      });
+      const range = { from: today, to: today };
+      const [sales, modes] = await Promise.all([
+        controller.api.getSalesSummary({ query: range }),
+        controller.api.getPaymentModes({ query: range }),
+      ]);
+      return { sales: sales.totals, modes: modes.modes };
+    },
+    (type) => type === 'BillSettled' || type === 'BillPrinted' || type === 'RestaurantChanged',
+  );
+  if (!allowed) return null;
+  if (data.status !== 'ready' || data.value === null) {
+    return (
+      <GlanceCard title={t('dashboard.overview.today')}>
+        {data.status === 'ready' ? null : <GlancePending data={data} reload={reload} />}
+      </GlanceCard>
+    );
+  }
+  const { sales, modes } = data.value;
+  const paid = MODE_ORDER.flatMap((mode) => {
+    const total = modes
+      .filter((entry) => entry.mode === mode)
+      .reduce((sum, entry) => sum + entry.amount, 0);
+    return total > 0 ? [{ mode, total }] : [];
+  });
+  return (
+    <GlanceCard title={t('dashboard.overview.today')}>
+      <p className="glance-card__value glance-card__value--money">{formatRupees(sales.netSales)}</p>
+      <p className="glance-card__line">
+        {t('dashboard.overview.todayBills', {
+          count: sales.invoices,
+          average: formatRupees(
+            sales.invoices === 0 ? 0 : Math.round(sales.netSales / sales.invoices),
+          ),
+        })}
+      </p>
+      {paid.length === 0 ? null : (
+        <p className="glance-card__line glance-card__modes">
+          {paid.map(({ mode, total }) => (
+            <span key={mode}>
+              {t('dashboard.overview.todayModes', {
+                mode: t(`reportsPage.paymentMode.${mode}`),
+                amount: formatRupees(total),
+              })}
+            </span>
+          ))}
+        </p>
+      )}
+      <p className="glance-card__links">
+        <Link to="reports" className="glance-card__link">
+          {t('dashboard.overview.seeReports')}
+        </Link>
+      </p>
+    </GlanceCard>
   );
 }
 
@@ -135,14 +214,23 @@ function OrdersGlance({
           {t('dashboard.overview.awaiting', { count: summary.awaitingApproval })}
         </p>
       ) : null}
-      <p className="glance-card__line">
-        {t('dashboard.overview.inKitchen', { count: summary.inKitchen })}
-      </p>
-      <p className="glance-card__line">{t('dashboard.overview.ready', { count: summary.ready })}</p>
-      <p className="glance-card__line" data-delayed={late || undefined}>
-        {late ? <Icon name="warning" /> : null}
-        {t('dashboard.overview.delayed', { count: summary.delayed })}
-      </p>
+      {/* Only what is there (P9-26): three lines of "Nothing…" said nothing. */}
+      {summary.inKitchen === 0 ? null : (
+        <p className="glance-card__line">
+          {t('dashboard.overview.inKitchen', { count: summary.inKitchen })}
+        </p>
+      )}
+      {summary.ready === 0 ? null : (
+        <p className="glance-card__line">
+          {t('dashboard.overview.ready', { count: summary.ready })}
+        </p>
+      )}
+      {late ? (
+        <p className="glance-card__line" data-delayed>
+          <Icon name="warning" />
+          {t('dashboard.overview.delayed', { count: summary.delayed })}
+        </p>
+      ) : null}
       <p className="glance-card__links">
         <Link to="orders" className="glance-card__link">
           {t('dashboard.overview.seeOrders')}
@@ -207,7 +295,6 @@ function FloorSection({ data, reload, now }: { data: FloorData; reload: () => vo
         <EmptyState title={t('dashboard.overview.noTables')} />
       ) : (
         <>
-          <p className="dashboard-section__hint">{t('dashboard.overview.tableHint')}</p>
           {sections.map((section) => (
             <section
               key={section.id}

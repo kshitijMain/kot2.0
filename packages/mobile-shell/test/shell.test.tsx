@@ -36,7 +36,7 @@ describe('[AUTH-007] pairing screen', () => {
 
     const submit = screen.getByTestId('pairing-submit');
     expect(submit).toBeDisabled();
-    await fireEvent.changeText(screen.getByLabelText('Server address'), ADDRESS);
+    await fireEvent.changeText(screen.getByLabelText('Restaurant PC address'), ADDRESS);
     await fireEvent.changeText(screen.getByLabelText('Pairing code'), 'abcd efgh');
     expect(screen.getByLabelText('Pairing code')).toHaveDisplayValue('ABCD-EFGH');
     await fireEvent.press(submit);
@@ -54,14 +54,14 @@ describe('[AUTH-007] pairing screen', () => {
     const { session } = newSession(server);
     await session.start();
     await renderShell(session, <PairingScreen />);
-    await fireEvent.changeText(screen.getByLabelText('Server address'), 'ftp://nope');
+    await fireEvent.changeText(screen.getByLabelText('Restaurant PC address'), 'ftp://nope');
     await fireEvent.changeText(screen.getByLabelText('Pairing code'), 'ABCDEFGH');
     await fireEvent.press(screen.getByTestId('pairing-submit'));
     expect(await screen.findByTestId('pairing-error')).toHaveTextContent(
       translator('mobile.invalidServer'),
     );
 
-    await fireEvent.changeText(screen.getByLabelText('Server address'), ADDRESS);
+    await fireEvent.changeText(screen.getByLabelText('Restaurant PC address'), ADDRESS);
     await fireEvent.press(screen.getByTestId('pairing-submit'));
     expect(await screen.findByText('That code has expired. Ask for a new one.')).toBeOnTheScreen();
   });

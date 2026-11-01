@@ -164,7 +164,6 @@ export function DevicesScreen() {
               <summary className="device-group__heading">
                 {t('devices.unpairedCount', { count: unpaired.length })}
               </summary>
-              <p className="dashboard-section__hint">{t('devices.unpairedHint')}</p>
               <ul className="staff-list" aria-label={t('devices.unpairedTitle')}>
                 {unpaired.map((device) => (
                   <DeviceRow key={device.id} device={device} names={names} isThisDevice={false} />

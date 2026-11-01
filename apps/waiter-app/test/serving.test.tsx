@@ -159,9 +159,7 @@ describe('[WTR-009] [ORD-011] cancellations and voids', () => {
 
     await endItem('Void', 'Paneer Tikka');
     expect(screen.getByRole('header', { name: 'Void Paneer Tikka?' })).toBeOnTheScreen();
-    expect(
-      screen.getByText('A manager approves it with their PIN on this phone.'),
-    ).toBeOnTheScreen();
+    expect(screen.getByText('Needs a manager’s PIN on this phone.')).toBeOnTheScreen();
     await fireEvent.changeText(screen.getByTestId('end-item-reason'), 'Too salty');
     await fireEvent.press(screen.getByTestId('end-item-confirm'));
 

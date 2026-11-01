@@ -53,12 +53,17 @@ export function ModeLayout() {
         </span>
         {person === undefined ? null : <ModeLinks person={person} />}
         <AlertsButton />
-        <span className="console-header__device" title={t('modes.device')}>
-          {state.device?.name}
-        </span>
+        {/* A kitchen screen in station mode has nobody signed in: its own name says which. */}
+        {person === undefined ? (
+          <span className="console-header__device">{state.device?.name}</span>
+        ) : null}
         {person === undefined ? null : (
           <>
-            <span className="console-header__person">
+            {/* The device's name is for support, not for staff: kept as the hover text (P9-26). */}
+            <span
+              className="console-header__person"
+              title={`${t('modes.device')}: ${state.device?.name ?? ''}`}
+            >
               <span className="console-header__name">{person.displayName}</span>
               {/* The role, unless the name says it already ("Kitchen", "Manager (Mannat)"). */}
               {person.displayName

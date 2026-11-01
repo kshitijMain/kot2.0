@@ -17,7 +17,7 @@ describe('[WTR-002] every table, and the tables I sent KOTs to (ADR-0023)', () =
     expect(
       screen.getByRole('button', { name: 'T2, Occupied, 3 guests, 25 min, Ravi, 1 request' }),
     ).toBeOnTheScreen();
-    expect(screen.getByRole('button', { name: /^T3, Bill asked/ })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: /^T3, Bill requested/ })).toBeOnTheScreen();
     // Any waiter serves any table: Kiran's T5 and the terrace are shown too.
     expect(await tile(/^T5, Occupied, 4 guests, 25 min, Kiran/)).toBeOnTheScreen();
     expect(screen.getByRole('header', { name: 'Hall' })).toBeOnTheScreen();
@@ -27,7 +27,7 @@ describe('[WTR-002] every table, and the tables I sent KOTs to (ADR-0023)', () =
 
   it('filters to the tables the waiter sent a KOT to today, and says when there are none', async () => {
     await signedInApp();
-    await fireEvent.press(await screen.findByRole('tab', { name: 'Tables I sent KOTs to today' }));
+    await fireEvent.press(await screen.findByRole('tab', { name: 'My tables' }));
     expect(await tile(/^T2, Occupied/)).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: /^T1/ })).toBeNull();
     expect(screen.queryByRole('button', { name: /^T5/ })).toBeNull();
@@ -35,10 +35,8 @@ describe('[WTR-002] every table, and the tables I sent KOTs to (ADR-0023)', () =
     const none = new Restaurant();
     none.sentTo = ['0199a0e0-0000-7000-8000-00000000dead'];
     await signedInApp(none);
-    await fireEvent.press(await screen.findByRole('tab', { name: 'Tables I sent KOTs to today' }));
-    expect(
-      await screen.findByText('You have not sent a KOT to any table today. Show all tables.'),
-    ).toBeOnTheScreen();
+    await fireEvent.press(await screen.findByRole('tab', { name: 'My tables' }));
+    expect(await screen.findByText('No tables of yours today.')).toBeOnTheScreen();
   });
 });
 
@@ -187,16 +185,14 @@ describe('[TBL-005] [WTR-008] moving a table and asking for the bill', () => {
     const { server } = await signedInApp();
     await fireEvent.press(await tile(/^T2, Occupied/));
     await fireEvent.press(await screen.findByRole('button', { name: 'Request bill' }));
-    expect(
-      await screen.findByText('The managers have been asked for the bill for T2.'),
-    ).toBeOnTheScreen();
+    expect(await screen.findByText('Bill requested for T2.')).toBeOnTheScreen();
     expect(
       server.callsTo(
         'POST',
         '/api/v1/table-sessions/0199a0e0-0000-7000-8000-000000009002/request-bill',
       ),
     ).toHaveLength(1);
-    expect(await screen.findByText(/^Bill asked · 3 guests/)).toBeOnTheScreen();
+    expect(await screen.findByText(/^Bill requested · 3 guests/)).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Request bill' })).toBeNull();
   });
 
@@ -332,7 +328,7 @@ describe('[WTR-014] the waiter’s pager', () => {
     restaurant.pager = null;
     const { sockets } = await signedInApp(restaurant);
     await openMenu();
-    expect(await screen.findByText('No pager is given to you.')).toBeOnTheScreen();
+    expect(await screen.findByText('You have no pager.')).toBeOnTheScreen();
     restaurant.pager = given;
     await act(async () => {
       sockets.sync(0);
@@ -350,7 +346,7 @@ describe('[WTR-014] the waiter’s pager', () => {
     restaurant.pager = null;
     await signedInApp(restaurant);
     await openMenu();
-    expect(await screen.findByText('No pager is given to you.')).toBeOnTheScreen();
+    expect(await screen.findByText('You have no pager.')).toBeOnTheScreen();
 
     const broken = new Restaurant();
     const server = broken.server().on('GET', '/api/v1/pagers/mine', () => ({
