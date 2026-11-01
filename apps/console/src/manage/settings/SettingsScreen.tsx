@@ -244,12 +244,10 @@ export function SettingsScreen() {
                 return (
                   <li key={setting.key} className="staff-row">
                     <div className="staff-row__who">
-                      <h4 className="staff-row__name">{name}</h4>
-                      <p className="staff-row__contact">{hint(setting.key)}</p>
-                      <p className="settings-row__value">
-                        {describe(editor, setting.value, setting.unit, data.value.printers, t)}
-                      </p>
-                      <p className="staff-row__states">
+                      {/* P9-26: the badges beside the name, the value beside the button; an
+                          empty line of badges had made every row twice as tall. */}
+                      <div className="settings-row__title">
+                        <h4 className="staff-row__name">{name}</h4>
                         {setting.isDefault ? null : (
                           <Badge tone="info">{t('settingsPage.changed')}</Badge>
                         )}
@@ -261,7 +259,8 @@ export function SettingsScreen() {
                         {needsOwner(setting) ? (
                           <Badge tone="warning">{t('settingsPage.ownerOnly')}</Badge>
                         ) : null}
-                      </p>
+                      </div>
+                      <p className="staff-row__contact">{hint(setting.key)}</p>
                       {setting.isDefault ? null : (
                         <p className="staff-row__contact">
                           {t('settingsPage.default', {
@@ -279,6 +278,9 @@ export function SettingsScreen() {
                         <p className="staff-row__contact">{t('settingsPage.notYours')}</p>
                       ) : null}
                     </div>
+                    <p className="settings-row__value">
+                      {describe(editor, setting.value, setting.unit, data.value.printers, t)}
+                    </p>
                     {editor?.kind === 'RULES' ? (
                       <div className="staff-row__actions">
                         <Link to={`/manage/settings/${editor.page}`} className="staff-pages__link">

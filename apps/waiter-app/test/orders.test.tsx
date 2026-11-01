@@ -185,10 +185,7 @@ describe('[WTR-003] [ORD-013] taking an order', () => {
     const dal = screen.getByTestId(`cart-line-${IDS.dal}`);
     expect(within(dal).getByTestId('stepper-value')).toHaveTextContent('2');
     await fireEvent.press(within(dal).getByRole('button', { name: 'One more' }));
-    await fireEvent.changeText(
-      within(dal).getByLabelText('Note for the kitchen'),
-      'No cream',
-    );
+    await fireEvent.changeText(within(dal).getByLabelText('Note for the kitchen'), 'No cream');
     await fireEvent.press(button('Remove Paneer Tikka'));
     expect(screen.queryByTestId(`cart-line-${IDS.tikka}`)).toBeNull();
     expect(screen.getByText('Estimated total')).toBeOnTheScreen();
@@ -357,9 +354,7 @@ describe('[WTR-012] [ORD-013] orders without a connection', () => {
     });
     expect(await screen.findByText('1 order is not sent yet')).toBeOnTheScreen();
     await openTable('T2');
-    expect(
-      screen.getByText('Another waiter’s order. Sends when they sign in.'),
-    ).toBeOnTheScreen();
+    expect(screen.getByText('Another waiter’s order. Sends when they sign in.')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Send now' })).toBeNull();
     restaurant.network = 'up';
     await goOnline(sockets);
@@ -436,9 +431,7 @@ describe('[ORD-017] [WTR-010] items the kitchen cannot make', () => {
     await addDal();
     await fireEvent.press(screen.getByTestId('send-kot'));
     expect(
-      await screen.findByText(
-        'Not sent: This table has been closed. Your items are kept.',
-      ),
+      await screen.findByText('Not sent: This table has been closed. Your items are kept.'),
     ).toBeOnTheScreen();
     expect(screen.getByText('1 new item · ₹240.00')).toBeOnTheScreen();
   });

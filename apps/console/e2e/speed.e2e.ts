@@ -237,8 +237,10 @@ test.describe.serial('[NFR-P07] taps and screen changes at the design capacityâ€
     await signIn(/^Neha \(Manager\)/, '3333', 'POS');
     await speed.tap('a free table', page.getByRole('button', { name: '11, Free' }));
     const open = page.getByRole('dialog', { name: t('pos.open.title', { table: '11' }) });
-    await open.getByLabel(t('pos.open.guests'), { exact: true }).fill('2');
-    await speed.tap('open the table', open.getByRole('button', { name: t('pos.open.submit') }));
+    await speed.tap(
+      'open the table',
+      open.getByRole('button', { name: t('pos.open.guestsCount', { count: 2 }) }),
+    );
     await expect(page.getByText(t('pos.open.opened', { table: '11' }))).toBeVisible();
     await speed.tap('an occupied table', page.getByRole('button', { name: /^11, Occupied/ }));
     await speed.go(

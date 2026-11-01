@@ -153,7 +153,14 @@ export class KdsService {
           ).map((station) => station.id)
         : [...stationIds];
     const cooking = await this.prisma.orderItem.findMany({
-      where: { restaurantId, stationId: { in: stations }, state: { in: [...AT_STATION] } },
+      where: {
+        restaurantId,
+        stationId: { in: stations },
+        state: { in: [...AT_STATION] },
+        // A dine-in table that paid and left was served (P9-26): its tickets leave the screen,
+        // where they had stayed "late" for good. A takeaway, paid before it is cooked, stays.
+        OR: [{ order: { tableSessionId: null } }, { order: { tableSession: { status: 'OPEN' } } }],
+      },
       select: { kotLines: { select: { kotId: true } } },
     });
     const kotIds = [...new Set(cooking.flatMap((item) => item.kotLines.map((line) => line.kotId)))];

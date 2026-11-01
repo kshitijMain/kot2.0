@@ -36,9 +36,7 @@ describe('[WTR-002] every table, and the tables I sent KOTs to (ADR-0023)', () =
     none.sentTo = ['0199a0e0-0000-7000-8000-00000000dead'];
     await signedInApp(none);
     await fireEvent.press(await screen.findByRole('tab', { name: 'My tables' }));
-    expect(
-      await screen.findByText('No tables of yours today.'),
-    ).toBeOnTheScreen();
+    expect(await screen.findByText('No tables of yours today.')).toBeOnTheScreen();
   });
 });
 
@@ -187,9 +185,7 @@ describe('[TBL-005] [WTR-008] moving a table and asking for the bill', () => {
     const { server } = await signedInApp();
     await fireEvent.press(await tile(/^T2, Occupied/));
     await fireEvent.press(await screen.findByRole('button', { name: 'Request bill' }));
-    expect(
-      await screen.findByText('Bill requested for T2.'),
-    ).toBeOnTheScreen();
+    expect(await screen.findByText('Bill requested for T2.')).toBeOnTheScreen();
     expect(
       server.callsTo(
         'POST',

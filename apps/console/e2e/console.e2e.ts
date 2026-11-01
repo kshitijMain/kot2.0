@@ -202,8 +202,7 @@ test.describe.serial('the web console', () => {
 
     await hall.getByRole('button', { name: '1, Free' }).click();
     const open = page.getByRole('dialog', { name: t('pos.open.title', { table: '1' }) });
-    await open.getByLabel(t('pos.open.guests'), { exact: true }).fill('2');
-    await open.getByRole('button', { name: t('pos.open.submit') }).click();
+    await open.getByRole('button', { name: t('pos.open.guestsCount', { count: 2 }) }).click();
     await expect(page.getByText(t('pos.open.opened', { table: '1' }))).toBeVisible();
     const occupied = hall.getByRole('button', { name: /^1, Occupied, 2 guests, 0 min, / });
     await expect(occupied).toBeVisible();
@@ -461,8 +460,7 @@ test.describe.serial('the web console', () => {
     const hall = page.getByRole('region', { name: 'Main Hall' });
     await hall.getByRole('button', { name: '2, Free' }).click();
     const open = page.getByRole('dialog', { name: t('pos.open.title', { table: '2' }) });
-    await open.getByLabel(t('pos.open.guests'), { exact: true }).fill('2');
-    await open.getByRole('button', { name: t('pos.open.submit') }).click();
+    await open.getByRole('button', { name: t('pos.open.guestsCount', { count: 2 }) }).click();
     await hall.getByRole('button', { name: /^2, Occupied/ }).click();
     await page.getByRole('button', { name: t('pos.table.takeOrder') }).click();
     await page.getByRole('button', { name: 'Breads', exact: true }).click();

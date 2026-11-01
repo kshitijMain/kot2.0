@@ -693,7 +693,7 @@ export const en = {
     setup: {
       title: 'Getting ready for service',
       body: 'This checklist shows what is still missing before you can take your first order.',
-      tip: 'Work down the list from the top.',
+      tip: 'Each step ticks itself once it is done.',
     },
     restaurant: {
       title: 'Your restaurant’s details',
@@ -708,7 +708,7 @@ export const en = {
     settings: {
       title: 'Settings',
       body: 'Every setting starts at a sensible default. Change only what your restaurant does differently.',
-      tip: 'Read the line under a setting before you change it.',
+      tip: 'Type in Find a setting to jump straight to one.',
     },
     system: {
       title: 'System health',
@@ -4000,6 +4000,10 @@ until you press Publish.
     summary: '{free} of {total} tables free',
     open: {
       title: 'Open table {table}',
+      /** P9-26: one tap on the party size opens the table. */
+      howMany: 'How many guests?',
+      guestsCount: '{count, plural, one {# guest} other {# guests}}',
+      more: 'More guests',
       guests: 'Guests',
       guestsPad: 'Guests keypad',
       submit: 'Open table',

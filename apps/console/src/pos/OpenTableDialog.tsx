@@ -1,13 +1,17 @@
 import type { TableOverviewEntry } from '@rp/contracts';
-import { Button, Dialog, NumberPad, TextField, useToast } from '@rp/ui-web';
+import { Button, Dialog, TextField, useToast } from '@rp/ui-web';
 import { useId, useState } from 'react';
 import { useConsole } from '../app/console-context.js';
 import { useT } from '../app/i18n.js';
 import { messageOf } from '../app/messages.js';
 
+/** The party sizes a tap opens the table with; anything bigger is typed (P9-26). */
+const QUICK_GUESTS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+
 /**
- * Seat guests at a free table (TBL-003): the number of guests. Any waiter serves any table, so none
- * is chosen; the server records who opened it (ADR-0023).
+ * Seat guests at a free table (TBL-003): one tap on the number of guests opens it (P9-26: it took
+ * a field and a keypad before); a bigger party is typed. Any waiter serves any table, so none is
+ * chosen; the server records who opened it (ADR-0023).
  */
 export function OpenTableDialog({
   table,
@@ -27,8 +31,8 @@ export function OpenTableDialog({
   const [working, setWorking] = useState(false);
   const formId = useId();
 
-  const submit = async () => {
-    const covers = Number(guests);
+  const submit = async (count?: number) => {
+    const covers = count ?? Number(guests);
     if (!Number.isInteger(covers) || covers < 1 || covers > 99) {
       setError(t('pos.open.invalidGuests'));
       return;
@@ -55,11 +59,34 @@ export function OpenTableDialog({
       dismissible={!working}
       title={t('pos.open.title', { table: table.label })}
       footer={
-        <Button type="submit" form={formId} loading={working}>
+        <Button type="submit" form={formId} variant="secondary" loading={working && guests !== ''}>
           {t('pos.open.submit')}
         </Button>
       }
     >
+      <div
+        className="guest-picker"
+        role="group"
+        aria-label={t('pos.open.howMany')}
+        aria-describedby={error === undefined ? undefined : `${formId}-error`}
+      >
+        {QUICK_GUESTS.map((count) => (
+          <button
+            key={count}
+            type="button"
+            className="guest-picker__option"
+            disabled={working}
+            data-autofocus={count === 2 || undefined}
+            aria-label={t('pos.open.guestsCount', { count })}
+            onClick={() => {
+              setGuests(String(count));
+              void submit(count);
+            }}
+          >
+            {count}
+          </button>
+        ))}
+      </div>
       <form
         id={formId}
         className="console-form"
@@ -69,21 +96,13 @@ export function OpenTableDialog({
         }}
       >
         <TextField
-          label={t('pos.open.guests')}
+          label={t('pos.open.more')}
           inputMode="numeric"
           value={guests}
           onChange={(event) => {
             setGuests(event.target.value.replace(/\D/g, '').slice(0, 2));
           }}
           error={error}
-          data-autofocus
-        />
-        <NumberPad
-          label={t('pos.open.guestsPad')}
-          value={guests}
-          maxLength={2}
-          onChange={setGuests}
-          disabled={working}
         />
       </form>
     </Dialog>

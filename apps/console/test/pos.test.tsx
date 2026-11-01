@@ -213,10 +213,11 @@ describe('[TBL-003] opening a table', () => {
     expect(within(dialog).getByText(t('pos.open.invalidGuests'))).toBeInTheDocument();
     expect(fake.callsTo('POST', `/api/v1/tables/${T1}/open`)).toHaveLength(0);
 
-    const pad = within(dialog).getByRole('group', { name: t('pos.open.guestsPad') });
-    await user.click(within(pad).getByRole('button', { name: '4' }));
-    expect(within(dialog).getByLabelText(t('pos.open.guests'))).toHaveValue('4');
-    await user.click(within(dialog).getByRole('button', { name: t('pos.open.submit') }));
+    // One tap on the party size opens the table (P9-26).
+    const picker = within(dialog).getByRole('group', { name: t('pos.open.howMany') });
+    await user.click(
+      within(picker).getByRole('button', { name: t('pos.open.guestsCount', { count: 4 }) }),
+    );
 
     expect(await screen.findByText(t('pos.open.opened', { table: 'T1' }))).toBeInTheDocument();
     // No waiter is chosen: any waiter serves any table (ADR-0023).
@@ -239,7 +240,7 @@ describe('[TBL-003] opening a table', () => {
     const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
     await user.click(await tile(/^T1, Free$/));
     const dialog = await screen.findByRole('dialog');
-    await user.type(within(dialog).getByLabelText(t('pos.open.guests')), '2');
+    await user.type(within(dialog).getByLabelText(t('pos.open.more')), '12');
     await user.click(within(dialog).getByRole('button', { name: t('pos.open.submit') }));
     expect(
       await within(dialog).findByText('T1 was just opened on another device.'),

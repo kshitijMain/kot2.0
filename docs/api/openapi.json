@@ -23385,6 +23385,10 @@
           "lockedUntil": {
             "anyOf": [{ "$ref": "#/components/schemas/Timestamp" }, { "type": "null" }]
           },
+          "lastSeenAt": {
+            "anyOf": [{ "$ref": "#/components/schemas/Timestamp" }, { "type": "null" }]
+          },
+          "signedIn": { "type": "boolean" },
           "createdAt": { "$ref": "#/components/schemas/Timestamp" },
           "updatedAt": { "$ref": "#/components/schemas/Timestamp" }
         },
