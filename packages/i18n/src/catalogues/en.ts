@@ -161,6 +161,7 @@ export const en = {
       SIGN_IN_LOCKED: 'Sign-in locked after wrong PINs',
       OUT_OF_STOCK: 'Dish out of stock',
       PAYMENT_CLAIMED: 'Paid by UPI: check and settle',
+      GUEST_WAITING: 'Guest waiting at a table not opened yet',
     },
     outOfStock:
       '{quantity} × {item}: cancelled, not charged. Tell the table and offer something else.',
@@ -4133,6 +4134,8 @@ until you press Publish.
       onMyWay: 'On my way',
       onMyWayOf: 'On my way: {title}',
       done: 'Done',
+      /** P9-25: a diner called before anyone opened the table. */
+      notOpened: 'Table not opened yet: seat the guests',
     },
     billOrder: 'Bill order {number}',
     backToTables: 'Back to tables',

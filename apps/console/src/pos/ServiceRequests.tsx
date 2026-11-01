@@ -79,6 +79,8 @@ export function ServiceRequests() {
             what: t(`alerts.type.${SERVICE_REQUEST_ALERTS[request.type]}`),
           });
           const facts = [alertAge(request.createdAt, now, t)];
+          // A call at a table nobody has opened yet (P9-25): someone goes and seats them.
+          if (request.tableSessionId === null) facts.push(t('pos.tableRequests.notOpened'));
           if (request.state === 'ACKNOWLEDGED') {
             facts.push(
               request.acknowledgedByName === null
@@ -97,11 +99,13 @@ export function ServiceRequests() {
               <p className="approvals__title">{title}</p>
               <p className="approvals__facts">{facts.join(' · ')}</p>
               <div className="bill__actions">
-                {request.type === 'BILL' && canBill ? (
+                {request.type === 'BILL' && canBill && request.tableSessionId !== null ? (
                   <Button
                     loading={opening}
                     onClick={() => {
-                      openBill({ tableSessionId: request.tableSessionId });
+                      if (request.tableSessionId !== null) {
+                        openBill({ tableSessionId: request.tableSessionId });
+                      }
                     }}
                   >
                     {t('pos.tableRequests.openBill')}

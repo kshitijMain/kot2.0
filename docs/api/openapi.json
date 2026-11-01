@@ -19816,7 +19816,8 @@
           "VENDOR_RESTORE_CODE",
           "SIGN_IN_LOCKED",
           "OUT_OF_STOCK",
-          "PAYMENT_CLAIMED"
+          "PAYMENT_CLAIMED",
+          "GUEST_WAITING"
         ]
       },
       "NotifyManagerResponse": {
@@ -23151,7 +23152,9 @@
           "source": { "$ref": "#/components/schemas/ServiceRequestSource" },
           "tableId": { "$ref": "#/components/schemas/Id" },
           "tableLabel": { "type": "string" },
-          "tableSessionId": { "$ref": "#/components/schemas/Id" },
+          "tableSessionId": {
+            "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }]
+          },
           "createdAt": { "$ref": "#/components/schemas/Timestamp" },
           "escalatedAt": {
             "anyOf": [{ "$ref": "#/components/schemas/Timestamp" }, { "type": "null" }]

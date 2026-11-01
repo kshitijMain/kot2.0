@@ -30,6 +30,11 @@ export const NOTIFICATION_EVENTS = [
   'OUT_OF_STOCK',
   /** A diner says they paid the printed bill by UPI from the QR page (ADR-0024, P9-03). */
   'PAYMENT_CLAIMED',
+  /**
+   * A diner called a waiter (or asked for water) at a table nobody has opened yet (P9-25): the
+   * Business Owner's answer to P9-23's question. Every waiter on duty and the managers hear it.
+   */
+  'GUEST_WAITING',
 ] as const;
 export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 
@@ -123,6 +128,13 @@ export const DEFAULT_NOTIFICATION_RULES: Readonly<Record<NotificationEvent, Noti
   ),
   WATER_REQUEST: rule(['ALL_WAITERS'], ['PAGER', 'WAITER_APP'], '{table} WATER', true, 'NONE'),
   WAITER_REQUEST: rule(['ALL_WAITERS'], ['PAGER', 'WAITER_APP'], '{table} WAITER', true, 'NONE'),
+  GUEST_WAITING: rule(
+    ['ALL_WAITERS', 'MANAGERS_ON_DUTY'],
+    ['PAGER', 'WAITER_APP', 'POS'],
+    '{table} NEW GUEST',
+    true,
+    'NONE',
+  ),
   // The cashier's part goes to the managers on duty, who bill now, and the table's to every waiter
   // on duty (ADR-0023).
   BILL_REQUEST: rule(

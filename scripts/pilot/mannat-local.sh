@@ -50,6 +50,9 @@ RP_MQTT=off
 RP_AUTH_PIN_ONLY=1
 # Backups with the database container's own PostgreSQL 16 tools (P9-24): none on the Mac.
 RP_PG_BIN=$ROOT/scripts/pilot/pg-bin
+# TEST ONLY (P9-25): prints are saved in .pilot/printouts instead of printing (no printer here).
+# Delete this line once a real printer is connected.
+RP_PRINT_TO_FOLDER=$STATE/printouts
 LOG_LEVEL=info
 EOF
 }

@@ -1538,6 +1538,7 @@ components:
         - SIGN_IN_LOCKED
         - OUT_OF_STOCK
         - PAYMENT_CLAIMED
+        - GUEST_WAITING
     OrderApproved:
       type: object
       properties:
