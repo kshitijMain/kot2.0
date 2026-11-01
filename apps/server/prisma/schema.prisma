@@ -1284,7 +1284,7 @@ model ServiceRequest {
   businessDate     DateTime             @map("business_date") @db.Date
   /// Null when a diner called at a table nobody had opened yet (P9-25): seating them ends it.
   tableSessionId   String?              @map("table_session_id") @db.Uuid
-  tableSession     TableSession?        @relation(fields: [tableSessionId], references: [id])
+  tableSession     TableSession?        @relation(fields: [tableSessionId], references: [id], onDelete: Restrict)
   /// The table it was raised at; the guests are wherever the session is now.
   tableId          String               @map("table_id") @db.Uuid
   type             ServiceRequestType

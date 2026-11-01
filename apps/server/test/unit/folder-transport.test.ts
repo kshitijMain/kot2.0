@@ -26,7 +26,11 @@ describe('[KDS-008] a print saved in a folder (test only, P9-25)', () => {
     expect(text).toContain('Mannat');
     expect(text).toContain('Bill printer');
     expect(text).toContain('cut');
-    expect(text).not.toMatch(/[\u0000-\u0009\u000b-\u001f]/);
+    // No printer command left: only printable characters and line breaks.
+    const controls = Array.from(Buffer.from(text, 'latin1')).filter(
+      (byte) => byte !== 0x0a && byte < 0x20,
+    );
+    expect(controls).toEqual([]);
   });
 
   it('saves the bytes and the text of every job, one pair each', async () => {
