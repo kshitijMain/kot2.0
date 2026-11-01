@@ -1,5 +1,12 @@
 import { elevation, fontSize, fontWeight, spacing } from '@rp/design-tokens';
-import { Text, useKeyboardHeight, useScreenInsets, useTheme, weight } from '@rp/ui-native';
+import {
+  Text,
+  useKeyboardHeight,
+  useScreenInsets,
+  useTheme,
+  useToastClearance,
+  weight,
+} from '@rp/ui-native';
 import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { BrandLogo } from './brand.js';
@@ -89,21 +96,29 @@ export function Screen({
         )}
         {children}
       </ScrollView>
-      {footer === undefined ? null : (
-        <View
-          testID="screen-footer"
-          style={[
-            styles.footer,
-            {
-              backgroundColor: colors.surface,
-              borderTopColor: colors.border,
-              paddingBottom: spacing[3] + insets.bottom,
-            },
-          ]}
-        >
-          {footer}
-        </View>
-      )}
+      {footer === undefined ? null : <ScreenFooter bottom={insets.bottom}>{footer}</ScreenFooter>}
+    </View>
+  );
+}
+
+/** A screen's footer button bar; toasts sit above it while it is there (P9-28). */
+function ScreenFooter({ bottom, children }: { bottom: number; children: ReactNode }) {
+  const { colors } = useTheme();
+  const onLayout = useToastClearance();
+  return (
+    <View
+      testID="screen-footer"
+      onLayout={onLayout}
+      style={[
+        styles.footer,
+        {
+          backgroundColor: colors.surface,
+          borderTopColor: colors.border,
+          paddingBottom: spacing[3] + bottom,
+        },
+      ]}
+    >
+      {children}
     </View>
   );
 }

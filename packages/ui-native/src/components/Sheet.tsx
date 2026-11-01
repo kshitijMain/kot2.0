@@ -1,6 +1,7 @@
 import { elevation, fontSize, fontWeight, radius, spacing, touchTarget } from '@rp/design-tokens';
-import { type ReactNode, useEffect, useState } from 'react';
-import { Keyboard, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { Keyboard, Modal, Platform, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { onBackPress } from '../back.js';
 import { useScreenInsets } from '../insets.js';
 import { useUiStrings } from '../strings.js';
 import { useTheme, weight } from '../theme.js';
@@ -32,6 +33,19 @@ export function Sheet({ open, onClose, title, children, footer, dismissible = tr
   const close = () => {
     if (dismissible) onClose();
   };
+  // In a browser (P9-28), back (an iPhone's swipe) closes the sheet, not the screen under it.
+  // Android's back reaches the Modal's onRequestClose instead.
+  const latestClose = useRef(close);
+  useEffect(() => {
+    latestClose.current = close;
+  });
+  useEffect(() => {
+    if (!open || Platform.OS !== 'web') return undefined;
+    return onBackPress(() => {
+      latestClose.current();
+      return true;
+    });
+  }, [open]);
   return (
     <Modal
       visible={open}
@@ -106,6 +120,7 @@ export function useKeyboardHeight(active = true): number {
   const [height, setHeight] = useState(0);
   useEffect(() => {
     if (!active) return undefined;
+    if (Platform.OS === 'web') return watchBrowserKeyboard(setHeight);
     const shown = Keyboard.addListener('keyboardDidShow', (event) => {
       setHeight(event.endCoordinates.height);
     });
@@ -119,6 +134,37 @@ export function useKeyboardHeight(active = true): number {
     };
   }, [active]);
   return height;
+}
+
+interface VisualViewportLike {
+  readonly height: number;
+  readonly offsetTop: number;
+  addEventListener(type: 'resize' | 'scroll', listener: () => void): void;
+  removeEventListener(type: 'resize' | 'scroll', listener: () => void): void;
+}
+
+/**
+ * The keyboard's height in a browser (P9-28), which sends no keyboard events: what it hides of the
+ * window, from the visual viewport. On an iPhone the keyboard covers the page without resizing it,
+ * so a sheet's fields and buttons would sit under it.
+ */
+function watchBrowserKeyboard(setHeight: (height: number) => void): () => void {
+  const browser = globalThis as { visualViewport?: VisualViewportLike; innerHeight?: number };
+  const viewport = browser.visualViewport;
+  if (viewport === undefined) return () => undefined;
+  const update = () => {
+    const hidden = (browser.innerHeight ?? viewport.height) - viewport.height - viewport.offsetTop;
+    // Under 80 px is the browser's own bars moving, not a keyboard.
+    setHeight(hidden > 80 ? Math.round(hidden) : 0);
+  };
+  viewport.addEventListener('resize', update);
+  viewport.addEventListener('scroll', update);
+  update();
+  return () => {
+    viewport.removeEventListener('resize', update);
+    viewport.removeEventListener('scroll', update);
+    setHeight(0);
+  };
 }
 
 const styles = StyleSheet.create({

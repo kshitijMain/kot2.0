@@ -45,6 +45,22 @@ export function HomeMenu({
       {person === undefined ? null : (
         <Note>{t('mobile.signedInAs', { name: person.displayName })}</Note>
       )}
+      {onTakeaway === undefined ? null : (
+        <Button
+          variant="secondary"
+          fullWidth
+          testID="new-takeaway"
+          onPress={() => {
+            onClose();
+            onTakeaway();
+          }}
+        >
+          {t('mobile.takeaway.new')}
+        </Button>
+      )}
+      {/* The Owner takes no break the manager covers (P9-28: the Owner on a phone). */}
+      {person?.role === 'OWNER' ? null : <BreakCard state={breakState} />}
+      <PagerCard />
       {inBrowser && runsTheRestaurant ? (
         <>
           <Button
@@ -61,22 +77,6 @@ export function HomeMenu({
           <Note>{t('mobile.tables.dashboardHint')}</Note>
         </>
       ) : null}
-      <PagerCard />
-      {/* The Owner takes no break the manager covers (P9-28: the Owner on a phone). */}
-      {person?.role === 'OWNER' ? null : <BreakCard state={breakState} />}
-      {onTakeaway === undefined ? null : (
-        <Button
-          variant="secondary"
-          fullWidth
-          testID="new-takeaway"
-          onPress={() => {
-            onClose();
-            onTakeaway();
-          }}
-        >
-          {t('mobile.takeaway.new')}
-        </Button>
-      )}
       {inBrowser ? <Note testID="web-alerts">{t('mobile.web.alerts')}</Note> : null}
       {inBrowser && !fromHomeScreen() ? (
         <Note testID="web-home-screen">

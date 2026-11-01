@@ -715,6 +715,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-26 Staff roles live (managers add managers); a UX and wording pass across the console, waiter app and kitchen
 - [x] P9-27 Phones find the PC by themselves; Wi-Fi without internet; the installer's network step; daily summaries and bill history; CI fixed
 - [x] P9-28 The waiter app in phones' browsers for iPhones, the same code as the APK (ADR-0028)
+- [x] P9-29 The phone web app checked flow by flow on WebKit, Chrome and the dashboard at iPhone size; fixes and polish
 
 ## Decisions
 
@@ -4656,6 +4657,84 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-11-01: P9-29 The phone web app checked flow by flow; fixes and polish
+
+The Business Owner asked for every waiter, manager and Owner flow in the browser to be checked
+"very rigorously", with UI and UX polish. The iPhone 16 (iOS 26.2) was connected by USB:
+
+- Developer Mode, Web Inspector and Remote Automation are on;
+- Safari on it is driven through its automation interface (pymobiledevice3).
+
+The PC's certificate is not yet trusted on that iPhone, so Safari there refuses the page. The
+Business Owner installs it (`docs/runbooks/phone-web-app.md`); pushing a trusted CA to their phone
+from here was refused by the permission system, rightly. Meanwhile everything ran in WebKit (the
+iPhone's engine) at iPhone 15 and SE sizes, against the live pilot.
+
+**Checked live, all working:**
+
+- **Waiter:**
+  - the PIN, typed on screen or on a keyboard; a wrong PIN;
+  - opening a table; a dish with options and a note; search, and search with no result;
+  - Hold, then Send held items;
+  - cancelling a dish with a reason;
+  - Again;
+  - Move table (the kitchen shows "Moved from 1");
+  - Request bill;
+  - a takeaway with a token;
+  - break on and off;
+  - the alerts list.
+- **A waiter's void after the kitchen started** (started on the console's kitchen screen): the
+  manager approval sheet, Priya's PIN, "Crispy Corn voided".
+- **Manager:**
+  - Print bill;
+  - cash with no shift says so;
+  - a part payment, then the rest;
+  - approving a diner's QR order;
+  - a diner's Call waiter at an unopened table: On my way, then Done, and the diner sees it.
+- **Owner:** the dashboard, every Manage and POS page at iPhone size in WebKit.
+
+**Fixed:**
+
+- **Browser:**
+  - The browser's back (the iPhone's swipe) now closes an open sheet before the screen under it
+    (`onBackPress`, moved to `@rp/ui-native`).
+  - The keyboard's height comes from the visual viewport, so sheets lift above the iPhone's
+    keyboard.
+  - A click or a key counts as activity.
+  - A keyboard types the PIN.
+- **Toasts** sit above a screen's footer (Send KOT, Record payment); they covered it
+  (`useToastClearance`).
+- **Footers:** Open table, Mark clean and Move's Back fill the footer; they sat at the left, on
+  Android too.
+- **A dish's More sheet** says "Cancel this dish" / "Void this dish", each with what follows. A bare
+  "Cancel" read as closing the sheet.
+- **The manager approval PIN** says whose PIN it wants.
+- **The menu** has no grey photo placeholders when the menu has no photos: twice the dishes on a
+  screen.
+- **The Menu sheet:** a clear order (takeaway, break, pager, dashboard, notes, sign out), and the
+  break card no longer indented.
+- **Payment:** the sheet stays open after a part payment, with the rest filled in and a new
+  idempotency key; it closed before.
+- **Notifications:** "Turn on" re-checks at once.
+- **The takeaway list** says so when it cannot be read.
+- **Console on a phone:**
+  - one header row (the bell with its count, no "Alerts" word);
+  - System's backups and archives tables scroll in their box (the page dragged 9 px sideways).
+- **Phone e2e** extended to 9 flows per browser (keyboard PIN, back on a sheet, hold and send,
+  cancel with reason, move, takeaway, part payment): 18/18.
+
+**Noted, not changed:**
+
+- Each screen scrolls as one, header included, as in the APK.
+- Playwright's screenshots inject a style the console's CSP refuses; the console itself showed
+  none.
+- One back on the Tables screen does nothing before a second leaves the page.
+
+**For the next session:**
+
+- Once the CA is trusted on the iPhone, run the flows in its real Safari over USB.
+- Check the keyboard lift on a real iPhone.
 
 ### 2026-11-01: P9-28 The waiter app in phones' browsers, for iPhones
 

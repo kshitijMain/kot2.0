@@ -185,6 +185,15 @@ export function TakeawayScreen({
       <Text accessibilityRole="header" style={[styles.heading, { color: colors.text }]}>
         {t('mobile.takeaway.open')}
       </Text>
+      {/* A list that could not be read says so, with Try again (P9-28: it showed nothing). */}
+      {open.data.status === 'error' ? (
+        <>
+          <Note tone="danger">{messageOf(open.data.error, t)}</Note>
+          <Button variant="secondary" onPress={open.reload}>
+            {t('states.retry')}
+          </Button>
+        </>
+      ) : null}
       {open.data.status !== 'ready' ? null : open.data.value.length === 0 ? (
         <Note>{t('mobile.takeaway.none')}</Note>
       ) : (

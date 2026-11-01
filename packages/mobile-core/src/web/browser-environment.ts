@@ -7,7 +7,7 @@ export const TABLE_PARAMETER = 'table';
 
 /* Browser glue for the phone web app (P9-28). Every API here is optional in some browser, so each
    is looked up and its absence is not an error: the app then does without it. It runs only in a
-   browser and is covered by the phone web e2e (apps/waiter-app/e2e), not by unit tests. */
+   browser and is covered by the phone web e2e (apps/console/e2e/phone.e2e.ts), not by unit tests. */
 
 interface WakeLockSentinelLike {
   release(): Promise<void>;
