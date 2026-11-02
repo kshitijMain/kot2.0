@@ -17,6 +17,7 @@ import { AppError } from '../errors/app-error.js';
 import { appendEvent } from '../events/outbox.js';
 import { SettingsService } from '../settings/settings.service.js';
 import { CashDrawerService } from './cash-drawer.service.js';
+import { sessionWork } from '../billing/session-work.js';
 import { ShiftsService } from './shifts.service.js';
 
 export type ParsedPayments = ReturnType<typeof RecordPaymentsRequest.parse>;
@@ -204,6 +205,7 @@ export class PaymentsService {
           { aggregate: { type: 'invoice', id: invoiceId } },
         );
         tableClosed = await this.closeTableIfPaid(tx, principal, invoice.billId, envelope);
+        await this.closeTakeawayIfPaid(tx, invoice.billId);
       }
 
       await tx.idempotencyRecord.create({
@@ -276,6 +278,26 @@ export class PaymentsService {
   }
 
   /**
+   * A takeaway whose every bill is paid is done with (QA-032): it leaves the open takeaway
+   * lists, where it had stayed with "Bill order" for good. Its tickets stay on the kitchen screen
+   * until cooked, as before: they do not follow the order's status.
+   */
+  private async closeTakeawayIfPaid(tx: TransactionClient, billId: string | null): Promise<void> {
+    if (billId === null) return;
+    const bill = await tx.bill.findUniqueOrThrow({
+      where: { id: billId },
+      select: { status: true, orderId: true },
+    });
+    if (bill.orderId === null || bill.status !== 'INVOICED') return;
+    const unpaid = await tx.invoice.count({ where: { billId, status: 'ISSUED' } });
+    if (unpaid > 0) return;
+    await tx.order.updateMany({
+      where: { id: bill.orderId, status: 'OPEN' },
+      data: { status: 'CLOSED' },
+    });
+  }
+
+  /**
    * TBL-004: a table whose every bill is paid, with nothing ordered since printing, is free
    * again and its session closes.
    */
@@ -294,6 +316,10 @@ export class PaymentsService {
     if (session?.status !== 'OPEN' || bill.status !== 'INVOICED') return false;
     const unpaid = await tx.invoice.count({ where: { billId, status: 'ISSUED' } });
     if (unpaid > 0) return false;
+    // A diner's order waiting for approval, dishes held or not yet on a bill, or a voided part of
+    // a split bill keep the table open: closing now would leave them unbilled (QA-025, QA-026).
+    const work = await sessionWork(tx, principal.restaurantId, session.id);
+    if (work.waiting + work.held + work.unbilled + work.voidedParts > 0) return false;
     await tx.$queryRaw`SELECT 1 AS locked FROM tables WHERE id = ${session.tableId}::uuid FOR UPDATE`;
     const table = await tx.diningTable.findUniqueOrThrow({ where: { id: session.tableId } });
     // Items ordered after the bill was printed keep the table open for another bill.

@@ -146,6 +146,25 @@ export function BillScreen({
           })}
         </p>
       )}
+      {bill.status !== 'OPEN' &&
+      (bill.unbilledOrderItemIds.length > 0 || bill.voidedPartIds.length > 0) ? (
+        <div className="console-notice" role="status">
+          {bill.voidedPartIds.length > 0 ? (
+            <p>{t('billing.voidedPartNotice', { count: bill.voidedPartIds.length })}</p>
+          ) : null}
+          {bill.unbilledOrderItemIds.length > 0 ? (
+            <p>{t('billing.unbilledNotice', { count: bill.unbilledOrderItemIds.length })}</p>
+          ) : null}
+          <Button
+            loading={busy}
+            onClick={() => {
+              void print();
+            }}
+          >
+            {t('billing.printUpdated')}
+          </Button>
+        </div>
+      ) : null}
       <div className="bill">
         <BillPreview bill={bill} />
         <div className="bill__panel">
@@ -417,6 +436,12 @@ function BillPreview({ bill }: { bill: BillView }) {
                   <>
                     {' '}
                     <Badge tone="info">{t('billing.complimentary')}</Badge>
+                  </>
+                ) : null}
+                {bill.unbilledOrderItemIds.includes(line.orderItemId) ? (
+                  <>
+                    {' '}
+                    <Badge tone="warning">{t('billing.notYetBilled')}</Badge>
                   </>
                 ) : null}
               </td>

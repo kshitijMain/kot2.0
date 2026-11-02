@@ -71,6 +71,8 @@ export function billView(overrides: Partial<BillView> = {}): BillView {
     grandTotal: 70_400,
     customer: { name: null, phone: null, phoneConsent: false, gstin: null },
     invoiceIds: [],
+    unbilledOrderItemIds: [],
+    voidedPartIds: [],
     editingInvoiceId: null,
     amountInWords: true,
     ...overrides,

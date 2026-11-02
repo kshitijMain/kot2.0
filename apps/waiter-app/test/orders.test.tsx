@@ -1,6 +1,6 @@
 import type { OrderView, SubmitOrderRequest } from '@rp/contracts';
 import { eventFrame, type SocketFactory } from '@rp/mobile-core/testing';
-import { act, fireEvent, screen, within } from '@testing-library/react-native';
+import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import { IDS, KIRAN, Restaurant, signedInApp, T2_SESSION } from './restaurant';
 
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
@@ -321,6 +321,28 @@ describe('[WTR-012] [ORD-013] orders without a connection', () => {
     // Nothing more to send when the connection comes back.
     await goOnline(sockets);
     expect(orderPosts(server)).toHaveLength(2);
+  });
+
+  it('[ORD-013] resends a takeaway whose answer was lost with the same key: one order (QA-027)', async () => {
+    const restaurant = new Restaurant();
+    const { server } = await signedInApp(restaurant);
+    await fireEvent.press(await screen.findByRole('button', { name: /^Menu: break, takeaway/ }));
+    await fireEvent.press(await screen.findByTestId('new-takeaway'));
+    await fireEvent.press(await screen.findByRole('button', { name: 'Main Course' }));
+    await fireEvent.press(button(/^Dal Makhani,/));
+    restaurant.network = 'loseAnswers';
+    await fireEvent.press(screen.getByTestId('send-takeaway'));
+    // The server made the order; the phone never heard, and keeps the dish to send again.
+    expect(await screen.findByText(/Not sent/)).toBeOnTheScreen();
+    expect(restaurant.allOrders()).toHaveLength(1);
+    restaurant.network = 'up';
+    await fireEvent.press(screen.getByTestId('send-takeaway'));
+    await waitFor(() => {
+      expect(orderPosts(server)).toHaveLength(2);
+    });
+    const keys = orderPosts(server).map((body) => body.idempotencyKey);
+    expect(keys).toEqual([keys[0], keys[0]]);
+    expect(restaurant.allOrders()).toHaveLength(1);
   });
 
   it('keeps another waiter’s order for them, and says so', async () => {

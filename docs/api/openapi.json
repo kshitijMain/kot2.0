@@ -15215,6 +15215,16 @@
           "grandTotal": { "$ref": "#/components/schemas/Paise" },
           "customer": { "$ref": "#/components/schemas/BillCustomerView" },
           "invoiceIds": { "type": "array", "items": { "$ref": "#/components/schemas/Id" } },
+          "unbilledOrderItemIds": {
+            "default": [],
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Id" }
+          },
+          "voidedPartIds": {
+            "default": [],
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Id" }
+          },
           "editingInvoiceId": {
             "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }]
           },
@@ -15239,6 +15249,8 @@
           "grandTotal",
           "customer",
           "invoiceIds",
+          "unbilledOrderItemIds",
+          "voidedPartIds",
           "editingInvoiceId",
           "amountInWords"
         ],
@@ -15282,6 +15294,16 @@
           "grandTotal": { "$ref": "#/components/schemas/Paise" },
           "customer": { "$ref": "#/components/schemas/BillCustomerView" },
           "invoiceIds": { "type": "array", "items": { "$ref": "#/components/schemas/Id" } },
+          "unbilledOrderItemIds": {
+            "default": [],
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Id" }
+          },
+          "voidedPartIds": {
+            "default": [],
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/Id" }
+          },
           "editingInvoiceId": {
             "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }]
           },

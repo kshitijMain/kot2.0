@@ -1,7 +1,7 @@
 import type { DayEndPreview } from '@rp/contracts';
 import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { B, billView, invoiceView } from './billing-fixture.js';
+import { B, billView, invoiceView, paymentsView } from './billing-fixture.js';
 import { STAFF } from './fakes.js';
 import { expectNoAxeViolations, renderConsole, server, signsInAs, t } from './harness.js';
 
@@ -287,6 +287,10 @@ describe('[BILL-013] [RPT-005] closing the day', () => {
     await expectNoAxeViolations(container);
     await user.click(screen.getByLabelText(t('dayEnd.carryForward')));
     await user.click(screen.getByRole('button', { name: t('dayEnd.close') }));
+    // Closing a day cannot be undone: it asks first (QA-030).
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: t('dayEnd.close') }),
+    );
     expect(
       await screen.findByText(t('dayEnd.closedToast', { date: '26-09-2026' })),
     ).toBeInTheDocument();
@@ -334,6 +338,55 @@ describe('[BILL-013] [RPT-005] closing the day', () => {
     const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/day-end' });
     expect(await screen.findByText(t('dayEnd.noBlockers'))).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: t('dayEnd.close') }));
+    await user.click(
+      within(await screen.findByRole('dialog')).getByRole('button', { name: t('dayEnd.close') }),
+    );
     expect(await screen.findByRole('alert')).toBeInTheDocument();
+  });
+
+  it('asks before closing the day, and closes nothing when kept open (QA-030)', async () => {
+    const fake = signsInAs(server(), 'MANAGER').on('GET', '/api/v1/day-end', () => ({
+      status: 200,
+      body: dayEnd({ blockers: { openShifts: [], openTables: [], unsettledInvoices: [] } }),
+    }));
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/day-end' });
+    await user.click(await screen.findByRole('button', { name: t('dayEnd.close') }));
+    const dialog = await screen.findByRole('dialog', {
+      name: t('dayEnd.confirmTitle', { date: '26-09-2026' }),
+    });
+    await user.click(within(dialog).getByRole('button', { name: t('dayEnd.keepOpen') }));
+    expect(fake.callsTo('POST', '/api/v1/day-end')).toHaveLength(0);
+  });
+
+  it('opens each unpaid bill that holds the day up, to take its payment (QA-031)', async () => {
+    const fake = signsInAs(server(), 'MANAGER')
+      .on('GET', '/api/v1/day-end', () => ({
+        status: 200,
+        body: dayEnd({
+          blockers: {
+            openShifts: [],
+            openTables: [],
+            unsettledInvoices: [
+              { invoiceId: B.invoice, invoiceNumber: 'INV/26-27/000012', grandTotal: 61_200 },
+            ],
+          },
+        }),
+      }))
+      .on('GET', `/api/v1/invoices/${B.invoice}`, () => ({ status: 200, body: invoiceView() }))
+      .on('GET', `/api/v1/invoices/${B.invoice}/payments`, () => ({
+        status: 200,
+        body: paymentsView(),
+      }));
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/day-end' });
+    await user.click(
+      await screen.findByRole('button', {
+        name: t('dayEnd.payInvoice', { number: 'INV/26-27/000012' }),
+      }),
+    );
+    expect(
+      await screen.findByRole('heading', {
+        name: t('payment.title', { number: 'INV/26-27/000012' }),
+      }),
+    ).toBeInTheDocument();
   });
 });

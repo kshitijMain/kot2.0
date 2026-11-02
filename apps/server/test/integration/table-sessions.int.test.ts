@@ -191,16 +191,12 @@ describe('[TBL-003] [TBL-004] table sessions', () => {
       }),
     ).toBe(1);
 
-    // The bill cannot be requested twice, and a table with the bill asked for cannot be closed.
+    // The bill cannot be requested twice. (A table that asked for the bill with nothing to bill
+    // may now be closed without one, so it is not stuck for good: QA-024, `qa-flows.int.test.ts`.)
     const twice = await server()
       .post(`/api/v1/table-sessions/${session.id}/request-bill`)
       .set(as(waiter));
     expect([twice.status, codeOf(twice)]).toEqual([409, 'INVALID_TRANSITION']);
-    const close = await server()
-      .post(`/api/v1/table-sessions/${session.id}/close-without-bill`)
-      .set(as(cashier))
-      .send({ reason: 'Guests left' });
-    expect([close.status, codeOf(close)]).toEqual([409, 'INVALID_TRANSITION']);
     await prisma.diningTable.update({ where: { id: tables.T1 }, data: { state: 'OCCUPIED' } });
   });
 

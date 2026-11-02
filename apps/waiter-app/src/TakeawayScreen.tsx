@@ -22,22 +22,22 @@ import {
   requestLines,
 } from '@rp/ordering';
 import { Button, StatusChip, Text, TextField, useTheme, useToast, weight } from '@rp/ui-native';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
 import { CartList } from './CartList';
 import { MenuBrowser } from './MenuBrowser';
 
-/** Takeaway orders come and go with these events. */
+/** Takeaway orders come and go with these events (a paid one leaves the list, QA-032). */
 const affectsTakeaway = (eventType: string) =>
   eventType === 'OrderSubmitted' ||
   eventType === 'ItemStatusChanged' ||
-  eventType === 'InvoiceIssued' ||
-  eventType === 'PaymentRecorded';
+  eventType === 'BillPrinted' ||
+  eventType === 'BillSettled';
 
 /**
  * A takeaway order from the waiter app (WTR-013): dishes from the menu, the customer's name and
  * phone if given, sent straight to the kitchen with a token (TBL-008), and the open takeaway
- * orders with their tokens and progress. Billing stays at the POS.
+ * orders with their tokens and progress, until paid. Billing stays at the POS.
  */
 export function TakeawayScreen({
   onBack,
@@ -59,6 +59,8 @@ export function TakeawayScreen({
   const [phone, setPhone] = useState('');
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState<string | undefined>();
+  /** The key of the order being sent, kept while the same order is sent again. */
+  const attempt = useRef<{ key: string; signature: string } | undefined>(undefined);
   const open = useLive(
     async () => (await session.api.listTakeawayOrders()).orders,
     affectsTakeaway,
@@ -106,26 +108,33 @@ export function TakeawayScreen({
   const send = async () => {
     setSending(true);
     setNotice(undefined);
+    const order = {
+      source: 'WAITER_APP' as const,
+      orderType: 'TAKEAWAY' as const,
+      ...(customer.trim() !== '' && { customerName: customer.trim() }),
+      ...(phone.trim() !== '' && { customerPhone: phone.trim() }),
+      lines: requestLines(lines),
+    };
+    // The same order sent again (its answer was lost) keeps its key, so the server makes it once
+    // (ORD-013, QA-027); a changed order is a new one.
+    const signature = JSON.stringify(order);
+    if (attempt.current?.signature !== signature) {
+      attempt.current = { key: newIdempotencyKey(), signature };
+    }
     try {
       const answer = await session.api.submitOrder({
-        body: {
-          idempotencyKey: newIdempotencyKey(),
-          source: 'WAITER_APP',
-          orderType: 'TAKEAWAY',
-          ...(customer.trim() !== '' && { customerName: customer.trim() }),
-          ...(phone.trim() !== '' && { customerPhone: phone.trim() }),
-          lines: requestLines(lines),
-        },
+        body: { idempotencyKey: attempt.current.key, ...order },
       });
+      attempt.current = undefined;
       if (answer.status !== 'ACCEPTED') {
         setLines((current) => markRejected(current, answer.rejectedLines));
         setNotice(t('pos.result.rejected'));
         return;
       }
-      const order = await session.api.getOrder({ params: { orderId: answer.orderId } });
+      const made = await session.api.getOrder({ params: { orderId: answer.orderId } });
       toast.show({
         title: t('pos.result.takeaway', {
-          token: order.takeawayToken ?? 0,
+          token: made.takeawayToken ?? 0,
           number: answer.orderNumber,
         }),
         tone: 'success',

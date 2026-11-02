@@ -140,22 +140,31 @@ export class InvoicesService {
 
   async issue(principal: Principal, billId: string, seriesId: string | null): Promise<InvoiceView> {
     const invoiceId = await this.prisma.transaction(async (tx) => {
-      const context = await this.bills.lockedOpenBill(tx, principal.restaurantId, billId);
+      const printing = await this.bills.lockedBillToPrint(tx, principal.restaurantId, billId);
+      if (printing.mode === 'REPLACE_PART') {
+        return this.reissuePart(tx, principal, printing.context, printing.voidedId, seriesId);
+      }
+      const { context } = printing;
       const { bill, calculated } = context;
       const { result } = calculated;
       // A voided invoice of this bill not yet replaced: the new one replaces it (BILL-010).
-      const replaces = await tx.invoice.findFirst({
-        where: { billId, status: 'VOIDED', replacedBy: { none: {} } },
-        orderBy: [{ voidedAt: 'desc' }, { sequence: 'desc' }],
-        select: { id: true },
-      });
+      const replaces =
+        printing.mode === 'OPEN'
+          ? await tx.invoice.findFirst({
+              where: { billId, status: 'VOIDED', replacedBy: { none: {} } },
+              orderBy: [{ voidedAt: 'desc' }, { sequence: 'desc' }],
+              select: { id: true },
+            })
+          : null;
       await this.assertBillable(tx, context, replaces !== null);
 
-      // A printed invoice reopened for editing is updated in place, keeping its number (BILL-010).
+      // A printed invoice reopened for editing is updated in place, keeping its number (BILL-010),
+      // and so is an unpaid printed bill when dishes were ordered after it (QA-022).
+      const editingId = printing.mode === 'REVISE' ? printing.invoiceId : bill.editingInvoiceId;
       const editing =
-        bill.editingInvoiceId === null
+        editingId === null
           ? null
-          : await tx.invoice.findUniqueOrThrow({ where: { id: bill.editingInvoiceId } });
+          : await tx.invoice.findUniqueOrThrow({ where: { id: editingId } });
       const [restaurant, snapshot] = await Promise.all([
         tx.restaurant.findUniqueOrThrow({ where: { id: principal.restaurantId } }),
         this.settings.snapshot(principal.restaurantId),
@@ -321,7 +330,9 @@ export class InvoicesService {
         aggregate: { type: 'invoice', id: invoice.id },
         ...(context.tableId !== null && { audience: { tableIds: [context.tableId] } }),
       };
-      if (context.tableId !== null) {
+      // Only while its own guests are at the table: a corrected bill of guests who have left
+      // must not move the table of whoever sits there now (QA-028).
+      if (context.tableId !== null && context.sessionOpen) {
         const table = await tx.diningTable.findUniqueOrThrow({ where: { id: context.tableId } });
         if (table.state !== 'BILL_PRINTED') {
           const to = transition(tableMachine, table.state, 'PRINT_BILL').to;
@@ -368,7 +379,7 @@ export class InvoicesService {
           entityType: 'invoice',
           entityId: invoice.id,
           actorId: principal.staffId,
-          approverId: bill.editApprovedById,
+          approverId: printing.mode === 'REVISE' ? null : bill.editApprovedById,
           deviceId: principal.deviceId,
           restaurantId: principal.restaurantId,
           before: {
@@ -381,7 +392,10 @@ export class InvoicesService {
             grandTotal: editing.grandTotal,
           },
           after: { version, ...totals, lines: lines.length },
-          reason: bill.editReason,
+          reason:
+            printing.mode === 'REVISE'
+              ? 'Dishes ordered after the bill was printed'
+              : bill.editReason,
         });
         return invoice.id;
       }
@@ -409,6 +423,168 @@ export class InvoicesService {
       return invoice.id;
     });
     return this.view(principal.restaurantId, invoiceId);
+  }
+
+  /**
+   * Prints a voided part of a split bill again (QA-026): the same lines, tax and totals as the
+   * part had, under a new number that replaces it, so the bill adds up again and the table can
+   * close once every part is paid.
+   */
+  private async reissuePart(
+    tx: TransactionClient,
+    principal: Principal,
+    context: BillContext,
+    voidedId: string,
+    seriesId: string | null,
+  ): Promise<string> {
+    const voided = await tx.invoice.findUniqueOrThrow({ where: { id: voidedId } });
+    const [lines, taxLines, restaurant, snapshot] = await Promise.all([
+      tx.invoiceLine.findMany({
+        where: { invoiceId: voidedId, version: voided.version },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      }),
+      tx.taxLine.findMany({
+        where: { invoiceId: voidedId, version: voided.version },
+        orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
+      }),
+      tx.restaurant.findUniqueOrThrow({ where: { id: principal.restaurantId } }),
+      this.settings.snapshot(principal.restaurantId),
+    ]);
+    const now = new Date();
+    const numbering = await this.nextNumber(
+      tx,
+      principal.restaurantId,
+      seriesId,
+      now,
+      restaurant.timeZone,
+    );
+    const businessDate = await currentBusinessDate(tx, principal.restaurantId, now);
+    const amounts = {
+      priceMode: voided.priceMode,
+      subtotal: voided.subtotal,
+      discountTotal: voided.discountTotal,
+      serviceCharge: voided.serviceCharge,
+      taxTotal: voided.taxTotal,
+      roundOff: voided.roundOff,
+      grandTotal: voided.grandTotal,
+      customerName: voided.customerName,
+      customerGstin: voided.customerGstin,
+      customerPhone: voided.customerPhone,
+      customerPhoneConsent: voided.customerPhoneConsent,
+    };
+    const invoice = await tx.invoice.create({
+      data: {
+        id: newId(),
+        restaurantId: principal.restaurantId,
+        businessDate: dbDate(businessDate),
+        invoiceDate: dbDate(numbering.invoiceDate),
+        financialYear: numbering.financialYear,
+        seriesId: numbering.seriesId,
+        sequence: numbering.sequence,
+        invoiceNumber: numbering.invoiceNumber,
+        billId: context.bill.id,
+        tableSessionId: context.bill.tableSessionId,
+        orderId: context.bill.orderId,
+        particulars: particularsOf(restaurant, snapshot),
+        ...amounts,
+        issuedById: principal.staffId,
+        issuedAt: now,
+        printCount: 0,
+        replacesInvoiceId: voidedId,
+        lines: {
+          create: lines.map((line) => ({
+            restaurantId: principal.restaurantId,
+            orderItemId: line.orderItemId,
+            description: line.description,
+            quantity: line.quantity,
+            unitPrice: line.unitPrice,
+            lineTotal: line.lineTotal,
+            discount: line.discount,
+            taxableValue: line.taxableValue,
+            taxGroupId: line.taxGroupId,
+            sacCode: line.sacCode,
+            itemId: line.itemId,
+            taxShare: line.taxShare,
+          })),
+        },
+        taxLines: {
+          create: taxLines.map((line) => ({
+            restaurantId: principal.restaurantId,
+            taxGroupId: line.taxGroupId,
+            code: line.code,
+            rateBp: line.rateBp,
+            taxableValue: line.taxableValue,
+            amount: line.amount,
+          })),
+        },
+      },
+    });
+    const envelope = {
+      version: 1 as const,
+      occurredAt: now.toISOString(),
+      restaurantId: principal.restaurantId,
+      businessDate,
+    };
+    const options = {
+      aggregate: { type: 'invoice', id: invoice.id },
+      ...(context.tableId !== null && { audience: { tableIds: [context.tableId] } }),
+    };
+    // Only while its own guests are at the table: a corrected bill of guests who have left
+    // must not move the table of whoever sits there now (QA-028).
+    if (context.tableId !== null && context.sessionOpen) {
+      const table = await tx.diningTable.findUniqueOrThrow({ where: { id: context.tableId } });
+      if (table.state !== 'BILL_PRINTED') {
+        const to = transition(tableMachine, table.state, 'PRINT_BILL').to;
+        await tx.diningTable.update({ where: { id: table.id }, data: { state: to } });
+        await appendEvent(
+          tx,
+          {
+            ...envelope,
+            eventId: newId(),
+            type: 'TableStateChanged',
+            payload: { tableId: table.id, state: to },
+          },
+          options,
+        );
+      }
+    }
+    await appendEvent(
+      tx,
+      {
+        ...envelope,
+        eventId: newId(),
+        type: 'BillPrinted',
+        payload: {
+          invoiceId: invoice.id,
+          invoiceNumber: numbering.invoiceNumber,
+          grandTotal: voided.grandTotal,
+          duplicate: false,
+        },
+      },
+      options,
+    );
+    await this.audit.record(tx, {
+      action: 'INVOICE_ISSUED',
+      entityType: 'invoice',
+      entityId: invoice.id,
+      actorId: principal.staffId,
+      deviceId: principal.deviceId,
+      restaurantId: principal.restaurantId,
+      before: null,
+      after: {
+        invoiceNumber: numbering.invoiceNumber,
+        billId: context.bill.id,
+        replacesInvoiceId: voidedId,
+        subtotal: voided.subtotal,
+        discountTotal: voided.discountTotal,
+        serviceCharge: voided.serviceCharge,
+        taxTotal: voided.taxTotal,
+        roundOff: voided.roundOff,
+        grandTotal: voided.grandTotal,
+      },
+      reason: 'A voided part of a split bill, printed again',
+    });
+    return invoice.id;
   }
 
   async view(restaurantId: string, invoiceId: string): Promise<InvoiceView> {

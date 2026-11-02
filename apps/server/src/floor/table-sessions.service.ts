@@ -9,7 +9,6 @@ import type {
 import {
   isBillable,
   OPEN_SERVICE_REQUEST_STATES,
-  ORDER_ITEM_STATES,
   tableAfterGuestsLeft,
   tableMachine,
   type TableEvent,
@@ -23,16 +22,12 @@ import { authErrors } from '../auth/auth-errors.js';
 import { currentBusinessDate, dbDate, isoDateOf } from '../common/business-dates.js';
 import { newId } from '../common/ids.js';
 import { PrismaService, type TransactionClient } from '../database/prisma.service.js';
+import { sessionWork } from '../billing/session-work.js';
 import { AppError } from '../errors/app-error.js';
 import { appendEvent, type EventAudience } from '../events/outbox.js';
 import type { DiningTable, TableSession } from '../generated/prisma/client.js';
 import { LicenceAgentService } from '../licensing/licence-agent.service.js';
 import { SettingsService } from '../settings/settings.service.js';
-
-/** Items that keep a table from being closed without a bill: billable or awaiting approval. */
-const OPEN_ITEM_STATES = ORDER_ITEM_STATES.filter(
-  (state) => isBillable(state) || state === 'PENDING_APPROVAL',
-);
 
 export type SessionRow = TableSession & { table: DiningTable };
 
@@ -220,15 +215,24 @@ export class TableSessionsService {
       const session = await this.lockSession(tx, principal.restaurantId, sessionId);
       this.next(session.table.state, 'CLOSE_WITHOUT_BILL');
       const to = await this.stateAfterGuestsLeft(principal.restaurantId);
-      const items = await tx.orderItem.count({
-        where: { order: { tableSessionId: sessionId }, state: { in: [...OPEN_ITEM_STATES] } },
-      });
-      if (items > 0) {
+      // Nothing may be left to bill, approve, fire or pay (QA-024, QA-025): items already on a
+      // paid bill are fine.
+      const work = await sessionWork(tx, principal.restaurantId, sessionId);
+      const items = work.waiting + work.held + work.unbilled;
+      if (items > 0 || work.voidedParts > 0) {
         throw new AppError(
           409,
           'TABLE_HAS_ITEMS',
           'Items have been ordered at this table. Cancel them, or print the bill, to close it.',
           { itemCount: items },
+        );
+      }
+      if (work.unpaid.length > 0) {
+        throw new AppError(
+          409,
+          'UNPAID_BILL',
+          `Bill ${work.unpaid.join(', ')} is printed and not paid. Take the payment, or void the bill, first.`,
+          { invoices: work.unpaid },
         );
       }
       const closed = await tx.tableSession.update({

@@ -236,7 +236,9 @@ export class BillSplitService {
         businessDate,
       };
       const audience = context.tableId !== null ? { tableIds: [context.tableId] } : undefined;
-      if (context.tableId !== null) {
+      // Only while its own guests are at the table: a corrected bill of guests who have left
+      // must not move the table of whoever sits there now (QA-028).
+      if (context.tableId !== null && context.sessionOpen) {
         const table = await tx.diningTable.findUniqueOrThrow({ where: { id: context.tableId } });
         if (table.state !== 'BILL_PRINTED') {
           const to = transition(tableMachine, table.state, 'PRINT_BILL').to;

@@ -148,6 +148,13 @@ export const BillView = z.object({
   grandTotal: Paise,
   customer: BillCustomerView,
   invoiceIds: z.array(Id),
+  /**
+   * Dishes on the bill that no printed invoice has yet: ordered after the bill was printed
+   * (QA-022). Printing again revises an unpaid printed bill, or prints a new one for these.
+   */
+  unbilledOrderItemIds: z.array(Id).default([]),
+  /** Voided parts of a split bill not printed again (QA-026): printing again re-issues them. */
+  voidedPartIds: z.array(Id).default([]),
   /** The printed invoice this bill was reopened to edit; printing it again keeps its number. */
   editingInvoiceId: Id.nullable(),
   /** Show the total in words under it (`bills.amountInWords`, BILL-001). */

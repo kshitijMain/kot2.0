@@ -301,3 +301,63 @@ order feed's waiter filter show "Opened by" that person. Reports by waiter use w
 **Options.** A: keep it. B: show everyone who sent a KOT to the table. C: show nobody.
 
 **Recommendation:** A (short on a tile), with B on the table screen later.
+
+---
+
+## D-21: a printed bill when the guests order more
+
+**Situation.** The bill is printed; the guests order more before paying (or after paying part).
+
+**Today (built by the audit, QA-022).** "Print updated bill" gives the revised bill, same number,
+new amount, while nobody has paid any of the printed bill; once it is paid or part paid, a second
+bill for just the new dishes. A bill-wide discount applies to the revised bill but not to the
+second bill (it was given on the first).
+
+**Options.** A: keep it. B: always a second bill for the new dishes (two bills for the guest).
+C: always revise, voiding and re-issuing a part-paid bill.
+
+**Recommendation:** A.
+
+---
+
+## D-22: freeing a table that asked for the bill, or whose bills are all paid
+
+**Situation.** A table asked for the bill with nothing ordered (or everything was cancelled), or
+its bills are all paid but a diner's later order was rejected, so it never closed by itself.
+
+**Today (built by the audit, QA-024, QA-025).** A manager (or anyone allowed to free tables) can
+free it with a reason, as for a table opened by mistake, only when nothing is left to bill, approve,
+fire or pay. The audit log records it as "closed without a bill".
+
+**Options.** A: keep it. B: also let the guest's "Cancel bill request" on the tablet put the table
+back to "Occupied". C: free such tables by themselves after a while.
+
+**Recommendation:** A, plus B.
+
+---
+
+## D-23: when a takeaway leaves the "open takeaway orders" list
+
+**Today (built by the audit, QA-032).** When it is fully paid (prepaid or after collection). Its
+kitchen tickets stay on the kitchen screen until cooked, either way.
+
+**Options.** A: keep it. B: keep a paid takeaway listed, marked "Paid", until its dishes are
+picked up. C: list only unpaid takeaways.
+
+**Recommendation:** B, if staff use the list to hand food over; otherwise A.
+
+---
+
+## D-24: dishes still cooking when the table pays
+
+**Situation.** A table pays and leaves while a dessert is still being made (or the bill was paid
+early).
+
+**Today.** The table closes at payment; its tickets leave the kitchen screen (P9-26), even half
+cooked, and the kitchen gets no slip. (The audit stopped the "food waiting" alerts that followed,
+QA-029.)
+
+**Options.** A: keep it. B: keep the tickets on the kitchen screen until bumped, even after the
+table closes. C: refuse the last payment while dishes are still in the kitchen, with a warning.
+
+**Recommendation:** B (the kitchen finishes and the waiter packs it or serves it).
