@@ -54,6 +54,9 @@ Every fix started with a test that failed, and the test now passes.
 | QA-034 | High     | Day-end           | Another manager's shift left open blocked day-end, and nobody else could close it                                         | Fixed        |
 | QA-035 | Medium   | POS / printing    | A kitchen ticket lost to a jammed or offline printer could not be printed again anywhere                                  | Fixed        |
 | QA-036 | Low      | POS               | Merge and "Move dishes" were offered on a table whose bill was printed, then refused                                      | Fixed        |
+| QA-037 | Medium   | Phone / POS       | Cancel and Void were offered on dishes already on a printed bill, then refused (a void after the manager's PIN)           | Fixed        |
+| QA-038 | Medium   | Kitchen display   | Recalling a ticket whose dishes were all collected made it vanish from both lists                                         | Fixed        |
+| QA-039 | Medium   | Tables / alerts   | Merging tables cleared the guests' open requests' alerts (water, waiter, bill)                                            | Fixed        |
 
 ## Findings
 
@@ -440,6 +443,34 @@ Every fix started with a test that failed, and the test now passes.
 
 - **Fix:** only Move is offered on a table whose bill is printed (`TableOverview.tsx`).
 - **Guarded by:** `apps/console/test/pos.test.tsx` (QA-036).
+
+### QA-037 Medium: actions offered that the server then refused
+
+- **What happened:** the waiter phone (and the POS) offered Cancel and Void on dishes that were on a
+  printed bill; the server refused them ("Use Edit bill"), a void only after a manager had walked
+  over and entered their PIN.
+- **Fix:** order views now say which dishes are on a printed bill not open for changes
+  (`onPrintedBill`), and neither app offers cancel or void for them (`@rp/ordering` `lineActions`,
+  `orders.service.ts`). Older servers do not send it: the apps then behave as before.
+- **Guarded by:** `packages/ordering/test/order-logic.test.ts`, `qa-flows.int.test.ts` (QA-037).
+
+### QA-038 Medium: a recalled ticket vanished
+
+- **What happened:** on the kitchen display, recalling a bumped ticket whose dishes had all been
+  collected took it off the "recently bumped" list, and it did not come back either (only tickets
+  with a dish still at the station are shown), so it vanished.
+- **Fix:** such a recall is refused: "Every dish on this ticket has been collected. Order it again
+  if it must be made again." (`kitchen/kds.service.ts`).
+- **Guarded by:** `qa-flows.int.test.ts` (QA-038).
+
+### QA-039 Medium: merging tables cleared the guests' requests
+
+- **What happened:** when two tables were merged, a guest's open request (water, waiter, bill) moved
+  to the joined table, but its alert was cleared when the table they left closed, so nobody was told
+  any more.
+- **Fix:** on a merge, the open alerts follow the guests to the joined table before the old one
+  closes (`notifications/notification-triggers.ts`).
+- **Guarded by:** `qa-flows.int.test.ts` (QA-039).
 
 ## Checked and found sound
 

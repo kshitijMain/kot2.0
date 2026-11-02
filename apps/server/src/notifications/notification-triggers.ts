@@ -30,6 +30,7 @@ export class NotificationTriggers implements OnModuleInit {
         'ItemStatusChanged',
         'BillRequested',
         'BillPrinted',
+        'OrdersMoved',
         'TableClosed',
         'KotBumped',
         'DeviceStatusChanged',
@@ -102,6 +103,23 @@ export class NotificationTriggers implements OnModuleInit {
         const sessionId = invoice?.tableSessionId ?? null;
         if (sessionId === null) return;
         await this.notifications.clear(tx, { restaurantId, dedupeKey: `bill:${sessionId}` });
+        return;
+      }
+      case 'OrdersMoved': {
+        // Merged tables: the guests' open requests and alerts follow them to the table they
+        // joined, before the table they left closes and clears its own (QA-039).
+        if (event.payload.kind !== 'MERGE') return;
+        await tx.alert.updateMany({
+          where: {
+            restaurantId,
+            status: 'OPEN',
+            tableSessionId: event.payload.fromTableSessionId,
+          },
+          data: {
+            tableSessionId: event.payload.toTableSessionId,
+            tableId: event.payload.toTableId,
+          },
+        });
         return;
       }
       case 'TableClosed':

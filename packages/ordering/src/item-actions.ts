@@ -31,11 +31,14 @@ const NONE: LineActions = { pickUp: false, serve: false, cancel: false, void: nu
  * The server checks again.
  */
 export function lineActions(
-  line: Pick<Line, 'state' | 'parentOrderItemId'>,
+  line: Pick<Line, 'state' | 'parentOrderItemId'> & { readonly onPrintedBill?: boolean },
   role: Role,
   ownTable: boolean,
 ): LineActions {
   if (line.parentOrderItemId !== null) return NONE;
+  // A dish on a printed bill is changed through Edit bill: offering cancel or void only led to a
+  // refusal, a void's after a manager had entered their PIN (QA-037).
+  const billed = line.onPrintedBill === true;
   const can = (event: OrderItemEvent) => canTransition(orderItemMachine, line.state, event);
   const may = (capability: Capability) => {
     const grant = grantFor(role, capability);
@@ -45,7 +48,8 @@ export function lineActions(
   return {
     pickUp: can('PICK_UP') && may('ITEM_MARK_PICKED_UP'),
     serve: can('SERVE') && may('ITEM_MARK_SERVED'),
-    cancel: can('CANCEL') && may('ITEM_CANCEL_BEFORE_PREP'),
-    void: can('VOID') && (voiding === 'ALLOW' || voiding === 'OVERRIDE') ? voiding : null,
+    cancel: !billed && can('CANCEL') && may('ITEM_CANCEL_BEFORE_PREP'),
+    void:
+      !billed && can('VOID') && (voiding === 'ALLOW' || voiding === 'OVERRIDE') ? voiding : null,
   };
 }

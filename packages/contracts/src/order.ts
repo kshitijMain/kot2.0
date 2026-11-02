@@ -171,6 +171,11 @@ export const OrderView = z.object({
       instructions: z.string().nullable(),
       /** Why a line was rejected, cancelled or voided: the diner sees a rejection's (ORD-003). */
       endReason: z.string().nullable().optional(),
+      /**
+       * On a printed bill not open for changes: cancel and void are refused, the bill is changed
+       * with Edit bill (QA-037). Absent from older servers: not known, treated as not billed.
+       */
+      onPrintedBill: z.boolean().optional(),
     }),
   ),
   kots: z.array(

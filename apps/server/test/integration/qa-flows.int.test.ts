@@ -418,3 +418,89 @@ describe('[BILL-013] another manager’s shift left open at day-end (QA-034)', (
     expect(closed.status, JSON.stringify(closed.body)).toBe(200);
   });
 });
+
+describe('[ORD-011] [BILL-010] dishes on a printed bill in the order views (QA-037)', () => {
+  it('are marked while the bill is printed, and not while it is reopened for changes', async () => {
+    const { sessionId } = await seated();
+    const onBill = async () =>
+      (
+        (await api(app).get(`/api/v1/table-sessions/${sessionId}/orders`).set(as(waiter))).body as {
+          orders: { items: { onPrintedBill?: boolean }[] }[];
+        }
+      ).orders.flatMap((order) => order.items.map((item) => item.onPrintedBill ?? false));
+    expect(await onBill()).toEqual([false]);
+    const invoice = await printBill((await openBill(sessionId)).id);
+    expect(await onBill()).toEqual([true]);
+    const reopened = await api(app)
+      .post(`/api/v1/invoices/${invoice.id}/reopen`)
+      .set(as(manager))
+      .send({ reason: 'Guest sent a dish back' });
+    expect(reopened.status, JSON.stringify(reopened.body)).toBeLessThan(300);
+    expect(await onBill()).toEqual([false]);
+  });
+});
+
+describe('[KDS-005] recalling a ticket whose dishes were all collected (QA-038)', () => {
+  it('is refused with a reason, and the ticket stays among the bumped ones', async () => {
+    const { sessionId } = await seated();
+    const line = await prisma.orderItem.findFirstOrThrow({
+      where: { order: { tableSessionId: sessionId } },
+    });
+    const kot = await prisma.kotLine.findFirstOrThrow({ where: { orderItemId: line.id } });
+    for (const event of ['START_PREPARING', 'MARK_READY']) {
+      const step = await api(app)
+        .post(`/api/v1/order-items/${line.id}/status`)
+        .set(as(manager))
+        .send({ event });
+      expect(step.status, JSON.stringify(step.body)).toBeLessThan(300);
+    }
+    const bumped = await api(app).post(`/api/v1/kds/tickets/${kot.kotId}/bump`).set(as(manager));
+    expect(bumped.status, JSON.stringify(bumped.body)).toBeLessThan(300);
+    const picked = await api(app)
+      .post(`/api/v1/order-items/${line.id}/status`)
+      .set(as(waiter))
+      .send({ event: 'PICK_UP' });
+    expect(picked.status, JSON.stringify(picked.body)).toBeLessThan(300);
+    const recalled = await api(app)
+      .post(`/api/v1/kds/tickets/${kot.kotId}/recall`)
+      .set(as(manager));
+    expect(recalled.status).toBe(409);
+    expect(recalled.body).toMatchObject({ code: 'NOTHING_TO_RECALL' });
+    const ticket = await prisma.kot.findUniqueOrThrow({ where: { id: kot.kotId } });
+    expect(ticket.bumpedAt).not.toBeNull();
+  });
+});
+
+describe('[TBL-006] [NTF-002] merging tables with a guest’s request still open (QA-039)', () => {
+  it('keeps the request’s alert, now for the table the guests joined', async () => {
+    const from = await seated();
+    const into = await seated();
+    const tablet = await addDevice(app, kit, 'TABLE_TABLET', { tableId: from.tableId });
+    const asked = await api(app)
+      .post('/api/v1/devices/current/service-requests')
+      .set(authHeaders(tablet))
+      .send({ type: 'WATER' });
+    expect(asked.status, JSON.stringify(asked.body)).toBeLessThan(300);
+    const waitForAlert = async (sessionId: string) => {
+      for (let tries = 0; tries < 50; tries += 1) {
+        const alert = await prisma.alert.findFirst({
+          where: { tableSessionId: sessionId, status: 'OPEN' },
+        });
+        if (alert !== null) return alert;
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+      return null;
+    };
+    expect(await waitForAlert(from.sessionId)).not.toBeNull();
+    const merged = await api(app)
+      .post(`/api/v1/table-sessions/${from.sessionId}/merge`)
+      .set(as(manager))
+      .send({ intoTableSessionId: into.sessionId });
+    expect(merged.status, JSON.stringify(merged.body)).toBeLessThan(300);
+    // The events are handled after the answer: give the consumer a moment.
+    await new Promise((resolve) => setTimeout(resolve, 1_500));
+    const moved = await waitForAlert(into.sessionId);
+    expect(moved).not.toBeNull();
+    expect(moved?.tableId).toBe(into.tableId);
+  });
+});

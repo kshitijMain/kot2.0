@@ -21003,7 +21003,8 @@
                 "stationId": { "$ref": "#/components/schemas/Id" },
                 "state": { "$ref": "#/components/schemas/OrderItemState" },
                 "instructions": { "type": ["string", "null"] },
-                "endReason": { "type": ["string", "null"] }
+                "endReason": { "type": ["string", "null"] },
+                "onPrintedBill": { "type": "boolean" }
               },
               "required": [
                 "id",
