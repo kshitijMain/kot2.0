@@ -50,6 +50,10 @@ Every fix started with a test that failed, and the test now passes.
 | QA-030 | Medium   | POS               | Closing the day had no confirmation; opening a shift from a payment lost the payment                                      | Fixed        |
 | QA-031 | High     | Day-end           | Unpaid bills holding day-end up were listed as numbers only, with no way to open them                                     | Fixed        |
 | QA-032 | Medium   | Takeaway          | Paid takeaway orders stayed in "Open takeaway orders" for good, with a "Bill" button                                      | Fixed (D-23) |
+| QA-033 | High     | POS               | The POS could not cancel or void a dish already sent to the kitchen (only a waiter phone could)                           | Fixed        |
+| QA-034 | High     | Day-end           | Another manager's shift left open blocked day-end, and nobody else could close it                                         | Fixed        |
+| QA-035 | Medium   | POS / printing    | A kitchen ticket lost to a jammed or offline printer could not be printed again anywhere                                  | Fixed        |
+| QA-036 | Low      | POS               | Merge and "Move dishes" were offered on a table whose bill was printed, then refused                                      | Fixed        |
 
 ## Findings
 
@@ -403,6 +407,39 @@ Every fix started with a test that failed, and the test now passes.
   (`payments.service.ts`, `TakeawayScreen.tsx`). Whether a paid takeaway should stay listed until it
   is handed over is decision D-23.
 - **Guarded by:** `qa-flows.int.test.ts` (QA-032).
+
+### QA-033 High: the POS could not take a dish off a table
+
+- **What happened:** with no cashier role, managers run the POS, but the POS had no way to cancel a
+  dish the kitchen had not started, or void one it had: only the waiter phone did. A dish entered on
+  the wrong table could only be hidden with a discount.
+- **Fix:** each sent dish on the POS has **Cancel** (not started) or **Void** (started), as the
+  person may (`@rp/ordering` `lineActions`), with a reason; a void asks for a manager's PIN when the
+  person needs one (`apps/console/src/pos/OrderEntry.tsx`).
+- **Guarded by:** `apps/console/test/order-entry.test.tsx` (QA-033).
+
+### QA-034 High: another manager's open shift blocked day-end
+
+- **What happened:** day-end waits for every cash shift to close, and named whose was open ("Each
+  person closes their own"), but the console only showed one's own shift. If a manager went home
+  with a shift open, nobody could close the day.
+- **Fix:** a new `GET /api/v1/shifts/:id` (managers; someone limited to their own shift sees only
+  theirs) and **Close {name}'s shift** on day-end, which opens that shift to count and close it.
+- **Guarded by:** `qa-flows.int.test.ts` (QA-034); `billing-corrections.test.tsx` (QA-034); the
+  authorisation sweep and the fuzz test now cover the new endpoint.
+
+### QA-035 Medium: no way to print a kitchen ticket again
+
+- **What happened:** the server could reprint a KOT, but no screen offered it; a ticket lost to a
+  jammed or offline kitchen printer was simply lost, and the dish never made.
+- **Fix:** the POS lists each order's printed tickets with their status ("Printed", "Not printed:
+  printer problem") and **Print again**, with a reason (`OrderEntry.tsx`).
+- **Guarded by:** `order-entry.test.tsx` (QA-035).
+
+### QA-036 Low: Merge and Move dishes offered on a printed bill
+
+- **Fix:** only Move is offered on a table whose bill is printed (`TableOverview.tsx`).
+- **Guarded by:** `apps/console/test/pos.test.tsx` (QA-036).
 
 ## Checked and found sound
 

@@ -54,10 +54,23 @@ const never = () => false;
  * cash taken in or out with a reason, and close it with the counted cash; the server says what the
  * drawer should hold and the difference.
  */
-export function ShiftScreen({ onBack }: { onBack: () => void }) {
+export function ShiftScreen({
+  onBack,
+  shiftId,
+}: {
+  onBack: () => void;
+  /** Another person's shift, for a manager closing it for them (QA-034); else one's own. */
+  shiftId?: string | undefined;
+}) {
   const t = useT();
   const controller = useConsole();
-  const { data, reload } = useLive(() => controller.api.getCurrentShift(), never);
+  const { data, reload } = useLive(
+    () =>
+      shiftId === undefined
+        ? controller.api.getCurrentShift()
+        : controller.api.getShift({ params: { id: shiftId } }).then((shift) => ({ shift })),
+    never,
+  );
 
   return (
     <section className="pos-order" aria-labelledby="shift-title">

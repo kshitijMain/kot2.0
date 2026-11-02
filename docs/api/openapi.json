@@ -11091,6 +11091,60 @@
         "x-requirements": ["BILL-013", "AUD-001"]
       }
     },
+    "/api/v1/shifts/{id}": {
+      "get": {
+        "operationId": "getShift",
+        "summary": "One shift with the cash expected in its drawer, to close it for its owner",
+        "description": "For a manager closing a shift left open, e.g. before day-end (QA-034). Someone limited to their own shift reads only their own.",
+        "tags": ["payments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The shift.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ShiftView" } }
+            }
+          },
+          "400": {
+            "description": "The request does not match the contract.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "No valid session or device credential.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "The signed-in role lacks the required capability.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "No such shift.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        },
+        "x-capability": "CASH_MOVEMENT_AND_SHIFT_CLOSE",
+        "x-requirements": ["BILL-013"]
+      }
+    },
     "/api/v1/shifts/{id}/cash-movements": {
       "post": {
         "operationId": "recordCashMovement",

@@ -1,7 +1,7 @@
 import type { DayEndPreview } from '@rp/contracts';
 import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { B, billView, invoiceView, paymentsView } from './billing-fixture.js';
+import { B, billView, invoiceView, paymentsView, shiftView } from './billing-fixture.js';
 import { STAFF } from './fakes.js';
 import { expectNoAxeViolations, renderConsole, server, signsInAs, t } from './harness.js';
 
@@ -342,6 +342,31 @@ describe('[BILL-013] [RPT-005] closing the day', () => {
       within(await screen.findByRole('dialog')).getByRole('button', { name: t('dayEnd.close') }),
     );
     expect(await screen.findByRole('alert')).toBeInTheDocument();
+  });
+
+  it('opens another manager’s open shift from day-end, to close it for them (QA-034)', async () => {
+    const fake = signsInAs(server(), 'MANAGER')
+      .on('GET', '/api/v1/day-end', () => ({
+        status: 200,
+        body: dayEnd({
+          blockers: {
+            openShifts: [{ shiftId: B.shift, staffId: STAFF.MANAGER.staffId }],
+            openTables: [],
+            unsettledInvoices: [],
+          },
+        }),
+      }))
+      .on('GET', `/api/v1/shifts/${B.shift}`, () => ({ status: 200, body: shiftView() }));
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/day-end' });
+    await user.click(
+      await screen.findByRole('button', {
+        name: t('dayEnd.closeShiftOf', { name: STAFF.MANAGER.displayName }),
+      }),
+    );
+    await waitFor(() => {
+      expect(fake.callsTo('GET', `/api/v1/shifts/${B.shift}`)).toHaveLength(1);
+    });
+    expect(await screen.findByRole('heading', { name: t('shift.title') })).toBeInTheDocument();
   });
 
   it('asks before closing the day, and closes nothing when kept open (QA-030)', async () => {

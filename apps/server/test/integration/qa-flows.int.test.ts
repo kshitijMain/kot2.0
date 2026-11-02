@@ -397,3 +397,24 @@ describe('[TBL-008] [BILL-008] a takeaway once it is paid (QA-032)', () => {
     expect(order.status).toBe('CLOSED');
   });
 });
+
+describe('[BILL-013] another manager’s shift left open at day-end (QA-034)', () => {
+  it('can be read and closed by a manager, and is refused to a waiter', async () => {
+    const opened = await api(app)
+      .post('/api/v1/shifts')
+      .set(as(biller))
+      .send({ openingFloat: 50_000 });
+    expect(opened.status, JSON.stringify(opened.body)).toBeLessThan(300);
+    const shiftId = (opened.body as { id: string }).id;
+    const read = await api(app).get(`/api/v1/shifts/${shiftId}`).set(as(manager));
+    expect(read.status, JSON.stringify(read.body)).toBe(200);
+    expect(read.body).toMatchObject({ id: shiftId, status: 'OPEN', openingFloat: 50_000 });
+    const byWaiter = await api(app).get(`/api/v1/shifts/${shiftId}`).set(as(waiter));
+    expect(byWaiter.status).toBe(403);
+    const closed = await api(app)
+      .post(`/api/v1/shifts/${shiftId}/close`)
+      .set(as(manager))
+      .send({ countedCash: 50_000 });
+    expect(closed.status, JSON.stringify(closed.body)).toBe(200);
+  });
+});

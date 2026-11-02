@@ -4478,6 +4478,24 @@ export const ROUTES = [
     },
   },
   {
+    operationId: 'getShift',
+    method: 'GET',
+    path: '/api/v1/shifts/:id',
+    summary: 'One shift with the cash expected in its drawer, to close it for its owner',
+    description:
+      'For a manager closing a shift left open, e.g. before day-end (QA-034). Someone limited to ' +
+      'their own shift reads only their own.',
+    tags: ['payments'],
+    requirements: ['BILL-013'],
+    capability: 'CASH_MOVEMENT_AND_SHIFT_CLOSE',
+    request: { params: ShiftParams },
+    responses: {
+      200: { description: 'The shift.', schema: ShiftView },
+      ...standardErrors,
+      404: { description: 'No such shift.', schema: ApiError },
+    },
+  },
+  {
     operationId: 'recordCashMovement',
     method: 'POST',
     path: '/api/v1/shifts/:id/cash-movements',

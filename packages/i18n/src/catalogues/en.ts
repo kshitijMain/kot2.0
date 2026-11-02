@@ -4170,6 +4170,19 @@ until you press Publish.
       orderReady: 'Ready to serve',
       token: 'Token {token}',
       openTakeaway: 'Open takeaway orders',
+      cancelOf: 'Cancel {name}',
+      voidOf: 'Void {name}',
+      cancelTitle: 'Cancel {name}?',
+      voidTitle: 'Void {name}?',
+      cancelDescription:
+        'The kitchen has not started it: it comes off the order and is not charged.',
+      voidDescription:
+        'The kitchen has started it: it comes off the bill, and is recorded as voided with your reason.',
+      reason: 'Reason',
+      cancel: 'Cancel dish',
+      void: 'Void dish',
+      cancelled: '{name} cancelled',
+      voided: '{name} voided',
     },
     kot: {
       title: 'KOT {number} · {station}',
@@ -4177,6 +4190,13 @@ until you press Publish.
       printing: 'Printing',
       printed: 'Printed',
       failed: 'Not printed: printer problem',
+      reprint: 'Print again',
+      reprintOf: 'Print KOT {number} · {station} again',
+      reprintTitle: 'Print KOT {number} · {station} again?',
+      reprintDescription:
+        'The kitchen gets the ticket again, marked as a reprint. Nothing is ordered twice.',
+      reprinted: 'KOT {number} printed again',
+      reprintFailed: 'KOT {number} did not print: {error}',
     },
     result: {
       sent: 'Order {number} sent to the kitchen',
@@ -4324,7 +4344,8 @@ until you press Publish.
     blockers: 'Before closing',
     noBlockers: 'Ready to close.',
     openShifts:
-      '{count, plural, one {A shift is} other {# shifts are}} still open: {names}. Each person closes their own.',
+      '{count, plural, one {A shift is} other {# shifts are}} still open: {names}. Close {count, plural, one {it} other {them}} with the counted cash.',
+    closeShiftOf: 'Close {name}’s shift',
     someone: 'someone',
     openTables: 'Tables still open: {tables}',
     unsettled: 'Unpaid bills: {invoices}',

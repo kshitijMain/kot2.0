@@ -65,6 +65,7 @@ function Shift() {
   const [search] = useSearchParams();
   return (
     <ShiftScreen
+      shiftId={search.get('id') ?? undefined}
       onBack={() => {
         void navigate(backTo(search));
       }}
@@ -121,6 +122,9 @@ function DayEnd() {
       }}
       onPay={(invoiceId) => {
         void navigate(`/pos/pay/${invoiceId}?back=${encodeURIComponent('/pos/day-end')}`);
+      }}
+      onCloseShift={(shiftId) => {
+        void navigate(`/pos/shift?id=${shiftId}&back=${encodeURIComponent('/pos/day-end')}`);
       }}
     />
   );

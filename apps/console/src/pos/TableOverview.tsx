@@ -403,12 +403,17 @@ function TableDetails({
             <Button variant="secondary" onClick={onMove}>
               {t('pos.table.move')}
             </Button>
-            <Button variant="secondary" onClick={onMerge}>
-              {t('pos.table.merge')}
-            </Button>
-            <Button variant="secondary" onClick={onTransfer}>
-              {t('pos.table.transfer')}
-            </Button>
+            {/* The server refuses both once the bill is printed (QA-036); a move is fine. */}
+            {table.state === 'BILL_PRINTED' ? null : (
+              <>
+                <Button variant="secondary" onClick={onMerge}>
+                  {t('pos.table.merge')}
+                </Button>
+                <Button variant="secondary" onClick={onTransfer}>
+                  {t('pos.table.transfer')}
+                </Button>
+              </>
+            )}
           </>
         ) : null}
         {billing === 'open' ? (

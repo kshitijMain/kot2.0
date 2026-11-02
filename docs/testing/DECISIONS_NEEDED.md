@@ -361,3 +361,20 @@ QA-029.)
 table closes. C: refuse the last payment while dishes are still in the kitchen, with a warning.
 
 **Recommendation:** B (the kitchen finishes and the waiter packs it or serves it).
+
+---
+
+## D-25: dishes at a station that only prints tickets
+
+**Situation.** A station without a kitchen screen gets printed KOTs only. Nobody marks its dishes
+"preparing" or "ready", and waiters no longer mark dishes served, so its dishes stay "Sent" for good.
+
+**Today.** "Sent" means "not started", so a waiter may **cancel** such a dish (own table, with a
+reason, no manager's PIN) even after it was cooked and eaten, as long as the bill is not printed.
+The cancel is in the audit log, but stock comes back and the dish leaves the bill.
+
+**Options.** A: keep it. B: once its ticket has printed, a dish at a print-only station counts as
+started: it can only be voided, with a manager's PIN. C: ask the kitchen to bump printed tickets on
+a small screen.
+
+**Recommendation:** B (safest for money).

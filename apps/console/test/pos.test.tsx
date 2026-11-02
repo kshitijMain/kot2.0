@@ -609,6 +609,18 @@ describe('[TBL-004] freeing a table opened by mistake', () => {
     }
   });
 
+  it('offers only Move on a table whose bill is printed: merging and moving dishes are refused then (QA-036)', async () => {
+    const fake = posServer(overview({ ...entry(T1, 'T1', HALL, {}), state: 'BILL_PRINTED' }));
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    await user.click(await tile(/^T1, Bill printed/));
+    const details = await screen.findByRole('dialog', {
+      name: t('pos.table.title', { table: 'T1' }),
+    });
+    expect(within(details).getByRole('button', { name: t('pos.table.move') })).toBeVisible();
+    expect(within(details).queryByRole('button', { name: t('pos.table.merge') })).toBeNull();
+    expect(within(details).queryByRole('button', { name: t('pos.table.transfer') })).toBeNull();
+  });
+
   it('is offered for a table that asked for the bill with nothing to bill (QA-024)', async () => {
     const fake = posServer(
       overview({ ...entry(T1, 'T1', HALL, { amountSoFar: 0 }), state: 'BILL_REQUESTED' }),

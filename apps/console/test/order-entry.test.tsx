@@ -128,6 +128,108 @@ describe('[ORD-001] [MENU-012] taking an order at a table', () => {
     expect(thali).toBeDisabled();
   });
 
+  it('[ORD-011] cancels a sent dish the kitchen has not started, with a reason (QA-033)', async () => {
+    const fake = orderServer().on('POST', `/api/v1/order-items/${IDS.orderItem}/cancel`, () => ({
+      status: 200,
+      body: sentOrder('CANCELLED'),
+    }));
+    const { user, container } = await renderConsole({
+      fake,
+      signedIn: 'MANAGER',
+      path: TABLE_PATH,
+    });
+    const sent = within(await screen.findByRole('region', { name: t('pos.sent.title') }));
+    await user.click(
+      await sent.findByRole('button', { name: t('pos.sent.cancelOf', { name: 'Dal Makhani' }) }),
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: t('pos.sent.cancelTitle', { name: 'Dal Makhani' }),
+    });
+    await expectNoAxeViolations(container);
+    await user.type(within(dialog).getByLabelText(t('pos.sent.reason')), 'Guest changed mind');
+    await user.click(within(dialog).getByRole('button', { name: t('pos.sent.cancel') }));
+    await waitFor(() => {
+      expect(fake.callsTo('POST', `/api/v1/order-items/${IDS.orderItem}/cancel`)[0]?.body).toEqual({
+        reason: 'Guest changed mind',
+      });
+    });
+  });
+
+  it('[ORD-011] voids a dish the kitchen has started, with a reason (QA-033)', async () => {
+    const fake = signsInAs(server(), 'MANAGER')
+      .on('GET', '/api/v1/menu', () => ({ status: 200, body: MENU }))
+      .on('GET', `/api/v1/table-sessions/${IDS.session}/orders`, () => ({
+        status: 200,
+        body: { orders: [sentOrder('PREPARING')] },
+      }))
+      .on('POST', `/api/v1/order-items/${IDS.orderItem}/void`, () => ({
+        status: 200,
+        body: sentOrder('VOIDED'),
+      }));
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: TABLE_PATH });
+    const sent = within(await screen.findByRole('region', { name: t('pos.sent.title') }));
+    expect(
+      sent.queryByRole('button', { name: t('pos.sent.cancelOf', { name: 'Dal Makhani' }) }),
+    ).toBeNull();
+    await user.click(
+      await sent.findByRole('button', { name: t('pos.sent.voidOf', { name: 'Dal Makhani' }) }),
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: t('pos.sent.voidTitle', { name: 'Dal Makhani' }),
+    });
+    await user.type(within(dialog).getByLabelText(t('pos.sent.reason')), 'Dropped on the floor');
+    await user.click(within(dialog).getByRole('button', { name: t('pos.sent.void') }));
+    await waitFor(() => {
+      expect(fake.callsTo('POST', `/api/v1/order-items/${IDS.orderItem}/void`)[0]?.body).toEqual({
+        reason: 'Dropped on the floor',
+      });
+    });
+  });
+
+  it('[KDS-008] prints a kitchen ticket again when its printer failed, with a reason (QA-035)', async () => {
+    const failed = sentOrder('SENT', {
+      kots: [
+        {
+          id: IDS.orderItem,
+          kotNumber: 4,
+          stationId: IDS.kitchen,
+          stationName: 'Kitchen',
+          kind: 'NEW',
+          printStatus: 'FAILED',
+        },
+      ],
+    });
+    const fake = signsInAs(server(), 'MANAGER')
+      .on('GET', '/api/v1/menu', () => ({ status: 200, body: MENU }))
+      .on('GET', `/api/v1/table-sessions/${IDS.session}/orders`, () => ({
+        status: 200,
+        body: { orders: [failed] },
+      }))
+      .on('POST', `/api/v1/kots/${IDS.orderItem}/reprint`, () => ({
+        status: 200,
+        body: { printed: true, error: null },
+      }));
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: TABLE_PATH });
+    const sent = within(await screen.findByRole('region', { name: t('pos.sent.title') }));
+    expect(await sent.findByText(t('pos.kot.failed'))).toBeInTheDocument();
+    await user.click(
+      sent.getByRole('button', {
+        name: t('pos.kot.reprintOf', { number: 4, station: 'Kitchen' }),
+      }),
+    );
+    const dialog = await screen.findByRole('dialog', {
+      name: t('pos.kot.reprintTitle', { number: 4, station: 'Kitchen' }),
+    });
+    await user.type(within(dialog).getByLabelText(t('pos.sent.reason')), 'Printer jammed');
+    await user.click(within(dialog).getByRole('button', { name: t('pos.kot.reprint') }));
+    await waitFor(() => {
+      expect(fake.callsTo('POST', `/api/v1/kots/${IDS.orderItem}/reprint`)[0]?.body).toEqual({
+        printerId: null,
+        reason: 'Printer jammed',
+      });
+    });
+  });
+
   it('[ORD-016] holds a dish for later and fires it from the sent orders', async () => {
     const held = sentOrder('HELD');
     const fake = signsInAs(server(), 'MANAGER')

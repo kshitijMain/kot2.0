@@ -26,10 +26,13 @@ const affectsDay = (type: string) => /^(Bill|Order|Table|ItemStatusChanged$)/.te
 export function DayEndScreen({
   onBack,
   onPay,
+  onCloseShift,
 }: {
   onBack: () => void;
   /** Opens an unpaid bill that holds the day up, to take its payment (QA-031). */
   onPay: (invoiceId: string) => void;
+  /** Opens a shift left open, to close it for its owner (QA-034). */
+  onCloseShift: (shiftId: string) => void;
 }) {
   const t = useT();
   const controller = useConsole();
@@ -88,7 +91,7 @@ export function DayEndScreen({
                 {error}
               </p>
             )}
-            <Blockers preview={data.value} onPay={onPay} />
+            <Blockers preview={data.value} onPay={onPay} onCloseShift={onCloseShift} />
             {data.value.status === 'CLOSED' ? (
               <p className="console-notice">{t('dayEnd.closed')}</p>
             ) : (
@@ -158,9 +161,11 @@ function canClose(preview: DayEndPreview, carryForward: boolean): boolean {
 function Blockers({
   preview,
   onPay,
+  onCloseShift,
 }: {
   preview: DayEndPreview;
   onPay: (invoiceId: string) => void;
+  onCloseShift: (shiftId: string) => void;
 }) {
   const t = useT();
   // Whose shift is open, by name (P9-24): "1 shift is still open" did not say whose.
@@ -181,6 +186,20 @@ function Blockers({
             })}
           </li>
         ) : null}
+        {openShifts.map((shift) => (
+          <li key={shift.shiftId}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                onCloseShift(shift.shiftId);
+              }}
+            >
+              {t('dayEnd.closeShiftOf', {
+                name: names?.get(shift.staffId) ?? t('dayEnd.someone'),
+              })}
+            </Button>
+          </li>
+        ))}
         {openTables.length > 0 ? (
           <li>
             {t('dayEnd.openTables', {

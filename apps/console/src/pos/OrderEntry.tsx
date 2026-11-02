@@ -29,8 +29,11 @@ import {
   updateLine,
 } from '@rp/ordering';
 import { useOpenBill } from '../billing/use-open-bill.js';
+import { OverrideCancelled, useOverride } from '../billing/override.js';
+import { ReasonDialog } from '../billing/ReasonDialog.js';
+import { useConsoleState } from '../app/console-context.js';
 import { ItemDialog } from './ItemDialog.js';
-import { displayState } from '@rp/ordering';
+import { displayState, lineActions } from '@rp/ordering';
 import {
   displayPrice,
   channelItems,
@@ -411,7 +414,81 @@ function SentOrders({
   const controller = useConsole();
   const toast = useToast();
   const { openBill, opening } = useOpenBill();
+  const { person } = useConsoleState();
+  const { withOverride, dialog } = useOverride();
   const [firing, setFiring] = useState<string | undefined>();
+  // ORD-011: a dish comes off a table from the POS too, not only from a waiter phone (QA-033).
+  const [ending, setEnding] = useState<
+    { readonly item: OrderView['items'][number]; readonly kind: 'cancel' | 'void' } | undefined
+  >();
+  const [endBusy, setEndBusy] = useState(false);
+  const [endError, setEndError] = useState<string | undefined>();
+  // KDS-008: a kitchen ticket lost to a jammed or offline printer is printed again (QA-035).
+  const [reprinting, setReprinting] = useState<OrderView['kots'][number] | undefined>();
+  const reprint = async (reason: string) => {
+    if (reprinting === undefined) return;
+    setEndBusy(true);
+    setEndError(undefined);
+    try {
+      const result = await controller.api.reprintKot({
+        params: { id: reprinting.id },
+        body: { printerId: null, reason },
+      });
+      toast.show(
+        result.printed
+          ? { title: t('pos.kot.reprinted', { number: reprinting.kotNumber }), tone: 'success' }
+          : {
+              title: t('pos.kot.reprintFailed', {
+                number: reprinting.kotNumber,
+                error: result.error ?? '',
+              }),
+              tone: 'warning',
+            },
+      );
+      setReprinting(undefined);
+      onChanged();
+    } catch (failure) {
+      setEndError(messageOf(failure, t));
+    } finally {
+      setEndBusy(false);
+    }
+  };
+  const end = async (reason: string) => {
+    if (ending === undefined) return;
+    const { item, kind } = ending;
+    setEndBusy(true);
+    setEndError(undefined);
+    try {
+      if (kind === 'cancel') {
+        await controller.api.cancelOrderItem({
+          params: { orderItemId: item.id },
+          body: { reason },
+        });
+      } else {
+        await withOverride(
+          (overrideToken) =>
+            controller.api.voidOrderItem({
+              params: { orderItemId: item.id },
+              body: { reason },
+              ...(overrideToken !== undefined && { overrideToken }),
+            }),
+          { entityType: 'order_item', entityId: item.id },
+        );
+      }
+      toast.show({
+        title: t(kind === 'cancel' ? 'pos.sent.cancelled' : 'pos.sent.voided', {
+          name: item.name,
+        }),
+        tone: 'success',
+      });
+      setEnding(undefined);
+      onChanged();
+    } catch (failure) {
+      if (!(failure instanceof OverrideCancelled)) setEndError(messageOf(failure, t));
+    } finally {
+      setEndBusy(false);
+    }
+  };
   // ORD-016: an order's held items go to the kitchen now.
   const fire = async (orderId: string) => {
     setFiring(orderId);
@@ -457,9 +534,44 @@ function SentOrders({
                     state={displayState(item, order.items)}
                     label={t(`pos.itemState.${displayState(item, order.items)}`)}
                   />
+                  {person === undefined ? null : (
+                    <EndButton
+                      actions={lineActions(item, person.role, true)}
+                      name={item.name}
+                      onEnd={(kind) => {
+                        setEndError(undefined);
+                        setEnding({ item, kind });
+                      }}
+                    />
+                  )}
                 </li>
               ))}
           </ul>
+          {order.kots
+            .filter((kot) => kot.printStatus === 'FAILED' || kot.printStatus === 'PRINTED')
+            .map((kot) => (
+              <p key={kot.id} className="pos-sent__kot">
+                <span>
+                  {t('pos.kot.title', { number: kot.kotNumber, station: kot.stationName })}
+                </span>
+                <span>
+                  {t(kot.printStatus === 'FAILED' ? 'pos.kot.failed' : 'pos.kot.printed')}
+                </span>
+                <Button
+                  variant="ghost"
+                  aria-label={t('pos.kot.reprintOf', {
+                    number: kot.kotNumber,
+                    station: kot.stationName,
+                  })}
+                  onClick={() => {
+                    setEndError(undefined);
+                    setReprinting(kot);
+                  }}
+                >
+                  {t('pos.kot.reprint')}
+                </Button>
+              </p>
+            ))}
           {order.items.some((item) => item.state === 'HELD' && item.parentOrderItemId === null) ? (
             <Button
               loading={firing === order.id}
@@ -483,6 +595,85 @@ function SentOrders({
           ) : null}
         </article>
       ))}
+      {ending === undefined ? null : (
+        <ReasonDialog
+          title={t(ending.kind === 'cancel' ? 'pos.sent.cancelTitle' : 'pos.sent.voidTitle', {
+            name: ending.item.name,
+          })}
+          description={t(
+            ending.kind === 'cancel' ? 'pos.sent.cancelDescription' : 'pos.sent.voidDescription',
+          )}
+          label={t('pos.sent.reason')}
+          confirmLabel={t(ending.kind === 'cancel' ? 'pos.sent.cancel' : 'pos.sent.void')}
+          tone="danger"
+          busy={endBusy}
+          error={endError}
+          onConfirm={(reason) => {
+            void end(reason);
+          }}
+          onClose={() => {
+            setEnding(undefined);
+          }}
+        />
+      )}
+      {reprinting === undefined ? null : (
+        <ReasonDialog
+          title={t('pos.kot.reprintTitle', {
+            number: reprinting.kotNumber,
+            station: reprinting.stationName,
+          })}
+          description={t('pos.kot.reprintDescription')}
+          label={t('pos.sent.reason')}
+          confirmLabel={t('pos.kot.reprint')}
+          busy={endBusy}
+          error={endError}
+          onConfirm={(reason) => {
+            void reprint(reason);
+          }}
+          onClose={() => {
+            setReprinting(undefined);
+          }}
+        />
+      )}
+      {dialog}
     </section>
+  );
+}
+
+/** Cancel (the kitchen has not started) or void (it has) a sent dish, as the person may. */
+function EndButton({
+  actions,
+  name,
+  onEnd,
+}: {
+  actions: ReturnType<typeof lineActions>;
+  name: string;
+  onEnd: (kind: 'cancel' | 'void') => void;
+}) {
+  const t = useT();
+  if (actions.cancel) {
+    return (
+      <Button
+        variant="ghost"
+        aria-label={t('pos.sent.cancelOf', { name })}
+        onClick={() => {
+          onEnd('cancel');
+        }}
+      >
+        {t('pos.sent.cancel')}
+      </Button>
+    );
+  }
+  if (actions.void === null) return null;
+  return (
+    <Button
+      variant="ghost"
+      aria-label={t('pos.sent.voidOf', { name })}
+      onClick={() => {
+        onEnd('void');
+      }}
+    >
+      {t('pos.sent.void')}
+    </Button>
   );
 }

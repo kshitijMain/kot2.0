@@ -61,6 +61,15 @@ export class ShiftsController {
     return { shift: await this.shifts.current(principalOf(request)) };
   }
 
+  @Get(':id')
+  @RequireCapability('CASH_MOVEMENT_AND_SHIFT_CLOSE')
+  get(
+    @Req() request: AuthenticatedRequest,
+    @Param(new ZodValidationPipe(ShiftParams)) params: ShiftParams,
+  ): Promise<ShiftView> {
+    return this.shifts.get(principalOf(request), params.id, request.ownershipRequired === true);
+  }
+
   @Post(':id/cash-movements')
   @HttpCode(200)
   @RequireCapability('CASH_MOVEMENT_AND_SHIFT_CLOSE')
