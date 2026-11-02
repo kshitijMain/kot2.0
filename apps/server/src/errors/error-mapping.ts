@@ -153,6 +153,8 @@ const BY_SQLSTATE: Readonly<Record<string, DatabaseAnswer>> = {
 const BY_PRISMA_CODE: Readonly<Record<string, DatabaseAnswer>> = {
   P2002: CLASH,
   P2034: TRY_AGAIN,
+  // A transaction that ran out of time or was closed under it (QA-041).
+  P2028: TRY_AGAIN,
   P2025: {
     status: HttpStatus.NOT_FOUND,
     code: 'NOT_FOUND',
@@ -173,7 +175,12 @@ const BY_PRISMA_CODE: Readonly<Record<string, DatabaseAnswer>> = {
  * refuses gets a plain answer instead of an internal error (QA-021). Others stay unexpected.
  */
 function databaseAnswer(error: unknown): DatabaseAnswer | undefined {
-  if (!(error instanceof Error) || !error.name.startsWith('PrismaClient')) return undefined;
+  if (!(error instanceof Error)) return undefined;
+  // The connection pool closed under a request while the server stops or restarts (QA-041).
+  if (error.message === 'Cannot use a pool after calling end on the pool') {
+    return DATABASE_UNAVAILABLE;
+  }
+  if (!error.name.startsWith('PrismaClient')) return undefined;
   const { code, errorCode, meta } = error as Error & {
     code?: unknown;
     errorCode?: unknown;

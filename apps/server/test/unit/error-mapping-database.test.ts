@@ -20,6 +20,7 @@ describe('[SEC-004] [NFR-A03] database errors reach people as plain answers (QA-
     ['a clash on a unique key', prismaError('P2002', '23505'), 409, 'CONFLICT', true],
     ['a deadlock', prismaError('P2010', '40P01'), 503, 'TRY_AGAIN', true],
     ['a serialization failure', prismaError('P2034'), 503, 'TRY_AGAIN', true],
+    ['a transaction that ran out of time', prismaError('P2028'), 503, 'TRY_AGAIN', true],
     ['a record gone meanwhile', prismaError('P2025'), 404, 'NOT_FOUND', false],
     ['text the database cannot store', prismaError('P2010', '22021'), 400, 'INVALID_TEXT', false],
     ['a number out of range', prismaError('P2020'), 422, 'VALUE_OUT_OF_RANGE', false],
@@ -52,5 +53,14 @@ describe('[SEC-004] [NFR-A03] database errors reach people as plain answers (QA-
 
   it('still answers anything else as an internal error', () => {
     expect(mapError(prismaError('P2010', '22012')).status).toBe(500);
+  });
+});
+
+describe('[NFR-A04] a request caught by a server restart (QA-041)', () => {
+  it('answers 503 so the apps try again, not an internal error', () => {
+    const ended = new Error('Cannot use a pool after calling end on the pool');
+    const mapped = mapError(ended, 'corr-2');
+    expect(mapped.status).toBe(503);
+    expect(mapped.body.code).toBe('DATABASE_UNAVAILABLE');
   });
 });

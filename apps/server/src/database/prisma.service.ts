@@ -1,4 +1,4 @@
-import { Inject, Injectable, type OnModuleDestroy } from '@nestjs/common';
+import { Inject, Injectable, type OnApplicationShutdown } from '@nestjs/common';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { UTC_SESSION } from './utc-session.js';
 import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
@@ -24,7 +24,7 @@ export interface DatabasePing {
  * (Prisma 7, no query engine binary). One instance per server process.
  */
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleDestroy {
+export class PrismaService extends PrismaClient implements OnApplicationShutdown {
   /** Steps each open transaction runs after its work, before it commits. */
   private readonly endings = new WeakMap<TransactionClient, (() => Promise<void>)[]>();
 
@@ -43,7 +43,11 @@ export class PrismaService extends PrismaClient implements OnModuleDestroy {
     });
   }
 
-  async onModuleDestroy(): Promise<void> {
+  /**
+   * Last, once the server has stopped taking requests and those in flight have finished
+   * (`HttpDrain`, QA-041): closing in `onModuleDestroy` came before both.
+   */
+  async onApplicationShutdown(): Promise<void> {
     await this.$disconnect();
   }
 

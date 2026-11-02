@@ -16,47 +16,49 @@ Every fix started with a test that failed, and the test now passes.
 
 ## Summary
 
-| ID     | Severity | Area              | Problem                                                                                                                   | Status       |
-| ------ | -------- | ----------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------ |
-| QA-001 | Critical | Billing           | A flat (rupee) discount took nothing off the bill                                                                         | Fixed        |
-| QA-002 | Critical | Orders / billing  | Dishes could be added, cancelled or voided after the bill was printed or paid                                             | Fixed        |
-| QA-003 | High     | Server, phones    | A hidden NUL character in any text crashed the request (500)                                                              | Fixed        |
-| QA-004 | Medium   | Server            | The date "0000-01-01" crashed the request (500)                                                                           | Fixed        |
-| QA-005 | High     | Billing           | Payment taken while a bill was open for changes; part-paid bill could be reopened                                         | Fixed        |
-| QA-006 | High     | Payments          | A payment and a void of the same bill at the same moment crashed one of them (500)                                        | Fixed        |
-| QA-007 | High     | All apps          | A bug in one screen blanked the whole app (no error boundary)                                                             | Fixed        |
-| QA-008 | Medium   | Phone, tablet     | If the app could not start, it showed a blank screen forever                                                              | Fixed        |
-| QA-009 | Medium   | Phones            | One order the server keeps failing blocks every later order from that phone                                               | Fixed        |
-| QA-010 | Critical | Day-end           | A payment or bill made while day-end runs could land on the closed day, outside its report                                | Fixed        |
-| QA-011 | High     | Menu import       | A tiny Excel file could fill the memory and stop the whole server                                                         | Fixed        |
-| QA-012 | Medium   | Billing           | Two tills opening the same bill at once: one got an error (500)                                                           | Fixed        |
-| QA-013 | High     | Payments / shifts | Cash taken while the cashier's shift was being closed went into the closed shift                                          | Fixed        |
-| QA-014 | Low      | Reports           | Feedback comments made in the same instant came out in a random order                                                     | Fixed        |
-| QA-015 | Medium   | Menu / orders     | An add-on marked "not available" could still be ordered and charged                                                       | Fixed        |
-| QA-016 | High     | Orders            | A dish taken off the menu could no longer be cancelled or reduced on an open order                                        | Fixed        |
-| QA-017 | Medium   | Kitchen display   | A kitchen screen showing two stations could not mark the second station's dishes                                          | Fixed        |
-| QA-018 | High     | Orders            | Any waiter could lower the dishes on another waiter's table, without a reason                                             | Fixed (D-3)  |
-| QA-019 | Low      | Printing          | Curly quotes and dashes from phone keyboards printed as "?"                                                               | Fixed        |
-| QA-020 | Low      | Billing           | A very large bill (about ₹9 lakh on one line) with a large discount could not be worked out                               | Fixed        |
-| QA-021 | Medium   | Server            | A clash between two devices, a database outage or a value out of range answered "Something went wrong" (500)              | Fixed        |
-| QA-022 | Critical | Billing           | Dishes ordered after the bill was printed could not be billed: no revised bill, and after payment they were never charged | Fixed        |
-| QA-023 | High     | Manager dashboard | A table showing "Bill requested" offered no way to bill it from the dashboard; only the alert led there                   | Fixed        |
-| QA-024 | High     | Tables            | A table that asked for the bill with nothing to bill could never be closed (blocking day-end)                             | Fixed (D-22) |
-| QA-025 | High     | Orders / billing  | A diner's order placed after the bill was printed was left waiting for ever once the bill was paid                        | Fixed        |
-| QA-026 | Critical | Billing           | Split bill: with one part voided and the other paid, the table closed and the voided part was never billed                | Fixed        |
-| QA-027 | Critical | Waiter phone      | A takeaway sent again after its answer was lost (Wi-Fi) could be made twice                                               | Fixed        |
-| QA-028 | Critical | Billing / tables  | A paid table's bill voided and printed again set the next guests' table to "Bill printed" (or failed for good)            | Fixed        |
-| QA-029 | Medium   | Kitchen alerts    | A dish left at the pass for a table that had paid and left raised a "food waiting" alert nobody could clear               | Fixed        |
-| QA-030 | Medium   | POS               | Closing the day had no confirmation; opening a shift from a payment lost the payment                                      | Fixed        |
-| QA-031 | High     | Day-end           | Unpaid bills holding day-end up were listed as numbers only, with no way to open them                                     | Fixed        |
-| QA-032 | Medium   | Takeaway          | Paid takeaway orders stayed in "Open takeaway orders" for good, with a "Bill" button                                      | Fixed (D-23) |
-| QA-033 | High     | POS               | The POS could not cancel or void a dish already sent to the kitchen (only a waiter phone could)                           | Fixed        |
-| QA-034 | High     | Day-end           | Another manager's shift left open blocked day-end, and nobody else could close it                                         | Fixed        |
-| QA-035 | Medium   | POS / printing    | A kitchen ticket lost to a jammed or offline printer could not be printed again anywhere                                  | Fixed        |
-| QA-036 | Low      | POS               | Merge and "Move dishes" were offered on a table whose bill was printed, then refused                                      | Fixed        |
-| QA-037 | Medium   | Phone / POS       | Cancel and Void were offered on dishes already on a printed bill, then refused (a void after the manager's PIN)           | Fixed        |
-| QA-038 | Medium   | Kitchen display   | Recalling a ticket whose dishes were all collected made it vanish from both lists                                         | Fixed        |
-| QA-039 | Medium   | Tables / alerts   | Merging tables cleared the guests' open requests' alerts (water, waiter, bill)                                            | Fixed        |
+| ID     | Severity | Area                  | Problem                                                                                                                   | Status       |
+| ------ | -------- | --------------------- | ------------------------------------------------------------------------------------------------------------------------- | ------------ |
+| QA-001 | Critical | Billing               | A flat (rupee) discount took nothing off the bill                                                                         | Fixed        |
+| QA-002 | Critical | Orders / billing      | Dishes could be added, cancelled or voided after the bill was printed or paid                                             | Fixed        |
+| QA-003 | High     | Server, phones        | A hidden NUL character in any text crashed the request (500)                                                              | Fixed        |
+| QA-004 | Medium   | Server                | The date "0000-01-01" crashed the request (500)                                                                           | Fixed        |
+| QA-005 | High     | Billing               | Payment taken while a bill was open for changes; part-paid bill could be reopened                                         | Fixed        |
+| QA-006 | High     | Payments              | A payment and a void of the same bill at the same moment crashed one of them (500)                                        | Fixed        |
+| QA-007 | High     | All apps              | A bug in one screen blanked the whole app (no error boundary)                                                             | Fixed        |
+| QA-008 | Medium   | Phone, tablet         | If the app could not start, it showed a blank screen forever                                                              | Fixed        |
+| QA-009 | Medium   | Phones                | One order the server keeps failing blocks every later order from that phone                                               | Fixed        |
+| QA-010 | Critical | Day-end               | A payment or bill made while day-end runs could land on the closed day, outside its report                                | Fixed        |
+| QA-011 | High     | Menu import           | A tiny Excel file could fill the memory and stop the whole server                                                         | Fixed        |
+| QA-012 | Medium   | Billing               | Two tills opening the same bill at once: one got an error (500)                                                           | Fixed        |
+| QA-013 | High     | Payments / shifts     | Cash taken while the cashier's shift was being closed went into the closed shift                                          | Fixed        |
+| QA-014 | Low      | Reports               | Feedback comments made in the same instant came out in a random order                                                     | Fixed        |
+| QA-015 | Medium   | Menu / orders         | An add-on marked "not available" could still be ordered and charged                                                       | Fixed        |
+| QA-016 | High     | Orders                | A dish taken off the menu could no longer be cancelled or reduced on an open order                                        | Fixed        |
+| QA-017 | Medium   | Kitchen display       | A kitchen screen showing two stations could not mark the second station's dishes                                          | Fixed        |
+| QA-018 | High     | Orders                | Any waiter could lower the dishes on another waiter's table, without a reason                                             | Fixed (D-3)  |
+| QA-019 | Low      | Printing              | Curly quotes and dashes from phone keyboards printed as "?"                                                               | Fixed        |
+| QA-020 | Low      | Billing               | A very large bill (about ₹9 lakh on one line) with a large discount could not be worked out                               | Fixed        |
+| QA-021 | Medium   | Server                | A clash between two devices, a database outage or a value out of range answered "Something went wrong" (500)              | Fixed        |
+| QA-022 | Critical | Billing               | Dishes ordered after the bill was printed could not be billed: no revised bill, and after payment they were never charged | Fixed        |
+| QA-023 | High     | Manager dashboard     | A table showing "Bill requested" offered no way to bill it from the dashboard; only the alert led there                   | Fixed        |
+| QA-024 | High     | Tables                | A table that asked for the bill with nothing to bill could never be closed (blocking day-end)                             | Fixed (D-22) |
+| QA-025 | High     | Orders / billing      | A diner's order placed after the bill was printed was left waiting for ever once the bill was paid                        | Fixed        |
+| QA-026 | Critical | Billing               | Split bill: with one part voided and the other paid, the table closed and the voided part was never billed                | Fixed        |
+| QA-027 | Critical | Waiter phone          | A takeaway sent again after its answer was lost (Wi-Fi) could be made twice                                               | Fixed        |
+| QA-028 | Critical | Billing / tables      | A paid table's bill voided and printed again set the next guests' table to "Bill printed" (or failed for good)            | Fixed        |
+| QA-029 | Medium   | Kitchen alerts        | A dish left at the pass for a table that had paid and left raised a "food waiting" alert nobody could clear               | Fixed        |
+| QA-030 | Medium   | POS                   | Closing the day had no confirmation; opening a shift from a payment lost the payment                                      | Fixed        |
+| QA-031 | High     | Day-end               | Unpaid bills holding day-end up were listed as numbers only, with no way to open them                                     | Fixed        |
+| QA-032 | Medium   | Takeaway              | Paid takeaway orders stayed in "Open takeaway orders" for good, with a "Bill" button                                      | Fixed (D-23) |
+| QA-033 | High     | POS                   | The POS could not cancel or void a dish already sent to the kitchen (only a waiter phone could)                           | Fixed        |
+| QA-034 | High     | Day-end               | Another manager's shift left open blocked day-end, and nobody else could close it                                         | Fixed        |
+| QA-035 | Medium   | POS / printing        | A kitchen ticket lost to a jammed or offline printer could not be printed again anywhere                                  | Fixed        |
+| QA-036 | Low      | POS                   | Merge and "Move dishes" were offered on a table whose bill was printed, then refused                                      | Fixed        |
+| QA-037 | Medium   | Phone / POS           | Cancel and Void were offered on dishes already on a printed bill, then refused (a void after the manager's PIN)           | Fixed        |
+| QA-038 | Medium   | Kitchen display       | Recalling a ticket whose dishes were all collected made it vanish from both lists                                         | Fixed        |
+| QA-039 | Medium   | Tables / alerts       | Merging tables cleared the guests' open requests' alerts (water, waiter, bill)                                            | Fixed        |
+| QA-040 | Medium   | Waiter phone / alerts | An out-of-stock alert about a takeaway stayed on the waiter's bell for good                                               | Fixed        |
+| QA-041 | Medium   | Server                | A request in flight when the server stopped or restarted failed half way (500)                                            | Fixed        |
 
 ## Findings
 
@@ -471,6 +473,32 @@ Every fix started with a test that failed, and the test now passes.
 - **Fix:** on a merge, the open alerts follow the guests to the joined table before the old one
   closes (`notifications/notification-triggers.ts`).
 - **Guarded by:** `qa-flows.int.test.ts` (QA-039).
+
+### QA-040 Medium: a takeaway's out-of-stock alert never cleared
+
+- **What happened:** when a takeaway's dish was marked out of stock, the waiter who sent it got an
+  alert. Such alerts clear when the table closes; a takeaway has no table, so it stayed on the
+  waiter's bell for good (the phone has nothing to acknowledge, by the owner's choice).
+- **Fix:** once a takeaway's bills are all paid, its alerts clear
+  (`notifications/notification-triggers.ts`).
+- **Guarded by:** `qa-flows.int.test.ts` (QA-040).
+
+### QA-041 Medium: requests in flight when the server stops or restarts
+
+- **What happened:** when the server stopped (an update, a restore, the Windows service restarting),
+  it closed its database connections before it stopped taking requests, so a payment, a kitchen bump
+  or an order in flight failed half way and its device got "Something went wrong" (500). The
+  simulated rush test failed now and then because of it.
+- **How found:** the rush test failing intermittently, then a test that stops the server under a
+  slow request (it was cut off: "socket hang up").
+- **Fix:** the server now stops taking new requests first, lets those being answered finish (up to
+  10 seconds), and closes the database last (`apps/server/src/http/http-drain.ts`,
+  `database/prisma.service.ts`). A request still caught by a closing database or a transaction that
+  ran out of time answers "… Try again" (503), which the phones retry by themselves
+  (`errors/error-mapping.ts`).
+- **Guarded by:** `apps/server/test/integration/graceful-shutdown.int.test.ts`,
+  `apps/server/test/unit/error-mapping-database.test.ts` (QA-041), and the rush test
+  (`load-rush.int.test.ts`).
 
 ## Checked and found sound
 

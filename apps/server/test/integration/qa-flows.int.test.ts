@@ -504,3 +504,45 @@ describe('[TBL-006] [NTF-002] merging tables with a guest’s request still open
     expect(moved?.tableId).toBe(into.tableId);
   });
 });
+
+describe('[MENU-006] [NTF-002] an out-of-stock alert about a takeaway (QA-040)', () => {
+  it('clears once the takeaway is paid, instead of staying on the waiter’s bell for good', async () => {
+    const ordered = await api(app)
+      .post('/api/v1/orders')
+      .set(as(waiter))
+      .send({
+        idempotencyKey: randomUUID(),
+        source: 'WAITER_APP',
+        orderType: 'TAKEAWAY',
+        lines: [
+          { clientLineId: randomUUID(), itemId: restaurant.items.Naan, quantity: 2 },
+          { clientLineId: randomUUID(), itemId: restaurant.items.Lassi, quantity: 1 },
+        ],
+      });
+    expect(ordered.body, JSON.stringify(ordered.body)).toMatchObject({ status: 'ACCEPTED' });
+    const orderId = (ordered.body as { orderId: string }).orderId;
+    const out = await api(app)
+      .put(`/api/v1/menu/items/${restaurant.items.Naan}/availability`)
+      .set(as(manager))
+      .send({ available: false, stockCount: null });
+    expect(out.status, JSON.stringify(out.body)).toBeLessThan(300);
+    const openAlerts = () =>
+      prisma.alert.count({ where: { orderId, type: 'OUT_OF_STOCK', status: 'OPEN' } });
+    for (let tries = 0; tries < 50 && (await openAlerts()) === 0; tries += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    expect(await openAlerts()).toBe(1);
+    const opened = await api(app).post('/api/v1/bills').set(as(biller)).send({ orderId });
+    const invoice = await printBill(BillView.parse(opened.body).id);
+    expect((await pay(invoice.id, invoice.grandTotal)).status).toBeLessThan(300);
+    for (let tries = 0; tries < 50 && (await openAlerts()) > 0; tries += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    expect(await openAlerts()).toBe(0);
+    // Back on the menu for the other tests.
+    await api(app)
+      .put(`/api/v1/menu/items/${restaurant.items.Naan}/availability`)
+      .set(as(manager))
+      .send({ available: true, stockCount: null });
+  });
+});

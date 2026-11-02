@@ -15,21 +15,20 @@ Critical and High ones fixed), **n/a** (does not apply to this part).
 
 > Session 2 (2026-11-02, branch `qa/functional-gaps`): functional gaps found by using the product
 > the way a restaurant does (the owner's two reports, then journey walk-throughs of the console,
-> phones, tablet, kitchen and the server's lifecycles). QA-022 to QA-039 fixed and committed;
+> phones, tablet, kitchen and the server's lifecycles). QA-022 to QA-041 fixed and committed;
 > decisions D-21 to D-25 written.
 >
 > Still open from the walk-throughs, in order:
 >
-> 1. An out-of-stock alert on a takeaway never leaves the waiter's bell (clears only on TableClosed).
-> 2. A guest's "Cancel bill request" on the tablet leaves the table "Bill requested" (D-22 B).
-> 3. A takeaway handed over but never billed does not block day-end (D-8 B).
-> 4. The payment and shift screens do not refresh when another till changes the bill; discounts,
->    part payments and voids send no live event.
-> 5. The waiter's unsent cart is lost on the inactivity sign-out (decision: keep per person?).
-> 6. A printed or part-paid bill carried forward keeps the closed day's date (D-8, D-6).
-> 7. Low: the waiter sees "Cancelled" without the reason; the tablet's order list ignores moves;
->    a request during a server restart answers 500 instead of 503 (load-rush flaky).
-> 8. Then the session-1 list below (Area 1 leftovers, server mutation check, Areas 2-7).
+> 1. A guest's "Cancel bill request" on the tablet leaves the table "Bill requested" (D-22 B).
+> 2. A takeaway handed over but never billed does not block day-end (D-8 B).
+> 3. The payment and shift screens do not refresh when another till changes the bill; discounts,
+>    part payments and voids send no live event (the server still refuses an overpayment).
+> 4. The waiter's unsent cart is lost on the inactivity sign-out (decision: keep per person?).
+> 5. A printed or part-paid bill carried forward keeps the closed day's date (D-8, D-6).
+> 6. Low: the waiter sees "Cancelled" without the reason; the tablet's order list ignores moves
+>    (needs a live-event test harness in the tablet's tests).
+> 7. Then the session-1 list below (Area 1 leftovers, server mutation check, Areas 2-7).
 >
 > Session 1 (2026-10-27/28): plan written; Area 1 (server) nearly done: 21 findings, all fixed
 > (QA_REPORT.md), 12 business decisions written (DECISIONS_NEEDED.md), the manual checklist
