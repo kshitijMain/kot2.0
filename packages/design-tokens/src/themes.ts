@@ -2,7 +2,7 @@
  * Semantic colour roles for every theme (NFR-U01, NFR-U02). Components use roles, never raw
  * colours, so a theme or the restaurant accent can change without touching components.
  *
- * The Parossa palette (ADR-0022): warm off-white pages, teal for actions and saffron for highlights.
+ * The Parosaa palette (ADR-0022): warm off-white pages, teal for actions and saffron for highlights.
  * Every theme meets WCAG 2.2 AA (checked by tests); both kitchen themes reach AAA for text (KDS-011).
  */
 

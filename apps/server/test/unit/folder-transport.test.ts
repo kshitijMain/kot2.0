@@ -14,7 +14,7 @@ afterAll(() => {
 
 describe('[KDS-008] a print saved in a folder (test only, P9-25)', () => {
   const page = renderTestPage({
-    restaurantName: 'Mannat',
+    restaurantName: 'Parosaa',
     printerName: 'Bill printer',
     paperWidthMm: 80,
     at: new Date('2026-11-01T10:00:00.000Z'),
@@ -23,7 +23,7 @@ describe('[KDS-008] a print saved in a folder (test only, P9-25)', () => {
 
   it('reads the slip as text, without the printer commands', () => {
     const text = slipText(page);
-    expect(text).toContain('Mannat');
+    expect(text).toContain('Parosaa');
     expect(text).toContain('Bill printer');
     expect(text).toContain('cut');
     // No printer command left: only printable characters and line breaks.

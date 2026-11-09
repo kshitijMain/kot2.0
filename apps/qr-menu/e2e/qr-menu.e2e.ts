@@ -355,13 +355,13 @@ test.describe('[NFR-P05] [MENU-006] an open page follows the menu', () => {
   });
 });
 
-test.describe('[P9] Mannat: the whole table on a phone (ADR-0024)', () => {
-  /** Mannat's local server at the relay. */
-  async function asMannat<T>(method: string, path: string, body?: unknown): Promise<T> {
+test.describe('[P9] Parosaa: the whole table on a phone (ADR-0024)', () => {
+  /** Parosaa's local server at the relay. */
+  async function asParosaa<T>(method: string, path: string, body?: unknown): Promise<T> {
     const response = await fetch(`${state.relayUrl}/server/${path}`, {
       method,
       headers: {
-        authorization: `Bearer ${state.mannat.credential}`,
+        authorization: `Bearer ${state.parosaa.credential}`,
         'content-type': 'application/json',
       },
       ...(body !== undefined && { body: JSON.stringify(body) }),
@@ -374,9 +374,9 @@ test.describe('[P9] Mannat: the whole table on a phone (ADR-0024)', () => {
   test('[BILL-011] [QR-007] welcome with the mobile, order, accepted, order again, the bill and UPI', async ({
     page,
   }) => {
-    await page.goto(`${state.site}/t/${state.mannat.token}`);
+    await page.goto(`${state.site}/t/${state.parosaa.token}`);
     // The welcome step: the table comes from the code alone, and the number is asked first.
-    await expect(page.getByRole('heading', { level: 1, name: 'Mannat' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Parosaa' })).toBeVisible();
     await expect(page.getByText('You’re at table M3')).toBeVisible();
     await expect(page.getByRole('button', { name: s.welcome.skip })).toHaveCount(0);
     await expectAccessible(page);
@@ -393,15 +393,15 @@ test.describe('[P9] Mannat: the whole table on a phone (ADR-0024)', () => {
     await expectAccessible(page);
 
     // The restaurant picks it up with the number, and the manager accepts it.
-    const { orders } = await asMannat<{
+    const { orders } = await asParosaa<{
       orders: { id: string; customerPhone: string | null; lines: { clientLineId: string }[] }[];
     }>('GET', 'orders');
     const order = orders.at(-1);
     if (order === undefined) throw new Error('nothing to pick up');
     expect(order.customerPhone).toBe('+919876543210');
-    await asMannat('POST', `orders/${order.id}/status`, { status: 'RECEIVED' });
+    await asParosaa('POST', `orders/${order.id}/status`, { status: 'RECEIVED' });
     await expect(page.getByText(s.orders.RECEIVED)).toBeVisible();
-    await asMannat('POST', `orders/${order.id}/status`, {
+    await asParosaa('POST', `orders/${order.id}/status`, {
       status: 'SENT_TO_KITCHEN',
       detail: { items: [{ clientLineId: order.lines[0]?.clientLineId, state: 'PREPARING' }] },
     });
@@ -418,7 +418,7 @@ test.describe('[P9] Mannat: the whole table on a phone (ADR-0024)', () => {
     await page.keyboard.press('Escape');
 
     // The bill is printed: the diner pays by UPI with the amount filled in.
-    await asMannat('PUT', `tables/${state.mannat.tableId}/bill`, {
+    await asParosaa('PUT', `tables/${state.parosaa.tableId}/bill`, {
       bill: {
         invoices: [
           {
@@ -437,7 +437,7 @@ test.describe('[P9] Mannat: the whole table on a phone (ADR-0024)', () => {
             grandTotal: 29_000,
           },
         ],
-        upi: { upiId: 'mannat@okhdfcbank', payeeName: 'Mannat' },
+        upi: { upiId: 'parosaa@okhdfcbank', payeeName: 'Parosaa' },
       },
     });
     await page
@@ -448,22 +448,22 @@ test.describe('[P9] Mannat: the whole table on a phone (ADR-0024)', () => {
     await expect(pay).toBeVisible();
     await expect(pay).toHaveAttribute(
       'href',
-      'upi://pay?pa=mannat%40okhdfcbank&pn=Mannat&am=290.00&cu=INR&tn=Mannat%20bill%20INV%2F26-27%2F000042',
+      'upi://pay?pa=parosaa%40okhdfcbank&pn=Parosaa&am=290.00&cu=INR&tn=Parosaa%20bill%20INV%2F26-27%2F000042',
     );
     await expect(page.getByRole('img', { name: /QR code to pay ₹290\.00/ })).toBeVisible();
     await expectAccessible(page);
     await page.getByRole('button', { name: s.help.PAID }).click();
     await expect(page.getByText(s.help.said.PAID.SUBMITTED)).toBeVisible();
-    const { requests } = await asMannat<{ requests: { type: string }[] }>(
+    const { requests } = await asParosaa<{ requests: { type: string }[] }>(
       'GET',
       'service-requests',
     );
     expect(requests.map((request) => request.type)).toContain('PAID');
 
     // Settled: the table closes and the bill goes; the page thanks the diner.
-    await asMannat('PUT', `tables/${state.mannat.tableId}/bill`, { bill: null });
+    await asParosaa('PUT', `tables/${state.parosaa.tableId}/bill`, { bill: null });
     await expect(
-      page.getByText('Your bill is settled. Thank you for dining at Mannat.'),
+      page.getByText('Your bill is settled. Thank you for dining at Parosaa.'),
     ).toBeVisible();
   });
 });
@@ -477,7 +477,7 @@ test.describe('[P9-08] the same number on any phone, and a page that never moves
       method: 'POST',
       headers: {
         'content-type': 'application/json',
-        'x-rp-table-token': state.mannat.token,
+        'x-rp-table-token': state.parosaa.token,
         'x-rp-browser': 'browser-first-phone-0001',
       },
       body: JSON.stringify({
@@ -491,7 +491,7 @@ test.describe('[P9-08] the same number on any phone, and a page that never moves
     const open = async (number: string) => {
       const context = await browser.newContext({ ...devices['Pixel 7'] });
       const page = await context.newPage();
-      await page.goto(`${state.site}/t/${state.mannat.token}`);
+      await page.goto(`${state.site}/t/${state.parosaa.token}`);
       await page.getByLabel(new RegExp(`^${s.cart.phone}`)).fill(number);
       await page.getByRole('button', { name: s.welcome.start }).click();
       await page

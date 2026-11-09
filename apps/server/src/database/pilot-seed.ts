@@ -3,7 +3,7 @@ import { newTableToken } from '../floor/table-qr.service.js';
 import { type ItemSpec, type SeedProfile, seedDevelopmentData } from './dev-seed.js';
 
 /**
- * The QR pilot's restaurant, Mannat (P9-06, ADR-0024): 5 tables with QR codes, a North Indian
+ * The QR pilot's restaurant, Parosaa (P9-06, ADR-0024): 5 tables with QR codes, a North Indian
  * menu, a manager whose phone rings for every QR order, two waiters and a kitchen screen, and the
  * QR settings the pilot runs with (the diner's mobile number required; UPI when given). Set-up
  * only: it refuses a database that already has a restaurant, like the development seed. Every PIN
@@ -12,9 +12,9 @@ import { type ItemSpec, type SeedProfile, seedDevelopmentData } from './dev-seed
 
 const R = 100; // paise per rupee, for readable prices below
 
-export const MANNAT_PINS = {
-  'Owner (Mannat)': '1111',
-  'Manager (Mannat)': '2222',
+export const PAROSAA_PINS = {
+  'Owner (Parosaa)': '1111',
+  'Manager (Parosaa)': '2222',
   'Waiter 1': '4444',
   'Waiter 2': '5555',
   Kitchen: '6666',
@@ -330,7 +330,7 @@ const ITEMS: readonly ItemSpec[] = [
     station: 'kitchen',
   },
   {
-    name: 'Mannat Veg Thali',
+    name: 'Parosaa Veg Thali',
     description: 'Dal makhani, paneer butter masala, 3 chapatis, jeera rice and a dessert.',
     category: 'Thalis',
     price: 349 * R,
@@ -340,17 +340,17 @@ const ITEMS: readonly ItemSpec[] = [
   },
 ];
 
-/** Mannat's opening hours: every day, 11:00 to 23:30. */
-export const MANNAT_HOURS = (['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] as const).map(
+/** Parosaa's opening hours: every day, 11:00 to 23:30. */
+export const PAROSAA_HOURS = (['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'] as const).map(
   (day) => ({ day, start: '11:00', end: '23:30' }),
 );
 
-export const MANNAT_PROFILE: SeedProfile = {
-  legalName: 'Mannat',
-  displayName: 'Mannat',
+export const PAROSAA_PROFILE: SeedProfile = {
+  legalName: 'Parosaa',
+  displayName: 'Parosaa',
   accentColor: '#8A1C2B',
   stateCode: '27',
-  address: { line1: 'Mannat restaurant', city: 'Pune', pincode: '411001' },
+  address: { line1: 'Parosaa restaurant', city: 'Pune', pincode: '411001' },
   sections: [
     {
       name: 'Dining Hall',
@@ -361,16 +361,16 @@ export const MANNAT_PROFILE: SeedProfile = {
     },
   ],
   people: [
-    ['OWNER', 'Owner (Mannat)', MANNAT_PINS['Owner (Mannat)']],
-    ['MANAGER', 'Manager (Mannat)', MANNAT_PINS['Manager (Mannat)']],
-    ['WAITER', 'Waiter 1', MANNAT_PINS['Waiter 1']],
-    ['WAITER', 'Waiter 2', MANNAT_PINS['Waiter 2']],
-    ['KITCHEN', 'Kitchen', MANNAT_PINS.Kitchen],
+    ['OWNER', 'Owner (Parosaa)', PAROSAA_PINS['Owner (Parosaa)']],
+    ['MANAGER', 'Manager (Parosaa)', PAROSAA_PINS['Manager (Parosaa)']],
+    ['WAITER', 'Waiter 1', PAROSAA_PINS['Waiter 1']],
+    ['WAITER', 'Waiter 2', PAROSAA_PINS['Waiter 2']],
+    ['KITCHEN', 'Kitchen', PAROSAA_PINS.Kitchen],
   ],
   categories: ['Starters', 'Main Course', 'Breads', 'Rice', 'Thalis', 'Beverages', 'Desserts'],
   items: ITEMS,
   thali: {
-    item: 'Mannat Veg Thali',
+    item: 'Parosaa Veg Thali',
     fixed: [
       ['Dal Makhani', 1],
       ['Paneer Butter Masala', 1],
@@ -395,13 +395,13 @@ export interface PilotSummary {
   readonly tables: readonly { readonly label: string; readonly code: string }[];
 }
 
-/** Sets up Mannat on an empty database: the restaurant, its QR codes and the pilot's settings. */
-export async function seedMannat(
+/** Sets up Parosaa on an empty database: the restaurant, its QR codes and the pilot's settings. */
+export async function seedParosaa(
   prisma: PrismaClient,
   options: PilotOptions = {},
 ): Promise<PilotSummary> {
   const { restaurantId } = await seedDevelopmentData(prisma, {
-    profile: MANNAT_PROFILE,
+    profile: PAROSAA_PROFILE,
     ...(options.hashPin !== undefined && { hashPin: options.hashPin }),
   });
   const rows = await prisma.diningTable.findMany({
@@ -421,7 +421,7 @@ export async function seedMannat(
   const settings: [string, unknown][] = [
     // The diner's mobile number before the first order, printed on the bill (P9-02).
     ['qr.askPhone', 'REQUIRED'],
-    ['payments.upiPayeeName', 'Mannat'],
+    ['payments.upiPayeeName', 'Parosaa'],
     // The kitchen signs in with its PIN (6666) rather than a station screen (ADR-0025).
     ['auth.kitchenIndividualLogins', true],
     ...(options.upiId === undefined
@@ -434,7 +434,7 @@ export async function seedMannat(
   // Open every day, 11:00 to 23:30 (P9-16): without hours the restaurant reads "Closed".
   await prisma.restaurant.update({
     where: { id: restaurantId },
-    data: { businessHours: MANNAT_HOURS },
+    data: { businessHours: PAROSAA_HOURS },
   });
   return { restaurantId, tables };
 }

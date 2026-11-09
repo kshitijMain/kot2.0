@@ -2,7 +2,7 @@
 // ADR-0024), as the Control Plane does (VCP-002) until it provisions self-hosted relays itself.
 //
 //   RELAY_PROVISION_DB_URL=postgresql://relay_control_plane:...@127.0.0.1/rp_relay \
-//     node scripts/provision-restaurant.mjs --name "Mannat" [--label "Counter PC"]
+//     node scripts/provision-restaurant.mjs --name "Parosaa" [--label "Counter PC"]
 //
 // The credential is printed once and never stored here: the relay keeps only its SHA-256. Pipe
 // it into the restaurant PC's `pnpm --filter @rp/server relay:credential`, then forget it.
@@ -20,7 +20,7 @@ const { values } = parseArgs({
 const url = process.env.RELAY_PROVISION_DB_URL;
 if (url === undefined || url === '' || values.name === undefined || values.name.trim() === '') {
   process.stderr.write(
-    'Usage: RELAY_PROVISION_DB_URL=... node scripts/provision-restaurant.mjs --name "Mannat"\n',
+    'Usage: RELAY_PROVISION_DB_URL=... node scripts/provision-restaurant.mjs --name "Parosaa"\n',
   );
   process.exit(1);
 }

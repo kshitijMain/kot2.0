@@ -1,4 +1,4 @@
-# 38. Put the QR site and relay on your own server (the Mannat pilot)
+# 38. Put the QR site and relay on your own server (the Parosaa pilot)
 
 **Why:** for the QR pilot, the menu site diners open and the relay that passes their orders to the
 restaurant PC run on a server you own, not on Supabase (ADR-0024). Claude built and tested
@@ -9,7 +9,7 @@ everything. Creating the server, the domain and the restaurant's credential need
 **You need:**
 
 - About 45 minutes.
-- A domain you control, e.g. `mannat.in`; the site will be `menu.mannat.in`.
+- A domain you control, e.g. `parosaa.in`; the site will be `menu.parosaa.in`.
 - An Oracle Cloud account. Any Ubuntu 24.04 server with a public IP works the same.
 
 Never paste a password, key or credential into a Claude session, a chat or a commit.
@@ -17,7 +17,7 @@ Never paste a password, key or credential into a Claude session, a chat or a com
 ## 0. (Optional) Try it on the restaurant's Wi-Fi first
 
 Everything also runs on one Mac or PC, with no server and no domain: see
-[`scripts/pilot/README.md`](../scripts/pilot/README.md). It sets up Mannat with its 5 tables,
+[`scripts/pilot/README.md`](../scripts/pilot/README.md). It sets up Parosaa with its 5 tables,
 prints the tents and starts everything, so phones on the same Wi-Fi can order.
 
 ## 1. Create the server
@@ -37,34 +37,34 @@ prints the tents and starts everything, so phones on the same Wi-Fi can order.
 ## 2. Point the domain at it
 
 At your DNS provider, add an **A record**: `menu` → the public IP. Wait until
-`nslookup menu.mannat.in` answers with that IP (minutes to an hour).
+`nslookup menu.parosaa.in` answers with that IP (minutes to an hour).
 
 ## 3. Install
 
 ```sh
 ssh ubuntu@<public IP>
 sudo git clone https://github.com/kshitijMain/kot2.0.git /opt/rp   # or copy the repository there
-sudo bash /opt/rp/infra/relay-host/setup-ubuntu.sh menu.mannat.in
+sudo bash /opt/rp/infra/relay-host/setup-ubuntu.sh menu.parosaa.in
 ```
 
 It ends with `{"ok":true,"restaurantsOnLine":0}` and the next command to run. Open
-`https://menu.mannat.in/` in a browser: a page with a padlock (a "not found" page is right, since no
+`https://menu.parosaa.in/` in a browser: a page with a padlock (a "not found" page is right, since no
 table is given).
 
-## 4. Add Mannat and get its credential
+## 4. Add Parosaa and get its credential
 
 ```sh
-sudo bash -c 'set -a; . /etc/rp-relay/provision.env; node /opt/rp/infra/supabase/scripts/provision-restaurant.mjs --name "Mannat"'
+sudo bash -c 'set -a; . /etc/rp-relay/provision.env; node /opt/rp/infra/supabase/scripts/provision-restaurant.mjs --name "Parosaa"'
 ```
 
 It prints a long credential **once**. Copy it straight into step 5 and nowhere else.
 
 ## 5. Connect the restaurant PC
 
-On the restaurant PC, first set up Mannat if it is a fresh install:
+On the restaurant PC, first set up Parosaa if it is a fresh install:
 
 ```sh
-pnpm --filter @rp/server pilot:mannat --site https://menu.mannat.in --tents tents.pdf --upi-id <business UPI ID>
+pnpm --filter @rp/server pilot:parosaa --site https://menu.parosaa.in --tents tents.pdf --upi-id <business UPI ID>
 ```
 
 It prints the first PINs and the 5 tables' QR addresses, and writes the tents to print. Then:
@@ -72,8 +72,8 @@ It prints the first PINs and the 5 tables' QR addresses, and writes the tents to
 1. In the server's `.env`, set:
 
    ```
-   RP_RELAY_URL=https://menu.mannat.in/functions/v1
-   RP_QR_SITE_URL=https://menu.mannat.in
+   RP_RELAY_URL=https://menu.parosaa.in/functions/v1
+   RP_QR_SITE_URL=https://menu.parosaa.in
    ```
 
 2. Store the credential:
@@ -89,7 +89,7 @@ It prints the first PINs and the 5 tables' QR addresses, and writes the tents to
 
 ## 6. Test with a phone (mobile data, not the restaurant Wi-Fi)
 
-1. Scan the T1 tent. Mannat's menu opens for "Table T1" and asks for your mobile number.
+1. Scan the T1 tent. Parosaa's menu opens for "Table T1" and asks for your mobile number.
 2. Order two dishes.
    - The manager's phone (waiter app) rings within a second or two: "Table T1 ordered...".
    - The diner's page says it is waiting for the restaurant.

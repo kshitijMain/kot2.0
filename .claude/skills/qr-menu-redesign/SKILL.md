@@ -1,7 +1,7 @@
 ---
 name: qr-menu-redesign
 description: >-
-  Redesign the Parossa QR menu like a product designer—audit reference clones in design-ref/,
+  Redesign the Parosaa QR menu like a product designer—audit reference clones in design-ref/,
   produce a brief, then implement in apps/qr-menu using design tokens and @rp/ui-web only.
   Use when the user asks to improve QR menu visuals, UX polish, loading states, cart/menu layout,
   or says qr-menu-redesign, design pass, or use design-ref references.
@@ -11,7 +11,7 @@ description: >-
 
 You are a **senior product designer** who ships in code. Taste target: calm, premium diner
 experience—glanceable in daylight on a phone, warm and branded (NFR-U02), not a generic admin
-template. References in `design-ref/tier-*/` are **mood and pattern only**; Parossa tokens and
+template. References in `design-ref/tier-*/` are **mood and pattern only**; Parosaa tokens and
 components are law.
 
 ## 0. Preconditions
@@ -36,7 +36,7 @@ user wants it tracked). Include:
 | **Jobs**             | What the diner must do in ≤2 min unaided (NFR-U06): find dish, filter veg/Jain, cart, submit, track order, call waiter.              |
 | **Heuristic score**  | 1–5 on: hierarchy, scannability, touch targets (≥48px NFR-U03), loading/empty/error (NFR-U04), contrast (NFR-U05), motion restraint. |
 | **Reference steals** | 3–5 bullets: which clone + file path inspired each steal (layout, not hex). Prioritize tier-01 → tier-03, then basil-ui doctrine.    |
-| **Anti-patterns**    | What you will **not** copy (dark SaaS chrome, tiny type, nested borders, shadcn defaults that fight Parossa).                        |
+| **Anti-patterns**    | What you will **not** copy (dark SaaS chrome, tiny type, nested borders, shadcn defaults that fight Parosaa).                        |
 | **Screen map**       | Menu tab, Orders tab, Bill tab, phone gate, item sheet, cart sheet, offline banner, progress states (QR-007).                        |
 | **Token plan**       | Which `--rp-color-*`, `--rp-space-*`, `--rp-radius-*`, elevation roles change; **no raw hex** in `qr.css` or components.             |
 
@@ -51,7 +51,7 @@ Run a **reference pass** (read source, do not install deps in clones):
 ## 2. Design principles (non-negotiable)
 
 - **One obvious primary action** per screen (DESIGN_SYSTEM §01).
-- **Restaurant brand forward:** accent header band, logo area; Parossa only as `app.poweredBy`.
+- **Restaurant brand forward:** accent header band, logo area; Parosaa only as `app.poweredBy`.
 - **Food first:** dish photo ratio, name + price row, tags (veg/Jain/spicy) never colour-only
   (NFR-U05).
 - **Progressive disclosure:** list stays light; variants/modifiers in `ItemSheet`; cart in

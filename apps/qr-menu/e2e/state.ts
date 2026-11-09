@@ -13,7 +13,7 @@ export interface E2eState {
   readonly tokens: Readonly<Record<string, string>>;
   readonly tableIds: Readonly<Record<string, string>>;
   /** P9: a restaurant that asks for the diner's phone and takes UPI, with table M3. */
-  readonly mannat: {
+  readonly parosaa: {
     readonly credential: string;
     readonly token: string;
     readonly tableId: string;

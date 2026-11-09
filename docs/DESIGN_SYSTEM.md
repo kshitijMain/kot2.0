@@ -1,14 +1,14 @@
-# Design System: Parossa
+# Design System: Parosaa
 
 Every visual decision in one place, so no agent invents one. The source of truth is code:
 `packages/design-tokens/src` (values), `packages/ui-web` and `packages/ui-native` (components),
-ADR-0009 (approach) and ADR-0022 (the Parossa brand). This file describes them. If this file and
+ADR-0009 (approach) and ADR-0022 (the Parosaa brand). This file describes them. If this file and
 the code disagree, the code wins and this file is fixed in the same pull request. A colour change is
 an edit to `packages/design-tokens/src/themes.ts`, guarded by its contrast tests.
 
 ## 01 Brand identity
 
-- Name: Parossa (the waiter app is Parossa Captain, the table tablet Parossa Table). Logo files and
+- Name: Parosaa (the waiter app is Parosaa Captain, the table tablet Parosaa Table). Logo files and
   their rules are in `brand/parossa`: the mark is a serving ladle seen from above that reads as a P.
 - Personality: calm, clear, quick. Light and uncluttered: an off-white page, white cards with soft
   shadows, generous spacing and one obvious main action per screen.
@@ -19,8 +19,8 @@ an edit to `packages/design-tokens/src/themes.ts`, guarded by its contrast tests
   again."). Name things the way the floor does: table, KOT, bill, pass.
 - Feel: light on the POS and dashboard; light, large and very high contrast on the KDS (dark when a
   manager chooses it); warm and simple on the diner surfaces (tablet, QR), which show the
-  restaurant's own logo and accent colour (NFR-U02). Parossa appears there only as a small
-  "Powered by Parossa" line (`app.poweredBy`).
+  restaurant's own logo and accent colour (NFR-U02). Parosaa appears there only as a small
+  "Powered by Parosaa" line (`app.poweredBy`).
 - Where the logo goes: the console's header, pairing, sign-in and first-run screens (`BrandLogo` in
   `apps/console/src/app/brand.tsx`, the on-dark file on the dark kitchen theme); the phones' and
   tablet's pairing and sign-in screens (`Screen` with `brand`, `@rp/mobile-shell`).

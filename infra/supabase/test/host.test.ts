@@ -25,12 +25,12 @@ let db: RelayDb;
 let host: RelayHost;
 let base: string;
 let photosDir: string;
-let mannat: SeededTenant;
+let parosaa: SeededTenant;
 let other: SeededTenant;
 
 beforeAll(async () => {
   db = await openRelayDb();
-  mannat = await seedTenant(db, 'Mannat');
+  parosaa = await seedTenant(db, 'Parosaa');
   other = await seedTenant(db, 'Elsewhere');
   photosDir = await mkdtemp(join(tmpdir(), 'rp-relay-photos-'));
   host = await startHost(
@@ -125,7 +125,7 @@ const until = async (check: () => boolean, ms = 2_000) => {
 
 describe('the self-hosted relay host (P9-01, ADR-0024)', () => {
   it('[QR-009] rings a restaurant’s open line within a second of a new QR order, and only that restaurant', async () => {
-    const mine = await openLine(mannat);
+    const mine = await openLine(parosaa);
     const theirs = await openLine(other);
     try {
       const health = (await (await fetch(`${base}/healthz`)).json()) as {
@@ -134,12 +134,12 @@ describe('the self-hosted relay host (P9-01, ADR-0024)', () => {
       expect(health.restaurantsOnLine).toBe(2);
 
       const started = Date.now();
-      const orderId = await submitOrder(db, mannat.id, mannat.tables[0].id);
+      const orderId = await submitOrder(db, parosaa.id, parosaa.tables[0].id);
       expect(await until(() => mine.rings.length === 1)).toBe(true);
       expect(Date.now() - started).toBeLessThan(1_000);
       const data = mine.rings[0]!.data as { table: string; record: Record<string, unknown> };
       expect(data.table).toBe('qr_orders');
-      expect(data.record).toMatchObject({ id: orderId, tenant_id: mannat.id });
+      expect(data.record).toMatchObject({ id: orderId, tenant_id: parosaa.id });
       // Another restaurant on the same host hears nothing of it (SEC-005).
       await new Promise((r) => setTimeout(r, 150));
       expect(theirs.rings).toEqual([]);
@@ -150,16 +150,16 @@ describe('the self-hosted relay host (P9-01, ADR-0024)', () => {
   });
 
   it('[QR-011] rings the line for a call from the QR page too', async () => {
-    const mine = await openLine(mannat);
+    const mine = await openLine(parosaa);
     try {
       await db.as(
         'relay_diner',
-        { tenant_id: mannat.id, table_id: mannat.tables[1].id },
+        { tenant_id: parosaa.id, table_id: parosaa.tables[1].id },
         (client) =>
           client.query(
             `INSERT INTO relay.qr_service_requests (tenant_id, table_id, idempotency_key, browser_id, type)
              VALUES ($1, $2, $3, $4, 'BILL')`,
-            [mannat.id, mannat.tables[1].id, randomUUID(), `browser-${randomUUID()}`],
+            [parosaa.id, parosaa.tables[1].id, randomUUID(), `browser-${randomUUID()}`],
           ),
       );
       expect(await until(() => mine.rings.length === 1)).toBe(true);
@@ -182,17 +182,17 @@ describe('the self-hosted relay host (P9-01, ADR-0024)', () => {
     expect(failed).toBe(true);
 
     const forged = await signHs256(
-      { role: 'relay_server', tenant_id: mannat.id, exp: Math.floor(Date.now() / 1000) + 60 },
+      { role: 'relay_server', tenant_id: parosaa.id, exp: Math.floor(Date.now() / 1000) + 60 },
       'not-the-secret-not-the-secret-not-the-secret',
     );
     expect(verifyToken(forged, SECRET)).toBe('Invalid JWT signature');
     const diner = await signHs256(
-      { role: 'relay_diner', tenant_id: mannat.id, exp: Math.floor(Date.now() / 1000) + 60 },
+      { role: 'relay_diner', tenant_id: parosaa.id, exp: Math.floor(Date.now() / 1000) + 60 },
       SECRET,
     );
     expect(verifyToken(diner, SECRET)).toBe('Not a relay server token');
     const expired = await signHs256(
-      { role: 'relay_server', tenant_id: mannat.id, exp: Math.floor(Date.now() / 1000) - 1 },
+      { role: 'relay_server', tenant_id: parosaa.id, exp: Math.floor(Date.now() / 1000) - 1 },
       SECRET,
     );
     expect(verifyToken(expired, SECRET)).toBe('Token has expired');
@@ -203,19 +203,19 @@ describe('the self-hosted relay host (P9-01, ADR-0024)', () => {
     const webp = Buffer.from('RIFF\u0000\u0000\u0000\u0000WEBPVP8 ', 'binary');
     const put = await fetch(`${base}/functions/v1/server/photos/${photoId}/480`, {
       method: 'PUT',
-      headers: { authorization: `Bearer ${mannat.credential}`, 'content-type': 'image/webp' },
+      headers: { authorization: `Bearer ${parosaa.credential}`, 'content-type': 'image/webp' },
       body: webp,
     });
     expect(put.status).toBe(200);
     const { path } = (await put.json()) as { path: string };
-    expect(await readdir(join(photosDir, mannat.id, photoId))).toEqual(['480.webp']);
+    expect(await readdir(join(photosDir, parosaa.id, photoId))).toEqual(['480.webp']);
 
     const got = await fetch(`${base}/storage/v1/object/public/menu-photos/${path}`);
     expect(got.status).toBe(200);
     expect(got.headers.get('cache-control')).toContain('immutable');
     expect(Buffer.from(await got.arrayBuffer())).toEqual(webp);
 
-    for (const bad of ['../../etc/passwd', `${mannat.id}/x/480.webp`, '%2e%2e%2fsecret']) {
+    for (const bad of ['../../etc/passwd', `${parosaa.id}/x/480.webp`, '%2e%2e%2fsecret']) {
       const refused = await fetch(`${base}/storage/v1/object/public/menu-photos/${bad}`);
       expect(refused.status).toBe(404);
     }
@@ -225,7 +225,10 @@ describe('the self-hosted relay host (P9-01, ADR-0024)', () => {
     // Refused by its announced length; the sender may see the 413 or the connection cut first.
     const outcome = await fetch(`${base}/functions/v1/server/menu`, {
       method: 'PUT',
-      headers: { authorization: `Bearer ${mannat.credential}`, 'content-type': 'application/json' },
+      headers: {
+        authorization: `Bearer ${parosaa.credential}`,
+        'content-type': 'application/json',
+      },
       body: Buffer.alloc(10 * 1024 * 1024, 32),
     }).then(
       (response) => response.status,
@@ -237,7 +240,7 @@ describe('the self-hosted relay host (P9-01, ADR-0024)', () => {
   });
 
   it('[QR-007] marks overdue orders expired with its own job, where there is no pg_cron', async () => {
-    const orderId = await submitOrder(db, mannat.id, mannat.tables[0].id);
+    const orderId = await submitOrder(db, parosaa.id, parosaa.tables[0].id);
     await letExpire(db, orderId);
     await host.jobs!.runNow();
     const { rows } = await db.admin.query<{ status: string }>(

@@ -672,7 +672,7 @@ describe('[QR-011] the table’s printed bill for its diners (P9-03, ADR-0024)',
         grandTotal,
       },
     ],
-    upi: { upiId: 'mannat@okhdfcbank', payeeName: 'Mannat' },
+    upi: { upiId: 'parosaa@okhdfcbank', payeeName: 'Parosaa' },
   });
   const putBill = (tableId: string, body: unknown, credential?: string) =>
     asServer(`tables/${tableId}/bill`, { method: 'PUT', body, credential });
@@ -687,7 +687,7 @@ describe('[QR-011] the table’s printed bill for its diners (P9-03, ADR-0024)',
 
     const seen = await dinerBill(first.token);
     expect(seen.bill?.invoices[0]?.grandTotal).toBe(61_200);
-    expect(seen.bill?.upi).toEqual({ upiId: 'mannat@okhdfcbank', payeeName: 'Mannat' });
+    expect(seen.bill?.upi).toEqual({ upiId: 'parosaa@okhdfcbank', payeeName: 'Parosaa' });
     // The next table, and another restaurant's tables, see nothing of it.
     expect((await dinerBill(second.token)).bill).toBeNull();
     expect((await dinerBill(b.tables[0].token)).bill).not.toEqual(seen.bill);

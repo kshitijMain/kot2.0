@@ -1,4 +1,4 @@
-// The QR pilot's set-up (P9-06): `pnpm --filter @rp/server pilot:mannat [-- --upi-id name@bank]
+// The QR pilot's set-up (P9-06): `pnpm --filter @rp/server pilot:parosaa [-- --upi-id name@bank]
 // [--site https://menu.example.in] [--tents tents.pdf]`, after `build`. Reads DATABASE_URL and
 // RP_DATA_DIR (for the secrets the server checks PINs with); refuses a database that already holds
 // a restaurant. Prints each table's QR address and, with --tents, writes the A5 tents to print.
@@ -19,7 +19,7 @@ import { CredentialHasher } from '../auth/credential-hasher.js';
 import { FileSecretStore } from '../auth/secret-store.js';
 import { tableTentsPdf } from '../floor/table-tents.js';
 import { PrismaClient } from '../generated/prisma/client.js';
-import { MANNAT_PINS, MANNAT_PROFILE, seedMannat } from './pilot-seed.js';
+import { PAROSAA_PINS, PAROSAA_PROFILE, seedParosaa } from './pilot-seed.js';
 import { UTC_SESSION } from './utc-session.js';
 
 const { values } = parseArgs({
@@ -72,7 +72,7 @@ if (values['menu-text']) {
     if (restaurant === null)
       throw new Error('There is no restaurant here yet: run the set-up first.');
     let filled = 0;
-    for (const spec of MANNAT_PROFILE.items) {
+    for (const spec of PAROSAA_PROFILE.items) {
       if (spec.description === undefined) continue;
       const { count } = await prisma.item.updateMany({
         where: {
@@ -129,15 +129,15 @@ try {
   const hasher = new CredentialHasher(
     new FileSecretStore(join(process.env.RP_DATA_DIR ?? './.data', 'secrets')),
   );
-  const summary = await seedMannat(prisma, {
+  const summary = await seedParosaa(prisma, {
     hashPin: (pin) => hasher.hash(pin),
     ...(upiId !== undefined && { upiId }),
   });
   const lines = [
-    `Mannat is set up (restaurant ${summary.restaurantId}).`,
+    `Parosaa is set up (restaurant ${summary.restaurantId}).`,
     '',
     'Staff and their first PINs (change them in Manage → Staff before service):',
-    ...Object.entries(MANNAT_PINS).map(([name, pin]) => `  ${name.padEnd(18)} ${pin}`),
+    ...Object.entries(PAROSAA_PINS).map(([name, pin]) => `  ${name.padEnd(18)} ${pin}`),
     '',
     'Tables and their QR codes:',
     ...summary.tables.map(
@@ -153,8 +153,8 @@ try {
     await writeTents(
       summary.tables,
       {
-        displayName: MANNAT_PROFILE.displayName,
-        accentColor: MANNAT_PROFILE.accentColor ?? null,
+        displayName: PAROSAA_PROFILE.displayName,
+        accentColor: PAROSAA_PROFILE.accentColor ?? null,
       },
       site,
       values.tents,

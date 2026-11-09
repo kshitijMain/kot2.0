@@ -11,7 +11,7 @@ const Env = z.object({
   RELAY_DB_URL: url,
   /** The jobs' login, `relay_janitor`, for expiry and retention. Unset: pg_cron or nothing does. */
   RELAY_JOBS_DB_URL: url.optional(),
-  /** This host's public address, e.g. `https://menu.mannat.in` (photos are linked from it). */
+  /** This host's public address, e.g. `https://menu.parosaa.in` (photos are linked from it). */
   RELAY_PUBLIC_URL: z.url({ protocol: /^https?$/ }).transform((value) => value.replace(/\/+$/, '')),
   /** The QR site's origins, comma-separated, allowed to call from a browser (CORS). */
   RELAY_ALLOWED_ORIGINS: z

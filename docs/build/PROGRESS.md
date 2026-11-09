@@ -686,7 +686,7 @@ Recommended next WPs (dependencies met):
   - [x] P8-06b Pilot KPI views: approval time (R-04) and availability over time
   - [ ] P8-06c The pilot itself: UAT, baselines, 4 weeks live [H]
 
-### Phase 9: The QR pilot at Mannat (`phases/phase-9.md`, ADR-0024)
+### Phase 9: The QR pilot at Parosaa (`phases/phase-9.md`, ADR-0024)
 
 - [x] P9-01 The relay on a server of our own, with an open line to each restaurant (the server
       itself: manual task 38)
@@ -694,7 +694,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-03 The bill on the diner's phone, UPI and "I have paid"
 - [x] P9-04 The diner's page: phone first, My orders, accepted, order again, Bill tab, a nicer menu
 - [x] P9-05 The manager's phone rings for QR orders
-- [x] P9-06 The Mannat pilot set-up and a one-Mac trial (the server and the real tables: manual task 38)
+- [x] P9-06 The Parosaa pilot set-up and a one-Mac trial (the server and the real tables: manual task 38)
 - [x] P9-07 Reprinting the tents when the site's address changes (ngrok)
 - [x] P9-08 A diner's orders follow their number; a compact page; pairing the first screen
 - [x] P9-09 A menu made for the phone: sections that follow, a stepper on the card, an order tracker
@@ -708,7 +708,7 @@ Recommended next WPs (dependencies met):
 - [x] P9-17 The waiter APK builds on this Mac
 - [x] P9-20 Full audit of every screen, link, button and workflow on the live pilot
 - [x] P9-21 The waiter app on a real phone: every flow to the kitchen, the bill and payment
-- [x] P9-22 No pairing: the waiter app and browsers connect by themselves; Mannat's UPI ID
+- [x] P9-22 No pairing: the waiter app and browsers connect by themselves; Parosaa's UPI ID
 - [x] P9-23 Every flow again (QR diner, manager, kitchen): fixes (the manager phone's part done in P9-24)
 - [x] P9-24 Everything in the manager's hands, live, checked in the database; fixes across every screen
 - [x] P9-25 The Owner by PIN only; call a waiter at an unopened table; Owner settings set up; prints saved to a folder (test)
@@ -1126,10 +1126,10 @@ by them before the build). Each changes a BRD default; each is data or a setting
      no development menu or floating gear), signed with the template's debug key so it installs
      over the debug build; production APKs stay with EAS Build and the owner's key.
 
-Decided 2026-10-24 (the Parossa redesign, at the Business Owner's request; ADR-0022):
+Decided 2026-10-24 (the Parosaa redesign, at the Business Owner's request; ADR-0022):
 
-794. The product is Parossa (replaces decision 9's OI-01 working name): Parossa Captain (waiter
-     app), Parossa Table (tablet), Parossa Control Plane (vendor web app). Only names people see
+794. The product is Parosaa (replaces decision 9's OI-01 working name): Parosaa Captain (waiter
+     app), Parosaa Table (tablet), Parosaa Control Plane (vendor web app). Only names people see
      change; the install folder, Windows app id, service ids, setup file name, Android package ids,
      Expo slugs, the LAN CA's subject and the `@rp/` scope stay. The Windows installer's wizard
      title keeps "Restaurant Platform" until `productName` (and with it the install folder) moves.
@@ -1144,7 +1144,7 @@ Decided 2026-10-24 (the Parossa redesign, at the Business Owner's request; ADR-0
 797. Inter 4.1 is vendored with its OFL licence (web: one variable WOFF2 in `@rp/ui-web`; Android:
      four TTFs in `@rp/ui-native/fonts`, built in by `expo-font`), not an npm dependency. The apps
      gain `expo-splash-screen` and `expo-font` (MIT, Expo's own) for the splash and the font.
-798. Diners' screens keep the restaurant's logo and accent (NFR-U02) and show "Powered by Parossa"
+798. Diners' screens keep the restaurant's logo and accent (NFR-U02) and show "Powered by Parosaa"
      in small muted text. Their main buttons keep the system's primary colour (now teal), as they
      did with the old blue; making them the restaurant's accent is left to the Business Owner.
 
@@ -4666,7 +4666,7 @@ the CI fixes. Built by the main session with two helper agents (mobile; data) in
 
 - **The PC announces itself on the Wi-Fi** (mDNS `_parossa-pos._tcp`, `MdnsService`, bonjour-service)
   with its CA fingerprint in TXT; `RP_MDNS=off` turns it off.
-  - Tested: macOS `dns-sd` found "Mannat PC" at port 8080, `v=1 tls=1 ca=DC97…`.
+  - Tested: macOS `dns-sd` found "Parosaa PC" at port 8080, `v=1 tls=1 ca=DC97…`.
 - **Addresses offered to phones** leave out VPN, virtual-machine, container, Bluetooth,
   link-local and carrier-NAT adapters (`lanAddresses`). The installer's chosen adapter comes first
   (`RP_LAN_INTERFACE`).
@@ -5013,7 +5013,7 @@ phone**. Table 4's QR order (KOT 10) and its open "Call waiter" request were lef
 - **The QR site broke ("This page couldn't load") whenever the site was rebuilt for tests**: the
   running pilot lost its files.
   - The pilot now builds and serves its own copy (`NEXT_DIST_DIR=.next-pilot`, set in
-    `next.config.ts`, `mannat-local.sh`, `mannat-ngrok.sh`), ignored like `.next`.
+    `next.config.ts`, `parosaa-local.sh`, `parosaa-ngrok.sh`), ignored like `.next`.
 - **Seven dishes were still "out of stock"** (all beverages, both desserts, so the Thali too). They
   were left by the P9-20 probe; they were marked available again in Menu availability.
 - **QR site wording and layout:**
@@ -5046,11 +5046,11 @@ phone**. Table 4's QR order (KOT 10) and its open "Call waiter" request were lef
   Should "Call waiter" at a table nobody has opened yet open the table, or alert the staff without
   one? (Today it is refused.)
 
-### 2026-11-01: P9-22 No pairing: the waiter app and browsers connect by themselves; Mannat's UPI ID
+### 2026-11-01: P9-22 No pairing: the waiter app and browsers connect by themselves; Parosaa's UPI ID
 
 Asked by the Business Owner:
 
-- set Mannat's UPI ID (7683072807@ptsbi);
+- set Parosaa's UPI ID (7683072807@ptsbi);
 - remove pairing everywhere: "we are not going to pair any device for anyone, whether it is a
   manager, waiter, owner, kitchen".
 
@@ -5085,7 +5085,7 @@ phone (see below).
   - the pairing screen, in PIN-only, is "Try again" (`connectByItself`) with no code field.
 - **Pilot:**
   - `scripts/pilot/build-waiter-apk.sh` builds the APK with this Mac's address and certificate;
-  - `mannat-local.sh pair` was removed, and the READMEs no longer mention pairing;
+  - `parosaa-local.sh pair` was removed, and the READMEs no longer mention pairing;
   - the server was restarted, and the new route answers on the Wi-Fi address with the PC's
     fingerprint;
   - Manage → Devices on the pilot shows no "Pair a device".
@@ -5158,7 +5158,7 @@ any Android phone.
     row, broken mid-word on small phones.
 - **Words:** "Open table 5" with a "Guests" label (it was "Open 5" over a bare "2"), and
   "Table 5 is open".
-- The APK was rebuilt (`.pilot/apk/parossa-waiter-preview.apk`) and reinstalled on the phone, which
+- The APK was rebuilt (`.pilot/apk/parosaa-waiter-preview.apk`) and reinstalled on the phone, which
   stays paired.
 
 **Checked and left as they are:**
@@ -5277,9 +5277,9 @@ Built: `apps/waiter-app/plugins/with-gradle-memory.cjs`, a config plugin. Every 
 `org.gradle.jvmargs` (4 GB, 1.5 GB Metaspace) and `kotlin.daemon.jvmargs` (3 GB, 1 GB Metaspace)
 into the generated `gradle.properties`.
 
-Result: `assembleRelease` succeeded in 45 s, giving a 100 MB APK, "Parossa Captain (preview)"
+Result: `assembleRelease` succeeded in 45 s, giving a 100 MB APK, "Parosaa Captain (preview)"
 `in.rp.waiter.preview` 0.1.0, signed with the debug key. It is copied to
-`.pilot/apk/parossa-waiter-preview.apk`. Steps are in `scripts/pilot/README.md`.
+`.pilot/apk/parosaa-waiter-preview.apk`. Steps are in `scripts/pilot/README.md`.
 
 Not done:
 
@@ -5290,13 +5290,13 @@ Not done:
 ### 2026-10-31: P9-16 Audit of every screen and the bill journey; managers take payment on the phone
 
 Asked by the Business Owner: test every function, button and word; the bill asked for on the QR
-page must be paid there; UPI for Mannat; phone-friendly; the same in the waiter app.
+page must be paid there; UPI for Parosaa; phone-friendly; the same in the waiter app.
 
 Decided (they did not answer):
 
 - Managers take payment in the waiter app.
 - Build the APK on this Mac.
-- No UPI ID is invented for Mannat. A notice says so where the manager looks, with a link to the
+- No UPI ID is invented for Parosaa. A notice says so where the manager looks, with a link to the
   setting (Owner and Manager may set it). A wrong VPA would send diners' money elsewhere.
 
 How:
@@ -5316,7 +5316,7 @@ Found and fixed:
   reports.
   - The site sends `ngrok-skip-browser-warning` to ngrok addresses only (`throughNgrok`).
   - The relay allows the header in CORS.
-  - `mannat-ngrok.sh` allows the Wi-Fi origin too, so `http://<ip>:3100` links order as well.
+  - `parosaa-ngrok.sh` allows the Wi-Fi origin too, so `http://<ip>:3100` links order as well.
 - **Phone layout:** every Manage page started below the fold (a three-row header and 18 nav
   buttons in six rows).
   - Under 60rem the sections are one row that scrolls, keeping the open one in view.
@@ -5327,8 +5327,8 @@ Found and fixed:
   - Day-end and the operations report show DD-MM-YYYY (they showed 2026-10-31).
   - Notification rules show the pager line for an example table ("T5 WATER", not "{table}
     WATER").
-  - Kitchen tickets read "Kitchen · QR order · Sent by Manager (Mannat)".
-- **Mannat's hours:** the seed sets 11:00–23:30 every day (the restaurant read "Closed" on every
+  - Kitchen tickets read "Kitchen · QR order · Sent by Manager (Parosaa)".
+- **Parosaa's hours:** the seed sets 11:00–23:30 every day (the restaurant read "Closed" on every
   day); the pilot is updated.
 - **UPI:**
   - A notice on the overview and the QR codes page while the UPI ID is not set ("Diners cannot
@@ -5400,8 +5400,8 @@ Built:
 - **QR Refresh** spins until the restaurant answers (at most 4 s).
 - **One type scale:** page title 24 (was 30), section headings 18 in sentence case (were uppercase
   14 labels, or 20). The approval and request cards sit side by side, so the floor stays in view.
-- **Header:** the name, and the role under it unless the name says it ("Manager (Mannat)", not
-  "Manager (Mannat) (Manager)"); the device name small.
+- **Header:** the name, and the role under it unless the name says it ("Manager (Parosaa)", not
+  "Manager (Parosaa) (Manager)"); the device name small.
 - **POS order screen:** no placeholder squares when the menu has no photos.
 
 Tests:
@@ -5420,7 +5420,7 @@ Next design pass, not done here:
 
 ### 2026-10-31: P9-14 PIN-only sign-in for the pilot
 
-Asked by the Business Owner: no pairing in the Mannat pilot. Open the console, tap a name, enter the
+Asked by the Business Owner: no pairing in the Parosaa pilot. Open the console, tap a name, enter the
 PIN; the kitchen with 6666.
 
 Decided:
@@ -5456,13 +5456,13 @@ Tests:
 
 ### 2026-10-31: P9-13 Accepted reaches the diner after a pilot reset; My orders survives a reload
 
-Reported from the pilot after `mannat-local.sh fresh`:
+Reported from the pilot after `parosaa-local.sh fresh`:
 
 - a QR order showed on the POS but not in the manager's alerts;
 - after approval the diner never saw Accepted, although the KOT reached the kitchen;
 - reloading the QR page landed on the menu.
 
-Found: the reset (`mannat-fresh-mannat.sql`) truncated `outbox` and `inbox` with RESTART IDENTITY.
+Found: the reset (`parosaa-fresh-parosaa.sql`) truncated `outbox` and `inbox` with RESTART IDENTITY.
 Event numbers are `MAX(sequence) + 1`, so they started again at 1, while every durable consumer's
 cursor stayed at 19. Every new event was skipped as already handled:
 
@@ -5483,7 +5483,7 @@ Built:
     the tab before;
   - My orders has Refresh and "Updated HH:MM".
 
-Committed with it: the owner's `fresh` command (`mannat-local.sh`, `mannat-fresh-*.sql`, README
+Committed with it: the owner's `fresh` command (`parosaa-local.sh`, `parosaa-fresh-*.sql`, README
 line), now safe.
 
 Tests:
@@ -5509,7 +5509,7 @@ again with the usual back-off; the timer is cleared on join and on loss.
 Tests:
 
 - unit `relay-realtime` +1 (a line that never opens is dropped and joined again). 9/9.
-- integration `relay-realtime` and `pilot-mannat` 11/11.
+- integration `relay-realtime` and `pilot-parosaa` 11/11.
 - On the pilot, the restarted server joined within 10 s.
 
 ### 2026-10-31: P9-11 A designed QR menu
@@ -5540,7 +5540,7 @@ Audit scores, before (out of 5):
 - touch targets 4: 36–40 px chips and stepper;
 - states 2: none designed; Orders and Bill said "nothing yet" while still loading; two "!" in the
   copy;
-- contrast 4: raw white overlays, and Mannat's maroon hard-coded in the step pulse;
+- contrast 4: raw white overlays, and Parosaa's maroon hard-coded in the step pulse;
 - motion 4.
 
 Built (screen by screen in the phase-9 spec):
@@ -5610,7 +5610,7 @@ Built:
 Tests:
 
 - console +3 (approve and reject from the alert; approve on the dashboard). 441/441.
-- server `pilot-mannat.int`: the accept test now carries on, so the diner's page shows every dish
+- server `pilot-parosaa.int`: the accept test now carries on, so the diner's page shows every dish
   Preparing, then Ready, then Served. Reads are 250 ms apart, because the relay lets a table read
   5 times a second. 5/5.
 
@@ -5659,7 +5659,7 @@ Built:
     filter shows whenever either exists.
 - Cart bar: count and total on the left and "View order ›" on the right; its accessible name is
   unchanged.
-- Mannat: one-line descriptions for all 32 dishes (`ItemSpec.description`, used by the seed).
+- Parosaa: one-line descriptions for all 32 dishes (`ItemSpec.description`, used by the seed).
   `pilot-cli --menu-text` fills in empty descriptions on an existing database.
 
 Gotcha: a 150 ms colour fade on the active pill failed axe colour contrast, because axe sampled
@@ -5671,7 +5671,7 @@ Tests:
   The chip assertion is scoped, because the tracker also says "Ready". 22/22.
 - QR e2e +1: the card stepper adds and removes, the cart bar counts, and the tapped last section
   is marked; axe clean. 16/16.
-- Server `pilot-mannat.int` +1: every dish has a description on the QR menu. 5/5.
+- Server `pilot-parosaa.int` +1: every dish has a description on the QR menu. 5/5.
 - Checked by hand: screenshots at 360 px on the pilot. The page is 360 px wide, the active pill
   follows, and the stepper and cart bar look right.
 
@@ -5720,22 +5720,22 @@ Built:
   - the cart bar sits above the 3.5rem tab bar.
 - Console pairing: the button explains `notAPin` or `codeFormat` instead of staying grey; an
   IP-opened screen shows `firstScreen`.
-- `mannat-local.sh pair`: the server's bootstrap code (loopback only, nothing paired yet).
+- `parosaa-local.sh pair`: the server's bootstrap code (loopback only, nothing paired yet).
 
 Tests:
 
 - relay `diner-functions` +4 (any browser, newest first, other numbers, tables and restaurants
   get nothing; only this sitting; 12 hours; bad number or code). Relay 180.
-- server `pilot-mannat.int` +1 (after settlement and close, the number sees nothing; `since` is
+- server `pilot-parosaa.int` +1 (after settlement and close, the number sees nothing; `since` is
   the session's `closedAt`).
 - QR e2e +2 (another phone with the same number sees the order and another number doesn't; at
   360 px the page is never wider than the screen and Bill is tappable with a cart). 15/15.
 - console +1 (a PIN and a short code explained; nothing sent).
-- Checked by hand: screenshots at 360 px; `mannat-local.sh pair` printed a code.
+- Checked by hand: screenshots at 360 px; `parosaa-local.sh pair` printed a code.
 
 On the pilot Mac:
 
-- The relay migration was applied and the services restarted (`mannat-ngrok.sh`, same ngrok
+- The relay migration was applied and the services restarted (`parosaa-ngrok.sh`, same ngrok
   address).
 - Before the restart the PC's open line was not joined (`restaurantsOnLine: 0`; orders still
   came by the 5 s fallback). Session calls succeeded every minute but no socket opened. A fresh
@@ -5750,8 +5750,8 @@ Edge cases decided:
 
 ### 2026-10-31: P9-07 Reprinting the tents when the site's address changes (ngrok)
 
-The Mannat pilot runs behind ngrok (`scripts/pilot/mannat-ngrok.sh`), whose free address changes
-at each start. The codes stay right, but `.pilot/mannat-tents.pdf` and printed tents kept the old
+The Parosaa pilot runs behind ngrok (`scripts/pilot/parosaa-ngrok.sh`), whose free address changes
+at each start. The codes stay right, but `.pilot/parosaa-tents.pdf` and printed tents kept the old
 (LAN) address.
 
 Found:
@@ -5773,13 +5773,13 @@ Built:
   `.qr-row__url`.
 - `pilot-cli --tents-only --site … --tents …` writes the existing restaurant's tents for an
   address.
-- `mannat-ngrok.sh` (now in the repository):
-  - rewrites `.pilot/mannat-tents.pdf` for the ngrok address;
+- `parosaa-ngrok.sh` (now in the repository):
+  - rewrites `.pilot/parosaa-tents.pdf` for the ngrok address;
   - remembers the last address in `.pilot/tents-url.txt` and warns when it changed;
   - says where to reprint;
   - its gateway moved from `.pilot/` to `scripts/pilot/ngrok-gateway.mjs`, so the script works on
     a fresh checkout.
-- README: the reprint section and the manual test for Mannat over ngrok.
+- README: the reprint section and the manual test for Parosaa over ngrok.
 
 Tests:
 
@@ -5798,20 +5798,20 @@ Gotchas (this Mac):
   - the Control Plane audit test: the disk is 93% full, so DISK_FULL is open.
 - Not pushed: this Mac's GitHub account gets 403 (MANUAL_TASKS.md).
 
-### 2026-10-31: P9-06 The Mannat pilot set-up and a one-Mac trial (Phase 9 built)
+### 2026-10-31: P9-06 The Parosaa pilot set-up and a one-Mac trial (Phase 9 built)
 
 Built:
 
 - `dev-seed.ts` takes a `SeedProfile` (`DEMO_PROFILE` is the old data, unchanged).
-- `pilot-seed.ts` `MANNAT_PROFILE` + `seedMannat`:
+- `pilot-seed.ts` `PAROSAA_PROFILE` + `seedParosaa`:
   - tables 1–5 with QR codes;
   - a North Indian menu (chapati, naan, thali and more);
   - Owner, Manager, two waiters, Kitchen;
   - the kitchen on its screen;
-  - `qr.askPhone` REQUIRED, payee name Mannat, a UPI ID when given.
-- `pilot-cli.ts` (`pnpm --filter @rp/server pilot:mannat --site … --tents … --upi-id …`) prints the
+  - `qr.askPhone` REQUIRED, payee name Parosaa, a UPI ID when given.
+- `pilot-cli.ts` (`pnpm --filter @rp/server pilot:parosaa --site … --tents … --upi-id …`) prints the
   PINs and QR addresses and writes the A5 tents.
-- `scripts/pilot/mannat-local.sh` (setup, start, status, stop, reset) and its README:
+- `scripts/pilot/parosaa-local.sh` (setup, start, status, stop, reset) and its README:
   PostgreSQL 16 in Docker, the relay host, the QR site and the KOT server with LAN TLS, secrets
   in `.pilot/` (git-ignored). Manual task 38 points to it.
 
@@ -5828,14 +5828,14 @@ Fixed on the way:
 
 Tests:
 
-- server `pilot-mannat.int` 3: 5 codes open the same menu at their own table with the phone
+- server `pilot-parosaa.int` 3: 5 codes open the same menu at their own table with the phone
   required; table 2's order comes down the open line with polling an hour away, alerts the
   manager, is approved, and makes a KOT sent by the manager, with the diner told; the bill
   carries the phone and the diner's page shows it with UPI.
 - schema and service-day (the demo seed) pass.
 - site +1 (UUIDs on insecure pages).
 
-Checked by hand on this Mac (`mannat-local.sh`, Pixel 7 browser):
+Checked by hand on this Mac (`parosaa-local.sh`, Pixel 7 browser):
 
 - Welcome, menu, cart ("On your bill"), send.
 - The PC received the order 133 ms after it was sent, over the line.
@@ -5847,7 +5847,7 @@ Checked by hand on this Mac (`mannat-local.sh`, Pixel 7 browser):
 
 Decided:
 
-- The pilot seed refuses a database with a restaurant, like the dev seed. Mannat on a fresh
+- The pilot seed refuses a database with a restaurant, like the dev seed. Parosaa on a fresh
   install, and nothing is overwritten.
 - No kitchen printer by default (the KDS works without one); add it in Manage → Printers.
 
@@ -5906,7 +5906,7 @@ Tests:
   estimate, ask for the bill, the printed bill's UPI links, QR and I have paid, the thanks after
   settlement).
 - ordering `reorder` +3.
-- QR e2e on a Pixel 7: +1 for Mannat (phone REQUIRED) end to end through the real relay, 13 of 13
+- QR e2e on a Pixel 7: +1 for Parosaa (phone REQUIRED) end to end through the real relay, 13 of 13
   pass.
 
 Fixed: the e2e photo test looked for `img.qr-dish__photo`, but since 039496e the class is on
@@ -6002,7 +6002,7 @@ Tests:
 Decided:
 
 - The default is OPTIONAL, not REQUIRED: every existing restaurant and test sends no number. The
-  Mannat pilot sets REQUIRED (P9-06).
+  Parosaa pilot sets REQUIRED (P9-06).
 - The diner's own order view never repeats the number.
 - Entering it on a page that says "printed on your bill, used for nothing else" is consent for the
   bill only (BILL-011). Digital bills still need their own consent.
@@ -6037,7 +6037,7 @@ Tests:
 - `roles.test.ts` and `retention.test.ts` cover `relay_janitor`.
 - Relay suite 168 passed. Server relay, Realtime, QR exit and table-QR integration suites pass on
   the production line.
-- Checked by hand on Docker PostgreSQL 16: migrate as superuser, logins given passwords, Mannat
+- Checked by hand on Docker PostgreSQL 16: migrate as superuser, logins given passwords, Parosaa
   provisioned, a second migrate is a no-op.
 
 Decided:
@@ -6205,9 +6205,9 @@ compiles it and builds both APKs. The app's Jest mocks `react-native-safe-area-c
 for it. A JS `BackHandler` listener registered by a parent runs before a child's (last added runs
 first), so each screen handles its own back press instead of `SignedIn`.
 
-### 2026-10-24: the Parossa redesign (ADR-0022)
+### 2026-10-24: the Parosaa redesign (ADR-0022)
 
-At the Business Owner's request, outside the WP plan: the product is Parossa, with a light, calm
+At the Business Owner's request, outside the WP plan: the product is Parosaa, with a light, calm
 look on every staff screen. Tokens: new light/dark palettes, `kds` (light, AAA) and `kds-dark`,
 saffron `highlight` roles, status tones moved apart from the brand, rounder radii and softer
 shadows; tests for the saffron roles, both kitchen themes and the brand/status separation. Inter
@@ -6217,7 +6217,7 @@ panel, a saffron bar under page titles); the logo on the console's header, pairi
 `kds.theme` setting with `KdsSettings.theme`, applied to the whole kitchen frame through a context
 (`apps/console/src/kds/kds-theme.tsx`). `@rp/ui-native` restyled the same way and exports `Text`
 and `TextInput` in Inter; the shell and both apps use them; the logo PNG on the phones' pairing
-and sign-in; "Powered by Parossa" on the tablet's diner screens and the QR menu's footer. App names,
+and sign-in; "Powered by Parosaa" on the tablet's diner screens and the QR menu's footer. App names,
 icons, splash (`#FAF7F2`) and the vendor web app's name changed; installer display names too.
 Before/after screenshots of the console were shown to the Business Owner before the native work.
 

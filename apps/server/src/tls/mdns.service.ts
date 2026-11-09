@@ -26,7 +26,7 @@ export function mdnsInstanceName(restaurantName: string | undefined): string {
     .replace(/[^\p{L}\p{N} &'().-]/gu, '')
     .trim()
     .slice(0, 50);
-  return clean === '' ? 'Parossa restaurant PC' : `${clean} PC`;
+  return clean === '' ? 'Parosaa restaurant PC' : `${clean} PC`;
 }
 
 /**

@@ -20,7 +20,7 @@ import { until } from '../helpers/wait.js';
 
 /**
  * A diner's "Bill" request ends once the bill is printed (P9-23), as a waiter's does: it had stayed
- * open, and its alert on every manager's list, after the bill was out (found on the Mannat pilot).
+ * open, and its alert on every manager's list, after the bill was out (found on the Parosaa pilot).
  */
 
 let database: TestDatabase;

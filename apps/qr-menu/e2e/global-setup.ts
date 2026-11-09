@@ -118,20 +118,23 @@ export default async function setup(): Promise<() => Promise<void>> {
   await asBig('PUT', 'menu', { version: 1, document: bigMenuDocument() });
   tokens.BIG = bigToken;
 
-  // P9: Mannat asks every table for the diner's mobile number (qr.askPhone REQUIRED).
-  const mannat = await relay.provision('Mannat');
-  const mannatToken = randomBytes(16).toString('base64url');
-  const mannatTable = randomUUID();
-  const asMannat = async (method: string, path: string, body: unknown) => {
+  // P9: Parosaa asks every table for the diner's mobile number (qr.askPhone REQUIRED).
+  const parosaa = await relay.provision('Parosaa');
+  const parosaaToken = randomBytes(16).toString('base64url');
+  const parosaaTable = randomUUID();
+  const asParosaa = async (method: string, path: string, body: unknown) => {
     const response = await fetch(`${relay.baseUrl}/server/${path}`, {
       method,
-      headers: { authorization: `Bearer ${mannat.credential}`, 'content-type': 'application/json' },
+      headers: {
+        authorization: `Bearer ${parosaa.credential}`,
+        'content-type': 'application/json',
+      },
       body: JSON.stringify(body),
     });
     if (!response.ok)
       throw new Error(`${path}: ${String(response.status)} ${await response.text()}`);
   };
-  await asMannat('POST', 'presence', {
+  await asParosaa('POST', 'presence', {
     serverVersion: '1.0.0',
     settings: {
       submissionsPerWindow: 50,
@@ -141,19 +144,19 @@ export default async function setup(): Promise<() => Promise<void>> {
       readOnlyAfterSeconds: 120,
     },
   });
-  await asMannat('PUT', 'tables', {
+  await asParosaa('PUT', 'tables', {
     tables: [
       {
-        tableId: mannatTable,
+        tableId: parosaaTable,
         label: 'M3',
-        tokenHash: createHash('sha256').update(mannatToken, 'utf8').digest('hex'),
+        tokenHash: createHash('sha256').update(parosaaToken, 'utf8').digest('hex'),
         active: true,
       },
     ],
   });
-  await asMannat('PUT', 'menu', {
+  await asParosaa('PUT', 'menu', {
     version: 1,
-    document: { ...menuDocument(), restaurantName: 'Mannat', phone: 'REQUIRED' },
+    document: { ...menuDocument(), restaurantName: 'Parosaa', phone: 'REQUIRED' },
   });
 
   const port = await freePort();
@@ -203,7 +206,7 @@ export default async function setup(): Promise<() => Promise<void>> {
       credential,
       tokens,
       tableIds,
-      mannat: { credential: mannat.credential, token: mannatToken, tableId: mannatTable },
+      parosaa: { credential: parosaa.credential, token: parosaaToken, tableId: parosaaTable },
     }),
   );
   return async () => {

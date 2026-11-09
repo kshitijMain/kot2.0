@@ -1,7 +1,7 @@
 import { useT } from './i18n.js';
 
 /**
- * The Parossa logo (brand/parossa, ADR-0022), served with the console so it shows offline. Its
+ * The Parosaa logo (brand/parossa, ADR-0022), served with the console so it shows offline. Its
  * text alternative is the product's name.
  */
 export function BrandLogo({

@@ -52,8 +52,8 @@ describe('[AUTH-007] the PC’s announcement on the Wi-Fi (P9-27)', () => {
   });
 
   it('names the PC after the restaurant', () => {
-    expect(mdnsInstanceName('Mannat')).toBe('Mannat PC');
-    expect(mdnsInstanceName('  ')).toBe('Parossa restaurant PC');
+    expect(mdnsInstanceName('Parosaa')).toBe('Parosaa PC');
+    expect(mdnsInstanceName('  ')).toBe('Parosaa restaurant PC');
     expect(mdnsInstanceName('Café <Delhi> #1')).toBe('Café Delhi 1 PC');
   });
 });

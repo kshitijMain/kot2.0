@@ -5,9 +5,9 @@
  */
 export const en = {
   app: {
-    name: 'Parossa',
-    /** Customer screens show the restaurant's own brand; Parossa only as this line (NFR-U02). */
-    poweredBy: 'Powered by Parossa',
+    name: 'Parosaa',
+    /** Customer screens show the restaurant's own brand; Parosaa only as this line (NFR-U02). */
+    poweredBy: 'Powered by Parosaa',
   },
   console: {
     outdated: {
@@ -3025,8 +3025,8 @@ until you press Publish.
     },
   },
   desktop: {
-    title: 'Parossa',
-    starting: 'Starting Parossa. This can take a minute.',
+    title: 'Parosaa',
+    starting: 'Starting Parosaa. This can take a minute.',
   },
   readiness: {
     title: 'Site-readiness checklist',
@@ -4540,7 +4540,7 @@ until you press Publish.
     },
   },
   vendorApp: {
-    name: 'Parossa Control Plane',
+    name: 'Parosaa Control Plane',
     signOut: 'Sign out',
     nav: {
       label: 'Sections',

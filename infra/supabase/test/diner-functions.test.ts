@@ -323,7 +323,7 @@ describe('[BILL-011] the diner’s mobile number (P9-02)', () => {
     ).rows[0]!.customer_phone;
 
   it('refuses an order without one where the restaurant asks for it, and stores it with one', async () => {
-    const tenant = await seedTenant(db, 'Mannat');
+    const tenant = await seedTenant(db, 'Parosaa');
     await publishMenu(db, tenant.id, 2, qrMenuDocument({ phone: 'REQUIRED' }));
     const options = { token: tenant.tables[0].token };
     const missing = await submit(order(), options);
@@ -349,7 +349,7 @@ describe('[BILL-011] the diner’s mobile number (P9-02)', () => {
   });
 
   it('never lets the stored number change', async () => {
-    const tenant = await seedTenant(db, 'Mannat Two');
+    const tenant = await seedTenant(db, 'Parosaa Two');
     await publishMenu(db, tenant.id, 2, qrMenuDocument({ phone: 'OPTIONAL' }));
     const answer = await accepted(order([dal()], { customerPhone: '+919876543210' }), {
       token: tenant.tables[0].token,
@@ -389,7 +389,7 @@ describe('[QR-007] a diner’s orders follow their number, not their browser (P9
     );
 
   it('finds the orders a number placed at this table, from any browser, newest first', async () => {
-    const tenant = await seedTenant(db, 'Mannat Sitting');
+    const tenant = await seedTenant(db, 'Parosaa Sitting');
     await publishMenu(db, tenant.id, 2, qrMenuDocument({ phone: 'REQUIRED' }));
     const [first, second] = tenant.tables;
     const options = (browser: string) => ({ token: first.token, browser });
@@ -417,7 +417,7 @@ describe('[QR-007] a diner’s orders follow their number, not their browser (P9
   });
 
   it('shows only this sitting: orders before the table last closed belong to an earlier party', async () => {
-    const tenant = await seedTenant(db, 'Mannat Next Party');
+    const tenant = await seedTenant(db, 'Parosaa Next Party');
     await publishMenu(db, tenant.id, 2, qrMenuDocument({ phone: 'REQUIRED' }));
     const table = tenant.tables[0];
     await accepted(order([dal()], { customerPhone: PHONE }), { token: table.token });
@@ -434,7 +434,7 @@ describe('[QR-007] a diner’s orders follow their number, not their browser (P9
   });
 
   it('never shows an order older than 12 hours, even when no close was ever heard', async () => {
-    const tenant = await seedTenant(db, 'Mannat Offline Close');
+    const tenant = await seedTenant(db, 'Parosaa Offline Close');
     await publishMenu(db, tenant.id, 2, qrMenuDocument({ phone: 'REQUIRED' }));
     const table = tenant.tables[0];
     const old = await accepted(order([dal()], { customerPhone: PHONE }), { token: table.token });

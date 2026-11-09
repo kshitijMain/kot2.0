@@ -3,12 +3,12 @@
 # PostgreSQL 16, Node 24, Caddy (HTTPS by itself), the relay host and the site as services, and a
 # firewall that lets in only SSH, HTTP and HTTPS. Run as root from the repository copied to /opt/rp:
 #
-#   sudo bash /opt/rp/infra/relay-host/setup-ubuntu.sh menu.mannat.in
+#   sudo bash /opt/rp/infra/relay-host/setup-ubuntu.sh menu.parosaa.in
 #
 # Safe to run again (after `git pull`, to update): it keeps the passwords and secrets it made.
 set -euo pipefail
 
-DOMAIN="${1:?Usage: setup-ubuntu.sh <site address, e.g. menu.mannat.in>}"
+DOMAIN="${1:?Usage: setup-ubuntu.sh <site address, e.g. menu.parosaa.in>}"
 REPO=/opt/rp
 ETC=/etc/rp-relay
 DATA=/var/lib/rp-relay
@@ -103,5 +103,5 @@ Done. The site is https://$DOMAIN (the certificate arrives within a minute once 
 
 Next, add each restaurant (once) and give its PC the credential this prints:
 
-  sudo bash -c 'set -a; . $ETC/provision.env; node $REPO/infra/supabase/scripts/provision-restaurant.mjs --name "Mannat"'
+  sudo bash -c 'set -a; . $ETC/provision.env; node $REPO/infra/supabase/scripts/provision-restaurant.mjs --name "Parosaa"'
 EOF

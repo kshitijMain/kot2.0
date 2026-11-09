@@ -11,7 +11,7 @@ AUTH-007 requires every device to be paired by a manager before it talks to the 
 manager makes a one-time code on a screen that is already paired, and the new device presents
 it. On a real installation that is right: a device is trusted, then a person signs in on it.
 
-The Mannat pilot runs on one Mac with browsers opening and closing all day (a POS window, an
+The Parosaa pilot runs on one Mac with browsers opening and closing all day (a POS window, an
 Incognito kitchen screen, a phone). Every new browser landed on `/pair` and needed a code from
 another, already paired screen. That blocked the owner from testing at all. The kitchen also ran in
 station mode (AUTH-005), so the Kitchen PIN 6666 could not be used.
@@ -36,8 +36,8 @@ An installation flag `RP_AUTH_PIN_ONLY` (off by default):
   a fallback if that fails.
 - **Kitchen staff sign in with their PIN** (`auth.kitchenIndividualLogins` is treated as on). A
   kitchen person on `/kds` sees every station.
-- **The pilot turns it on.** `scripts/pilot/mannat-local.sh` writes `RP_AUTH_PIN_ONLY=1`;
-  `mannat-ngrok.sh` adds it to a pilot set up earlier; the Mannat seed sets
+- **The pilot turns it on.** `scripts/pilot/parosaa-local.sh` writes `RP_AUTH_PIN_ONLY=1`;
+  `parosaa-ngrok.sh` adds it to a pilot set up earlier; the Parosaa seed sets
   `auth.kitchenIndividualLogins`.
 
 What stays:

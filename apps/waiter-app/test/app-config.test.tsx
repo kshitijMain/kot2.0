@@ -72,9 +72,9 @@ describe('[SEC-010] [MOBILE-I3] the app’s data stays on the device', () => {
 });
 
 describe('[NFR-U01] the app’s brand', () => {
-  it('is called Parossa Captain, on the off-white splash, with Inter built in', () => {
+  it('is called Parosaa Captain, on the off-white splash, with Inter built in', () => {
     const config = configFor({ APP_ENV: 'production', EAS_PROJECT_ID: undefined });
-    expect(config.name).toBe('Parossa Captain');
+    expect(config.name).toBe('Parosaa Captain');
     expect(config.android?.adaptiveIcon?.backgroundColor).toBe('#FAF7F2');
     const plugins = config.plugins ?? [];
     const options = (name: string): unknown =>

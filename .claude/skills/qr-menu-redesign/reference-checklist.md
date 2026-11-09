@@ -34,7 +34,7 @@ Use while auditing and before marking work done.
 
 - [ ] Only `--rp-*` tokens and `@rp/ui-web` roles; contrast tests still pass
 - [ ] Accent = restaurant brand; teal primary for actions per DESIGN_SYSTEM
-- [ ] Shadows only on floating layers (sheets, bars), not every card—match Parossa elevation tokens
+- [ ] Shadows only on floating layers (sheets, bars), not every card—match Parosaa elevation tokens
 - [ ] `prefers-reduced-motion` respected for any animation
 
 ## Engineering

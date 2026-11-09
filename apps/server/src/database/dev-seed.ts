@@ -12,7 +12,7 @@ import { buildMenuContent, menuChecksum } from '../menu/menu-content.js';
 export interface SeedOptions {
   /** Hashes a PIN with the server's pepper; when given, every person gets the PIN listed below. */
   readonly hashPin?: (pin: string) => Promise<string>;
-  /** Another restaurant than the demo one (the QR pilot's Mannat, P9-06); the demo by default. */
+  /** Another restaurant than the demo one (the QR pilot's Parosaa, P9-06); the demo by default. */
   readonly profile?: SeedProfile;
 }
 

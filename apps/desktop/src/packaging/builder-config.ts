@@ -20,7 +20,7 @@ export const APP_ID = 'in.restaurantplatform.pos';
 export const PRODUCT_NAME = 'Restaurant Platform';
 
 /** The product's name as people see it: shortcuts and Apps & features (ADR-0022). */
-export const DISPLAY_NAME = 'Parossa';
+export const DISPLAY_NAME = 'Parosaa';
 
 /**
  * Electron's fuses (SEC-011), set in the packaged executable: it cannot be run as Node.js or be

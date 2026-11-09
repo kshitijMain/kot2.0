@@ -28,7 +28,7 @@ describe('[NFR-U04] a screen that crashes (QA audit, category A)', () => {
     crash.on = false;
     await user.click(screen.getByRole('button', { name: t('states.retry') }));
     expect(
-      await screen.findByRole('heading', { name: 'Parossa Control Plane' }),
+      await screen.findByRole('heading', { name: 'Parosaa Control Plane' }),
     ).toBeInTheDocument();
     errors.mockRestore();
   });

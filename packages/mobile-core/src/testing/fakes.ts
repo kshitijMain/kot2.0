@@ -235,7 +235,7 @@ export function lanService(
   host: string,
   port: number,
   authority: ServerAuthority | null = LAN_CA,
-  name = 'Mannat',
+  name = 'Parosaa',
 ): LanService {
   return {
     name,

@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
-# The QR pilot (Mannat, P9-06, ADR-0024) on one Mac, for a test on the restaurant's Wi-Fi before the
+# The QR pilot (Parosaa, P9-06, ADR-0024) on one Mac, for a test on the restaurant's Wi-Fi before the
 # cloud server exists: PostgreSQL 16 (Docker), the QR relay host, the QR menu site and the KOT
 # server, all reachable from phones on the same network.
 #
-#   scripts/pilot/mannat-local.sh setup    # once: databases, build, Mannat, its 5 QR codes, tents
-#   scripts/pilot/mannat-local.sh start    # the relay, the site and the server, in the background
-#   scripts/pilot/mannat-local.sh status   # what is running, and the addresses
-#   scripts/pilot/mannat-local.sh stop
-#   scripts/pilot/mannat-local.sh reset    # stop and delete everything set up here
-#   scripts/pilot/mannat-local.sh fresh    # clear orders/KOTs/approvals; keep QR codes and devices
+#   scripts/pilot/parosaa-local.sh setup    # once: databases, build, Parosaa, its 5 QR codes, tents
+#   scripts/pilot/parosaa-local.sh start    # the relay, the site and the server, in the background
+#   scripts/pilot/parosaa-local.sh status   # what is running, and the addresses
+#   scripts/pilot/parosaa-local.sh stop
+#   scripts/pilot/parosaa-local.sh reset    # stop and delete everything set up here
+#   scripts/pilot/parosaa-local.sh fresh    # clear orders/KOTs/approvals; keep QR codes and devices
 #
 # Settings (environment): PILOT_IP (default: this Mac's Wi-Fi address), PILOT_UPI_ID (the
 # restaurant's business UPI ID; without it the bill has no Pay button). Secrets stay in .pilot/
@@ -38,7 +38,7 @@ server_env() {
 NODE_ENV=development
 HOST=0.0.0.0
 PORT=$SERVER_PORT
-DATABASE_URL=$(pg_url rp_mannat)
+DATABASE_URL=$(pg_url rp_parosaa)
 RP_DATA_DIR=$STATE/server-data
 RP_CONSOLE_DIR=$ROOT/apps/console/dist
 RP_RELAY_URL=$RELAY
@@ -80,7 +80,7 @@ setup() {
   fi
   docker start "$PG_CONTAINER" >/dev/null
   until docker exec "$PG_CONTAINER" pg_isready -U postgres >/dev/null 2>&1; do sleep 1; done
-  for db in rp_mannat rp_relay; do
+  for db in rp_parosaa rp_relay; do
     docker exec "$PG_CONTAINER" psql -U postgres -tAc "SELECT 1 FROM pg_database WHERE datname='$db'" \
       | grep -q 1 || docker exec "$PG_CONTAINER" createdb -U postgres "$db"
   done
@@ -94,7 +94,7 @@ setup() {
   pilot_site_build
 
   echo "== The KOT server's database"
-  (cd apps/server && DATABASE_URL="$(pg_url rp_mannat)" pnpm exec prisma migrate deploy >/dev/null)
+  (cd apps/server && DATABASE_URL="$(pg_url rp_parosaa)" pnpm exec prisma migrate deploy >/dev/null)
 
   echo "== The QR relay's database"
   RELAY_ADMIN_DB_URL="$(pg_url rp_relay)" node infra/supabase/scripts/migrate.mjs
@@ -123,27 +123,27 @@ EOF
     umask 022
   fi
 
-  if [[ ! -f "$STATE/mannat.txt" ]]; then
-    echo "== Mannat: the restaurant, 5 tables and their QR codes, the menu, staff"
+  if [[ ! -f "$STATE/parosaa.txt" ]]; then
+    echo "== Parosaa: the restaurant, 5 tables and their QR codes, the menu, staff"
     local upi=()
     [[ -n "${PILOT_UPI_ID:-}" ]] && upi=(--upi-id "$PILOT_UPI_ID")
     # Written only once it has worked, so a failed set-up runs this again.
     (set -a; source "$STATE/server.env"; set +a
-      node apps/server/dist/database/pilot-cli.js --site "$SITE" --tents "$STATE/mannat-tents.pdf" \
-        ${upi[@]+"${upi[@]}"}) > "$STATE/mannat.tmp"
-    mv "$STATE/mannat.tmp" "$STATE/mannat.txt"
-    cat "$STATE/mannat.txt"
+      node apps/server/dist/database/pilot-cli.js --site "$SITE" --tents "$STATE/parosaa-tents.pdf" \
+        ${upi[@]+"${upi[@]}"}) > "$STATE/parosaa.tmp"
+    mv "$STATE/parosaa.tmp" "$STATE/parosaa.txt"
+    cat "$STATE/parosaa.txt"
 
-    echo "== Mannat at the relay, and the PC's credential"
+    echo "== Parosaa at the relay, and the PC's credential"
     (set -a; source "$STATE/provision.env"; set +a
-      node infra/supabase/scripts/provision-restaurant.mjs --name Mannat --label "Mannat PC") \
+      node infra/supabase/scripts/provision-restaurant.mjs --name Parosaa --label "Parosaa PC") \
       | grep -E '^[A-Za-z0-9_-]{43,}$' > "$STATE/relay-credential.txt"
     chmod 600 "$STATE/relay-credential.txt"
     (set -a; source "$STATE/server.env"; set +a
       node apps/server/dist/relay/relay-cli.js credential < "$STATE/relay-credential.txt")
   fi
   echo
-  echo "Set up. Now: scripts/pilot/mannat-local.sh start"
+  echo "Set up. Now: scripts/pilot/parosaa-local.sh start"
 }
 
 launch() {
@@ -157,7 +157,7 @@ launch() {
 }
 
 start() {
-  [[ -f "$STATE/mannat.txt" ]] || { echo "Run setup first." >&2; exit 1; }
+  [[ -f "$STATE/parosaa.txt" ]] || { echo "Run setup first." >&2; exit 1; }
   docker start "$PG_CONTAINER" >/dev/null
   until docker exec "$PG_CONTAINER" pg_isready -U postgres >/dev/null 2>&1; do sleep 1; done
   cd "$ROOT"
@@ -191,7 +191,7 @@ status() {
   echo "relay: $(curl -s "http://127.0.0.1:$RELAY_PORT/healthz" || echo 'not answering')"
   cat <<EOF
 
-QR menu site:      $SITE   (each table: see .pilot/mannat.txt; tents: .pilot/mannat-tents.pdf)
+QR menu site:      $SITE   (each table: see .pilot/parosaa.txt; tents: .pilot/parosaa-tents.pdf)
 POS and dashboard: https://$IP:$SERVER_PORT   (the browser warns about the restaurant's own certificate)
 Sign in on any browser on this network: tap a name, then the PIN (no pairing, ADR-0025).
 Waiter / manager phone: install the waiter app (scripts/pilot/build-waiter-apk.sh); it connects by itself.
@@ -212,12 +212,12 @@ fresh() {
   docker start "$PG_CONTAINER" >/dev/null
   until docker exec "$PG_CONTAINER" pg_isready -U postgres >/dev/null 2>&1; do sleep 1; done
   echo "== Clear relay QR queues and table bills"
-  psql_in rp_relay < "$ROOT/scripts/pilot/mannat-fresh-relay.sql"
+  psql_in rp_relay < "$ROOT/scripts/pilot/parosaa-fresh-relay.sql"
   echo "== Clear KOT server orders, kitchen, approvals, open tables"
-  psql_in rp_mannat < "$ROOT/scripts/pilot/mannat-fresh-mannat.sql"
+  psql_in rp_parosaa < "$ROOT/scripts/pilot/parosaa-fresh-parosaa.sql"
   start
   echo
-  echo "Service data cleared. Same table QR codes (.pilot/mannat.txt) and devices remain."
+  echo "Service data cleared. Same table QR codes (.pilot/parosaa.txt) and devices remain."
   echo "On each phone: close the QR tab or clear site data for $SITE so cart and phone cache reset."
 }
 

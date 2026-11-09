@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Mannat pilot over one ngrok URL (mobile data / off-LAN). Run in a terminal and leave it open.
-# Needs: ngrok logged in, pilot already set up (mannat-local.sh setup).
+# Parosaa pilot over one ngrok URL (mobile data / off-LAN). Run in a terminal and leave it open.
+# Needs: ngrok logged in, pilot already set up (parosaa-local.sh setup).
 #
 # A free ngrok address changes each time ngrok starts. The table codes stay the same, but printed
-# tents open the address they were printed with: this script rewrites .pilot/mannat-tents.pdf for
+# tents open the address they were printed with: this script rewrites .pilot/parosaa-tents.pdf for
 # the address it starts, and Manage → QR codes on the POS prints the same (P9-07).
 set -euo pipefail
 
@@ -12,10 +12,10 @@ STATE="$ROOT/.pilot"
 GATE=9080
 NGROK_API=http://127.0.0.1:4040
 
-[[ -f "$STATE/mannat.txt" ]] || { echo "Run scripts/pilot/mannat-local.sh setup first." >&2; exit 1; }
+[[ -f "$STATE/parosaa.txt" ]] || { echo "Run scripts/pilot/parosaa-local.sh setup first." >&2; exit 1; }
 
 echo "== Local stack (relay, site, server)"
-"$ROOT/scripts/pilot/mannat-local.sh" start
+"$ROOT/scripts/pilot/parosaa-local.sh" start
 
 echo "== Gateway (relay + QR site on :$GATE)"
 if [[ -f "$STATE/ngrok-gateway.pid" ]] && kill -0 "$(cat "$STATE/ngrok-gateway.pid")" 2>/dev/null; then
@@ -93,7 +93,7 @@ echo "== Table tents for $NGROK"
 PREVIOUS="$(cat "$STATE/tents-url.txt" 2>/dev/null || echo "the Wi-Fi address")"
 (set -a; source "$STATE/server.env"; set +a
   node "$ROOT/apps/server/dist/database/pilot-cli.js" --tents-only --site "$NGROK" \
-    --tents "$STATE/mannat-tents.pdf" 2>/dev/null | head -n 1)
+    --tents "$STATE/parosaa-tents.pdf" 2>/dev/null | head -n 1)
 echo "$NGROK" > "$STATE/tents-url.txt"
 
 echo
@@ -103,7 +103,7 @@ echo
 echo "Phone — open one table (use mobile data to test ngrok):"
 # Every table now, from the database (P9-26): tables added after setup are listed too.
 docker exec -e PGPASSWORD="$(cat "$STATE/pg-password")" "${PG_CONTAINER:-rp-pilot-pg}" \
-  psql -U postgres -d rp_mannat -tA -F ' ' -c \
+  psql -U postgres -d rp_parosaa -tA -F ' ' -c \
   "SELECT label, qr_token FROM tables WHERE archived_at IS NULL AND qr_token IS NOT NULL ORDER BY display_order, label" |
   while read -r label tok; do
     [[ -n "$tok" ]] && echo "  Table $label  $NGROK/t/$tok"
@@ -115,6 +115,6 @@ echo
 if [[ "$PREVIOUS" != "$NGROK" ]]; then
   echo "!! The address changed (was: $PREVIOUS). Tents printed before open the old address:"
 fi
-echo "Print the tents again: .pilot/mannat-tents.pdf (just rewritten), or on the POS"
+echo "Print the tents again: .pilot/parosaa-tents.pdf (just rewritten), or on the POS"
 echo "  Manage → QR codes → Download table tents (all), or Print on one table's row."
-echo "Leave this Mac awake. Stop: scripts/pilot/mannat-local.sh stop; kill \$(cat .pilot/ngrok.pid) 2>/dev/null"
+echo "Leave this Mac awake. Stop: scripts/pilot/parosaa-local.sh stop; kill \$(cat .pilot/ngrok.pid) 2>/dev/null"

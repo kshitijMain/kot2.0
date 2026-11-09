@@ -1,18 +1,18 @@
-# scripts/pilot: the QR pilot at Mannat on one computer
+# scripts/pilot: the QR pilot at Parosaa on one computer
 
-Runs everything for Mannat's QR ordering on one Mac (or Linux PC), so it can be tried on the
+Runs everything for Parosaa's QR ordering on one Mac (or Linux PC), so it can be tried on the
 restaurant's Wi-Fi before the cloud server exists (P9-06,
 [ADR-0024](../../docs/adr/0024-qr-pilot-self-hosted-relay.md)). For the real pilot the QR site and
 relay move to your server ([manual task 38](../../manual-tasks/38-qr-pilot-server.md)); the KOT
 server stays on the restaurant PC.
 
 ```sh
-scripts/pilot/mannat-local.sh setup     # once (about 3 minutes)
-scripts/pilot/mannat-local.sh start
-scripts/pilot/mannat-local.sh status
-scripts/pilot/mannat-local.sh stop
-scripts/pilot/mannat-local.sh reset     # delete everything set up here and start again
-scripts/pilot/mannat-local.sh fresh     # clear orders, KOTs, approvals; keep QR codes and devices
+scripts/pilot/parosaa-local.sh setup     # once (about 3 minutes)
+scripts/pilot/parosaa-local.sh start
+scripts/pilot/parosaa-local.sh status
+scripts/pilot/parosaa-local.sh stop
+scripts/pilot/parosaa-local.sh reset     # delete everything set up here and start again
+scripts/pilot/parosaa-local.sh fresh     # clear orders, KOTs, approvals; keep QR codes and devices
 ```
 
 Needs Docker (for PostgreSQL 16), Node 24 and pnpm (`corepack enable`). Optional:
@@ -24,19 +24,19 @@ Needs Docker (for PostgreSQL 16), Node 24 and pnpm (`corepack enable`). Optional
 
 ## What `setup` makes
 
-| What                          | Where                                                         |
-| ----------------------------- | ------------------------------------------------------------- |
-| Mannat: 5 tables, menu, staff | The KOT server's database (`rp_mannat`)                       |
-| Each table's QR address       | `.pilot/mannat.txt`                                           |
-| The 5 table tents (A5 PDF)    | `.pilot/mannat-tents.pdf`: print, fold, one per table         |
-| The relay and Mannat in it    | `rp_relay`, with the PC's credential stored in the KOT server |
+| What                           | Where                                                         |
+| ------------------------------ | ------------------------------------------------------------- |
+| Parosaa: 5 tables, menu, staff | The KOT server's database (`rp_parosaa`)                      |
+| Each table's QR address        | `.pilot/parosaa.txt`                                          |
+| The 5 table tents (A5 PDF)     | `.pilot/parosaa-tents.pdf`: print, fold, one per table        |
+| The relay and Parosaa in it    | `rp_relay`, with the PC's credential stored in the KOT server |
 
 Staff and their first PINs: Owner 1111, Manager 2222, Waiter 1 4444, Waiter 2 5555, Kitchen 6666.
 Change them in Manage → Staff before real service.
 
 ## Signing in: PIN only (no pairing codes)
 
-The pilot runs with `RP_AUTH_PIN_ONLY=1` (ADR-0025, set by `setup`; `mannat-ngrok.sh` adds it to a
+The pilot runs with `RP_AUTH_PIN_ONLY=1` (ADR-0025, set by `setup`; `parosaa-ngrok.sh` adds it to a
 pilot set up earlier). Any browser on this Mac or its Wi-Fi opens the console and goes straight to
 the staff tiles; pick a name and enter the PIN. No `/pair`, no codes from Manage → Devices.
 
@@ -66,16 +66,16 @@ Build it again whenever the Mac's Wi-Fi address changes. (If the address changed
 not rebuilt, the app says it cannot connect and takes the new address in **Restaurant PC
 address**.)
 
-It is "Parossa Captain (preview)" (`in.rp.waiter.preview`), signed with the debug key, so it is
+It is "Parosaa Captain (preview)" (`in.rp.waiter.preview`), signed with the debug key, so it is
 installed directly, not from the Play Store. Over USB:
-`~/Library/Android/sdk/platform-tools/adb install -r .pilot/apk/parossa-waiter-preview.apk`.
+`~/Library/Android/sdk/platform-tools/adb install -r .pilot/apk/parosaa-waiter-preview.apk`.
 Or on this Wi-Fi:
 
 ```bash
 python3 -m http.server 8099 --directory .pilot/apk    # stop with Ctrl-C when done
 ```
 
-then open `http://<this Mac's IP>:8099/parossa-waiter-preview.apk` on the phone. Open the app: it
+then open `http://<this Mac's IP>:8099/parosaa-waiter-preview.apk` on the phone. Open the app: it
 connects to the restaurant PC by itself. Sign in with a PIN. A manager signed in on it takes payment
 for a printed bill.
 
@@ -86,8 +86,8 @@ for a printed bill.
    certificate; continue. It connects by itself (PIN-only, no code); sign in as **Manager** (2222).
    Every other browser and phone connects the same way: nobody pairs a device.
 
-2. On a phone on the same Wi-Fi, scan table 2's tent (or open its address from `mannat.txt`).
-   Mannat's page asks for a mobile number, then shows the menu.
+2. On a phone on the same Wi-Fi, scan table 2's tent (or open its address from `parosaa.txt`).
+   Parosaa's page asks for a mobile number, then shows the menu.
 3. Add dishes and send. The order appears on the POS under **Order to approve** within a second.
    The manager's phone rings too if the waiter app is on it (step 5). Press **Approve**: table 2 opens, the
    kitchen gets the KOT (**Kitchen display**), and the diner's page says it is accepted.
@@ -136,7 +136,7 @@ within a minute.
 
 ## Over ngrok (phones on mobile data)
 
-`scripts/pilot/mannat-ngrok.sh` puts the relay and the QR site behind one public ngrok address
+`scripts/pilot/parosaa-ngrok.sh` puts the relay and the QR site behind one public ngrok address
 (`scripts/pilot/ngrok-gateway.mjs` sends `/functions`, `/realtime`, `/storage` and `/healthz` to
 the relay and everything else to the site), sets `RP_QR_SITE_URL` and `RP_RELAY_URL` to it and
 restarts the three services. Needs `ngrok` signed in, and `setup` done once.
@@ -147,7 +147,7 @@ A table's QR code is the same whatever the address (`/t/<code>`), but a printed 
 whole address it was printed with. A free ngrok address changes each time ngrok starts, and the
 Wi-Fi trial uses the Mac's address, so tents printed before a change open the old address.
 
-- `mannat-ngrok.sh` rewrites `.pilot/mannat-tents.pdf` for the address it starts, and says when
+- `parosaa-ngrok.sh` rewrites `.pilot/parosaa-tents.pdf` for the address it starts, and says when
   the address changed since the last tents.
 - On the POS, **Manage → QR codes** always shows the address the codes open now, every table's
   code and link, and prints the tents for that address: **Download table tents** for all, or
@@ -158,17 +158,17 @@ Wi-Fi trial uses the Mac's address, so tents printed before a change open the ol
 - Without ngrok: `node apps/server/dist/database/pilot-cli.js --tents-only --site <address>
 --tents tents.pdf` (with `.pilot/server.env` loaded) writes the same PDF.
 
-## Manual test: Mannat over ngrok
+## Manual test: Parosaa over ngrok
 
-1. `scripts/pilot/mannat-ngrok.sh`. Note the public address it prints, and that it says the
+1. `scripts/pilot/parosaa-ngrok.sh`. Note the public address it prints, and that it says the
    tents were rewritten for it.
 2. On the POS (`https://<Mac>:8080`, Manager 2222), open **Manage → QR codes**:
    - the notice says the codes open the ngrok address;
    - each of tables 1 to 5 shows its code and a link starting with that address.
 3. **Copy link** on table 2 and paste it in a note: it is the ngrok address `/t/…`.
 4. Choose **A5 tents**, then **Print** on table 2's row: the PDF has one page, for table 2.
-5. On a phone on **mobile data**, scan that page's code: Mannat opens at table 2. Order, and
+5. On a phone on **mobile data**, scan that page's code: Parosaa opens at table 2. Order, and
    approve it on the POS.
-6. Stop ngrok and run `mannat-ngrok.sh` again (a new free address). The script warns that the
+6. Stop ngrok and run `parosaa-ngrok.sh` again (a new free address). The script warns that the
    address changed. Manage → QR codes shows the new address. The old printout opens the old
    address; the new **Download table tents** opens the new one.

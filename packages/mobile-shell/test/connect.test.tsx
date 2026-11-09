@@ -28,7 +28,7 @@ jest.mock('expo-camera', () => {
 });
 
 function connectQr(payload: Record<string, unknown>): string {
-  return JSON.stringify({ v: 1, kind: 'connect', name: 'Mannat', ...payload });
+  return JSON.stringify({ v: 1, kind: 'connect', name: 'Parosaa', ...payload });
 }
 
 async function setup(options: {

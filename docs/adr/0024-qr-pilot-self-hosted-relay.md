@@ -2,14 +2,14 @@
 
 Status: Accepted
 Date: 2026-10-31
-Work package: P9-01 to P9-06 (Phase 9, the QR pilot at Mannat)
+Work package: P9-01 to P9-06 (Phase 9, the QR pilot at Parosaa)
 Requirements: QR-001 to QR-013, ORD-003, ORD-005, ORD-013, ORD-014, BILL-011, SEC-005, SEC-008,
 NFR-A01, WTR-004, BRD §9.3, §13
 
 ## Context
 
 The Business Owner approved (2026-10-31) the architecture for a QR ordering pilot at one
-restaurant they control, Mannat, with 5 tables:
+restaurant they control, Parosaa, with 5 tables:
 
 - Option B of the proposal: the QR site and the relay on one server of our own (an Oracle VM, say),
   not on Supabase. The restaurant PC stays the system of record and is never reachable from the
@@ -79,7 +79,7 @@ already ran a stand-in for Realtime that speaks the Phoenix protocol the PC's do
 
 - The published menu says whether the page asks for a phone number:
   `QrMenuDocument.phone: OFF | OPTIONAL | REQUIRED`, from the setting `qr.askPhone`, default
-  `OPTIONAL` (the Mannat pilot sets `REQUIRED`). The relay refuses an order without one when it is required.
+  `OPTIONAL` (the Parosaa pilot sets `REQUIRED`). The relay refuses an order without one when it is required.
 - The number is a 10-digit Indian mobile, stored as `+91XXXXXXXXXX`.
 - The page states the purpose ("printed on your bill") next to the field. Giving it there is the
   diner's consent for that purpose (BILL-011), recorded with the words shown.
@@ -126,7 +126,7 @@ already ran a stand-in for Realtime that speaks the Phoenix protocol the PC's do
 
 ### The pilot set-up (P9-06)
 
-- `pnpm --filter @rp/server pilot:mannat` sets up Mannat on a development database:
+- `pnpm --filter @rp/server pilot:parosaa` sets up Parosaa on a development database:
   - the restaurant, 5 tables T1 to T5 with QR codes, a North Indian menu;
   - staff: a manager and two waiters;
   - the UPI settings.

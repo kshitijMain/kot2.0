@@ -83,7 +83,7 @@ export default ({ config, projectRoot }: ConfigContext): ExpoConfig => {
   return {
     ...config,
     // The name people see (ADR-0022). The slug and the package stay: devices update in place.
-    name: `Parossa Captain${label}`,
+    name: `Parosaa Captain${label}`,
     slug: 'rp-waiter',
     // The release pipeline sets package.json; the version matrix reads it there too (UPD-006).
     version: packageVersion(projectRoot),
@@ -151,7 +151,7 @@ export default ({ config, projectRoot }: ConfigContext): ExpoConfig => {
       'expo-secure-store',
       // Enough memory for Gradle and Kotlin in a release build (P9-16).
       './plugins/with-gradle-memory.cjs',
-      // Parossa's splash on the off-white page colour (ADR-0022).
+      // Parosaa's splash on the off-white page colour (ADR-0022).
       [
         'expo-splash-screen',
         {

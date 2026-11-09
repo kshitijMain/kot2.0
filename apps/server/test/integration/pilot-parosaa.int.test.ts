@@ -14,7 +14,7 @@ import { afterAll, beforeAll, describe, expect, inject, it } from 'vitest';
 import { CredentialHasher } from '../../src/auth/credential-hasher.js';
 import { SECRET_STORE, type SecretStore } from '../../src/auth/secret-store.js';
 import { PrismaService } from '../../src/database/prisma.service.js';
-import { type PilotSummary, seedMannat } from '../../src/database/pilot-seed.js';
+import { type PilotSummary, seedParosaa } from '../../src/database/pilot-seed.js';
 import { saveRelayCredential } from '../../src/relay/relay-credential.js';
 import {
   DEFAULT_RELAY_ORDERS_OPTIONS,
@@ -32,7 +32,7 @@ import { createTestDatabase, type TestDatabase } from '../helpers/test-database.
 import { until } from '../helpers/wait.js';
 
 /**
- * The QR pilot at Mannat (P9-06, ADR-0024), end to end: Mannat set up with its 5 tables and QR
+ * The QR pilot at Parosaa (P9-06, ADR-0024), end to end: Parosaa set up with its 5 tables and QR
  * codes, the PC on its open line to the relay, and a diner at table 2 ordering with their mobile
  * number. The order reaches the PC by the line alone (polling is an hour away), the manager
  * accepts it, and the kitchen gets a KOT for table 2, with the diner told.
@@ -48,10 +48,10 @@ let sync: RelaySyncService;
 let qr: RelayOrdersService;
 let kit: AuthKit;
 let manager: LoginResponse;
-let mannat: PilotSummary;
+let parosaa: PilotSummary;
 
 const server = () => request(httpServer(app));
-const codeOf = (label: string) => mannat.tables.find((table) => table.label === label)?.code ?? '';
+const codeOf = (label: string) => parosaa.tables.find((table) => table.label === label)?.code ?? '';
 
 beforeAll(async () => {
   database = await createTestDatabase();
@@ -60,7 +60,7 @@ beforeAll(async () => {
     runId: inject('pgRunId'),
     realtimeJwtSecret: JWT_SECRET,
   });
-  const tenant = await relay.provision('Mannat');
+  const tenant = await relay.provision('Parosaa');
   const later = { firstDelayMs: 3_600_000, retryBaseMs: 50, retryMaxMs: 400 };
   app = await createTestApp({
     databaseUrl: database.url,
@@ -88,11 +88,11 @@ beforeAll(async () => {
   sync = app.get(RelaySyncService);
   qr = app.get(RelayOrdersService);
   const hasher = app.get(CredentialHasher);
-  mannat = await seedMannat(prisma, {
+  parosaa = await seedParosaa(prisma, {
     hashPin: (pin) => hasher.hash(pin),
-    upiId: 'mannat.demo@example',
+    upiId: 'parosaa.demo@example',
   });
-  kit = await createAuthKit(app, { restaurantId: mannat.restaurantId });
+  kit = await createAuthKit(app, { restaurantId: parosaa.restaurantId });
   manager = await signIn(app, kit, 'MANAGER');
   await saveRelayCredential(prisma, app.get<SecretStore>(SECRET_STORE), tenant.credential);
   expect((await sync.sync()).lastError).toBeNull();
@@ -105,18 +105,18 @@ afterAll(async () => {
   await database.drop();
 });
 
-describe('[P9] the QR pilot at Mannat (ADR-0024)', () => {
-  it('sets up Mannat: 5 tables with their own QR codes, the menu, the phone asked for', async () => {
-    expect(mannat.tables.map((table) => table.label)).toEqual(['1', '2', '3', '4', '5']);
-    expect(new Set(mannat.tables.map((table) => table.code)).size).toBe(5);
-    for (const table of mannat.tables) {
+describe('[P9] the QR pilot at Parosaa (ADR-0024)', () => {
+  it('sets up Parosaa: 5 tables with their own QR codes, the menu, the phone asked for', async () => {
+    expect(parosaa.tables.map((table) => table.label)).toEqual(['1', '2', '3', '4', '5']);
+    expect(new Set(parosaa.tables.map((table) => table.code)).size).toBe(5);
+    for (const table of parosaa.tables) {
       const response = await fetch(`${relay.baseUrl}/qr-menu`, {
         headers: { 'x-rp-table-token': table.code },
       });
       const menu = QrMenuResponse.parse(await response.json());
       // Every code opens the same site and menu, at its own table.
       expect(menu.table.label).toBe(table.label);
-      expect(menu.document?.restaurantName).toBe('Mannat');
+      expect(menu.document?.restaurantName).toBe('Parosaa');
       expect(menu.document?.phone).toBe('REQUIRED');
     }
   });
@@ -149,7 +149,7 @@ describe('[P9] the QR pilot at Mannat (ADR-0024)', () => {
           headers: {
             'content-type': 'application/json',
             'x-rp-table-token': codeOf('2'),
-            'x-rp-browser': 'browser-mannat-0000000002',
+            'x-rp-browser': 'browser-parosaa-0000000002',
           },
           body: JSON.stringify({
             idempotencyKey: randomUUID(),
@@ -268,7 +268,7 @@ describe('[P9] the QR pilot at Mannat (ADR-0024)', () => {
 
   it('[QR-011] puts table 2’s printed bill, with the phone on it and UPI, on the diner’s page', async () => {
     const session = await prisma.tableSession.findFirstOrThrow({
-      where: { table: { label: '2', restaurantId: mannat.restaurantId }, status: 'OPEN' },
+      where: { table: { label: '2', restaurantId: parosaa.restaurantId }, status: 'OPEN' },
     });
     const bill = await server()
       .post('/api/v1/bills')
@@ -286,7 +286,7 @@ describe('[P9] the QR pilot at Mannat (ADR-0024)', () => {
         await fetch(`${relay.baseUrl}/table-bill`, { headers: { 'x-rp-table-token': codeOf('2') } })
       ).json(),
     );
-    expect(seen.bill?.upi).toEqual({ upiId: 'mannat.demo@example', payeeName: 'Mannat' });
+    expect(seen.bill?.upi).toEqual({ upiId: 'parosaa.demo@example', payeeName: 'Parosaa' });
     expect(seen.bill?.invoices[0]?.grandTotal).toBe(
       (invoice.body as { grandTotal: number }).grandTotal,
     );
@@ -302,7 +302,7 @@ describe('[P9] the QR pilot at Mannat (ADR-0024)', () => {
 
     // The table pays and closes; the PC tells the relay when the sitting ended.
     const invoice = await prisma.invoice.findFirstOrThrow({
-      where: { tableSession: { table: { label: '2', restaurantId: mannat.restaurantId } } },
+      where: { tableSession: { table: { label: '2', restaurantId: parosaa.restaurantId } } },
     });
     const paid = await server()
       .post(`/api/v1/invoices/${invoice.id}/payments`)
@@ -316,7 +316,7 @@ describe('[P9] the QR pilot at Mannat (ADR-0024)', () => {
     const after = await mine();
     expect(after.orders).toEqual([]);
     const closed = await prisma.tableSession.findFirstOrThrow({
-      where: { table: { label: '2', restaurantId: mannat.restaurantId }, status: 'CLOSED' },
+      where: { table: { label: '2', restaurantId: parosaa.restaurantId }, status: 'CLOSED' },
     });
     expect(after.since).toBe(closed.closedAt?.toISOString());
   });

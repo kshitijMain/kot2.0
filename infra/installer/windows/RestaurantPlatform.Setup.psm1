@@ -801,18 +801,18 @@ function Get-RPFirewallRuleSpec {
     }
     $https = $common.Clone()
     $https.Name = 'RP-Server-HTTPS'
-    $https.DisplayName = 'Parossa server (HTTPS)'
+    $https.DisplayName = 'Parosaa server (HTTPS)'
     $https.Description = 'The POS, kitchen screens, waiter phones and table tablets reach the server here.'
     $https.LocalPort = [string]$Port
     $mqtt = $common.Clone()
     $mqtt.Name = 'RP-Server-MQTT'
-    $mqtt.DisplayName = 'Parossa pagers (MQTT over TLS)'
+    $mqtt.DisplayName = 'Parosaa pagers (MQTT over TLS)'
     $mqtt.Description = 'The waiters'' wrist pagers reach the server here.'
     $mqtt.LocalPort = [string]$MqttPort
     # P9-27: the PC answers phones looking for it on the Wi-Fi (mDNS), from the same networks.
     $mdns = $common.Clone()
     $mdns.Name = 'RP-Server-mDNS'
-    $mdns.DisplayName = 'Parossa server (found on the Wi-Fi)'
+    $mdns.DisplayName = 'Parosaa server (found on the Wi-Fi)'
     $mdns.Description = 'Waiter phones find the restaurant PC on the staff Wi-Fi by its mDNS answer.'
     $mdns.Protocol = 'UDP'
     $mdns.LocalPort = '5353'

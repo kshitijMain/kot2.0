@@ -9,13 +9,13 @@
  */
 
 export interface UpiPayment {
-  /** The restaurant's UPI ID, e.g. `mannat@okhdfcbank`. */
+  /** The restaurant's UPI ID, e.g. `parosaa@okhdfcbank`. */
   readonly upiId: string;
   /** The name the diner's app shows. */
   readonly payeeName: string;
   /** Integer paise (BRD §9.4). */
   readonly amountPaise: number;
-  /** Shown in the diner's app, e.g. "Mannat bill INV/26-27/000007". At most 80 characters. */
+  /** Shown in the diner's app, e.g. "Parosaa bill INV/26-27/000007". At most 80 characters. */
   readonly note: string;
   /** The restaurant's reference for the payment, e.g. the invoice number. At most 35 characters. */
   readonly reference?: string;

@@ -1,4 +1,4 @@
--- Clears Mannat pilot service data (orders, KOTs, approvals, alerts, open tables, relay queues).
+-- Clears Parosaa pilot service data (orders, KOTs, approvals, alerts, open tables, relay queues).
 -- Keeps restaurant, menu, staff, paired devices, and table QR tokens. Pilot-only (postgres superuser).
 -- Keeps the event outbox and inbox: emptying them restarts event numbering under the consumers'
 -- cursors, and every new event (alerts, the QR "accepted") would be skipped (P9-13).

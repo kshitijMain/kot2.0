@@ -9,7 +9,7 @@ how notifications look can only be seen on a real phone.
 1. Push the branch (or `main` after the merge) and open the **Android** workflow run on GitHub.
 2. Download the artifact **waiter-app-release-apk**. It is the release variant: the JavaScript is
    inside, so Metro is not needed, and there is no floating gear or development menu. It is the
-   development environment (`in.rp.waiter.dev`, "Parossa Captain (dev)"), so it still talks to a
+   development environment (`in.rp.waiter.dev`, "Parosaa Captain (dev)"), so it still talks to a
    development server over `http://`, and it installs over the debug build already on the phone.
    The tablet's is **table-tablet-release-apk**.
 3. `adb install -r app-release.apk`, or copy it to the phone and open it.

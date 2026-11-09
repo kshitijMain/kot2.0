@@ -167,7 +167,7 @@ Exit: §18 acceptance met, pilot KPIs measured, zero open Critical/High security
 - P8-05 Runbooks, manuals and training material
 - P8-06 Pilot readiness: strict traceability, UAT, go-live checklist
 
-### Phase 9: The QR pilot at Mannat (`phases/phase-9.md`)
+### Phase 9: The QR pilot at Parosaa (`phases/phase-9.md`)
 
 Exit: manual task 38 done; the phone test works on mobile data. Design: ADR-0024.
 
@@ -176,7 +176,7 @@ Exit: manual task 38 done; the phone test works on mobile data. Design: ADR-0024
 - P9-03 The bill on the diner's phone, UPI and "I have paid"
 - P9-04 The diner's page: phone first, My orders, accepted, order again, Bill tab, a nicer menu
 - P9-05 The manager's phone rings for QR orders
-- P9-06 The Mannat pilot set-up and a one-Mac trial
+- P9-06 The Parosaa pilot set-up and a one-Mac trial
 - P9-07 Reprinting the tents when the site's address changes (ngrok)
 - P9-08 A diner's orders follow their number; a compact page; pairing the first screen
 - P9-09 A menu made for the phone: sections that follow, a stepper on the card, an order tracker

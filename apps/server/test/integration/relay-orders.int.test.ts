@@ -599,8 +599,8 @@ describe('[QR-011] the printed bill on the diner’s phone, and UPI (P9-03, ADR-
     });
     await prisma.setting.createMany({
       data: [
-        { restaurantId: kit.restaurantId, key: 'payments.upiId', value: 'mannat@okhdfcbank' },
-        { restaurantId: kit.restaurantId, key: 'payments.upiPayeeName', value: 'Mannat' },
+        { restaurantId: kit.restaurantId, key: 'payments.upiId', value: 'parosaa@okhdfcbank' },
+        { restaurantId: kit.restaurantId, key: 'payments.upiPayeeName', value: 'Parosaa' },
       ],
     });
     app.get(SettingsService).invalidate();
@@ -636,7 +636,7 @@ describe('[QR-011] the printed bill on the diner’s phone, and UPI (P9-03, ADR-
     await sync.sync();
 
     const seen = await dinerBill('T4');
-    expect(seen.bill?.upi).toEqual({ upiId: 'mannat@okhdfcbank', payeeName: 'Mannat' });
+    expect(seen.bill?.upi).toEqual({ upiId: 'parosaa@okhdfcbank', payeeName: 'Parosaa' });
     expect(seen.bill?.invoices).toHaveLength(1);
     expect(seen.bill?.invoices[0]).toMatchObject({
       invoiceNumber: issued.invoiceNumber,

@@ -40,7 +40,7 @@ Passwords and secrets are made by the setup and kept in `/etc/rp-relay/*.env` (r
 systemctl status relay-host qr-menu caddy       # running?
 curl -s http://127.0.0.1:8787/healthz           # {"ok":true,"restaurantsOnLine":1}
 journalctl -u relay-host -f                     # the relay host's log
-cd /opt/rp && git pull && sudo bash infra/relay-host/setup-ubuntu.sh menu.mannat.in   # update
+cd /opt/rp && git pull && sudo bash infra/relay-host/setup-ubuntu.sh menu.parosaa.in   # update
 ```
 
 Load:

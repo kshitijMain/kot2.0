@@ -66,7 +66,7 @@ code from going live:
       gear): waiters-only sign-in, the back button, the screen's edges, notifications that come and
       go, Picked up meaning served, the new home screen:
       [`manual-tasks/37-waiter-phone-feedback.md`](manual-tasks/37-waiter-phone-feedback.md).
-- [ ] **QR pilot (Mannat): put the QR site and relay on your own server** (Oracle VM, Ubuntu
+- [ ] **QR pilot (Parosaa): put the QR site and relay on your own server** (Oracle VM, Ubuntu
       24.04, one script) and connect the restaurant PC; replaces tasks 20 and 21 for the pilot
       (ADR-0024): [`manual-tasks/38-qr-pilot-server.md`](manual-tasks/38-qr-pilot-server.md).
 - [ ] (Not for the pilot) Supabase organisation, Mumbai region (QR relay), then deploy the relay

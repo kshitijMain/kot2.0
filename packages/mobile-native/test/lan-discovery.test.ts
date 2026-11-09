@@ -15,7 +15,12 @@ describe('[AUTH-007] finding the restaurant PC by mDNS on Android (P9-27)', () =
       discover: (serviceType, timeoutMs) => {
         asked.push([serviceType, timeoutMs]);
         return Promise.resolve([
-          { name: 'Mannat', host: '192.168.1.20', port: 8443, txt: { V: '1', tls: '1', ca: 'AB' } },
+          {
+            name: 'Parosaa',
+            host: '192.168.1.20',
+            port: 8443,
+            txt: { V: '1', tls: '1', ca: 'AB' },
+          },
           { name: 'Odd', host: 42, port: 8443 },
           { host: '192.168.1.21', port: 8443, txt: { v: 1 } },
           null,
@@ -24,7 +29,7 @@ describe('[AUTH-007] finding the restaurant PC by mDNS on Android (P9-27)', () =
     };
     const discovery = new AndroidLanDiscovery(() => Promise.resolve(native));
     expect(await discovery.discover(4_000)).toEqual([
-      { name: 'Mannat', host: '192.168.1.20', port: 8443, txt: { v: '1', tls: '1', ca: 'AB' } },
+      { name: 'Parosaa', host: '192.168.1.20', port: 8443, txt: { v: '1', tls: '1', ca: 'AB' } },
       { name: '', host: '192.168.1.21', port: 8443, txt: {} },
     ]);
     expect(asked).toEqual([['_parossa-pos._tcp', 4_000]]);

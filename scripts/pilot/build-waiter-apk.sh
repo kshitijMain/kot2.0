@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds the pilot's waiter app (APK) with this Mac's restaurant PC built in, so phones connect by
 # themselves: no pairing, no code (ADR-0025, Business Owner 2026-11-01). Run it after the pilot
-# server is up (scripts/pilot/mannat-ngrok.sh or mannat-local.sh), and again whenever the Mac's
+# server is up (scripts/pilot/parosaa-ngrok.sh or parosaa-local.sh), and again whenever the Mac's
 # Wi-Fi address changes.
 #
 #   scripts/pilot/build-waiter-apk.sh            # the address in .pilot/server.env (RP_TLS_HOSTNAMES)
@@ -9,8 +9,8 @@
 #   scripts/pilot/build-waiter-apk.sh --discover     # no address: the app finds the PC on the
 #                                                    # Wi-Fi (mDNS) or by its Connect QR (P9-27)
 #
-# The APK lands in .pilot/apk/parossa-waiter-preview.apk. To put it on a phone over USB:
-#   ~/Library/Android/sdk/platform-tools/adb install -r .pilot/apk/parossa-waiter-preview.apk
+# The APK lands in .pilot/apk/parosaa-waiter-preview.apk. To put it on a phone over USB:
+#   ~/Library/Android/sdk/platform-tools/adb install -r .pilot/apk/parosaa-waiter-preview.apk
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -48,5 +48,5 @@ cd android
 APP_ENV=preview NODE_ENV=production RP_RESTAURANT_SERVERS="$SERVERS" RP_RESTAURANT_CA="$CA" \
   ./gradlew assembleRelease -q
 mkdir -p "$STATE/apk"
-cp app/build/outputs/apk/release/app-release.apk "$STATE/apk/parossa-waiter-preview.apk"
-echo "== Built: $STATE/apk/parossa-waiter-preview.apk"
+cp app/build/outputs/apk/release/app-release.apk "$STATE/apk/parosaa-waiter-preview.apk"
+echo "== Built: $STATE/apk/parosaa-waiter-preview.apk"

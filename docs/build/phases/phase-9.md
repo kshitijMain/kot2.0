@@ -1,12 +1,12 @@
-# Phase 9: The QR pilot at Mannat
+# Phase 9: The QR pilot at Parosaa
 
-Approved by the Business Owner on 2026-10-31: QR ordering for one restaurant they control (Mannat,
+Approved by the Business Owner on 2026-10-31: QR ordering for one restaurant they control (Parosaa,
 5 tables), with the QR site and relay on a server of their own and the restaurant PC on one open
 line to it. The diner's page replaces the waiter taking the order. Everything after the manager
 accepts is the existing flow (KOT, stations, KDS, billing). Design:
 [ADR-0024](../../adr/0024-qr-pilot-self-hosted-relay.md).
 
-Exit: manual task 38 done at Mannat. Every step of its phone test works on mobile data, and the
+Exit: manual task 38 done at Parosaa. Every step of its phone test works on mobile data, and the
 manager's phone rings within 2 s of a QR order.
 
 ---
@@ -40,7 +40,7 @@ Requirements: BILL-011, QR-005 (changed: the pilot asks for a phone), QR-006, OR
 
 Deliverables:
 
-- Setting `qr.askPhone` (OFF, OPTIONAL, REQUIRED; default OPTIONAL, REQUIRED at Mannat), published in the QR menu
+- Setting `qr.askPhone` (OFF, OPTIONAL, REQUIRED; default OPTIONAL, REQUIRED at Parosaa), published in the QR menu
   document.
 - `customerPhone` on the submission, stored by the relay (migration), refused when required and
   missing, and picked up by the PC onto the order.
@@ -105,11 +105,11 @@ Acceptance:
 - A manager is listed and signs in on a waiter phone; the Owner and kitchen still cannot.
 - The approval alert reaches the managers on duty.
 
-## P9-06 The Mannat pilot set-up and a one-Mac trial
+## P9-06 The Parosaa pilot set-up and a one-Mac trial
 
 Deliverables:
 
-- `pilot:mannat`: the restaurant, 5 tables T1–T5 with QR codes, a menu, staff and UPI settings,
+- `pilot:parosaa`: the restaurant, 5 tables T1–T5 with QR codes, a menu, staff and UPI settings,
   idempotent.
 - `scripts/pilot/`: start PostgreSQL, the relay host, the QR site and the server on one Mac for a
   test on the Wi-Fi, and print the tents.
@@ -132,7 +132,7 @@ Deliverables:
 - Each table's row shows its code, its link, Copy link and Print (its own tent, through the
   existing `tableIds`).
 - `pilot-cli --tents-only` rewrites the tents for the current address.
-- `mannat-ngrok.sh` rewrites `.pilot/mannat-tents.pdf`, warns when the address changed and says
+- `parosaa-ngrok.sh` rewrites `.pilot/parosaa-tents.pdf`, warns when the address changed and says
   where to reprint; its gateway moves into `scripts/pilot/`.
 - The README's reprint section and the manual test.
 
@@ -169,7 +169,7 @@ Deliverables:
 - Pairing:
   - the button explains a short code or a PIN instead of staying grey;
   - an IP-opened screen says how the first one is paired;
-  - `mannat-local.sh pair` prints the first screen's code from the PC.
+  - `parosaa-local.sh pair` prints the first screen's code from the PC.
 
 Acceptance:
 
@@ -204,7 +204,7 @@ Deliverables:
   when something is added.
 - My orders: a five-step tracker per order (Sent, Accepted, Cooking, Ready, Served). It takes the
   step every dish still coming has reached, and there is no tracker for an order not taken.
-- Mannat's 32 dishes get a one-line description. `pilot-cli --menu-text` fills them in on a
+- Parosaa's 32 dishes get a one-line description. `pilot-cli --menu-text` fills them in on a
   database set up before, and the manager then publishes the menu.
 
 Acceptance:
@@ -212,7 +212,7 @@ Acceptance:
 - The tracker's steps for every status and dish state (unit).
 - The card stepper adds and removes, the cart bar counts, and the last section is marked after
   tapping it; no serious accessibility violation (e2e).
-- Every Mannat dish has a description on the QR menu (integration).
+- Every Parosaa dish has a description on the QR menu (integration).
 - A 360 px phone still never scrolls sideways (e2e).
 
 ## P9-10 Approving a diner's order from its alert, and on the manager dashboard
@@ -282,7 +282,7 @@ Acceptance:
 
 Requirements: AUTH-007, AUTH-005, AUTH-001, AUTH-003, AUTH-010. ADR-0025.
 
-Asked by the Business Owner: in the Mannat pilot every browser landed on `/pair` and needed a code
+Asked by the Business Owner: in the Parosaa pilot every browser landed on `/pair` and needed a code
 from another screen, and the kitchen could not use its PIN. They want: open the console, tap a name,
 enter the PIN.
 
@@ -295,7 +295,7 @@ Deliverables:
   - kitchen staff sign in with their PIN.
 - Console: with no stored device and a PIN-only server, it pairs itself and goes to `/login`; the
   pairing screen remains only as a fallback.
-- Pilot: `mannat-local.sh` sets the flag; `mannat-ngrok.sh` adds it to older pilots; the Mannat seed
+- Pilot: `parosaa-local.sh` sets the flag; `parosaa-ngrok.sh` adds it to older pilots; the Parosaa seed
   sets `auth.kitchenIndividualLogins`.
 
 Acceptance:

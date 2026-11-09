@@ -12,7 +12,7 @@ Or paste everything below the line into Claude Code in the `new-kot` repo root.
 
 ## Prompt
 
-You are redesigning the **Parossa QR menu** (`apps/qr-menu`) like a **senior product designer** who implements in code—not a theme swap, a coherent diner experience for Indian restaurants (Mannat pilot: table QR, veg/Jain filters, photos, cart, orders, bill, call waiter).
+You are redesigning the **Parosaa QR menu** (`apps/qr-menu`) like a **senior product designer** who implements in code—not a theme swap, a coherent diner experience for Indian restaurants (Parosaa pilot: table QR, veg/Jain filters, photos, cart, orders, bill, call waiter).
 
 **Follow the project skill:** read and execute `.claude/skills/qr-menu-redesign/SKILL.md` end to end.
 

@@ -107,7 +107,7 @@ export const MDNS_PROTOCOL = 'tcp';
  * The Connect QR code (P9-27), shown in Manage → Devices: one scan tells a phone where the
  * restaurant PC is and which certificate is its own. No code to type and nothing secret in it:
  * the staff PIN is what lets anyone in (ADR-0025).
- * `{"v":1,"kind":"connect","urls":["https://192.168.1.20:8080"],"ca":"3A:7F:…","name":"Mannat"}`
+ * `{"v":1,"kind":"connect","urls":["https://192.168.1.20:8080"],"ca":"3A:7F:…","name":"Parosaa"}`
  */
 export const ConnectQrPayload = z.object({
   v: z.literal(1),

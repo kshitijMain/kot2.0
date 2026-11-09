@@ -65,7 +65,7 @@ export function ModeLayout() {
               title={`${t('modes.device')}: ${state.device?.name ?? ''}`}
             >
               <span className="console-header__name">{person.displayName}</span>
-              {/* The role, unless the name says it already ("Kitchen", "Manager (Mannat)"). */}
+              {/* The role, unless the name says it already ("Kitchen", "Manager (Parosaa)"). */}
               {person.displayName
                 .toLowerCase()
                 .includes(t(`roles.${person.role}`).toLowerCase()) ? null : (

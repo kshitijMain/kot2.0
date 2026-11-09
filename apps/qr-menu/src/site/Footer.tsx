@@ -3,7 +3,7 @@ import { t } from './server-i18n';
 
 /**
  * QR-013: the privacy notice and terms, and what the page does not do. The page shows the
- * restaurant's brand; Parossa only as the quiet last line (NFR-U02, ADR-0022).
+ * restaurant's brand; Parosaa only as the quiet last line (NFR-U02, ADR-0022).
  */
 export function Footer() {
   return (

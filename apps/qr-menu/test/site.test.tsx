@@ -342,7 +342,7 @@ describe('[BILL-011] the welcome step and the mobile number (P9-02, P9-04)', () 
     render(
       <I18nProvider>
         <PhoneGate
-          restaurant="Mannat"
+          restaurant="Parosaa"
           table="T3"
           ask="REQUIRED"
           initial=""
@@ -351,7 +351,7 @@ describe('[BILL-011] the welcome step and the mobile number (P9-02, P9-04)', () 
         />
       </I18nProvider>,
     );
-    expect(screen.getByRole('heading', { name: 'Mannat' })).toBeVisible();
+    expect(screen.getByRole('heading', { name: 'Parosaa' })).toBeVisible();
     expect(screen.getByText('You’re at table T3')).toBeVisible();
     expect(screen.queryByRole('button', { name: en.qrSite.welcome.skip })).toBeNull();
     const field = screen.getByLabelText(new RegExp(`^${en.qrSite.cart.phone}`));
@@ -369,7 +369,7 @@ describe('[BILL-011] the welcome step and the mobile number (P9-02, P9-04)', () 
     render(
       <I18nProvider>
         <PhoneGate
-          restaurant="Mannat"
+          restaurant="Parosaa"
           table="T3"
           ask="OPTIONAL"
           initial=""
@@ -385,7 +385,7 @@ describe('[BILL-011] the welcome step and the mobile number (P9-02, P9-04)', () 
 
 describe('[QR-011] the bill on the diner’s phone and UPI (P9-03, P9-04)', () => {
   const document = {
-    restaurantName: 'Mannat',
+    restaurantName: 'Parosaa',
     timeZone: 'Asia/Kolkata',
     instructionMaxLength: 140,
     priceMode: 'TAX_EXCLUSIVE',
@@ -437,7 +437,7 @@ describe('[QR-011] the bill on the diner’s phone and UPI (P9-03, P9-04)', () =
         grandTotal: 61_200,
       },
     ],
-    upi: { upiId: 'mannat@okhdfcbank', payeeName: 'Mannat' },
+    upi: { upiId: 'parosaa@okhdfcbank', payeeName: 'Parosaa' },
   };
   const TOKEN = 't'.repeat(22);
   const answer = (bill: QrTableBill | null) =>
@@ -540,10 +540,10 @@ describe('[QR-011] the bill on the diner’s phone and UPI (P9-03, P9-04)', () =
     );
     const pay = await screen.findByRole('link', { name: /Pay ₹612\.00 with UPI/ });
     expect(pay.getAttribute('href')).toBe(
-      'upi://pay?pa=mannat%40okhdfcbank&pn=Mannat&am=612.00&cu=INR&tn=Mannat%20bill%20INV%2F26-27%2F000007',
+      'upi://pay?pa=parosaa%40okhdfcbank&pn=Parosaa&am=612.00&cu=INR&tn=Parosaa%20bill%20INV%2F26-27%2F000007',
     );
     expect(screen.getByRole('link', { name: 'PhonePe' }).getAttribute('href')).toMatch(
-      /^phonepe:\/\/pay\?pa=mannat%40okhdfcbank&pn=Mannat&am=612\.00/,
+      /^phonepe:\/\/pay\?pa=parosaa%40okhdfcbank&pn=Parosaa&am=612\.00/,
     );
     expect(screen.getByRole('img', { name: /QR code to pay ₹612\.00/ })).toBeVisible();
     expect(screen.getByText('CGST 2.5%')).toBeVisible();
@@ -573,7 +573,7 @@ describe('[QR-011] the bill on the diner’s phone and UPI (P9-03, P9-04)', () =
     await vi.advanceTimersByTimeAsync(5_500);
     await waitFor(() => {
       expect(
-        screen.getByText('Your bill is settled. Thank you for dining at Mannat.'),
+        screen.getByText('Your bill is settled. Thank you for dining at Parosaa.'),
       ).toBeVisible();
     });
     vi.useRealTimers();

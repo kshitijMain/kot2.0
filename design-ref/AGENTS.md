@@ -5,7 +5,7 @@ food-ordering UIs for **visual and interaction reference** when improving `apps/
 
 ## Rules when using these repos
 
-1. **Parossa wins:** Implement against `docs/DESIGN_SYSTEM.md`, `packages/design-tokens`, and
+1. **Parosaa wins:** Implement against `docs/DESIGN_SYSTEM.md`, `packages/design-tokens`, and
    `@rp/ui-web`. Do not copy hex colours, fonts, or third-party component libraries into product
    code unless an ADR says otherwise.
 2. **QR menu constraints:** Respect BRD/QR requirements (e.g. QR-013: no arbitrary external web
