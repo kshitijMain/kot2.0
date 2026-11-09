@@ -1,120 +1,107 @@
 #!/usr/bin/env bash
-# Mannat pilot over one ngrok URL (mobile data / off-LAN). Run in a terminal and leave it open.
-# Needs: ngrok logged in, pilot already set up (mannat-local.sh setup).
+# The Mannat pilot over one ngrok URL, for diners on mobile data. The relay and the QR site go behind
+# one public address; the KOT server stays on this computer.
 #
-# A free ngrok address changes each time ngrok starts. The table codes stay the same, but printed
-# tents open the address they were printed with: this script rewrites .pilot/mannat-tents.pdf for
-# the address it starts, and Manage → QR codes on the POS prints the same (P9-07).
+#   scripts/pilot/mannat-ngrok.sh install        # once: downloads ngrok into ~/.local/bin
+#   scripts/pilot/mannat-ngrok.sh token <token>  # once: your ngrok account's token
+#   scripts/pilot/mannat-ngrok.sh                # start, or the same as `start`
+#   scripts/pilot/mannat-ngrok.sh stop           # ends ngrok, puts the Wi-Fi addresses back
+#
+# The address and the printed table tents follow what ngrok gives: `mannat-local.sh` asks ngrok for
+# its address at every start, and rewrites .pilot/mannat-tents.pdf when it changed (P9-07).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
-STATE="$ROOT/.pilot"
+STATE="${PILOT_STATE_DIR:-$ROOT/.pilot}"
+LOCAL="$ROOT/scripts/pilot/mannat-local.sh"
 GATE=9080
 NGROK_API=http://127.0.0.1:4040
+export PATH="$HOME/.local/bin:$PATH"
 
-[[ -f "$STATE/mannat.txt" ]] || { echo "Run scripts/pilot/mannat-local.sh setup first." >&2; exit 1; }
+public_url() {
+  curl -s -m 2 "$NGROK_API/api/tunnels" 2>/dev/null | node -e '
+    let text = ""; process.stdin.on("data", (chunk) => (text += chunk));
+    process.stdin.on("end", () => {
+      try {
+        const tunnel = JSON.parse(text).tunnels.find((t) => t.config.addr.endsWith(":'"$GATE"'"));
+        if (tunnel) process.stdout.write(tunnel.public_url);
+      } catch {}
+    });' 2>/dev/null || true
+}
 
-echo "== Local stack (relay, site, server)"
-"$ROOT/scripts/pilot/mannat-local.sh" start
+install_ngrok() {
+  if [[ "$(uname -s)" == Darwin ]]; then
+    echo "On a Mac: brew install ngrok"
+    exit 1
+  fi
+  local arch=amd64
+  [[ "$(uname -m)" == x86_64 ]] || arch=arm64
+  mkdir -p "$HOME/.local/bin"
+  echo "Downloading ngrok (about 10 MB)..."
+  curl -fsSL "https://bin.equinox.io/c/bNyj1mQVY4c/ngrok-v3-stable-linux-$arch.tgz" \
+    | tar -xz -C "$HOME/.local/bin" ngrok
+  echo "Installed: $(ngrok version)"
+  echo "Next: scripts/pilot/mannat-ngrok.sh token <your token>"
+}
 
-echo "== Gateway (relay + QR site on :$GATE)"
-if [[ -f "$STATE/ngrok-gateway.pid" ]] && kill -0 "$(cat "$STATE/ngrok-gateway.pid")" 2>/dev/null; then
-  echo "gateway already running"
-else
-  nohup node "$ROOT/scripts/pilot/ngrok-gateway.mjs" >> "$STATE/logs/ngrok-gateway.log" 2>&1 &
-  echo $! > "$STATE/ngrok-gateway.pid"
-  sleep 1
-fi
+save_token() {
+  [[ -n "${1:-}" ]] || {
+    echo "Use: scripts/pilot/mannat-ngrok.sh token <token>" >&2
+    echo "Your token is at https://dashboard.ngrok.com/get-started/your-authtoken" >&2
+    exit 1
+  }
+  command -v ngrok >/dev/null || { echo "Install ngrok first: scripts/pilot/mannat-ngrok.sh install" >&2; exit 1; }
+  ngrok config add-authtoken "$1"
+}
 
-echo "== ngrok (public HTTPS)"
-if pgrep -f "ngrok http $GATE" >/dev/null; then
-  echo "ngrok already running"
-else
-  nohup ngrok http "$GATE" >> "$STATE/logs/ngrok-public.log" 2>&1 &
-  echo $! > "$STATE/ngrok.pid"
-  sleep 4
-fi
+start() {
+  [[ -f "$STATE/mannat.txt" ]] || { echo "Run scripts/pilot/mannat-local.sh setup first." >&2; exit 1; }
+  command -v ngrok >/dev/null || { echo "Install ngrok first: scripts/pilot/mannat-ngrok.sh install" >&2; exit 1; }
 
-NGROK="$(curl -s "$NGROK_API/api/tunnels" | python3 -c "import sys,json; t=json.load(sys.stdin).get('tunnels',[]); print(t[0]['public_url'] if t else '')")"
-[[ -n "$NGROK" ]] || { echo "ngrok did not start; check .pilot/logs/ngrok-public.log" >&2; exit 1; }
-echo "$NGROK" > "$STATE/ngrok-url.txt"
+  echo "== Gateway (relay and QR site together on port $GATE)"
+  if [[ -f "$STATE/ngrok-gateway.pid" ]] && kill -0 "$(cat "$STATE/ngrok-gateway.pid")" 2>/dev/null; then
+    echo "gateway already running"
+  else
+    nohup node "$ROOT/scripts/pilot/ngrok-gateway.mjs" >> "$STATE/logs/ngrok-gateway.log" 2>&1 &
+    echo $! > "$STATE/ngrok-gateway.pid"
+    sleep 1
+  fi
 
-perl -pi -e "s|^RELAY_PUBLIC_URL=.*|RELAY_PUBLIC_URL=$NGROK|" "$STATE/relay-host.env"
-# The ngrok address and the Wi-Fi one: a phone on the Wi-Fi link orders too (P9-16).
-WIFI_SITE="http://$(ipconfig getifaddr en0 2>/dev/null || echo 127.0.0.1):3100"
-perl -pi -e "s|^RELAY_ALLOWED_ORIGINS=.*|RELAY_ALLOWED_ORIGINS=$NGROK,$WIFI_SITE|" "$STATE/relay-host.env"
-perl -pi -e "s|^RP_RELAY_URL=.*|RP_RELAY_URL=$NGROK/functions/v1|" "$STATE/server.env"
-perl -pi -e "s|^RP_QR_SITE_URL=.*|RP_QR_SITE_URL=$NGROK|" "$STATE/server.env"
-# PIN-only sign-in (ADR-0025) for a pilot set up before it existed.
-grep -q '^RP_AUTH_PIN_ONLY=' "$STATE/server.env" || echo 'RP_AUTH_PIN_ONLY=1' >> "$STATE/server.env"
+  echo "== ngrok (the public address)"
+  if pgrep -f "ngrok http $GATE" >/dev/null; then
+    echo "ngrok already running"
+  else
+    nohup ngrok http "$GATE" --log=stdout > "$STATE/logs/ngrok-public.log" 2>&1 &
+    echo $! > "$STATE/ngrok.pid"
+  fi
 
-# The pilot's own build of the QR site (P9-23), made when missing.
-[[ -d "$ROOT/apps/qr-menu/.next-pilot" ]] || (cd "$ROOT/apps/qr-menu" && \
-  NEXT_DIST_DIR=.next-pilot NEXT_TELEMETRY_DISABLED=1 ./node_modules/.bin/next build >/dev/null)
-
-echo "== Restart relay, site, server with ngrok URLs"
-for name in relay-host qr-site server; do
-  [[ -f "$STATE/$name.pid" ]] && kill "$(cat "$STATE/$name.pid")" 2>/dev/null || true
-done
-sleep 2
-docker start rp-pilot-pg >/dev/null 2>&1 || true
-
-set -a
-source "$STATE/relay-host.env"
-set +a
-nohup env RELAY_DB_URL="$RELAY_DB_URL" RELAY_JOBS_DB_URL="$RELAY_JOBS_DB_URL" \
-  RELAY_PUBLIC_URL="$RELAY_PUBLIC_URL" RELAY_ALLOWED_ORIGINS="$RELAY_ALLOWED_ORIGINS" \
-  RELAY_JWT_SECRET="$RELAY_JWT_SECRET" RELAY_REALTIME_API_KEY="$RELAY_REALTIME_API_KEY" \
-  RELAY_PHOTOS_DIR="$RELAY_PHOTOS_DIR" RELAY_HOST="$RELAY_HOST" RELAY_PORT="$RELAY_PORT" \
-  node "$ROOT/infra/supabase/dist/relay-host.mjs" >> "$STATE/logs/relay-host.log" 2>&1 &
-echo $! > "$STATE/relay-host.pid"
-
-nohup env RELAY_URL="$NGROK/functions/v1" NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production \
-  NEXT_DIST_DIR=.next-pilot "$ROOT/apps/qr-menu/node_modules/.bin/next" start "$ROOT/apps/qr-menu" -p 3100 -H 0.0.0.0 \
-  >> "$STATE/logs/qr-site.log" 2>&1 &
-echo $! > "$STATE/qr-site.pid"
-
-set -a
-source "$STATE/server.env"
-set +a
-nohup env NODE_ENV="$NODE_ENV" HOST="$HOST" PORT="$PORT" DATABASE_URL="$DATABASE_URL" \
-  RP_DATA_DIR="$RP_DATA_DIR" RP_CONSOLE_DIR="$RP_CONSOLE_DIR" RP_RELAY_URL="$RP_RELAY_URL" \
-  RP_QR_SITE_URL="$RP_QR_SITE_URL" RP_TLS="$RP_TLS" RP_TLS_HOSTNAMES="$RP_TLS_HOSTNAMES" \
-  RP_MQTT="$RP_MQTT" RP_AUTH_PIN_ONLY="${RP_AUTH_PIN_ONLY:-off}" LOG_LEVEL="$LOG_LEVEL" \
-  RP_PG_BIN="${RP_PG_BIN:-$ROOT/scripts/pilot/pg-bin}" \
-  RP_PRINT_TO_FOLDER="${RP_PRINT_TO_FOLDER:-}" \
-  node "$ROOT/apps/server/dist/main.js" \
-  >> "$STATE/logs/server.log" 2>&1 &
-echo $! > "$STATE/server.pid"
-
-sleep 8
-
-echo "== Table tents for $NGROK"
-PREVIOUS="$(cat "$STATE/tents-url.txt" 2>/dev/null || echo "the Wi-Fi address")"
-(set -a; source "$STATE/server.env"; set +a
-  node "$ROOT/apps/server/dist/database/pilot-cli.js" --tents-only --site "$NGROK" \
-    --tents "$STATE/mannat-tents.pdf" 2>/dev/null | head -n 1)
-echo "$NGROK" > "$STATE/tents-url.txt"
-
-echo
-echo "Public base URL: $NGROK"
-echo "Relay health:    $(curl -s http://127.0.0.1:8787/healthz || echo down)"
-echo
-echo "Phone — open one table (use mobile data to test ngrok):"
-# Every table now, from the database (P9-26): tables added after setup are listed too.
-docker exec -e PGPASSWORD="$(cat "$STATE/pg-password")" "${PG_CONTAINER:-rp-pilot-pg}" \
-  psql -U postgres -d rp_mannat -tA -F ' ' -c \
-  "SELECT label, qr_token FROM tables WHERE archived_at IS NULL AND qr_token IS NOT NULL ORDER BY display_order, label" |
-  while read -r label tok; do
-    [[ -n "$tok" ]] && echo "  Table $label  $NGROK/t/$tok"
+  local url="" tries=0
+  while [[ -z "$url" && $tries -lt 20 ]]; do
+    sleep 1
+    tries=$((tries + 1))
+    url="$(public_url)"
   done
-echo
-echo "POS, dashboard, kitchen: https://$(ipconfig getifaddr en0 2>/dev/null || echo 127.0.0.1):8080  (tap a name, then the PIN)"
-echo "  PINs: Owner 1111 · Manager 2222 · Waiter 1 4444 · Waiter 2 5555 · Kitchen 6666 (pilot only)"
-echo
-if [[ "$PREVIOUS" != "$NGROK" ]]; then
-  echo "!! The address changed (was: $PREVIOUS). Tents printed before open the old address:"
-fi
-echo "Print the tents again: .pilot/mannat-tents.pdf (just rewritten), or on the POS"
-echo "  Manage → QR codes → Download table tents (all), or Print on one table's row."
-echo "Leave this Mac awake. Stop: scripts/pilot/mannat-local.sh stop; kill \$(cat .pilot/ngrok.pid) 2>/dev/null"
+  if [[ -z "$url" ]]; then
+    echo "ngrok did not start. What it said:" >&2
+    tail -n 5 "$STATE/logs/ngrok-public.log" | cut -c1-300 >&2
+    echo "If it mentions an authtoken: scripts/pilot/mannat-ngrok.sh token <your token>" >&2
+    exit 1
+  fi
+  echo "$url" > "$STATE/ngrok-url.txt"
+
+  echo "== Restart the relay, the site and the server with this address"
+  "$LOCAL" restart
+
+  echo
+  echo "Public address: $url"
+  echo "On a phone, open a table (use mobile data):"
+  "$LOCAL" links
+}
+
+case "${1:-start}" in
+  start) start ;;
+  stop) exec "$LOCAL" wifi ;;
+  install) install_ngrok ;;
+  token) save_token "${2:-}" ;;
+  *) sed -n '2,10p' "$0" | sed 's/^# \{0,1\}//'; exit 1 ;;
+esac
