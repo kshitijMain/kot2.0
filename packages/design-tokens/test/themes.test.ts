@@ -81,6 +81,18 @@ describe.each(THEME_NAMES)('[NFR-U05] WCAG 2.2 AA contrast in the %s theme', (na
     }
   });
 
+  it('uses a readable link colour and deep ink, never pure black', () => {
+    for (const surface of SURFACES) {
+      expect(contrastRatio(theme.link, theme[surface])).toBeGreaterThanOrEqual(AA_TEXT);
+    }
+    for (const value of Object.values(theme)) expect(value).not.toMatch(/^#000(000)?$/i);
+  });
+
+  it('never puts white on a saffron or gold action', () => {
+    expect(theme.onPrimary).toBe('#20223d');
+    expect(theme.onHighlight).toBe('#20223d');
+  });
+
   it('keeps the status tones apart from the brand colours', () => {
     for (const tone of ['info', 'success', 'warning', 'danger'] as const) {
       expect(theme[tone]).not.toBe(theme.primary);

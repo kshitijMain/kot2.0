@@ -35,7 +35,7 @@
 /* Selected is shown by weight and the underline, not colour alone. */
 .rp-tabs__tab[aria-selected='true'] {
   border-bottom-color: var(--rp-color-primary);
-  color: var(--rp-color-primary);
+  color: var(--rp-color-highlight-text);
   font-weight: var(--rp-font-weight-semibold);
 }
 

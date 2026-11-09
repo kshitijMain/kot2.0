@@ -75,7 +75,7 @@
   border: 0;
   border-radius: var(--rp-radius-md);
   background: transparent;
-  color: var(--rp-color-primary);
+  color: var(--rp-color-link);
   font: inherit;
   font-weight: var(--rp-font-weight-semibold);
   cursor: pointer;

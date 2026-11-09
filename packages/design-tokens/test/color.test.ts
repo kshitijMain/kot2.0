@@ -3,6 +3,7 @@ import {
   contrastRatio,
   isHexColor,
   parseHexColor,
+  brandTextColor,
   readableTextColor,
   relativeLuminance,
 } from '../src/index.js';
@@ -35,5 +36,18 @@ describe('[NFR-U05] colour maths', () => {
     expect(readableTextColor('#000000')).toBe('#ffffff');
     expect(readableTextColor('#facc15')).toBe('#000000');
     expect(readableTextColor('#1d4ed8')).toBe('#ffffff');
+  });
+
+  it('picks deep ink or white for brand surfaces, never pure black', () => {
+    expect(brandTextColor('#ffffff')).toBe('#20223d');
+    expect(brandTextColor('#000000')).toBe('#ffffff');
+    expect(brandTextColor('#facc15')).toBe('#20223d');
+    expect(brandTextColor('#1d4ed8')).toBe('#ffffff');
+  });
+
+  it('stays readable on a mid-tone accent where ink alone falls short', () => {
+    const text = brandTextColor('#2e8b57');
+    expect(text).not.toBe('#000000');
+    expect(contrastRatio(text, '#2e8b57')).toBeGreaterThanOrEqual(4.5);
   });
 });

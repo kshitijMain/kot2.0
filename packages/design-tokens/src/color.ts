@@ -54,9 +54,20 @@ export function contrastRatio(foreground: string, background: string): number {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
-/** Black or white, whichever reads better on `background`. */
+/** Black or white, whichever reads better on `background`. Only the table tablet still uses it. */
 export function readableTextColor(background: string): '#000000' | '#ffffff' {
   return contrastRatio('#000000', background) >= contrastRatio('#ffffff', background)
     ? '#000000'
     : '#ffffff';
+}
+
+const INK = '#20223d';
+/** Used only where a restaurant's mid-tone accent is too light for white and too dark for ink. */
+const DEEP_INK = '#05060c';
+const AA_TEXT = 4.5;
+
+/** Deep ink or white, whichever reads better on `background`, never pure black (ADR-0028). */
+export function brandTextColor(background: string): string {
+  const dark = contrastRatio(INK, background) >= AA_TEXT ? INK : DEEP_INK;
+  return contrastRatio(dark, background) >= contrastRatio('#ffffff', background) ? dark : '#ffffff';
 }

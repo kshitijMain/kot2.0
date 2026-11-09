@@ -34,7 +34,7 @@
 }
 
 .rp-state[data-kind='loading'] .rp-state__icon {
-  color: var(--rp-color-primary);
+  color: var(--rp-color-highlight-text);
 }
 
 .rp-state__title {

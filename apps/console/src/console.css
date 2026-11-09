@@ -1059,7 +1059,7 @@ body {
   display: inline-flex;
   align-items: center;
   min-height: var(--rp-touch-min);
-  color: var(--rp-color-primary);
+  color: var(--rp-color-link);
   font-weight: var(--rp-font-weight-medium);
 }
 
@@ -2038,7 +2038,7 @@ body {
 
 .audit-changes > summary {
   cursor: pointer;
-  color: var(--rp-color-primary);
+  color: var(--rp-color-link);
 }
 
 .audit-changes__label {

@@ -178,7 +178,7 @@
 }
 
 .cp-link {
-  color: var(--rp-color-primary);
+  color: var(--rp-color-link);
   text-decoration: underline;
   text-underline-offset: 2px;
 }

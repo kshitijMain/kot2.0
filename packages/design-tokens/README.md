@@ -10,7 +10,7 @@ TypeScript (web and React Native):
 
 ```ts
 import { themes, spacing, touchTarget, fontSize } from '@rp/design-tokens';
-themes['kds-dark'].background; // '#000000'
+themes['kds-dark'].background; // '#20223d'
 ```
 
 CSS (web): import once, then choose a theme with `data-theme` on any element (themes nest). Without

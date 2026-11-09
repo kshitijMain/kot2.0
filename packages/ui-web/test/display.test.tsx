@@ -243,7 +243,7 @@ describe('[NFR-U02] ThemeRoot', () => {
     const root = screen.getByTestId('root');
     expect(root).toHaveAttribute('data-theme', 'dark');
     expect(root.style.getPropertyValue('--rp-color-accent')).toBe('#fde047');
-    expect(root.style.getPropertyValue('--rp-color-on-accent')).toBe('#000000');
+    expect(root.style.getPropertyValue('--rp-color-on-accent')).toBe('#20223d');
     expect(root.style.padding).toBe('4px');
   });
 

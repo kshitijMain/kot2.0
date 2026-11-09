@@ -95,15 +95,15 @@ export const lineHeight = {
 export const elevation = {
   0: { shadow: 'none', androidElevation: 0 },
   1: {
-    shadow: '0 1px 2px rgb(28 25 23 / 0.05), 0 2px 8px rgb(28 25 23 / 0.06)',
+    shadow: '0 1px 2px rgb(32 34 61 / 0.05), 0 2px 8px rgb(32 34 61 / 0.06)',
     androidElevation: 1,
   },
   2: {
-    shadow: '0 2px 6px rgb(28 25 23 / 0.06), 0 8px 24px rgb(28 25 23 / 0.09)',
+    shadow: '0 2px 6px rgb(32 34 61 / 0.06), 0 8px 24px rgb(32 34 61 / 0.09)',
     androidElevation: 4,
   },
   3: {
-    shadow: '0 4px 12px rgb(28 25 23 / 0.08), 0 16px 40px rgb(28 25 23 / 0.16)',
+    shadow: '0 4px 12px rgb(32 34 61 / 0.08), 0 16px 40px rgb(32 34 61 / 0.16)',
     androidElevation: 12,
   },
 } as const;

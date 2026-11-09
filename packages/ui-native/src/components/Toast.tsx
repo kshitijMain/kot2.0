@@ -167,7 +167,7 @@ function ToastItem({
           }}
           style={styles.button}
         >
-          <Text style={[styles.action, { color: colors.primary }]}>{toast.action.label}</Text>
+          <Text style={[styles.action, { color: colors.link }]}>{toast.action.label}</Text>
         </Pressable>
       )}
       <Pressable

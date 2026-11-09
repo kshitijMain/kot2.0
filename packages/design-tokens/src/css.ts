@@ -5,7 +5,7 @@
  * Variable names: `--rp-<group>-<key>` in kebab-case, e.g. `--rp-color-surface-raised`,
  * `--rp-space-4`, `--rp-font-size-2xl`.
  */
-import { isHexColor, readableTextColor } from './color.js';
+import { brandTextColor, isHexColor } from './color.js';
 import {
   breakpoint,
   elevation,
@@ -121,7 +121,7 @@ export function accentVariables(accent: string): CssVariables {
   }
   return {
     [cssVarName('color', 'accent')]: accent,
-    [cssVarName('color', 'onAccent')]: readableTextColor(accent),
+    [cssVarName('color', 'onAccent')]: brandTextColor(accent),
   };
 }
 

@@ -79,7 +79,7 @@ export function Button({
     ghost: {
       background: 'transparent',
       pressed: colors.surfaceSunken,
-      text: colors.primary,
+      text: colors.link,
       border: 'transparent',
     },
   }[variant];

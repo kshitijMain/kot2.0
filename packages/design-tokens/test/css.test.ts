@@ -68,7 +68,7 @@ describe('[NFR-U02] restaurant accent colour', () => {
   it('sets the accent and a readable text colour on it', () => {
     expect(accentVariables('#fde047')).toEqual({
       '--rp-color-accent': '#fde047',
-      '--rp-color-on-accent': '#000000',
+      '--rp-color-on-accent': '#20223d',
     });
     expect(accentVariables('#7c2d12')['--rp-color-on-accent']).toBe('#ffffff');
   });
