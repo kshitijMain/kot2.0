@@ -13,7 +13,8 @@ To run the QR site on your own cloud server instead of ngrok, see
 
 ## 1. How it fits together
 
-Parosaa is a pretend restaurant used only for testing. It has 5 tables, a menu and staff.
+Parosaa is the name of the product and also of the pretend restaurant used for testing. The test
+restaurant has 5 tables, a menu and staff.
 
 ![How the pieces connect](pilot-diagram.svg)
 
@@ -87,8 +88,8 @@ It is never uploaded to GitHub.
 | `pg-password`: the database password                                           | **Yes** |
 | `relay-credential.txt`: the laptop's key to the relay                          | **Yes** |
 | `server-data/`: the certificate and the keys that protect PINs                 | **Yes** |
-| `parosaa.txt`: the staff PINs and each table's link                             | Private |
-| `parosaa-tents.pdf`: the printable table cards with QR codes                    | No      |
+| `parosaa.txt`: the staff PINs and each table's link                            | Private |
+| `parosaa-tents.pdf`: the printable table cards with QR codes                   | No      |
 | `pilot-ip`, `printer-mode`, `tents-url.txt`: what the scripts remember         | No      |
 | `logs/`, `printouts/`, `photos/`, `apk/`                                       | No      |
 
@@ -103,14 +104,14 @@ a different restaurant with a different database (`rp_dev` by default; this lapt
 **They cannot run at the same time, because both use port 8080.** If you try, the pilot refuses to
 start and says which program holds the port.
 
-| Logins        | Dev setup         | This pilot           |
-| ------------- | ----------------- | -------------------- |
+| Logins        | Dev setup         | This pilot            |
+| ------------- | ----------------- | --------------------- |
 | Owner, 1111   | Asha (Owner)      | **Owner (Parosaa)**   |
 | Manager, 2222 | Vikram (Manager)  | **Manager (Parosaa)** |
-| Manager, 3333 | Neha (Manager)    | (none)               |
-| Waiter, 4444  | Ravi              | **Waiter 1**         |
-| Waiter, 5555  | Sunita            | **Waiter 2**         |
-| Kitchen, 6666 | Chef Imran (note) | **Kitchen**          |
+| Manager, 3333 | Neha (Manager)    | (none)                |
+| Waiter, 4444  | Ravi              | **Waiter 1**          |
+| Waiter, 5555  | Sunita            | **Waiter 2**          |
+| Kitchen, 6666 | Chef Imran (note) | **Kitchen**           |
 
 There is no cashier role any more. Managers take payments. Note: in the dev setup the kitchen screen
 normally runs without a personal sign-in, so Chef Imran's PIN is refused unless individual kitchen
@@ -198,6 +199,10 @@ scripts/pilot/parosaa-local.sh setup
   - `Port` or `network` errors during the build: check the internet and run it again.
 
 **Run this again whenever the software is updated**, otherwise you are testing old screens.
+
+If you tested the earlier restaurant called Mannat on this laptop, this step creates a new Parosaa
+restaurant beside it, with new QR codes. Print the new ones. The old restaurant is simply no longer
+used.
 
 #### Step 3: let phones reach the laptop
 
@@ -404,7 +409,7 @@ Open a second browser window on the laptop and sign in as **Kitchen** (6666) for
 
 | #   | Do this                                                                        | You should see                                                                       | What's happening behind the scenes                                                                                 |
 | --- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------ |
-| 1   | Scan a table's code. If ngrok shows a warning page, tap **Visit Site**.        | `Welcome to Parosaa`, `You're at table 2`                                             | Phone → ngrok → gateway → QR site. The table comes from the code itself.                                           |
+| 1   | Scan a table's code. If ngrok shows a warning page, tap **Visit Site**.        | `Welcome to Parosaa`, `You're at table 2`                                            | Phone → ngrok → gateway → QR site. The table comes from the code itself.                                           |
 | 2   | Type a mobile number and tap **Start ordering**.                               | The menu                                                                             | The QR site gets the menu from the relay, which holds a copy sent by the laptop.                                   |
 | 3   | Tap **ADD** on two dishes. (**CHOOSE** means the dish has options.)            | A bar saying `2 items` and **View order**                                            | Nothing has been sent. The cart is only on the phone.                                                              |
 | 4   | Tap **View order**, then **Send order**.                                       | `Received. Waiting for the restaurant to accept it.`                                 | Phone → ngrok → relay, which stores it and passes it down the laptop's open line.                                  |
@@ -470,7 +475,7 @@ scripts/pilot/build-waiter-apk.sh
 - **Why:** so the phone can find the laptop by itself.
 - **What happens:** the first build is long, an hour or more on a slow connection, and it downloads several GB. Later builds
   are quicker. The laptop may be slow meanwhile. It creates `.pilot/apk/parosaa-waiter-preview.apk` and
-  puts a copy in your **Windows Downloads** folder.
+  puts a copy in your **Windows Downloads** folder, wherever Windows keeps it.
 - **It worked if you see:** `Copied to your Windows Downloads folder`.
 - **If it fails:**
   - `The pilot server is not running`: run `start`.
@@ -607,7 +612,7 @@ Commands starting `local` mean `scripts/pilot/parosaa-local.sh`. Commands starti
 
 | Command                 | What it triggers                                           | What it keeps                                                                                 | What it deletes                                                                                                                                                                                                           | Use it when                            |
 | ----------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- |
-| `local setup`           | Builds, creates databases and Parosaa if missing            | All test data                                                                                 | Nothing                                                                                                                                                                                                                   | First time, and after software updates |
+| `local setup`           | Builds, creates databases and Parosaa if missing           | All test data                                                                                 | Nothing                                                                                                                                                                                                                   | First time, and after software updates |
 | `local start`           | Starts database, relay, QR site, server, printer if chosen | Everything                                                                                    | Nothing                                                                                                                                                                                                                   | Beginning a test                       |
 | `local restart`         | Stops and starts relay, QR site and server                 | Everything                                                                                    | Nothing                                                                                                                                                                                                                   | Something seems stuck                  |
 | `local status`          | Only looks                                                 | Everything                                                                                    | Nothing                                                                                                                                                                                                                   | Quick look                             |
@@ -644,7 +649,7 @@ build it again, because the certificate is new.
 | The QR page says `Ordering is paused`                    | The KOT server is off or has lost its open line to the relay.              | Run `doctor`.                                                                                                                                                                                            |
 | A QR link from before does not open                      | It holds an old address.                                                   | Run `links` for the current ones, or print new codes from **Manage → QR codes**.                                                                                                                         |
 | ngrok shows `ERR_NGROK_4018`                             | No token is saved.                                                         | Do Step 2 of 4C.                                                                                                                                                                                         |
-| ngrok says the account is already online                 | Free accounts allow one ngrok at a time.                                   | Close the other one, for example in another window. Run `parosaa-ngrok.sh` again.                                                                                                                         |
+| ngrok says the account is already online                 | Free accounts allow one ngrok at a time.                                   | Close the other one, for example in another window. Run `parosaa-ngrok.sh` again.                                                                                                                        |
 | The waiter app says it could not connect                 | The address built in is out of date, or the phone cannot reach the laptop. | Check 4D Step 4. Under **Restaurant PC address**, type your address and `:8080`, for example `192.168.1.2:8080`.                                                                                         |
 | The app says this Wi-Fi has no internet                  | Android dislikes Wi-Fi with no internet.                                   | Keep the Wi-Fi on and turn mobile data on too.                                                                                                                                                           |
 | The app says the restaurant PC can't be verified         | `reset` made a new certificate, and the app remembers the old one.         | Uninstall the app, then rebuild and reinstall.                                                                                                                                                           |

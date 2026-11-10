@@ -118,27 +118,40 @@ function toHtml(markdown) {
   return output.join('\n');
 }
 
+/** A font from the apps, embedded so the PDF has the brand's look on any computer. */
+function fontFace(family, file, weights) {
+  const data = readFileSync(join(ROOT, 'packages/ui-web/src/styles/fonts', file)).toString(
+    'base64',
+  );
+  return `@font-face { font-family: '${family}'; font-weight: ${weights};
+    src: url(data:font/woff2;base64,${data}) format('woff2'); }`;
+}
+
 const STYLE = `
-  body { font: 10.5pt/1.45 "Liberation Sans", Arial, "DejaVu Sans", sans-serif; color: #1b1b1b; }
-  h1 { font-size: 22pt; margin: 0 0 8pt; }
-  h2 { font-size: 16pt; margin: 18pt 0 6pt; padding-bottom: 3pt; border-bottom: 1.5pt solid #33691e; }
-  h3 { font-size: 13pt; margin: 14pt 0 4pt; }
-  h4 { font-size: 11pt; margin: 12pt 0 3pt; }
+  ${fontFace('Inter', 'InterVariable.woff2', '100 900')}
+  ${fontFace('Playfair Display', 'PlayfairDisplayVariable.woff2', '400 900')}
+  ${fontFace('JetBrains Mono', 'JetBrainsMonoVariable.woff2', '100 800')}
+  body { font: 10.5pt/1.45 Inter, Arial, sans-serif; color: #20223d; }
+  h1, h2, h3, h4 { font-family: 'Playfair Display', Georgia, serif; font-variant-numeric: lining-nums; }
+  h1 { font-size: 24pt; margin: 0 0 8pt; }
+  h2 { font-size: 17pt; margin: 18pt 0 6pt; padding-bottom: 3pt; border-bottom: 1.5pt solid #f5a623; }
+  h3 { font-size: 13.5pt; margin: 14pt 0 4pt; }
+  h4 { font-size: 11.5pt; margin: 12pt 0 3pt; }
   h1, h2, h3, h4, .window { break-after: avoid; }
   p { margin: 4pt 0 6pt; }
   ul, ol { margin: 3pt 0 7pt; padding-left: 16pt; }
   li { margin: 2pt 0; break-inside: avoid; }
-  a { color: #0b57d0; text-decoration: none; }
-  code { font: 9pt "DejaVu Sans Mono", "Liberation Mono", monospace; background: #f0f0f0;
+  a { color: #1b2a6b; text-decoration: none; }
+  code { font: 8.5pt "JetBrains Mono", monospace; background: #f4eee3;
     padding: 0 2pt; overflow-wrap: anywhere; }
-  pre { font: 9pt/1.4 "DejaVu Sans Mono", "Liberation Mono", monospace; background: #1f2933;
-    color: #fff; padding: 6pt 8pt; margin: 3pt 0 6pt; border-radius: 3pt; white-space: pre;
+  pre { font: 9pt/1.4 "JetBrains Mono", monospace; background: #20223d;
+    color: #fbf7f0; padding: 6pt 8pt; margin: 3pt 0 6pt; border-radius: 4pt; white-space: pre;
     break-inside: avoid; break-after: avoid; }
-  .window { margin: 8pt 0 2pt; color: #33691e; }
+  .window { margin: 8pt 0 2pt; color: #9a5410; }
   figure { margin: 6pt 0 10pt; } figure svg { width: 100%; height: auto; }
   table { width: 100%; border-collapse: collapse; margin: 6pt 0 10pt; font-size: 9pt; line-height: 1.3; }
-  th { background: #e8eee1; text-align: left; }
-  th, td { border: 0.5pt solid #9aa58c; padding: 3pt 4pt; vertical-align: top; overflow-wrap: break-word; }
+  th { background: #fdefdc; text-align: left; }
+  th, td { border: 0.5pt solid #c9bfae; padding: 3pt 4pt; vertical-align: top; overflow-wrap: break-word; }
   td code { overflow-wrap: normal; }
   tr { break-inside: avoid; } thead { display: table-header-group; }
   table.cols-5 { font-size: 8pt; } table.cols-5 code { font-size: 7.5pt; }
@@ -152,6 +165,7 @@ const browser = await chromium.launch();
 try {
   const page = await browser.newPage();
   await page.setContent(html);
+  await page.evaluate(() => document.fonts.ready);
   await page.emulateMedia({ media: 'print' });
   // The page's text width on A4 with these margins: 210 mm less 2 x 15 mm, at 96 pixels per inch.
   await page.setViewportSize({ width: Math.floor((180 / 25.4) * 96), height: 1000 });

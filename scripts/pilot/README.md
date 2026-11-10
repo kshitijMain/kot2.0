@@ -40,11 +40,11 @@ Needs Docker (for PostgreSQL 16), Node 24 and pnpm (`corepack enable`). Optional
 
 ## What `setup` makes
 
-| What                          | Where                                                         |
-| ----------------------------- | ------------------------------------------------------------- |
-| Parosaa: 5 tables, menu, staff | The KOT server's database (`rp_parosaa`)                       |
-| Each table's QR address       | `.pilot/parosaa.txt`                                           |
-| The 5 table tents (A5 PDF)    | `.pilot/parosaa-tents.pdf`: print, fold, one per table         |
+| What                           | Where                                                         |
+| ------------------------------ | ------------------------------------------------------------- |
+| Parosaa: 5 tables, menu, staff | The KOT server's database (`rp_parosaa`)                      |
+| Each table's QR address        | `.pilot/parosaa.txt`                                          |
+| The 5 table tents (A5 PDF)     | `.pilot/parosaa-tents.pdf`: print, fold, one per table        |
 | The relay and Parosaa in it    | `rp_relay`, with the PC's credential stored in the KOT server |
 
 Staff and their first PINs: Owner 1111, Manager 2222, Waiter 1 4444, Waiter 2 5555, Kitchen 6666.
