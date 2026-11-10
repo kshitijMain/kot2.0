@@ -7,12 +7,12 @@ import { createHash } from 'node:crypto';
 
 /** The page's only styles; the CSP allows exactly this text (P8-03c1), not inline styles in general. */
 const STYLE = `
-body{margin:0;padding:16px;background:#f4f4f2;color:#1b1b1b;font-family:system-ui,sans-serif}
-main{max-width:420px;margin:0 auto;background:#fff;border-radius:8px;padding:16px}
+body{margin:0;padding:16px;background:#fbf7f0;color:#20223d;font-family:system-ui,sans-serif}
+main{max-width:420px;margin:0 auto;background:#fff;border-radius:14px;padding:16px}
 h1{font-size:1.1rem;margin:0 0 12px}
 pre{margin:0;overflow-x:auto;font:13px/1.45 ui-monospace,Menlo,Consolas,monospace;white-space:pre}
-p{font-size:.85rem;color:#555;margin:16px 0 0}
-@media (prefers-color-scheme:dark){body{background:#111;color:#eee}main{background:#1d1d1d}p{color:#aaa}}
+p{font-size:.85rem;color:#5f5f74;margin:16px 0 0}
+@media (prefers-color-scheme:dark){body{background:#20223d;color:#fbf7f0}main{background:#2a2d4c}p{color:#b8b4aa}}
 @media print{body{background:#fff;padding:0}main{padding:0}p{display:none}}
 `;
 

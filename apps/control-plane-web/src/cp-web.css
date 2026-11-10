@@ -25,6 +25,12 @@
   box-shadow: var(--rp-elevation-1);
 }
 
+.cp-auth__logo {
+  display: block;
+  width: auto;
+  height: 40px;
+}
+
 .cp-auth__title {
   margin: 0;
   font-size: var(--rp-font-size-2xl);

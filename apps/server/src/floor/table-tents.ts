@@ -22,8 +22,8 @@ export interface TentBranding {
   readonly accentColor: string | null;
 }
 
-const INK = '#111827';
-const MUTED = '#4B5563';
+const INK = '#20223D';
+const MUTED = '#5F5F74';
 
 function panel(table: TentTable, branding: TentBranding): Content {
   return {
@@ -32,7 +32,7 @@ function panel(table: TentTable, branding: TentBranding): Content {
         text: branding.restaurantName,
         fontSize: 16,
         bold: true,
-        color: branding.accentColor ?? '#1F2937',
+        color: branding.accentColor ?? '#20223D',
         alignment: 'center',
         margin: [0, 0, 0, 4],
       },
@@ -106,7 +106,7 @@ export async function tableTentsPdf(
             x2: page.width / 2,
             y2: page.height - 12,
             lineWidth: 0.5,
-            lineColor: '#9CA3AF',
+            lineColor: '#C9BFAE',
             dash: { length: 3 },
           },
         ],

@@ -223,7 +223,7 @@ export async function startShell(deps: ShellDeps): Promise<Shell | undefined> {
     const window = deps.createWindow({
       fullscreen: config.fullScreen,
       show: true,
-      backgroundColor: '#f4f4f2',
+      backgroundColor: '#fbf7f0',
       autoHideMenuBar: true,
       webPreferences: WEB_PREFERENCES,
     });

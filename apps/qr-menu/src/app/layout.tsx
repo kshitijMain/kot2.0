@@ -1,6 +1,7 @@
 import '@rp/design-tokens/tokens.css';
 import '@rp/ui-web/styles.css';
 import './qr.css';
+import { themes } from '@rp/design-tokens';
 import type { Metadata, Viewport } from 'next';
 import { connection } from 'next/server';
 import type { ReactNode } from 'react';
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  themeColor: '#ffffff',
+  themeColor: themes.light.background,
 };
 
 /**

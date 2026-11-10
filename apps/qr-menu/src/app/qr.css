@@ -30,7 +30,7 @@ body {
   overflow-x: clip;
 }
 
-/* The focus ring in the restaurant's own colour (P9-23): the console's teal had ringed the sheets'
+/* The focus ring in the restaurant's own colour (P9-23): the console's colour had ringed the sheets'
    close button on Parosaa's maroon page. */
 .rp-theme {
   --rp-color-focus-ring: var(--rp-color-accent);

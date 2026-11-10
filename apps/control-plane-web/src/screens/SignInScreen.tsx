@@ -41,6 +41,7 @@ export function SignInScreen() {
           );
         }}
       >
+        <img src="/wordmark.svg" alt="" className="cp-auth__logo" width={142} height={40} />
         <h1 id="cp-sign-in-title" className="cp-auth__title">
           {t('vendorApp.name')}
         </h1>
