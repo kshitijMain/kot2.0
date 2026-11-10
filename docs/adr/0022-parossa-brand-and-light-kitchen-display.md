@@ -1,5 +1,8 @@
 # ADR-0022: Parossa brand, Inter and a light kitchen display
 
+The name, palette and logo here are replaced by ADR-0028 (the name is spelled Parosaa). The light
+kitchen display still stands.
+
 Status: Accepted
 Date: 2026-10-24
 Work package: none (a redesign the Business Owner asked for on 2026-10-24)

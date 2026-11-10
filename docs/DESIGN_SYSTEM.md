@@ -2,15 +2,16 @@
 
 Every visual decision in one place, so no agent invents one. The source of truth is code:
 `packages/design-tokens/src` (values), `packages/ui-web` and `packages/ui-native` (components),
-ADR-0009 (approach) and ADR-0022 (the Parosaa brand). This file describes them. If this file and
+ADR-0009 (approach) and ADR-0028 (the Parosaa brand). This file describes them. If this file and
 the code disagree, the code wins and this file is fixed in the same pull request. A colour change is
 an edit to `packages/design-tokens/src/themes.ts`, guarded by its contrast tests.
 
 ## 01 Brand identity
 
-- Name: Parosaa (the waiter app is Parosaa Captain, the table tablet Parosaa Table). Logo files and
-  their rules are in `brand/parossa`: the mark is a serving ladle seen from above that reads as a P.
-- Personality: calm, clear, quick. Light and uncluttered: an off-white page, white cards with soft
+- Name: Parosaa (the waiter app is Parosaa Captain). Logo files and their rules are in
+  `brand/parosaa`: a gold P on a deep ink rounded square with a saffron dot, and the wordmark with a
+  saffron dot above the o.
+- Personality: calm, clear, quick. Light and uncluttered: a warm cream page, white cards with soft
   shadows, generous spacing and one obvious main action per screen.
 - Who reads it: staff in a hurry (often standing, sometimes with wet or gloved hands) and diners
   who have never seen the app. Design for a glance, not a read.
@@ -34,46 +35,53 @@ stylesheets). On the web each role is a CSS variable `--rp-color-<role-in-kebab>
 read `themes[name].<role>` through `@rp/ui-native`'s theme.
 
 Four themes: `light` (POS, dashboard, diner surfaces), `dark`, `kds` (the kitchen display's
-default: light, AAA text, large type, 64 px targets) and `kds-dark` (near-black, the same sizes),
-chosen by the `kds.theme` setting (KDS-011, ADR-0022). Choose with
+default: light, AAA text, large type, 64 px targets) and `kds-dark` (deep ink, the same sizes),
+chosen by the `kds.theme` setting (KDS-011, ADR-0022, ADR-0028). Choose with
 `data-theme="light|dark|kds|kds-dark"`; without it the root follows the operating system. The
 console pins `light` (and a kitchen theme in KDS mode).
 
 Light theme (abridged; the full set is in `themes.ts`):
 
-| Role (`--rp-color-…`) | Light     | Use                                                  |
-| --------------------- | --------- | ---------------------------------------------------- |
-| `background`          | `#faf7f2` | Page background (warm off-white)                     |
-| `surface`             | `#ffffff` | Cards, panels, table rows                            |
-| `surface-raised`      | `#ffffff` | Dialogs, sheets, toasts, menus                       |
-| `surface-sunken`      | `#f3efe8` | Wells, keypad action keys, the mode switch's track   |
-| `border`              | `#ebe5db` | Hairlines on cards and dividers                      |
-| `border-strong`       | `#7c756c` | Control outlines (≥ 3:1 against surfaces)            |
-| `text`                | `#1c1917` | Body text                                            |
-| `text-muted`          | `#57534e` | Secondary text, captions                             |
-| `primary`             | `#0f766e` | Teal: primary buttons, links, active states          |
-| `primary-hover`       | `#115e59` | Hover on primary                                     |
-| `primary-active`      | `#134e4a` | Pressed primary                                      |
-| `highlight`           | `#f7931e` | Saffron fill: badges, the bar under page titles      |
-| `on-highlight`        | `#1c1917` | Text on saffron                                      |
-| `highlight-subtle`    | `#fff4e5` | Selected items' background                           |
-| `highlight-text`      | `#a64b08` | Saffron text, and the ring around a selected item    |
-| `accent`              | `#0f766e` | The restaurant's brand colour slot (diner surfaces)  |
-| `focus-ring`          | `#0f766e` | Focus outline (`#b45309` on the light kitchen theme) |
-| `info`                | `#1d4ed8` | Sent, preparing, occupied                            |
-| `success`             | `#15803d` | Ready, picked up, free, confirmations                |
-| `warning`             | `#a16207` | Waiting for approval, non-blocking warnings (ochre)  |
-| `danger`              | `#b91c1c` | Errors, destructive actions, cancelled/voided        |
+| Role (`--rp-color-…`) | Light     | Use                                                       |
+| --------------------- | --------- | --------------------------------------------------------- |
+| `background`          | `#fbf7f0` | Page background of every app and site (warm cream)        |
+| `surface`             | `#ffffff` | Cards, panels, table rows                                 |
+| `surface-raised`      | `#ffffff` | Dialogs, sheets, toasts, menus                            |
+| `surface-sunken`      | `#f4eee3` | Wells, keypad action keys, the mode switch's track        |
+| `border`              | `#e7dfd1` | Hairlines on cards (warm grey)                            |
+| `border-strong`       | `#908777` | Control outlines (≥ 3:1 against surfaces)                 |
+| `text`                | `#20223d` | Deep ink: headings, body text, navigation                 |
+| `text-muted`          | `#5f5f74` | Secondary text, captions                                  |
+| `primary`             | `#e8821e` | Saffron: main buttons, key calls to action                |
+| `on-primary`          | `#20223d` | Text on saffron: deep ink, never white                    |
+| `primary-hover`       | `#ee9237` | Hover on primary                                          |
+| `primary-active`      | `#d17217` | Pressed primary                                           |
+| `highlight`           | `#e8821e` | Saffron fill: selected states, the bar under page titles  |
+| `highlight-subtle`    | `#fdefdc` | Selected items' background                                |
+| `highlight-text`      | `#9a5410` | Saffron-coloured text, and the ring around a selected one |
+| `divider`             | `#f5a623` | Gold: thin dividers (decoration only)                     |
+| `link`                | `#1b2a6b` | Royal indigo: links, report figures, charts               |
+| `accent`              | `#e8821e` | The restaurant's brand colour slot (diner surfaces)       |
+| `focus-ring`          | `#1b2a6b` | Focus outline                                             |
+| `info`                | `#1b2a6b` | Sent, preparing, occupied                                 |
+| `success`             | `#1aa26e` | Teal, small areas only: ready, free, confirmations        |
+| `success-text`        | `#0f7550` | Teal text on cream                                        |
+| `warning`             | `#8a6100` | Waiting for approval, non-blocking warnings (ochre)       |
+| `danger`              | `#b3261e` | Errors, destructive actions, cancelled/voided             |
+
+Dark surfaces (`dark`, `kds-dark`): deep ink `#20223d` backgrounds, cream `#fbf7f0` text, gold
+`#f5a623` actions with deep ink text.
 
 Each tone also has `on-<tone>` (text on it), `<tone>-subtle` (tinted background) and `<tone>-text`
 (text on the subtle background). The tones are `neutral`, `info`, `success`, `warning`, `danger`.
 
 Rules:
 
-- One primary colour (teal) for actions. Saffron (`highlight`) marks what is selected and adds small
-  decorative touches; the saffron fill is too light to carry small text on white or to be the only
-  sign of a state, so a selected item also gets a `highlight-text` ring (≥ 3:1) or a checked
-  control.
+- Saffron is the hero: one main action per screen, with deep ink text, never white. Saffron and
+  gold are too light to be text or the only sign of a state on cream, so a selected item also gets
+  a `highlight-text` ring (≥ 3:1) or a checked control.
+- Never pure black. Avoid large flat greys and large fields of teal: teal is a small accent only.
+- An error never looks like a main button: `danger` and `warning` stay apart from saffron.
 - Tones carry state, never decoration, and stay apart from the brand colours (a test checks that no
   status tone equals the primary or the highlight).
 - WCAG 2.2 AA for every theme and AAA for KDS text, enforced by tests on the token values
@@ -101,17 +109,22 @@ Order item states (`ORDER_ITEM_STATE_STYLES`, shared by web and native):
 
 ## 03 Typography
 
-Inter 4.1 everywhere, bundled with the apps (SIL Open Font License, ADR-0022): nothing is
-downloaded, so every screen renders offline (NFR-A01).
+Three families, all bundled with the apps (SIL Open Font License, ADR-0028): nothing is downloaded,
+so every screen renders offline (NFR-A01). Printed thermal receipts keep the printer's own font.
 
-- Web: one variable WOFF2 in `@rp/ui-web` (`src/styles/fonts/`), `font-display: swap`, with the
-  system faces after it.
-- Sans: `Inter, system-ui, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, sans-serif`
-- Android: four TTFs (400, 500, 600, 700) in `@rp/ui-native/fonts`, built into each APK as the
-  family `Inter` by the `expo-font` plugin (`nativeFontFamily`). Use `Text` and `TextInput` from
-  `@rp/ui-native`, never React Native's own, so text is set in Inter. Glyphs stay in the system
-  face.
-- Mono: `ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', Menlo, Consolas, monospace`
+| Family           | Token               | Use                                                                |
+| ---------------- | ------------------- | ------------------------------------------------------------------ |
+| Inter            | `--rp-font-sans`    | Body text, buttons, inputs and controls                            |
+| Playfair Display | `--rp-font-heading` | Headings, the brand name, table numbers                            |
+| JetBrains Mono   | `--rp-font-mono`    | Bill previews, invoice numbers, QR text, pairing codes (`rp-code`) |
+
+- Web: variable WOFF2 files in `@rp/ui-web` (`src/styles/fonts/`), `font-display: swap`, with the
+  system faces after them.
+- Android: TTFs in `@rp/ui-native/fonts`, built into each APK by the `expo-font` plugin as the
+  families `Inter`, `Playfair Display` and `JetBrains Mono`. Use `Text` and `TextInput` from
+  `@rp/ui-native`, never React Native's own; `accessibilityRole="header"` text takes the serif.
+- Table numbers use Playfair Display extra bold with lining figures, larger than the old label, so
+  they read from 2 m on the kitchen display and the POS floor plan.
 
 | Token (`--rp-font-size-…`) | Default | KDS theme | Typical use                  |
 | -------------------------- | ------- | --------- | ---------------------------- |
@@ -124,12 +137,12 @@ downloaded, so every screen renders offline (NFR-A01).
 | `3xl`                      | 30px    | 40px      | Totals, KOT numbers          |
 | `4xl`                      | 36px    | 48px      | Hero numbers                 |
 
-Weights: regular 400, medium 500, semibold 600, bold 700. Line heights: tight 1.2, snug 1.35,
+Weights: regular 400, medium 500, semibold 600, bold 700, extrabold 800. Line heights: tight 1.2, snug 1.35,
 normal 1.5. Web sizes are emitted in rem so text scales with the browser setting.
 
 Rules:
 
-- Two families at most (sans and mono). Mono is for codes, references and tabular figures.
+- Mono is for codes, references and on-screen receipts, never for ordinary text.
 - Money is always shown through `Money` / `formatRupees` (₹ with Indian grouping, 1,00,000.00;
   NFR-L03), never formatted by hand. Dates DD-MM-YYYY, time zone Asia/Kolkata.
 
@@ -155,17 +168,16 @@ console's margins shrink at 40rem and below.
 
 ## 05 Border radius, elevation and layers
 
-| Token         | Value  | Use                 |
-| ------------- | ------ | ------------------- |
-| `radius-sm`   | 6px    | Badges, small chips |
-| `radius-md`   | 10px   | Buttons, inputs     |
-| `radius-lg`   | 14px   | Cards, table tiles  |
-| `radius-xl`   | 20px   | Dialogs, sheets     |
-| `radius-full` | 9999px | Pills, avatars      |
+| Token         | Value  | Use                                 |
+| ------------- | ------ | ----------------------------------- |
+| `radius-sm`   | 6px    | Inputs, chips, badges               |
+| `radius-md`   | 10px   | Buttons, small cards                |
+| `radius-lg`   | 14px   | Cards, table tiles, sheets, dialogs |
+| `radius-full` | 9999px | Avatars, round controls             |
 
 Elevation (`--rp-elevation-<n>`; native uses the matching `androidElevation`):
 
-Shadows are soft and warm (`rgb(28 25 23 / …)`); they separate cards from the page instead of
+Shadows are soft and tinted with deep ink (`rgb(32 34 61 / …)`); they separate cards from the page instead of
 heavy borders. Cards keep a hairline `border`; controls keep a 1 px `border-strong` outline.
 
 - `0` none.
@@ -262,9 +274,10 @@ Per surface:
 
 ## 09 Motion
 
-- Durations (`--rp-duration-…`): instant 0, fast 120ms (taps, hovers), normal 200ms (panels,
-  dialogs), slow 320ms (page-level).
+- Durations (`--rp-duration-…`): instant 0, fast 150ms (taps, hovers), normal 200ms (panels,
+  dialogs), slow 200ms (page-level).
 - Easing (`--rp-easing-…`): `standard` cubic-bezier(0.2, 0, 0, 1), `enter` cubic-bezier(0, 0, 0, 1),
   `exit` cubic-bezier(0.3, 0, 1, 1).
 - Visual feedback within 100 ms of a tap, screen transitions within 300 ms (NFR-P07).
-- `prefers-reduced-motion` sets every duration to 0 in the token stylesheet.
+- `prefers-reduced-motion` sets every duration to 0 in the token stylesheet. On Android the sheets
+  skip their slide when the device asks for reduced motion (`useReducedMotion`).

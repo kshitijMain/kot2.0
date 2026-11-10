@@ -4656,6 +4656,20 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
 
 ## Session log (newest first)
 
+### 2026-11-10: the Parosaa brand (ADR-0028)
+
+Rebranded on `feature/parosaa-brand` (visual and naming only). The name is Parosaa; the test
+restaurant formerly Mannat is Parosaa too. New logos in `brand/parosaa`; saffron, gold, deep ink,
+indigo, cream and teal tokens; Playfair Display, Inter and JetBrains Mono bundled; corners and motion
+per ADR-0028. `apps/table-tablet` was not edited and still passes. This replaces the teal and
+off-white redesign of ADR-0022.
+
+- Decided: the closest passing shades where a requested colour failed contrast (ADR-0028).
+- Decided: the mDNS id, Android packages and Windows ids keep their names (ADR-0028).
+- Decided: `readableTextColor` stays for the tablet; everything else uses `brandTextColor`.
+- Gotcha: a pilot set up as Mannat is not migrated; `setup` creates a new restaurant beside it.
+- Not checked on real devices: the Windows installer graphics and the waiter app's look on a phone.
+
 ### 2026-11-01: P9-27 The network and the data, as the Business Owner approved
 
 The Business Owner approved the architecture proposed after the installer and network review:
