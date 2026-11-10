@@ -47,7 +47,7 @@ export function Screen({
   title?: string;
   actions?: ReactNode;
   footer?: ReactNode;
-  /** The Parosaa logo above the title: pairing and sign-in (ADR-0022). */
+  /** The Parosaa logo above the title: pairing and sign-in (ADR-0028). */
   brand?: boolean;
   children: ReactNode;
 }) {

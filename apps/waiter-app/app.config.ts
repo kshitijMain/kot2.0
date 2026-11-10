@@ -97,7 +97,7 @@ export default ({ config, projectRoot }: ConfigContext): ExpoConfig => {
       // computer (MOBILE-I3); the credentials are in the Keystore, which backups do not carry.
       allowBackup: false,
       adaptiveIcon: {
-        backgroundColor: '#FAF7F2',
+        backgroundColor: '#20223D',
         foregroundImage: './assets/android-icon-foreground.png',
         backgroundImage: './assets/android-icon-background.png',
         monochromeImage: './assets/android-icon-monochrome.png',
@@ -151,14 +151,14 @@ export default ({ config, projectRoot }: ConfigContext): ExpoConfig => {
       'expo-secure-store',
       // Enough memory for Gradle and Kotlin in a release build (P9-16).
       './plugins/with-gradle-memory.cjs',
-      // Parosaa's splash on the off-white page colour (ADR-0022).
+      // Parosaa's splash on the cream page colour (ADR-0028).
       [
         'expo-splash-screen',
         {
           image: './assets/splash-icon.png',
           imageWidth: 200,
           resizeMode: 'contain',
-          backgroundColor: '#FAF7F2',
+          backgroundColor: '#FBF7F0',
         },
       ],
       // Inter, built into the APK so text renders the same offline (ADR-0022); one family with
