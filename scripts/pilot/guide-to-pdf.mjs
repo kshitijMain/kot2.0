@@ -4,6 +4,7 @@
 // anything wider than the page, so nothing can be cut off.
 //
 //   node scripts/pilot/guide-to-pdf.mjs
+/* global document -- runs inside the browser page */
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
