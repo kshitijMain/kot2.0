@@ -1,4 +1,4 @@
-import { nativeFontFamily } from '@rp/design-tokens';
+import { nativeFontFamily, nativeHeadingFontFamily } from '@rp/design-tokens';
 import { render, screen } from '@testing-library/react-native';
 import { StyleSheet } from 'react-native';
 import { Text, TextField, TextInput } from '../src/index.js';
@@ -24,6 +24,25 @@ describe('[NFR-U01] the brand font', () => {
     });
     expect(StyleSheet.flatten(screen.getByTestId('input').props.style)).toMatchObject({
       fontFamily: nativeFontFamily,
+    });
+  });
+
+  it('sets headers in the brand serif unless the caller gives a font', async () => {
+    await renderUi(
+      <>
+        <Text testID="header" accessibilityRole="header">
+          Tables
+        </Text>
+        <Text testID="own" accessibilityRole="header" style={{ fontFamily: 'monospace' }}>
+          KOT 12
+        </Text>
+      </>,
+    );
+    expect(StyleSheet.flatten(screen.getByTestId('header').props.style)).toMatchObject({
+      fontFamily: nativeHeadingFontFamily,
+    });
+    expect(StyleSheet.flatten(screen.getByTestId('own').props.style)).toMatchObject({
+      fontFamily: 'monospace',
     });
   });
 

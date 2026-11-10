@@ -145,6 +145,10 @@ CA="$(curl -sk "https://127.0.0.1:$PORT/api/v1/tls/ca" | node -e '
 echo "== Restaurant PC built in: $SERVERS"
 echo "== Certificate: $CA"
 echo "== Building. The first time takes 20 minutes or more and downloads several GB."
+# The app bundles the shared packages' built output: rebuilt here so it never ships an old look.
+cd "$ROOT"
+COREPACK_ENABLE_DOWNLOAD_PROMPT=0 pnpm turbo run build --filter='@rp/waiter-app^...' \
+  --output-logs=errors-only
 cd "$ROOT/apps/waiter-app"
 APP_ENV=preview RP_RESTAURANT_SERVERS="$SERVERS" RP_RESTAURANT_CA="$CA" pnpm prebuild >/dev/null
 cd android

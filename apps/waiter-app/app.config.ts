@@ -69,6 +69,7 @@ function listOf(value: string | undefined): string[] {
 
 /** An Inter face vendored in @rp/ui-native (SIL Open Font License, ADR-0022). */
 const INTER = (face: string): string => `../../packages/ui-native/fonts/Inter-${face}.ttf`;
+const FONT = (file: string): string => `../../packages/ui-native/fonts/${file}.ttf`;
 
 export default ({ config, projectRoot }: ConfigContext): ExpoConfig => {
   const env = appEnv();
@@ -161,7 +162,7 @@ export default ({ config, projectRoot }: ConfigContext): ExpoConfig => {
           backgroundColor: '#FBF7F0',
         },
       ],
-      // Inter, built into the APK so text renders the same offline (ADR-0022); one family with
+      // The brand's fonts, built into the APK so text renders the same offline (ADR-0028); one family with
       // its weights, as @rp/ui-native asks for it.
       [
         'expo-font',
@@ -175,6 +176,20 @@ export default ({ config, projectRoot }: ConfigContext): ExpoConfig => {
                   { path: INTER('Medium'), weight: 500 },
                   { path: INTER('SemiBold'), weight: 600 },
                   { path: INTER('Bold'), weight: 700 },
+                ],
+              },
+              {
+                fontFamily: 'Playfair Display',
+                fontDefinitions: [
+                  { path: FONT('PlayfairDisplay-Bold'), weight: 700 },
+                  { path: FONT('PlayfairDisplay-ExtraBold'), weight: 800 },
+                ],
+              },
+              {
+                fontFamily: 'JetBrains Mono',
+                fontDefinitions: [
+                  { path: FONT('JetBrainsMono-Regular'), weight: 400 },
+                  { path: FONT('JetBrainsMono-Bold'), weight: 700 },
                 ],
               },
             ],

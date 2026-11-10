@@ -161,7 +161,7 @@ export function QrCodesScreen() {
                     ? t('qrCodes.noCode')
                     : t('qrCodes.madeAt', displayDateTime(new Date(table.issuedAt)))}
                 </p>
-                {table.url === null ? null : <p className="qr-row__url">{table.url}</p>}
+                {table.url === null ? null : <p className="qr-row__url rp-code">{table.url}</p>}
               </div>
               <div className="staff-row__actions">
                 <Button

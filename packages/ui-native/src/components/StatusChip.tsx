@@ -59,7 +59,7 @@ const styles = StyleSheet.create({
     gap: spacing[1],
     paddingHorizontal: spacing[2],
     paddingVertical: spacing[1],
-    borderRadius: radius.full,
+    borderRadius: radius.sm,
   },
   label: { fontWeight: weight(fontWeight.semibold) },
 });

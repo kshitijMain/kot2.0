@@ -1,4 +1,4 @@
-import { nativeFontFamily } from '@rp/design-tokens';
+import { nativeFontFamily, nativeHeadingFontFamily } from '@rp/design-tokens';
 import {
   Text as NativeText,
   TextInput as NativeTextInput,
@@ -6,9 +6,11 @@ import {
   type TextProps,
 } from 'react-native';
 
-/** Text in the brand's font (ADR-0022). A style the caller gives still wins. */
+/** Text in the brand's font, the serif for headers (ADR-0028). A style the caller gives still wins. */
 export function Text({ style, ...rest }: TextProps) {
-  return <NativeText {...rest} style={[{ fontFamily: nativeFontFamily }, style]} />;
+  const fontFamily =
+    rest.accessibilityRole === 'header' ? nativeHeadingFontFamily : nativeFontFamily;
+  return <NativeText {...rest} style={[{ fontFamily }, style]} />;
 }
 
 /** A text input in the brand's font, so typed text matches the labels around it. */

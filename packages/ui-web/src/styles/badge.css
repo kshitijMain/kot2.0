@@ -48,7 +48,7 @@
   gap: var(--rp-space-1);
   min-height: 24px;
   padding: 0 var(--rp-space-3);
-  border-radius: var(--rp-radius-full);
+  border-radius: var(--rp-radius-sm);
   background: var(--rp-tone-subtle);
   color: var(--rp-tone-text);
   font-size: var(--rp-font-size-sm);

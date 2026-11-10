@@ -2,6 +2,7 @@ import {
   elevation,
   fontSize,
   fontWeight,
+  nativeHeadingFontFamily,
   radius,
   spacing,
   touchTarget,
@@ -146,7 +147,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: spacing[1],
   },
-  label: { fontSize: fontSize.xl, fontWeight: weight(fontWeight.bold) },
+  // The table number reads across the floor: heavy, larger, figures on the line (ADR-0028).
+  label: {
+    fontFamily: nativeHeadingFontFamily,
+    fontSize: fontSize['2xl'],
+    fontVariant: ['lining-nums'],
+    fontWeight: weight(fontWeight.extrabold),
+  },
   state: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -1,5 +1,5 @@
 import { parsePairingQr } from '@rp/contracts';
-import { fontSize, radius, spacing } from '@rp/design-tokens';
+import { fontSize, nativeMonoFontFamily, radius, spacing } from '@rp/design-tokens';
 import type { FoundServer, ServerAuthority } from '@rp/mobile-core';
 import { Button, Text, TextField, useTheme } from '@rp/ui-native';
 import { lazy, Suspense, useState } from 'react';
@@ -215,7 +215,7 @@ export function PairingScreen() {
 
 const styles = StyleSheet.create({
   fingerprint: {
-    fontFamily: 'monospace',
+    fontFamily: nativeMonoFontFamily,
     fontSize: fontSize.md,
     lineHeight: fontSize.md * 1.6,
     padding: spacing[3],

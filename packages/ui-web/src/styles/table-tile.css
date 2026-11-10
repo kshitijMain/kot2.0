@@ -60,10 +60,13 @@
   opacity: 0.55;
 }
 
+/* The table number reads from across the floor: heavy, larger, figures on the line (ADR-0028). */
 .rp-table-tile__label {
-  font-size: var(--rp-font-size-xl);
-  font-weight: var(--rp-font-weight-bold);
-  letter-spacing: -0.01em;
+  font-family: var(--rp-font-heading);
+  font-size: var(--rp-font-size-3xl);
+  font-variant-numeric: lining-nums;
+  font-weight: var(--rp-font-weight-extrabold);
+  line-height: var(--rp-line-height-tight);
 }
 
 .rp-table-tile__state,

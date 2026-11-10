@@ -19,6 +19,25 @@
   outline-offset: 2px;
 }
 
+/* Links in royal indigo, wherever a screen does not style its own (ADR-0028). */
+:where(a) {
+  color: var(--rp-color-link);
+}
+
+/* Headings and titles in the brand's serif, with figures that sit on the line (ADR-0028). */
+:where(h1, h2, h3, h4, h5, h6),
+:where(.rp-card__title, .rp-dialog__title, .rp-state__title) {
+  font-family: var(--rp-font-heading);
+  font-variant-numeric: lining-nums;
+  font-weight: var(--rp-font-weight-bold);
+}
+
+/* Codes and receipts on screen: invoice numbers, QR text, pairing codes (ADR-0028). */
+.rp-code {
+  font-family: var(--rp-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
 .rp-visually-hidden {
   position: absolute;
   width: 1px;

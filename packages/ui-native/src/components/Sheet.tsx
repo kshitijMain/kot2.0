@@ -4,6 +4,7 @@ import { Keyboard, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-
 import { useScreenInsets } from '../insets.js';
 import { useUiStrings } from '../strings.js';
 import { useTheme, weight } from '../theme.js';
+import { useReducedMotion } from '../reduced-motion.js';
 import { Glyph } from './Glyph.js';
 import { Text } from './Text.js';
 
@@ -29,6 +30,7 @@ export function Sheet({ open, onClose, title, children, footer, dismissible = tr
   // Drawn under the system bars (edge to edge): the last part keeps above the navigation bar.
   const { bottom } = useScreenInsets();
   const keyboard = useKeyboardHeight(open);
+  const reducedMotion = useReducedMotion();
   const close = () => {
     if (dismissible) onClose();
   };
@@ -36,7 +38,7 @@ export function Sheet({ open, onClose, title, children, footer, dismissible = tr
     <Modal
       visible={open}
       transparent
-      animationType="slide"
+      animationType={reducedMotion ? 'none' : 'slide'}
       statusBarTranslucent
       navigationBarTranslucent
       onRequestClose={close}
@@ -125,8 +127,8 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     maxHeight: '90%',
-    borderTopLeftRadius: radius.xl,
-    borderTopRightRadius: radius.xl,
+    borderTopLeftRadius: radius.lg,
+    borderTopRightRadius: radius.lg,
     elevation: elevation[3].androidElevation,
   },
   handle: {

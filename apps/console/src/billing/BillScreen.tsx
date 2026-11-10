@@ -164,7 +164,7 @@ export function BillScreen({
               <ul className="bill__discounts">
                 {invoices.map((invoice) => (
                   <li key={invoice.id} className="bill__discount">
-                    <span>
+                    <span className="rp-code">
                       {t('billing.invoice', { number: invoice.invoiceNumber })} ·{' '}
                       <Money paise={invoice.grandTotal} />
                     </span>
@@ -400,7 +400,7 @@ function BillPreview({ bill }: { bill: BillView }) {
   const t = useT();
   return (
     <Card title={t('billing.lines')} headingLevel={3}>
-      <table className="rp-table">
+      <table className="rp-table rp-code">
         <thead>
           <tr>
             <th scope="col">{t('billing.item')}</th>
@@ -428,7 +428,7 @@ function BillPreview({ bill }: { bill: BillView }) {
           ))}
         </tbody>
       </table>
-      <dl className="bill__totals">
+      <dl className="bill__totals rp-code">
         <dt>{t('billing.subtotal')}</dt>
         <dd>
           <Money paise={bill.subtotal} />

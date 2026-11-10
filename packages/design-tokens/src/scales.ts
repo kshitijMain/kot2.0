@@ -39,17 +39,20 @@ export const touchTarget = {
 } as const;
 
 export const fontFamily = {
-  // Inter, bundled with the apps (ADR-0022): nothing is downloaded, so the UI renders offline
-  // (NFR-A01). The system faces after it cover a missing glyph and the moment before it loads.
+  // Bundled with the apps (ADR-0028): nothing is downloaded, so the UI renders offline (NFR-A01).
+  // The system faces after each cover a missing glyph and the moment before it loads.
   sans: "Inter, system-ui, 'Segoe UI', Roboto, 'Noto Sans', 'Helvetica Neue', Arial, sans-serif",
-  mono: "ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', Menlo, Consolas, monospace",
+  heading: "'Playfair Display', Georgia, 'Times New Roman', 'Noto Serif', serif",
+  mono: "'JetBrains Mono', ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', 'Roboto Mono', Menlo, Consolas, monospace",
 } as const;
 
 /**
- * The font family the Android apps ask for: Inter, built into each APK by the `expo-font` plugin
- * with its 400 to 700 weights (ADR-0022). An APK built before then falls back to Roboto.
+ * The font families the Android apps ask for, built into each APK by the `expo-font` plugin
+ * (ADR-0028). An APK built without one falls back to the system's font.
  */
 export const nativeFontFamily = 'Inter';
+export const nativeHeadingFontFamily = 'Playfair Display';
+export const nativeMonoFontFamily = 'JetBrains Mono';
 
 /** Font sizes in px (converted to rem for the web). */
 export const fontSize = {
@@ -80,6 +83,7 @@ export const fontWeight = {
   medium: 500,
   semibold: 600,
   bold: 700,
+  extrabold: 800,
 } as const;
 
 export const lineHeight = {
@@ -112,9 +116,9 @@ export const elevation = {
 export const motion = {
   duration: {
     instant: 0,
-    fast: 120,
+    fast: 150,
     normal: 200,
-    slow: 320,
+    slow: 200,
   },
   easing: {
     standard: 'cubic-bezier(0.2, 0, 0, 1)',

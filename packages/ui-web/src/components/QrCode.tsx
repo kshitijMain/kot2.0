@@ -41,7 +41,7 @@ export function QrCode({ value, label, size = 192, className }: QrCodeProps) {
       data-modules={modules}
     >
       <rect width={modules} height={modules} fill="#ffffff" />
-      <path d={path} fill="#000000" />
+      <path d={path} fill="#20223d" />
     </svg>
   );
 }

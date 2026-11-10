@@ -87,7 +87,12 @@ describe('[NFR-U01] the app’s brand', () => {
       android: { fonts: { fontFamily: string; fontDefinitions: { path: string }[] }[] };
     };
     expect(fonts.android.fonts[0]?.fontFamily).toBe('Inter');
-    for (const font of fonts.android.fonts[0]?.fontDefinitions ?? []) {
+    expect(fonts.android.fonts.map((font) => font.fontFamily)).toEqual([
+      'Inter',
+      'Playfair Display',
+      'JetBrains Mono',
+    ]);
+    for (const font of fonts.android.fonts.flatMap((family) => family.fontDefinitions)) {
       expect(existsSync(join(projectRoot, font.path))).toBe(true);
     }
   });

@@ -42,7 +42,7 @@
   min-height: var(--rp-touch-target);
   padding: 0 var(--rp-space-4);
   border: 1px solid var(--rp-color-border-strong);
-  border-radius: var(--rp-radius-md);
+  border-radius: var(--rp-radius-sm);
   background: var(--rp-color-surface);
   color: var(--rp-color-text);
   font: inherit;
