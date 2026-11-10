@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 460" role="img" aria-label="How the pieces connect: the diner's phone reaches ngrok, then the gateway, QR site and relay inside WSL. The KOT server keeps an open line to the relay. The waiter phone reaches the KOT server through Windows port forwarding. The KOT server uses the database and the virtual printer." font-family="Arial, Helvetica, sans-serif" font-size="12">
+  <defs>
+    <marker id="a" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0 0 10 5 0 10z" fill="#333"/>
+    </marker>
+  </defs>
+  <rect width="760" height="460" fill="#fff"/>
+
+  <!-- Windows and WSL -->
+  <rect x="362" y="8" width="392" height="444" rx="10" fill="#f2f5fa" stroke="#7a8aa5"/>
+  <text x="374" y="27" font-weight="bold">Your laptop: Windows</text>
+  <rect x="488" y="34" width="256" height="408" rx="8" fill="#e6f1e6" stroke="#6a9a6a"/>
+  <text x="498" y="51" font-weight="bold">WSL (Ubuntu inside Windows)</text>
+
+  <!-- Outside the laptop -->
+  <rect x="8" y="52" width="150" height="56" rx="8" fill="#fff3d6" stroke="#b58a2a"/>
+  <text x="83" y="76" text-anchor="middle" font-weight="bold">Diner's phone</text>
+  <text x="83" y="94" text-anchor="middle">mobile data</text>
+  <rect x="196" y="52" width="136" height="56" rx="8" fill="#ede3f7" stroke="#8660ab"/>
+  <text x="264" y="76" text-anchor="middle" font-weight="bold">ngrok</text>
+  <text x="264" y="94" text-anchor="middle">public address</text>
+  <rect x="8" y="344" width="150" height="56" rx="8" fill="#fff3d6" stroke="#b58a2a"/>
+  <text x="83" y="368" text-anchor="middle" font-weight="bold">Waiter app</text>
+  <text x="83" y="386" text-anchor="middle">phone on the Wi-Fi</text>
+
+  <!-- Windows pieces -->
+  <rect x="374" y="344" width="102" height="56" rx="6" fill="#fff" stroke="#7a8aa5"/>
+  <text x="425" y="368" text-anchor="middle" font-weight="bold">Port</text>
+  <text x="425" y="386" text-anchor="middle" font-weight="bold">forwarding</text>
+  <rect x="374" y="214" width="102" height="56" rx="6" fill="#fff" stroke="#7a8aa5"/>
+  <text x="425" y="238" text-anchor="middle" font-weight="bold">Browser</text>
+  <text x="425" y="256" text-anchor="middle">POS, kitchen</text>
+
+  <!-- WSL pieces -->
+  <rect x="500" y="60" width="232" height="38" rx="6" fill="#fff" stroke="#6a9a6a"/>
+  <text x="616" y="84" text-anchor="middle" font-weight="bold">Gateway · port 9080</text>
+  <rect x="500" y="122" width="108" height="50" rx="6" fill="#fff" stroke="#6a9a6a"/>
+  <text x="554" y="144" text-anchor="middle" font-weight="bold">QR site</text>
+  <text x="554" y="162" text-anchor="middle">port 3100</text>
+  <rect x="624" y="122" width="108" height="50" rx="6" fill="#fff" stroke="#6a9a6a"/>
+  <text x="678" y="144" text-anchor="middle" font-weight="bold">QR relay</text>
+  <text x="678" y="162" text-anchor="middle">port 8787</text>
+  <rect x="500" y="218" width="232" height="50" rx="6" fill="#fff" stroke="#6a9a6a"/>
+  <text x="616" y="240" text-anchor="middle" font-weight="bold">KOT server</text>
+  <text x="616" y="258" text-anchor="middle">port 8080</text>
+  <rect x="500" y="344" width="108" height="78" rx="6" fill="#fff" stroke="#6a9a6a"/>
+  <text x="554" y="366" text-anchor="middle" font-weight="bold">Database</text>
+  <text x="554" y="384" text-anchor="middle">in Docker</text>
+  <text x="554" y="402" text-anchor="middle">rp_parosaa</text>
+  <text x="554" y="416" text-anchor="middle">rp_relay</text>
+  <rect x="624" y="344" width="108" height="78" rx="6" fill="#fff" stroke="#6a9a6a"/>
+  <text x="678" y="366" text-anchor="middle" font-weight="bold">Virtual</text>
+  <text x="678" y="384" text-anchor="middle" font-weight="bold">printer</text>
+  <text x="678" y="402" text-anchor="middle">takes 9100</text>
+  <text x="678" y="416" text-anchor="middle">shows 9180</text>
+
+  <!-- Arrows -->
+  <g stroke="#333" stroke-width="1.5" fill="none" marker-end="url(#a)">
+    <path d="M158 80H194"/>
+    <path d="M332 80H498"/>
+    <path d="M554 98V120"/>
+    <path d="M678 98V120"/>
+    <path d="M158 372H372"/>
+    <path d="M476 372H486V243H498"/>
+    <path d="M476 242H498"/>
+    <path d="M554 268V342"/>
+    <path d="M678 268V342"/>
+  </g>
+  <path d="M678 218V174" stroke="#b03030" stroke-width="2" stroke-dasharray="6 4" fill="none" marker-end="url(#a)"/>
+  <text x="686" y="200" fill="#b03030" font-weight="bold">open line</text>
+  <text x="430" y="72" fill="#555" text-anchor="middle">internet</text>
+  <text x="264" y="364" fill="#555" text-anchor="middle">restaurant Wi-Fi</text>
+</svg>

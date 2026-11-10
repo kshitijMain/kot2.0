@@ -1,34 +1,50 @@
 # scripts/pilot: the QR pilot at Parosaa on one computer
 
-Runs everything for Parosaa's QR ordering on one Mac (or Linux PC), so it can be tried on the
-restaurant's Wi-Fi before the cloud server exists (P9-06,
+Runs everything for Parosaa's QR ordering on one computer (Windows with WSL, a Mac or Linux), so it
+can be tried on the restaurant's Wi-Fi before the cloud server exists (P9-06,
 [ADR-0024](../../docs/adr/0024-qr-pilot-self-hosted-relay.md)). For the real pilot the QR site and
 relay move to your server ([manual task 38](../../manual-tasks/38-qr-pilot-server.md)); the KOT
 server stays on the restaurant PC.
 
+A step-by-step guide for a non-technical person is in
+[docs/guides/run-and-test-pilot.md](../../docs/guides/run-and-test-pilot.md) (and its PDF;
+`node scripts/pilot/guide-to-pdf.mjs` rebuilds the PDF).
+
 ```sh
-scripts/pilot/parosaa-local.sh setup     # once (about 3 minutes)
+scripts/pilot/parosaa-local.sh setup     # once, and after the code changes (keeps the test data)
 scripts/pilot/parosaa-local.sh start
+scripts/pilot/parosaa-local.sh restart
 scripts/pilot/parosaa-local.sh status
-scripts/pilot/parosaa-local.sh stop
-scripts/pilot/parosaa-local.sh reset     # delete everything set up here and start again
-scripts/pilot/parosaa-local.sh fresh     # clear orders, KOTs, approvals; keep QR codes and devices
+scripts/pilot/parosaa-local.sh doctor    # checks everything a test needs, says what to fix
+scripts/pilot/parosaa-local.sh links     # each table's address as it is now
+scripts/pilot/parosaa-local.sh wifi      # ends ngrok and follows a new Wi-Fi address
+scripts/pilot/parosaa-local.sh printer virtual   # or folder, or stop (the switch is remembered)
+scripts/pilot/parosaa-local.sh ports     # WSL: copies wsl-ports.ps1 to Windows and says how to run it
+scripts/pilot/parosaa-local.sh stop      # everything, ngrok and the database too
+scripts/pilot/parosaa-local.sh fresh     # DELETES orders, KOTs, approvals; keeps QR codes and devices
+scripts/pilot/parosaa-local.sh reset     # DELETES everything set up here
 ```
+
+Every `start` writes `.pilot/server.env` and the addresses in `.pilot/relay-host.env` afresh from
+what is remembered: the Wi-Fi address (`.pilot/pilot-ip`), the printer switch
+(`.pilot/printer-mode`) and whether ngrok is carrying the pilot now (asked of ngrok itself). Edits
+to those two files do not last; change the settings with the commands above.
 
 Needs Docker (for PostgreSQL 16), Node 24 and pnpm (`corepack enable`). Optional:
 
 - `PILOT_UPI_ID=yourbusiness@bank` before `setup`: the restaurant's **business** UPI ID, for Pay on
   the bill. UPI apps may decline amount-filled links to a personal UPI ID. It can also be set
   later in Manage → Settings → Payments.
-- `PILOT_IP=192.168.x.y`: this computer's Wi-Fi address, if the script guesses wrong.
+- `PILOT_IP=192.168.x.y` before `setup`: this computer's Wi-Fi address, if the script guesses wrong.
+  `setup` and `wifi` remember it. On WSL the script asks Windows for it.
 
 ## What `setup` makes
 
-| What                           | Where                                                         |
-| ------------------------------ | ------------------------------------------------------------- |
-| Parosaa: 5 tables, menu, staff | The KOT server's database (`rp_parosaa`)                      |
-| Each table's QR address        | `.pilot/parosaa.txt`                                          |
-| The 5 table tents (A5 PDF)     | `.pilot/parosaa-tents.pdf`: print, fold, one per table        |
+| What                          | Where                                                         |
+| ----------------------------- | ------------------------------------------------------------- |
+| Parosaa: 5 tables, menu, staff | The KOT server's database (`rp_parosaa`)                       |
+| Each table's QR address       | `.pilot/parosaa.txt`                                           |
+| The 5 table tents (A5 PDF)    | `.pilot/parosaa-tents.pdf`: print, fold, one per table         |
 | The relay and Parosaa in it    | `rp_relay`, with the PC's credential stored in the KOT server |
 
 Staff and their first PINs: Owner 1111, Manager 2222, Waiter 1 4444, Waiter 2 5555, Kitchen 6666.
@@ -51,15 +67,17 @@ the staff tiles; pick a name and enter the PIN. No `/pair`, no codes from Manage
 Each browser (or Incognito window) becomes a "Browser N" device; unpair old ones in Manage →
 Devices. Never set the flag on a real restaurant's installation.
 
-## The waiter app on a phone (APK built on this Mac)
+## The waiter app on a phone (APK built on this computer)
 
 Nobody pairs a phone (ADR-0025, 2026-11-01). The app is built with this Mac's address and its
 certificate's fingerprint, and connects by itself; staff only tap their name and type their PIN.
-Build it with the pilot server running (Android SDK in `~/Library/Android/sdk`; a few minutes):
+Build it with the pilot server running. On a Mac the Android SDK is in `~/Library/Android/sdk`; on
+Linux or WSL, `scripts/pilot/build-waiter-apk.sh install-tools` puts Java and the SDK in `~/Android`
+once:
 
 ```bash
-scripts/pilot/build-waiter-apk.sh                 # the address in .pilot/server.env
-scripts/pilot/build-waiter-apk.sh 192.168.1.20    # or another address of this Mac
+scripts/pilot/build-waiter-apk.sh                 # the address the pilot remembers
+scripts/pilot/build-waiter-apk.sh 192.168.1.20    # or another address of this computer
 ```
 
 Build it again whenever the Mac's Wi-Fi address changes. (If the address changed and the app was
@@ -109,10 +127,11 @@ the server, so Manage → System → "Back up now" works with only Docker.
 
 ## Prints saved in a folder (test only)
 
-With no printer on this Mac, the pilot saves every print (KOT, bill, reprint, test page) in
+With no printer on this computer, the pilot saves every print (KOT, bill, reprint, test page) in
 `.pilot/printouts/` instead: a `.txt` with what the slip says and a `.bin` with the printer's own
-bytes. `RP_PRINT_TO_FOLDER` in `.pilot/server.env` turns it on. To use a real printer, delete that
-line, restart, and set the printer in Manage → Kitchen and printers.
+bytes. `parosaa-local.sh printer virtual` stops that: the server then prints for real, to whatever
+Manage → Kitchen and printers names (the virtual printer on `127.0.0.1:9100`, or a real printer).
+`printer folder` goes back.
 
 ## A diner's orders follow their number
 
@@ -138,17 +157,17 @@ within a minute.
 
 `scripts/pilot/parosaa-ngrok.sh` puts the relay and the QR site behind one public ngrok address
 (`scripts/pilot/ngrok-gateway.mjs` sends `/functions`, `/realtime`, `/storage` and `/healthz` to
-the relay and everything else to the site), sets `RP_QR_SITE_URL` and `RP_RELAY_URL` to it and
-restarts the three services. Needs `ngrok` signed in, and `setup` done once.
+the relay and everything else to the site) and restarts the three services with it. Needs `setup`
+done once, `parosaa-ngrok.sh install` and `parosaa-ngrok.sh token <token>` once.
+`parosaa-ngrok.sh stop` ends it and puts the Wi-Fi addresses back.
 
 ## When the site's address changes, print the tents again
 
 A table's QR code is the same whatever the address (`/t/<code>`), but a printed tent holds the
-whole address it was printed with. A free ngrok address changes each time ngrok starts, and the
-Wi-Fi trial uses the Mac's address, so tents printed before a change open the old address.
+whole address it was printed with. A new ngrok address or a new Wi-Fi address means tents printed
+before the change open the old address.
 
-- `parosaa-ngrok.sh` rewrites `.pilot/parosaa-tents.pdf` for the address it starts, and says when
-  the address changed since the last tents.
+- `parosaa-local.sh` rewrites `.pilot/parosaa-tents.pdf` whenever the address changes, and says so.
 - On the POS, **Manage → QR codes** always shows the address the codes open now, every table's
   code and link, and prints the tents for that address: **Download table tents** for all, or
   **Print** on one table's row (after a tent is lost or spilled on). **Copy link** gives a
@@ -162,13 +181,13 @@ Wi-Fi trial uses the Mac's address, so tents printed before a change open the ol
 
 1. `scripts/pilot/parosaa-ngrok.sh`. Note the public address it prints, and that it says the
    tents were rewritten for it.
-2. On the POS (`https://<Mac>:8080`, Manager 2222), open **Manage → QR codes**:
+2. On the POS (`https://<this computer>:8080`, Manager 2222), open **Manage → QR codes**:
    - the notice says the codes open the ngrok address;
    - each of tables 1 to 5 shows its code and a link starting with that address.
 3. **Copy link** on table 2 and paste it in a note: it is the ngrok address `/t/…`.
 4. Choose **A5 tents**, then **Print** on table 2's row: the PDF has one page, for table 2.
 5. On a phone on **mobile data**, scan that page's code: Parosaa opens at table 2. Order, and
    approve it on the POS.
-6. Stop ngrok and run `parosaa-ngrok.sh` again (a new free address). The script warns that the
-   address changed. Manage → QR codes shows the new address. The old printout opens the old
+6. Stop ngrok and run `parosaa-ngrok.sh` again. If ngrok gave a new address, the script says so and
+   Manage → QR codes shows the new address. The old printout opens the old
    address; the new **Download table tents** opens the new one.
