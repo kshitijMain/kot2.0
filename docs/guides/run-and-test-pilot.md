@@ -419,10 +419,10 @@ Open a second browser window on the laptop and sign in as **Kitchen** (6666) for
 | 8   | On the phone, tap **My orders**, **Order again**, then **Send order**.         | A second order to **Approve** on the POS                                             | Same journey as steps 4 and 5.                                                                                     |
 | 9   | On the phone, open **Bill** and tap **Ask for the bill**.                      | On the POS: `1 request from a table` and `Bill requested`                            | The request travels the same way as an order.                                                                      |
 | 10  | On the POS, tap the table, then **Bill**, then **Print bill**.                 | Table shows `Bill printed`. The phone's **Bill** tab shows the bill with its number. | The server creates the invoice and its number, then sends a copy to the relay. A slip goes to the printer setting. |
-| 11  | On the phone, tap **I have paid**.                                             | Staff are alerted. (Button confirmed, press not run by Claude.)                      | A request travels to the laptop just like an order. No money moves.                                                |
+| 11  | On the phone, tap **I have paid**.                                             | The POS shows an alert such as `Paid by UPI: check and settle`.                      | A request travels to the laptop just like an order. No money moves.                                                |
 | 12  | On the POS, open **Shift**, type an opening cash amount, press **Open shift**. | `Shift opened`                                                                       | Cash cannot be taken without an open shift, so the drawer can be counted.                                          |
 | 13  | Tap the table, **Bill**, **Take payment**, **Record payment**.                 | `Invoice ... is paid`. The table goes back to `Free`.                                | The payment is recorded on the laptop only.                                                                        |
-| 14  | On a different table's code, enter a different number.                         | That table only, with none of the first table's orders. (Not run by Claude.)         | Each table's code and mobile number decide what is shown.                                                          |
+| 14  | On a different table's code, enter a different number.                         | That table only. **My orders** says `No orders yet`.                                 | Each table's code and mobile number decide what is shown.                                                          |
 
 The **Pay with UPI** button only appears once a UPI ID is set: **Manage → Settings → Payments**.
 
@@ -473,8 +473,8 @@ scripts/pilot/build-waiter-apk.sh
 
 - **What it does:** builds the Android app with the laptop's address built in.
 - **Why:** so the phone can find the laptop by itself.
-- **What happens:** the first build is long, an hour or more on a slow connection, and it downloads several GB. Later builds
-  are quicker. The laptop may be slow meanwhile. It creates `.pilot/apk/parosaa-waiter-preview.apk` and
+- **What happens:** the very first build also downloads several GB, so allow an hour or more on a slow connection. With
+  the downloads done, a build took 24 minutes on this laptop. The laptop may be slow meanwhile. It creates `.pilot/apk/parosaa-waiter-preview.apk` and
   puts a copy in your **Windows Downloads** folder, wherever Windows keeps it.
 - **It worked if you see:** `Copied to your Windows Downloads folder`.
 - **If it fails:**
@@ -679,26 +679,22 @@ build it again, because the certificate is new.
 
 ## 8. What Claude actually ran
 
-**Run on this laptop and working as described:** every `parosaa-local.sh` command, including `fresh`
-and `reset` (on a separate throwaway copy, so your test restaurant was not wiped). Also
-`parosaa-ngrok.sh install`, its message when there is no token, `build-waiter-apk.sh install-tools`
+**Run on this laptop after the Parosaa rebrand, and working as described:** every
+`parosaa-local.sh` command, including `fresh` and `reset` (on a separate throwaway copy, so your test
+restaurant was not wiped); `parosaa-ngrok.sh install`, `stop` and its message when there is no token;
+`build-waiter-apk.sh install-tools` and the build, which produced the app in your Downloads folder;
 and the switch to and from the dev server.
 
-**Run in a phone-sized browser on the laptop:** the QR ordering test through the real gateway and the
-POS, kitchen display and printer tests.
+**Run in a phone-sized browser on the laptop, all passing:** every row of the QR ordering test and
+every row of the virtual printer test, through the real gateway, relay, POS and kitchen display.
 
 **Not run by Claude:**
 
-- The two Administrator PowerShell commands. Their "what would happen" mode and refusal without
+- The two Administrator PowerShell commands. Their "what would happen" mode and their refusal without
   Administrator rights were run.
 - A real ngrok connection, as there was no account. A stand-in for ngrok was used, and everything
-  around it was real.
-- Finishing the first waiter app build. It was started and was still downloading when the session
-  ended, so the time quoted for it is an estimate.
+  around it was real. So `parosaa-ngrok.sh token` was not run either.
 - Everything on a real Android phone: installing the app, table 4D Step 5, and QR ordering on real
   mobile data.
-- Pressing **I have paid**, and checking a second table's privacy (rows 11 and 14 of the QR test).
-- Changing the paper to 58 mm on screen (row 8 of the printer test). An automated test covers the
-  narrow layout.
 - The troubleshooting commands that need your Linux password (`sudo service ...`), and
   `wsl --shutdown`, because it would have closed the session Claude was working in.

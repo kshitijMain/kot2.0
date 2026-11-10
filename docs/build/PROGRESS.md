@@ -4669,6 +4669,11 @@ off-white redesign of ADR-0022.
 - Decided: `readableTextColor` stays for the tablet; everything else uses `brandTextColor`.
 - Gotcha: a pilot set up as Mannat is not migrated; `setup` creates a new restaurant beside it.
 - Not checked on real devices: the Windows installer graphics and the waiter app's look on a phone.
+- The pilot scripts and the plain-language guide (`docs/guides/run-and-test-pilot.md` and its PDF) came
+  over from `docs/pilot-guide` under the new names; `build-waiter-apk.sh` now rebuilds the shared
+  packages first.
+- Gotcha: on a machine with 5 GB for WSL the full test run times out under load (console and server).
+  `pnpm turbo run test --concurrency=1 --continue`, then the failing server files alone, all pass.
 
 ### 2026-11-01: P9-27 The network and the data, as the Business Owner approved
 
