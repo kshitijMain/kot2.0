@@ -146,7 +146,8 @@
                         ]
                       },
                       "instructions": { "type": ["string", "null"] },
-                      "endReason": { "type": ["string", "null"] }
+                      "endReason": { "type": ["string", "null"] },
+                      "onPrintedBill": { "type": "boolean" }
                     },
                     "required": [
                       "id",
@@ -386,7 +387,8 @@
                         ]
                       },
                       "instructions": { "type": ["string", "null"] },
-                      "endReason": { "type": ["string", "null"] }
+                      "endReason": { "type": ["string", "null"] },
+                      "onPrintedBill": { "type": "boolean" }
                     },
                     "required": [
                       "id",

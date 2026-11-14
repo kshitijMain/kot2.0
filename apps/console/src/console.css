@@ -418,6 +418,14 @@ body {
   gap: var(--rp-space-2);
 }
 
+/* A kitchen ticket's print status, with Print again (QA-035). */
+.pos-sent__kot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rp-space-2);
+}
+
 .pos-cart__name {
   font-weight: var(--rp-font-weight-semibold);
 }

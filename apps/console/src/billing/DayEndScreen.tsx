@@ -1,6 +1,15 @@
 import type { DayEndPreview } from '@rp/contracts';
 import { formatDisplayDate } from '@rp/domain';
-import { Button, Card, ErrorState, Icon, LoadingState, Money, useToast } from '@rp/ui-web';
+import {
+  Button,
+  Card,
+  ConfirmDialog,
+  ErrorState,
+  Icon,
+  LoadingState,
+  Money,
+  useToast,
+} from '@rp/ui-web';
 import { useState } from 'react';
 import { useConsole } from '../app/console-context.js';
 import { useAlerts } from '../alerts/alerts-context.js';
@@ -14,7 +23,17 @@ const affectsDay = (type: string) => /^(Bill|Order|Table|ItemStatusChanged$)/.te
  * Closing the business day (BILL-013): the Z-report of the day so far, what blocks closing (open
  * shifts, unpaid takeaway bills, open tables, which the manager may carry forward), and the close.
  */
-export function DayEndScreen({ onBack }: { onBack: () => void }) {
+export function DayEndScreen({
+  onBack,
+  onPay,
+  onCloseShift,
+}: {
+  onBack: () => void;
+  /** Opens an unpaid bill that holds the day up, to take its payment (QA-031). */
+  onPay: (invoiceId: string) => void;
+  /** Opens a shift left open, to close it for its owner (QA-034). */
+  onCloseShift: (shiftId: string) => void;
+}) {
   const t = useT();
   const controller = useConsole();
   const toast = useToast();
@@ -22,6 +41,8 @@ export function DayEndScreen({ onBack }: { onBack: () => void }) {
   const [carryForward, setCarryForward] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | undefined>();
+  // Closing a day cannot be undone: it asks first (QA-030).
+  const [confirming, setConfirming] = useState(false);
 
   const close = async (preview: DayEndPreview) => {
     setBusy(true);
@@ -70,7 +91,7 @@ export function DayEndScreen({ onBack }: { onBack: () => void }) {
                 {error}
               </p>
             )}
-            <Blockers preview={data.value} />
+            <Blockers preview={data.value} onPay={onPay} onCloseShift={onCloseShift} />
             {data.value.status === 'CLOSED' ? (
               <p className="console-notice">{t('dayEnd.closed')}</p>
             ) : (
@@ -95,11 +116,29 @@ export function DayEndScreen({ onBack }: { onBack: () => void }) {
                   // a shift open, only to be refused.
                   disabled={!canClose(data.value, carryForward)}
                   onClick={() => {
-                    void close(data.value);
+                    setConfirming(true);
                   }}
                 >
                   {t('dayEnd.close')}
                 </Button>
+                <ConfirmDialog
+                  open={confirming}
+                  title={t('dayEnd.confirmTitle', {
+                    date: formatDisplayDate(data.value.businessDate),
+                  })}
+                  description={t('dayEnd.confirmDescription')}
+                  confirmLabel={t('dayEnd.close')}
+                  cancelLabel={t('dayEnd.keepOpen')}
+                  tone="danger"
+                  busy={busy}
+                  onCancel={() => {
+                    setConfirming(false);
+                  }}
+                  onConfirm={() => {
+                    setConfirming(false);
+                    void close(data.value);
+                  }}
+                />
               </>
             )}
           </div>
@@ -119,7 +158,15 @@ function canClose(preview: DayEndPreview, carryForward: boolean): boolean {
   );
 }
 
-function Blockers({ preview }: { preview: DayEndPreview }) {
+function Blockers({
+  preview,
+  onPay,
+  onCloseShift,
+}: {
+  preview: DayEndPreview;
+  onPay: (invoiceId: string) => void;
+  onCloseShift: (shiftId: string) => void;
+}) {
   const t = useT();
   // Whose shift is open, by name (P9-24): "1 shift is still open" did not say whose.
   const names = useAlerts()?.names;
@@ -139,6 +186,20 @@ function Blockers({ preview }: { preview: DayEndPreview }) {
             })}
           </li>
         ) : null}
+        {openShifts.map((shift) => (
+          <li key={shift.shiftId}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                onCloseShift(shift.shiftId);
+              }}
+            >
+              {t('dayEnd.closeShiftOf', {
+                name: names?.get(shift.staffId) ?? t('dayEnd.someone'),
+              })}
+            </Button>
+          </li>
+        ))}
         {openTables.length > 0 ? (
           <li>
             {t('dayEnd.openTables', {
@@ -153,6 +214,18 @@ function Blockers({ preview }: { preview: DayEndPreview }) {
             })}
           </li>
         ) : null}
+        {unsettledInvoices.map((invoice) => (
+          <li key={invoice.invoiceId}>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                onPay(invoice.invoiceId);
+              }}
+            >
+              {t('dayEnd.payInvoice', { number: invoice.invoiceNumber })}
+            </Button>
+          </li>
+        ))}
       </ul>
     </Card>
   );

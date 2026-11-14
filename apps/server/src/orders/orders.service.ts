@@ -81,7 +81,20 @@ function sha256(text: string): string {
  * for approval (P3-03).
  */
 export const ORDER_VIEW_INCLUDE = {
-  items: { orderBy: { id: 'asc' }, include: { modifiers: { orderBy: { id: 'asc' } } } },
+  items: {
+    orderBy: { id: 'asc' },
+    include: {
+      modifiers: { orderBy: { id: 'asc' } },
+      // On a printed bill that is not reopened for changes (QA-037).
+      _count: {
+        select: {
+          invoiceLines: {
+            where: { invoice: { status: { not: 'VOIDED' }, bill: { editingInvoiceId: null } } },
+          },
+        },
+      },
+    },
+  },
   kots: { orderBy: { kotNumber: 'asc' }, include: { station: { select: { name: true } } } },
 } as const satisfies Prisma.OrderInclude;
 
@@ -120,6 +133,7 @@ export function orderView(
       state: item.state,
       instructions: item.instructions,
       endReason: item.endReason,
+      onPrintedBill: item._count.invoiceLines > 0,
     })),
     kots: order.kots.map(({ id, kotNumber, stationId, station, kind, printStatus }) => ({
       id,

@@ -2,6 +2,7 @@ import type { AlertView, OrderFeedResponse } from '@rp/contracts';
 import { act, screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { kitchenFlag, waterForRavi } from './alerts-fixture.js';
+import { B, billView } from './billing-fixture.js';
 import {
   FLOOR,
   NOW,
@@ -134,6 +135,55 @@ describe('[MGR-002] the overview', () => {
       expect(await orderCards()).toHaveLength(3);
     });
     expect(screen.queryByText(t('dashboard.orders.table', { table: 'T1' }))).toBeNull();
+  });
+
+  it('[BILL-015] [TBL-007] a table that asked for its bill offers the bill from the floor, even with nothing cooking (QA-023)', async () => {
+    const billRequested = {
+      ...OVERVIEW,
+      tables: OVERVIEW.tables.map((table) =>
+        table.tableId === T1 ? { ...table, state: 'BILL_REQUESTED' as const } : table,
+      ),
+    };
+    const fake = signsInAs(server(), 'MANAGER')
+      .on('GET', '/api/v1/floor', () => ({ status: 200, body: FLOOR }))
+      .on('GET', '/api/v1/tables/overview', () => ({ status: 200, body: billRequested }))
+      .on('GET', '/api/v1/order-feed', () => ({ status: 200, body: feed() }))
+      .on('GET', '/api/v1/alerts', () => ({ status: 200, body: { alerts: [] } }))
+      .on('POST', '/api/v1/bills', () => ({ status: 200, body: billView() }))
+      .on('GET', `/api/v1/bills/${B.bill}`, () => ({ status: 200, body: billView() }));
+    const { user, container } = await renderConsole({ fake, path: '/manage', signedIn: 'MANAGER' });
+    const hall = await screen.findByRole('region', { name: 'Hall' });
+    await user.click(within(hall).getByRole('button', { name: /^T1, Bill requested/ }));
+    const bill = await screen.findByRole('button', { name: t('pos.billTable') });
+    expect(
+      screen.getByRole('button', { name: t('dashboard.orders.tableActions') }),
+    ).toBeInTheDocument();
+    await expectNoAxeViolations(container);
+    await user.click(bill);
+    expect(fake.callsTo('POST', '/api/v1/bills')[0]?.body).toEqual({
+      tableSessionId: billRequested.tables[0]?.session?.id,
+    });
+    expect(
+      await screen.findByRole('heading', {
+        name: t('billing.billFor', { target: t('pos.table.title', { table: 'T4' }) }),
+      }),
+    ).toBeInTheDocument();
+  });
+
+  it('[TBL-007] opens the table’s actions on the POS from the floor (QA-023)', async () => {
+    const { user } = await renderConsole({
+      fake: managerServer([feed()]),
+      path: '/manage',
+      signedIn: 'MANAGER',
+    });
+    const hall = await screen.findByRole('region', { name: 'Hall' });
+    await user.click(within(hall).getByRole('button', { name: /^T1, Occupied/ }));
+    await user.click(
+      await screen.findByRole('button', { name: t('dashboard.orders.tableActions') }),
+    );
+    expect(
+      await screen.findByRole('dialog', { name: t('pos.table.title', { table: 'T1' }) }),
+    ).toBeInTheDocument();
   });
 
   it('opens the late dishes from the glance', async () => {

@@ -781,8 +781,8 @@ describe('[BILL-010] editing a printed bill', () => {
       lines: [line(id('Water'))],
     });
     expect(orderId).toBeTruthy();
-    const refused = await issue(dineIn.id);
-    expect([refused.status, codeOf(refused)]).toEqual([409, 'BILL_ALREADY_PRINTED']);
+    // Printing again now gives the revised bill straight away (the owner's report, QA-022,
+    // `qa-flows.int.test.ts`); this test goes on with editing the printed bill by hand.
 
     const reopen = (headers: Record<string, string>) =>
       server()

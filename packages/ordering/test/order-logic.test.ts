@@ -270,3 +270,13 @@ describe('[WTR-012] whether each ticket reached the kitchen', () => {
     expect(text('unknown', 'NOT_REQUIRED')).toEqual([true, 'On the kitchen screen']);
   });
 });
+
+describe('[ORD-011] [BILL-010] a dish on a printed bill (QA-037)', () => {
+  it('offers no cancel or void: the bill is changed through Edit bill', () => {
+    const line = { state: 'SENT' as const, parentOrderItemId: null, onPrintedBill: true };
+    expect(lineActions(line, 'MANAGER', true)).toMatchObject({ cancel: false, void: null });
+    const started = { ...line, state: 'PREPARING' as const };
+    expect(lineActions(started, 'MANAGER', true)).toMatchObject({ cancel: false, void: null });
+    expect(lineActions({ ...line, onPrintedBill: false }, 'MANAGER', true).cancel).toBe(true);
+  });
+});

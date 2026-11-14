@@ -51,12 +51,23 @@ function TakeawayOrder() {
   );
 }
 
+/**
+ * Where a screen opened from another goes back to: `?back=`, when it is a POS address (a shift
+ * opened from the payment, a bill paid from day-end), else the floor (QA-030, QA-031).
+ */
+function backTo(search: URLSearchParams, fallback = '/pos'): string {
+  const back = search.get('back');
+  return back?.startsWith('/pos/') === true ? back : fallback;
+}
+
 function Shift() {
   const navigate = useNavigate();
+  const [search] = useSearchParams();
   return (
     <ShiftScreen
+      shiftId={search.get('id') ?? undefined}
       onBack={() => {
-        void navigate('/pos');
+        void navigate(backTo(search));
       }}
     />
   );
@@ -84,8 +95,9 @@ function Pay() {
   const [search] = useSearchParams();
   const navigate = useNavigate();
   const bill = search.get('bill');
+  const here = `/pos/pay/${invoiceId}${search.size === 0 ? '' : `?${search.toString()}`}`;
   const back = () => {
-    void navigate(bill === null ? '/pos' : `/pos/bill/${bill}`);
+    void navigate(backTo(search, bill === null ? '/pos' : `/pos/bill/${bill}`));
   };
   return (
     <PaymentScreen
@@ -94,7 +106,8 @@ function Pay() {
       onBack={back}
       onDone={back}
       onOpenShift={() => {
-        void navigate('/pos/shift');
+        // Back to this payment once the shift is open, not to the floor (QA-030).
+        void navigate(`/pos/shift?back=${encodeURIComponent(here)}`);
       }}
     />
   );
@@ -106,6 +119,12 @@ function DayEnd() {
     <DayEndScreen
       onBack={() => {
         void navigate('/pos');
+      }}
+      onPay={(invoiceId) => {
+        void navigate(`/pos/pay/${invoiceId}?back=${encodeURIComponent('/pos/day-end')}`);
+      }}
+      onCloseShift={(shiftId) => {
+        void navigate(`/pos/shift?id=${shiftId}&back=${encodeURIComponent('/pos/day-end')}`);
       }}
     />
   );

@@ -73,6 +73,16 @@ export class ShiftsService {
     return shift === null ? null : this.view(this.prisma, principal.restaurantId, shift.id);
   }
 
+  /** A shift, for a manager closing it for its owner (QA-034); OWN reads only their own. */
+  async get(principal: Principal, shiftId: string, ownOnly: boolean): Promise<ShiftView> {
+    const shift = await this.prisma.shift.findFirst({
+      where: { id: shiftId, restaurantId: principal.restaurantId },
+    });
+    if (shift === null) throw shiftNotFound();
+    if (ownOnly && shift.staffId !== principal.staffId) throw authErrors.forbidden();
+    return this.view(this.prisma, principal.restaurantId, shift.id);
+  }
+
   /** The person's open shift, if any (cash payments go into it). */
   openShiftOf(client: Client, principal: Principal): Promise<Shift | null> {
     return client.shift.findFirst({

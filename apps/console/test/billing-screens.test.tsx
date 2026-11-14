@@ -153,6 +153,77 @@ describe('[BILL-001] [BILL-005] [AUTH-011] the bill', () => {
     ).toBeInTheDocument();
   });
 
+  it('[BILL-010] shows dishes ordered after the bill was printed, and prints the updated bill (QA-022)', async () => {
+    let issued = 0;
+    const fake = manager()
+      .on('GET', `/api/v1/bills/${B.bill}`, () => ({
+        status: 200,
+        body: billView({
+          status: 'INVOICED',
+          invoiceIds: [B.invoice],
+          unbilledOrderItemIds: issued === 0 ? [B.item2] : [],
+        }),
+      }))
+      .on('GET', `/api/v1/invoices/${B.invoice}`, () => ({ status: 200, body: invoiceView() }))
+      .on('POST', `/api/v1/bills/${B.bill}/invoice`, () => {
+        issued += 1;
+        return { status: 201, body: invoiceView() };
+      })
+      .on('POST', `/api/v1/invoices/${B.invoice}/print`, () => ({
+        status: 200,
+        body: { printed: true, error: null, duplicate: false, printCount: 1 },
+      }));
+    const { user, container } = await renderConsole({
+      fake,
+      signedIn: 'MANAGER',
+      path: `/pos/bill/${B.bill}`,
+    });
+    expect(await screen.findByText(t('billing.unbilledNotice', { count: 1 }))).toBeInTheDocument();
+    expect(screen.getByText(t('billing.notYetBilled'))).toBeInTheDocument();
+    await expectNoAxeViolations(container);
+    await user.click(screen.getByRole('button', { name: t('billing.printUpdated') }));
+    await waitFor(() => {
+      expect(issued).toBe(1);
+    });
+    await waitFor(() => {
+      expect(screen.queryByText(t('billing.unbilledNotice', { count: 1 }))).not.toBeInTheDocument();
+    });
+  });
+
+  it('[BILL-007] says a voided part of a split bill is to be printed again, and prints it (QA-026)', async () => {
+    let issued = 0;
+    const fake = manager()
+      .on('GET', `/api/v1/bills/${B.bill}`, () => ({
+        status: 200,
+        body: billView({
+          status: 'INVOICED',
+          invoiceIds: [B.invoice],
+          voidedPartIds: issued === 0 ? [B.invoice] : [],
+        }),
+      }))
+      .on('GET', `/api/v1/invoices/${B.invoice}`, () => ({ status: 200, body: invoiceView() }))
+      .on('POST', `/api/v1/bills/${B.bill}/invoice`, () => {
+        issued += 1;
+        return { status: 201, body: invoiceView() };
+      })
+      .on('POST', `/api/v1/invoices/${B.invoice}/print`, () => ({
+        status: 200,
+        body: { printed: true, error: null, duplicate: false, printCount: 1 },
+      }));
+    const { user } = await renderConsole({
+      fake,
+      signedIn: 'MANAGER',
+      path: `/pos/bill/${B.bill}`,
+    });
+    expect(
+      await screen.findByText(t('billing.voidedPartNotice', { count: 1 })),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: t('billing.printUpdated') }));
+    await waitFor(() => {
+      expect(issued).toBe(1);
+    });
+  });
+
   it('removes the service charge with a reason', async () => {
     const fake = manager()
       .on('GET', `/api/v1/bills/${B.bill}`, () => ({ status: 200, body: billView() }))
@@ -269,6 +340,33 @@ describe('[BILL-008] taking payment', () => {
     expect(screen.getByText(t('payment.leftAfter'))).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: t('payment.openShift') }));
     expect(await screen.findByText(t('shift.none'))).toBeInTheDocument();
+  });
+
+  it('comes back to the payment from the shift it opened for cash (QA-030)', async () => {
+    const fake = manager()
+      .on('GET', `/api/v1/invoices/${B.invoice}/payments`, () => ({
+        status: 200,
+        body: paymentsView(),
+      }))
+      .on('POST', `/api/v1/invoices/${B.invoice}/payments`, () => ({
+        status: 409,
+        body: { code: 'NO_OPEN_SHIFT', message: 'Open a shift before taking cash.' },
+      }))
+      .on('GET', '/api/v1/shifts/current', () => ({ status: 200, body: { shift: null } }));
+    const { user } = await renderConsole({
+      fake,
+      signedIn: 'MANAGER',
+      path: `/pos/pay/${B.invoice}?bill=${B.bill}`,
+    });
+    await user.click(await screen.findByRole('button', { name: t('payment.record') }));
+    await user.click(await screen.findByRole('button', { name: t('payment.openShift') }));
+    expect(await screen.findByText(t('shift.none'))).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: t('pos.backToTables') }));
+    expect(
+      await screen.findByRole('heading', {
+        name: t('payment.title', { number: 'INV/26-27/000012' }),
+      }),
+    ).toBeInTheDocument();
   });
 
   it('refuses an amount above what is still to pay', async () => {

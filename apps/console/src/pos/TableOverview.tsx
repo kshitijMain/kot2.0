@@ -12,8 +12,8 @@ import {
   TableTile,
   useToast,
 } from '@rp/ui-web';
-import { useState } from 'react';
-import { useNavigate } from 'react-router';
+import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router';
 import { useConsole, useConsoleState } from '../app/console-context.js';
 import { useT } from '../app/i18n.js';
 import { messageOf } from '../app/messages.js';
@@ -56,6 +56,25 @@ export function TableOverview() {
   const [panel, setPanel] = useState<Panel | undefined>();
   const [plan, setPlan] = useState(false);
   const navigate = useNavigate();
+  // `?table=` opens that table's actions, e.g. from the dashboard's floor (QA-023).
+  const [search, setSearch] = useSearchParams();
+  const asked = search.get('table');
+  const askedTable =
+    asked !== null && data.status === 'ready'
+      ? data.value.overview.tables.find((table) => table.tableId === asked)
+      : undefined;
+  // Opened once per request, as the floor first shows it; the address is then cleared.
+  const [opened, setOpened] = useState<string | null>(null);
+  if (askedTable !== undefined && opened !== askedTable.tableId) {
+    setOpened(askedTable.tableId);
+    setPanel({
+      kind: askedTable.state === 'FREE' ? 'open' : 'details',
+      tableId: askedTable.tableId,
+    });
+  }
+  useEffect(() => {
+    if (askedTable !== undefined) setSearch({}, { replace: true });
+  }, [askedTable, setSearch]);
 
   if (data.status === 'loading') return <LoadingState title={t('states.loading')} />;
   if (data.status === 'error') {
@@ -321,7 +340,8 @@ function TableDetails({
   const freeable =
     canFree &&
     session !== null &&
-    table.state === 'OCCUPIED' &&
+    // Also after a bill request with nothing to bill, which otherwise stays for good (QA-024).
+    (table.state === 'OCCUPIED' || table.state === 'BILL_REQUESTED') &&
     session.amountSoFar === 0 &&
     session.pendingApprovals === 0;
   const [cleaning, setCleaning] = useState(false);
@@ -383,12 +403,17 @@ function TableDetails({
             <Button variant="secondary" onClick={onMove}>
               {t('pos.table.move')}
             </Button>
-            <Button variant="secondary" onClick={onMerge}>
-              {t('pos.table.merge')}
-            </Button>
-            <Button variant="secondary" onClick={onTransfer}>
-              {t('pos.table.transfer')}
-            </Button>
+            {/* The server refuses both once the bill is printed (QA-036); a move is fine. */}
+            {table.state === 'BILL_PRINTED' ? null : (
+              <>
+                <Button variant="secondary" onClick={onMerge}>
+                  {t('pos.table.merge')}
+                </Button>
+                <Button variant="secondary" onClick={onTransfer}>
+                  {t('pos.table.transfer')}
+                </Button>
+              </>
+            )}
           </>
         ) : null}
         {billing === 'open' ? (

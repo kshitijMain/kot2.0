@@ -30,7 +30,9 @@ export class NotificationTriggers implements OnModuleInit {
         'ItemStatusChanged',
         'BillRequested',
         'BillPrinted',
+        'OrdersMoved',
         'TableClosed',
+        'BillSettled',
         'KotBumped',
         'DeviceStatusChanged',
         'PrinterStatusChanged',
@@ -102,6 +104,42 @@ export class NotificationTriggers implements OnModuleInit {
         const sessionId = invoice?.tableSessionId ?? null;
         if (sessionId === null) return;
         await this.notifications.clear(tx, { restaurantId, dedupeKey: `bill:${sessionId}` });
+        return;
+      }
+      case 'OrdersMoved': {
+        // Merged tables: the guests' open requests and alerts follow them to the table they
+        // joined, before the table they left closes and clears its own (QA-039).
+        if (event.payload.kind !== 'MERGE') return;
+        await tx.alert.updateMany({
+          where: {
+            restaurantId,
+            status: 'OPEN',
+            tableSessionId: event.payload.fromTableSessionId,
+          },
+          data: {
+            tableSessionId: event.payload.toTableSessionId,
+            tableId: event.payload.toTableId,
+          },
+        });
+        return;
+      }
+      case 'BillSettled': {
+        // A takeaway has no table to close: once it is paid, its alerts (a dish out of stock)
+        // are done with, instead of staying on the waiter's bell for good (QA-040).
+        const invoice = await tx.invoice.findUnique({
+          where: { id: event.payload.invoiceId },
+          select: { billId: true, bill: { select: { orderId: true } } },
+        });
+        const billId = invoice?.billId ?? null;
+        const orderId = invoice?.bill?.orderId ?? null;
+        if (billId === null || orderId === null) return;
+        const unpaid = await tx.invoice.count({ where: { billId, status: 'ISSUED' } });
+        if (unpaid > 0) return;
+        const alerts = await tx.alert.findMany({
+          where: { restaurantId, status: 'OPEN', orderId },
+          select: { id: true },
+        });
+        await this.notifications.clear(tx, { restaurantId, ids: alerts.map((alert) => alert.id) });
         return;
       }
       case 'TableClosed':

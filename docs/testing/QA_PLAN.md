@@ -13,6 +13,23 @@ Critical and High ones fixed), **n/a** (does not apply to this part).
 
 ## Resume here
 
+> Session 2 (2026-11-02, branch `qa/functional-gaps`): functional gaps found by using the product
+> the way a restaurant does (the owner's two reports, then journey walk-throughs of the console,
+> phones, tablet, kitchen and the server's lifecycles). QA-022 to QA-041 fixed and committed;
+> decisions D-21 to D-25 written.
+>
+> Still open from the walk-throughs, in order:
+>
+> 1. A guest's "Cancel bill request" on the tablet leaves the table "Bill requested" (D-22 B).
+> 2. A takeaway handed over but never billed does not block day-end (D-8 B).
+> 3. The payment and shift screens do not refresh when another till changes the bill; discounts,
+>    part payments and voids send no live event (the server still refuses an overpayment).
+> 4. The waiter's unsent cart is lost on the inactivity sign-out (decision: keep per person?).
+> 5. A printed or part-paid bill carried forward keeps the closed day's date (D-8, D-6).
+> 6. Low: the waiter sees "Cancelled" without the reason; the tablet's order list ignores moves
+>    (needs a live-event test harness in the tablet's tests).
+> 7. Then the session-1 list below (Area 1 leftovers, server mutation check, Areas 2-7).
+>
 > Session 1 (2026-10-27/28): plan written; Area 1 (server) nearly done: 21 findings, all fixed
 > (QA_REPORT.md), 12 business decisions written (DECISIONS_NEEDED.md), the manual checklist
 > started. Error boundaries were added to every app (part of Areas 2 to 7, category A).
@@ -31,7 +48,8 @@ Critical and High ones fixed), **n/a** (does not apply to this part).
 > 3. Areas 2 to 7 in order, starting with the waiter app's bad answers, timeouts and lost network.
 >
 > Note for this machine (4.9 GB): the repo-wide `pnpm lint` runs out of memory; lint changed files
-> with `node --max-old-space-size=3000 node_modules/eslint/bin/eslint.js <files>`.
+> with `node --max-old-space-size=3000 node_modules/eslint/bin/eslint.js <files>`. Run the server's
+> full suite alone: console or Jest runs beside it make timing tests fail.
 
 ## Risk categories
 

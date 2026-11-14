@@ -31,7 +31,10 @@ export type TableEvent = (typeof TABLE_EVENTS)[number];
  *
  * Beyond the diagram: ADD_ITEMS is also allowed from BILL_REQUESTED (a diner asks for the bill
  * and then orders dessert), and CLOSE_WITHOUT_BILL frees a table opened by mistake; the server
- * only allows it when the session has no billable items. Moving a table (TBL-005) moves the
+ * only allows it when nothing is left to bill or pay. It is allowed after a bill request (the
+ * guests asked for the bill with nothing ordered, or everything was cancelled) and after a bill
+ * was printed and paid (a diner's later order was rejected): without it such a table could
+ * never close (QA-024, QA-025). Moving a table (TBL-005) moves the
  * session: the service frees the old table and gives the new one the old table's state.
  */
 export const tableMachine = defineStateMachine<TableState, TableEvent>({
@@ -44,7 +47,12 @@ export const tableMachine = defineStateMachine<TableState, TableEvent>({
     { event: 'PRINT_BILL', from: ['OCCUPIED', 'BILL_REQUESTED'], to: 'BILL_PRINTED' },
     { event: 'ADD_ITEMS', from: ['BILL_REQUESTED', 'BILL_PRINTED'], to: 'OCCUPIED' },
     { event: 'SETTLE_AND_CLOSE', from: ['BILL_PRINTED'], to: 'FREE' },
-    { event: 'CLOSE_WITHOUT_BILL', from: ['OCCUPIED'], to: 'FREE', requiresReason: true },
+    {
+      event: 'CLOSE_WITHOUT_BILL',
+      from: ['OCCUPIED', 'BILL_REQUESTED', 'BILL_PRINTED'],
+      to: 'FREE',
+      requiresReason: true,
+    },
     { event: 'GUESTS_LEFT', from: ['FREE'], to: 'NEEDS_CLEANING' },
     { event: 'CLEANED', from: ['NEEDS_CLEANING'], to: 'FREE' },
   ],

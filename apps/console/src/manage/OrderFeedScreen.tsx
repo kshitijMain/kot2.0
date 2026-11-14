@@ -31,6 +31,7 @@ import {
   orderPlace,
   tableLabelOf,
 } from './order-feed-view.js';
+import { TableActions } from './TableActions.js';
 import { serverNow, useOrderFeed } from './use-order-feed.js';
 
 /**
@@ -193,6 +194,7 @@ function FeedFilters({
               table: tableLabelOf(search, filter.tableId, feed.orders),
             })}
           </span>
+          <TableActions tableId={filter.tableId} />
           <Button
             variant="secondary"
             onClick={() => {

@@ -76,6 +76,12 @@ export class KdsEscalationService implements OnApplicationBootstrap, OnModuleDes
           stationId: { in: stations.map((station) => station.id) },
           state: 'READY',
           readyAt: { lte: since },
+          // Not for a table that has paid and left: its tickets left the screen, so the alert
+          // could never be cleared by bumping (QA-029). Takeaways stay, as on the screen.
+          OR: [
+            { order: { tableSessionId: null } },
+            { order: { tableSession: { status: 'OPEN' } } },
+          ],
         },
         select: { kotLines: { select: { kotId: true } } },
       });

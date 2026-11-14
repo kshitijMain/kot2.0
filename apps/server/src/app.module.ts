@@ -1,5 +1,6 @@
 import { type DynamicModule, Module } from '@nestjs/common';
 import { APP_FILTER } from '@nestjs/core';
+import { HttpDrain } from './http/http-drain.js';
 import { AuditModule } from './audit/audit.module.js';
 import { BackupsModule } from './backups/backups.module.js';
 import { LifecycleModule } from './lifecycle/lifecycle.module.js';
@@ -92,7 +93,7 @@ export class AppModule {
         DigitalBillsModule,
         HealthModule,
       ],
-      providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }],
+      providers: [{ provide: APP_FILTER, useClass: ApiExceptionFilter }, HttpDrain],
     };
   }
 }

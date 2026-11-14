@@ -216,6 +216,18 @@ export class KdsService {
     await this.prisma.transaction(async (tx) => {
       const kot = await this.lockedTicket(tx, actor, kotId);
       if (kot.bumpedAt === null) return;
+      // A ticket shows again only while a dish on it is still at the station: with every dish
+      // collected it would leave the bumped list and show nowhere (QA-038).
+      const atStation = await tx.kotLine.count({
+        where: { kotId: kot.id, orderItem: { state: { in: [...AT_STATION] } } },
+      });
+      if (atStation === 0) {
+        throw new AppError(
+          409,
+          'NOTHING_TO_RECALL',
+          'Every dish on this ticket has been collected. Order it again if it must be made again.',
+        );
+      }
       await tx.kot.update({
         where: { id: kot.id },
         data: { bumpedAt: null, bumpedById: null, bumpedByDeviceId: null },

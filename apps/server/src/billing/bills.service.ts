@@ -37,6 +37,8 @@ export interface BillContext {
   readonly bill: Bill;
   readonly tableId: string | null;
   readonly tableLabel: string | null;
+  /** Whether the bill's table session is still open (its guests are still at the table). */
+  readonly sessionOpen: boolean;
   readonly items: readonly BillableItem[];
   /** Items still waiting for a manager's approval (TAB/QR orders), which block printing. */
   readonly awaitingApproval: number;
@@ -146,7 +148,100 @@ export class BillsService {
     return this.toView(
       context,
       invoices.map((invoice) => invoice.id),
+      context.bill.status === 'INVOICED'
+        ? await this.unbilledIds(this.prisma, restaurantId, billId, context.items)
+        : [],
+      await this.voidedPartIds(this.prisma, restaurantId, billId),
     );
+  }
+
+  /**
+   * The bill's dishes that no live printed invoice has yet: ordered after the bill was printed
+   * (QA-022). A split takes every line whole, so a dish is either on a live invoice or not.
+   */
+  async unbilledIds(
+    client: Client,
+    restaurantId: string,
+    billId: string,
+    items: readonly BillableItem[],
+  ): Promise<string[]> {
+    const invoiced = await client.invoiceLine.findMany({
+      where: {
+        restaurantId,
+        orderItemId: { in: items.map((item) => item.id) },
+        invoice: { billId, status: { not: 'VOIDED' } },
+      },
+      select: { orderItemId: true },
+    });
+    const done = new Set(invoiced.map((line) => line.orderItemId));
+    return items.filter((item) => !done.has(item.id)).map((item) => item.id);
+  }
+
+  /** Voided parts of a printed (split) bill that were not printed again, oldest first (QA-026). */
+  async voidedPartIds(client: Client, restaurantId: string, billId: string): Promise<string[]> {
+    const voided = await client.invoice.findMany({
+      where: {
+        restaurantId,
+        billId,
+        status: 'VOIDED',
+        replacedBy: { none: {} },
+        bill: { status: 'INVOICED' },
+      },
+      orderBy: [{ voidedAt: 'asc' }, { sequence: 'asc' }],
+      select: { id: true },
+    });
+    return voided.map((invoice) => invoice.id);
+  }
+
+  /**
+   * Locks a bill to print (as `lockedOpenBill`) and says what printing does now. An open bill is
+   * printed as before. A printed bill with dishes ordered since (QA-022) is printed again: its one
+   * printed invoice is revised in place while nobody has paid any of it; otherwise (paid, part
+   * paid or split) a new invoice takes just the new dishes. Anything else is already printed.
+   */
+  async lockedBillToPrint(
+    tx: TransactionClient,
+    restaurantId: string,
+    billId: string,
+  ): Promise<
+    | { readonly mode: 'OPEN'; readonly context: BillContext }
+    | { readonly mode: 'REVISE'; readonly context: BillContext; readonly invoiceId: string }
+    | { readonly mode: 'MORE'; readonly context: BillContext }
+    | { readonly mode: 'REPLACE_PART'; readonly context: BillContext; readonly voidedId: string }
+  > {
+    const found = await tx.bill.findFirst({
+      where: { id: billId, restaurantId },
+      select: { status: true },
+    });
+    if (found === null) throw billNotFound();
+    if (found.status === 'OPEN') {
+      return { mode: 'OPEN', context: await this.lockedOpenBill(tx, restaurantId, billId) };
+    }
+    await this.lockBill(tx, restaurantId, billId);
+    const context = await this.context(tx, restaurantId, billId);
+    if (context.bill.status === 'OPEN') return { mode: 'OPEN', context };
+    // A voided part of a split bill, other parts still standing: printed again as it was, under a
+    // new number (QA-026).
+    const voided = await this.voidedPartIds(tx, restaurantId, billId);
+    if (voided[0] !== undefined) return { mode: 'REPLACE_PART', context, voidedId: voided[0] };
+    const unbilled = await this.unbilledIds(tx, restaurantId, billId, context.items);
+    if (unbilled.length === 0) throw billPrinted();
+    const live = await tx.invoice.findMany({
+      where: { billId, status: { not: 'VOIDED' } },
+      select: {
+        id: true,
+        status: true,
+        _count: { select: { payments: { where: { status: 'CAPTURED' } } } },
+      },
+    });
+    const only = live.length === 1 ? live[0] : undefined;
+    if (only?.status === 'ISSUED' && only._count.payments === 0) {
+      return { mode: 'REVISE', context, invoiceId: only.id };
+    }
+    return {
+      mode: 'MORE',
+      context: await this.context(tx, restaurantId, billId, new Set(unbilled)),
+    };
   }
 
   /** An item or bill discount, within the role's limit or with a manager's approval (BILL-005). */
@@ -339,6 +434,14 @@ export class BillsService {
     restaurantId: string,
     billId: string,
   ): Promise<BillContext> {
+    await this.lockBill(tx, restaurantId, billId);
+    const context = await this.context(tx, restaurantId, billId);
+    if (context.bill.status !== 'OPEN') throw billPrinted();
+    return context;
+  }
+
+  /** Locks a bill's table (dine-in) and then the bill. */
+  private async lockBill(tx: TransactionClient, restaurantId: string, billId: string) {
     const found = await tx.bill.findFirst({
       where: { id: billId, restaurantId },
       select: { tableSession: { select: { tableId: true } } },
@@ -349,13 +452,18 @@ export class BillsService {
       await tx.$queryRaw`SELECT 1 AS locked FROM tables WHERE id = ${found.tableSession.tableId}::uuid FOR UPDATE`;
     }
     await tx.$queryRaw`SELECT 1 AS locked FROM bills WHERE id = ${billId}::uuid FOR UPDATE`;
-    const context = await this.context(tx, restaurantId, billId);
-    if (context.bill.status !== 'OPEN') throw billPrinted();
-    return context;
   }
 
-  /** Loads and prices a bill. */
-  async context(client: Client, restaurantId: string, billId: string): Promise<BillContext> {
+  /**
+   * Loads and prices a bill; with `only`, just those dishes and none of the bill's discounts on
+   * the whole bill (a further bill for dishes ordered after the first was printed, QA-022).
+   */
+  async context(
+    client: Client,
+    restaurantId: string,
+    billId: string,
+    only?: ReadonlySet<string>,
+  ): Promise<BillContext> {
     const bill = await client.bill.findFirst({
       where: { id: billId, restaurantId },
       include: {
@@ -376,7 +484,9 @@ export class BillsService {
       }),
       this.settings.snapshot(restaurantId),
     ]);
-    const billable = orderItems.filter((item) => isBillable(item.state));
+    const billable = orderItems.filter(
+      (item) => isBillable(item.state) && (only === undefined || only.has(item.id)),
+    );
     const taxGroupRows = await client.taxGroup.findMany({
       where: { id: { in: [...new Set(billable.map((item) => item.taxGroupId))] } },
       select: { id: true, name: true, sacCode: true },
@@ -412,7 +522,9 @@ export class BillsService {
     // A discount on an item no longer on the bill (cancelled) takes nothing off.
     const billableIds = new Set(items.map((item) => item.id));
     const discounts = bill.discounts
-      .filter((discount) => discount.orderItemId === null || billableIds.has(discount.orderItemId))
+      .filter((discount) =>
+        discount.orderItemId === null ? only === undefined : billableIds.has(discount.orderItemId),
+      )
       .map((discount) => ({
         id: discount.id,
         orderItemId: discount.orderItemId,
@@ -432,6 +544,7 @@ export class BillsService {
     return {
       bill,
       tableId: bill.tableSession?.table.id ?? null,
+      sessionOpen: bill.tableSession?.status === 'OPEN',
       tableLabel: bill.tableSession?.table.label ?? null,
       items,
       awaitingApproval: orderItems.filter((item) => item.state === 'PENDING_APPROVAL').length,
@@ -453,7 +566,12 @@ export class BillsService {
     return result.lines.find((line) => line.id === discount.orderItemId)?.itemDiscount ?? 0;
   }
 
-  toView(context: BillContext, invoiceIds: readonly string[] = []): BillView {
+  toView(
+    context: BillContext,
+    invoiceIds: readonly string[] = [],
+    unbilledOrderItemIds: readonly string[] = [],
+    voidedPartIds: readonly string[] = [],
+  ): BillView {
     const { bill, calculated, settings } = context;
     const { result } = calculated;
     const itemsById = new Map(context.items.map((item) => [item.id, item]));
@@ -516,6 +634,8 @@ export class BillsService {
         gstin: bill.customerGstin,
       },
       invoiceIds: [...invoiceIds],
+      unbilledOrderItemIds: [...unbilledOrderItemIds],
+      voidedPartIds: [...voidedPartIds],
       editingInvoiceId: bill.editingInvoiceId,
       amountInWords: settings.amountInWords,
     };
