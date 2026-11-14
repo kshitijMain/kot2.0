@@ -403,7 +403,7 @@ describe('[ORD-007] [KDS-008] kitchen tickets on paper', () => {
       reprint: false,
       lines: [{ quantity: 2, name: 'Paneer Tikka', instructions: 'Less spicy' }],
     });
-    expect(rendered.ticket.waiterName).not.toBeNull();
+    expect(rendered.ticket.sentByName).not.toBeNull();
     const text = Buffer.from(rendered.bytes).toString('latin1');
     expect(text).toContain('TABLE T4');
     expect(text).toContain('2 x Paneer Tikka');

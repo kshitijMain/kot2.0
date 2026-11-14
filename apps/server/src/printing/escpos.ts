@@ -62,7 +62,8 @@ export interface KotTicket {
   readonly destination:
     | { readonly type: 'TABLE'; readonly label: string }
     | { readonly type: 'TAKEAWAY'; readonly token: number | null };
-  readonly waiterName: string | null;
+  /** Whoever sent the KOT (ADR-0031), not whoever opened the table. */
+  readonly sentByName: string | null;
   readonly source: 'POS' | 'WAITER_APP' | 'TABLE_TABLET' | 'QR';
   readonly createdAt: Date;
   readonly timeZone: string;
@@ -210,7 +211,7 @@ export function renderKotTicket(ticket: KotTicket, paperWidthMm: PaperWidthMm): 
   );
   receipt.line(
     spread(
-      ticket.waiterName === null ? '' : `Waiter: ${ticket.waiterName}`,
+      ticket.sentByName === null ? '' : `Sent by: ${ticket.sentByName}`,
       SOURCE_LABELS[ticket.source],
       width,
     ),

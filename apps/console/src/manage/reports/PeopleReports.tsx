@@ -55,6 +55,7 @@ function StaffWork({ range }: { range: ReportRange }) {
                 t('reportsPage.staff.approved'),
                 (row) => row.ordersApproved,
               ),
+              numberColumn('kots', t('reportsPage.staff.kotsSent'), (row) => row.kotsSent),
               moneyColumn('net', t('reportsPage.items.net'), (row) => row.net),
               numberColumn('acks', t('reportsPage.staff.acks'), (row) => row.acknowledgements),
               textColumn('ackTime', t('reportsPage.staff.ackTime'), (row) =>

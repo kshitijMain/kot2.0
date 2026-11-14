@@ -55,12 +55,15 @@ export class KotTicketsService {
       where: { id: restaurantId },
       select: { timeZone: true },
     });
-    const waiterId = kot.order.tableSession?.waiterId ?? kot.order.createdById;
-    const waiter =
-      waiterId === null
+    // Whoever sent this KOT, or approved the diner's order it came from (ADR-0031); the table's
+    // opener only for tickets from before KOTs recorded their sender.
+    const senderId =
+      kot.sentById ?? kot.order.createdById ?? kot.order.tableSession?.waiterId ?? null;
+    const sender =
+      senderId === null
         ? null
         : await this.prisma.staff.findFirst({
-            where: { id: waiterId, restaurantId },
+            where: { id: senderId, restaurantId },
             select: { displayName: true },
           });
 
@@ -73,7 +76,7 @@ export class KotTicketsService {
         kot.order.table === null
           ? { type: 'TAKEAWAY', token: kot.order.takeawayToken }
           : { type: 'TABLE', label: kot.order.table.label },
-      waiterName: waiter?.displayName ?? null,
+      sentByName: sender?.displayName ?? null,
       source: kot.order.source,
       createdAt: kot.createdAt,
       timeZone: restaurant.timeZone,

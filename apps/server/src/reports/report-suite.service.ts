@@ -166,7 +166,7 @@ export class ReportSuiteService {
   /** RPT-003: each person's orders, approvals, sales, acknowledgements, escalations and voids. */
   async staff(restaurantId: string, range: ReportRangeQuery): Promise<StaffPerformanceResponse> {
     const { from, to } = range;
-    const [created, approved, sales, acks, escalations, endings] = await Promise.all([
+    const [created, approved, sales, acks, escalations, endings, kots] = await Promise.all([
       this.prisma.$queryRaw<{ staff_id: string; n: bigint }[]>`
         SELECT created_by_id AS staff_id, count(*) AS n FROM orders
         WHERE restaurant_id = ${restaurantId}::uuid AND created_by_id IS NOT NULL
@@ -220,9 +220,15 @@ export class ReportSuiteService {
           AND action IN ('ORDER_ITEM_CANCELLED', 'ORDER_ITEM_VOIDED')
           AND business_date BETWEEN ${from}::date AND ${to}::date
         GROUP BY 1`,
+      // ADR-0031: new KOTs by whoever sent them (an approver for a diner's order).
+      this.prisma.$queryRaw<{ staff_id: string; n: bigint }[]>`
+        SELECT sent_by_id AS staff_id, count(*) AS n FROM kots
+        WHERE restaurant_id = ${restaurantId}::uuid AND sent_by_id IS NOT NULL AND kind = 'NEW'
+          AND business_date BETWEEN ${from}::date AND ${to}::date
+        GROUP BY 1`,
     ]);
     const ids = new Set(
-      [...created, ...approved, ...sales, ...acks, ...escalations, ...endings].map(
+      [...created, ...approved, ...sales, ...acks, ...escalations, ...endings, ...kots].map(
         (row) => row.staff_id,
       ),
     );
@@ -244,6 +250,7 @@ export class ReportSuiteService {
           role: person.role.baseRole,
           ordersCreated: count(created, person.id),
           ordersApproved: count(approved, person.id),
+          kotsSent: count(kots, person.id),
           net: num(sales.find((row) => row.staff_id === person.id)?.net),
           acknowledgements: num(ack?.n),
           averageAckSeconds:

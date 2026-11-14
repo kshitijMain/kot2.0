@@ -20,7 +20,7 @@ const ticket = (name: string, instructions: string | null, label = 'T4'): KotTic
   orderNumber: 42,
   stationName: 'Kitchen',
   destination: { type: 'TABLE', label },
-  waiterName: 'Ravi Kumar',
+  sentByName: 'Ravi Kumar',
   source: 'WAITER_APP',
   createdAt: new Date('2026-09-26T07:35:00Z'),
   timeZone: 'Asia/Kolkata',

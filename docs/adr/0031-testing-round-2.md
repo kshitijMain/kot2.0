@@ -74,3 +74,17 @@ to the tickets") and from the dashboard (`/manage/availability`):
 
 **Changed tests.** The availability tests were rewritten for the new page (the brief replaces the
 screen); the pure filter and the live update are kept.
+
+## D. The KOT named the wrong person
+
+**Cause.** Every KOT records who sent it (`kots.sent_by_id`, ADR-0023), but the printed KOT, the
+kitchen display card and the live order feed named the table session's waiter, who since ADR-0023
+is whoever _opened_ the table; the staff report counted orders, not KOTs.
+
+**Now.** They name the KOT's sender: the waiter who sent it, or for a table tablet or QR order the
+person who approved it (whoever fired held dishes for those). Orders and tickets from before KOTs
+recorded a sender fall back to the order's creator, then the table's opener. The printed KOT says
+"Sent by: …". The staff report adds **KOTs sent** per person (new KOTs by `sent_by_id`). "Ready"
+and "out of stock" alerts already went to the KOT's sender. The table's details keep "Opened by".
+
+**Changed tests.** The printed KOT's layout test reads "Sent by:" instead of "Waiter:".

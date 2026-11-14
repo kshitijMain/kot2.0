@@ -57,7 +57,7 @@ const TICKET: KotTicket = {
   orderNumber: 42,
   stationName: 'Kitchen',
   destination: { type: 'TABLE', label: 'T4' },
-  waiterName: 'Ravi Kumar',
+  sentByName: 'Ravi Kumar',
   source: 'WAITER_APP',
   createdAt: new Date('2026-09-26T07:35:00Z'),
   timeZone: 'Asia/Kolkata',
@@ -117,7 +117,7 @@ describe('ESC/POS rendering', () => {
       "<INIT><CENTRE><DOUBLE><BOLD>TABLE T4
       <NORMAL></BOLD>Kitchen
       <LEFT>KOT 17                                  Order 42
-      Waiter: Ravi Kumar                    Waiter app
+      Sent by: Ravi Kumar                   Waiter app
       26-09-2026 13:05
       ------------------------------------------------
       <TALL><BOLD>2 x Paneer Tikka (Full)
@@ -140,7 +140,7 @@ describe('ESC/POS rendering', () => {
           kind: 'MODIFIED',
           reprint: true,
           destination: { type: 'TAKEAWAY', token: 12 },
-          waiterName: null,
+          sentByName: null,
           source: 'POS',
           lines: [{ ...TICKET.lines[1]!, quantity: -1, comboName: null }],
         },
@@ -170,7 +170,7 @@ describe('ESC/POS rendering', () => {
     const long: KotTicket = {
       ...TICKET,
       stationName: 'A station with a very long name that goes on and on',
-      waiterName: 'Someone with a remarkably long display name indeed',
+      sentByName: 'Someone with a remarkably long display name indeed',
       lines: [
         {
           ...TICKET.lines[0]!,

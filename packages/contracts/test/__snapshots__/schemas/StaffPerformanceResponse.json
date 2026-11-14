@@ -26,6 +26,12 @@
             "role": { "type": "string", "enum": ["OWNER", "MANAGER", "WAITER", "KITCHEN"] },
             "ordersCreated": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
             "ordersApproved": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+            "kotsSent": {
+              "default": 0,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
             "net": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
             "acknowledgements": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
             "averageAckSeconds": {
@@ -83,6 +89,12 @@
             "role": { "type": "string", "enum": ["OWNER", "MANAGER", "WAITER", "KITCHEN"] },
             "ordersCreated": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
             "ordersApproved": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+            "kotsSent": {
+              "default": 0,
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 9007199254740991
+            },
             "net": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
             "acknowledgements": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
             "averageAckSeconds": {
@@ -101,6 +113,7 @@
             "role",
             "ordersCreated",
             "ordersApproved",
+            "kotsSent",
             "net",
             "acknowledgements",
             "averageAckSeconds",

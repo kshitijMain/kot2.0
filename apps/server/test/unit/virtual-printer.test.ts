@@ -27,7 +27,7 @@ const TICKET: KotTicket = {
   orderNumber: 42,
   stationName: 'Kitchen',
   destination: { type: 'TABLE', label: 'T4' },
-  waiterName: 'Ravi',
+  sentByName: 'Ravi',
   source: 'WAITER_APP',
   createdAt: AT,
   timeZone: 'Asia/Kolkata',

@@ -26,6 +26,8 @@ const FEED_SELECT = {
   createdAt: true,
   table: { select: { label: true } },
   tableSession: { select: { waiterId: true } },
+  // Who sent the order's first KOT (ADR-0031).
+  kots: { select: { sentById: true }, orderBy: { kotNumber: 'asc' }, take: 1 },
   // Every item, ended ones too, so a combo line is known by its parts (`parentOrderItemId`):
   // Prisma's `_count` of the parts counted every order item ever, on each read (P8-01a).
   items: {
@@ -60,8 +62,13 @@ function combos(order: FeedRow): ReadonlySet<string> {
   );
 }
 
+/**
+ * Who an order is shown with (ADR-0031): whoever sent its first KOT (the waiter, or for a diner's
+ * order the person who approved it), else whoever made it; the table's opener only for orders
+ * from before KOTs recorded their sender.
+ */
 function waiterOf(order: FeedRow): string | null {
-  return order.tableSession?.waiterId ?? order.createdById;
+  return order.kots[0]?.sentById ?? order.createdById ?? order.tableSession?.waiterId ?? null;
 }
 
 /**

@@ -413,6 +413,8 @@ export const StaffPerformanceResponse = z.object({
       role: Role,
       ordersCreated: Count,
       ordersApproved: Count,
+      /** KOTs this person sent: their own, and diners' orders they approved (ADR-0031). */
+      kotsSent: Count.default(0),
       net: Paise,
       acknowledgements: Count,
       /** Whole seconds from raised to acknowledged; null without any. */

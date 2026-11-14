@@ -2277,6 +2277,8 @@ until you press Publish.
       table: 'By person',
       created: 'Orders taken',
       approved: 'Guest orders approved',
+      /** ADR-0031: KOTs by whoever sent them. */
+      kotsSent: 'KOTs sent',
       acks: 'Alerts answered',
       ackTime: 'Average answer time',
       escalations: 'Escalated',

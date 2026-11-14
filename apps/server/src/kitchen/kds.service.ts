@@ -71,6 +71,21 @@ type TicketRow = Prisma.KotGetPayload<{ include: typeof TICKET_INCLUDE }>;
  * each item's live state, bump and recall, and "Notify manager". A kitchen screen in station mode
  * (AUTH-005) is held to its own station; its actions are attributed to the device.
  */
+/**
+ * Who a ticket names (ADR-0031): whoever sent that KOT (the waiter, or for a diner's order the
+ * person who approved it), else whoever made the order; the table's opener only for tickets from
+ * before KOTs recorded their sender.
+ */
+function senderOf(row: {
+  readonly sentById: string | null;
+  readonly order: {
+    readonly createdById: string | null;
+    readonly tableSession: { readonly waiterId: string | null } | null;
+  };
+}): string | null {
+  return row.sentById ?? row.order.createdById ?? row.order.tableSession?.waiterId ?? null;
+}
+
 /** The stations a station-mode screen is bound to; none for all (or for a person). */
 function boundStations(actor: Actor): readonly string[] {
   if (actor.stationIds !== undefined) return actor.stationIds;
@@ -358,8 +373,8 @@ export class KdsService {
     const staffIds = new Set<string>();
     const sessionIds = new Set<string>();
     for (const row of rows) {
-      const waiterId = row.order.tableSession?.waiterId ?? row.order.createdById;
-      if (waiterId !== null) staffIds.add(waiterId);
+      const senderId = senderOf(row);
+      if (senderId !== null) staffIds.add(senderId);
       if (row.order.tableSessionId !== null) sessionIds.add(row.order.tableSessionId);
     }
     const oldest = new Date(Math.min(...rows.map((row) => row.createdAt.getTime())));
@@ -429,7 +444,7 @@ export class KdsService {
       return labelOf(candidates[0]?.before);
     };
     return rows.map((row) => {
-      const waiterId = row.order.tableSession?.waiterId ?? row.order.createdById;
+      const waiterId = senderOf(row);
       return {
         kotId: row.id,
         kotNumber: row.kotNumber,
