@@ -154,6 +154,53 @@ describe('[KDS-003] [RPT-003] the KOT names who sent it (ADR-0031)', () => {
     expect((await kdsTickets()).find((entry) => entry.kotId === kot.id)?.waiterName).toBe(MANAGER);
   });
 
+  it('prints the guests, the table’s second KOT, held dishes and the KOT that fires them', async () => {
+    const sessionId = (
+      await prisma.tableSession.findFirstOrThrow({
+        where: { tableId: restaurant.tables.T1 ?? '', status: 'OPEN' },
+      })
+    ).id;
+    const sent = SubmitOrderResponse.parse(
+      (
+        await api(app)
+          .post('/api/v1/orders')
+          .set(as(sender))
+          .send({
+            idempotencyKey: randomUUID(),
+            source: 'WAITER_APP',
+            orderType: 'DINE_IN',
+            tableSessionId: sessionId,
+            lines: [
+              { clientLineId: randomUUID(), itemId: restaurant.items.Naan, quantity: 1 },
+              { clientLineId: randomUUID(), itemId: restaurant.items.Dal, quantity: 1, hold: true },
+            ],
+          })
+      ).body,
+    );
+    if (sent.status !== 'ACCEPTED') throw new Error('refused');
+    const second = await prisma.kot.findFirstOrThrow({ where: { orderId: sent.orderId } });
+    const paper = await rendered(second.id);
+    expect(paper).toContain('2 guests');
+    expect(paper).toContain('2nd KOT for this table');
+    expect(paper).toMatch(/ON HOLD - DO NOT COOK YET[\s\S]{0,8}1 x Dal/);
+    expect(paper).not.toContain('FIRE: HELD DISHES');
+
+    // A moment later the waiter fires the dal: its KOT says so, and holds nothing back.
+    await new Promise((resolve) => setTimeout(resolve, 1_100));
+    const fired = await api(app)
+      .post(`/api/v1/orders/${sent.orderId}/fire`)
+      .set(as(sender))
+      .send({});
+    expect(fired.status, JSON.stringify(fired.body)).toBeLessThan(300);
+    const third = await prisma.kot.findFirstOrThrow({
+      where: { orderId: sent.orderId, id: { not: second.id } },
+    });
+    const firedPaper = await rendered(third.id);
+    expect(firedPaper).toContain('FIRE: HELD DISHES');
+    expect(firedPaper).toContain('3rd KOT for this table');
+    expect(firedPaper).not.toContain('ON HOLD');
+  });
+
   it('counts each person’s KOTs by who sent them in the staff report', async () => {
     const today = (
       await prisma.kot.findFirstOrThrow({ select: { businessDate: true } })
@@ -165,7 +212,7 @@ describe('[KDS-003] [RPT-003] the KOT names who sent it (ADR-0031)', () => {
     );
     const kotsOf = (name: string) =>
       report.staff.find((person) => person.name === name)?.kotsSent ?? 0;
-    expect(kotsOf(SENDER)).toBe(1);
+    expect(kotsOf(SENDER)).toBe(3);
     expect(kotsOf(MANAGER)).toBe(1);
     expect(kotsOf(OPENER)).toBe(0);
   });

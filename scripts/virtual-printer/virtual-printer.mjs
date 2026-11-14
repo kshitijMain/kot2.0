@@ -167,6 +167,7 @@ main { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 32px; paddi
 .line--right { text-align: right; }
 .run--bold { font-weight: 700; }
 .run--underline { text-decoration: underline; }
+.run--reverse { background: #1c1b19; color: #fffdf7; }
 .run--sized { display: inline-block; vertical-align: bottom; text-align: left; }
 .run__text { display: inline-block; line-height: 1.5; transform-origin: left center; }
 .cut { margin: 12px -16px -8px; border-top: 2px dashed #9a958b; position: relative; height: 12px; }
@@ -191,7 +192,7 @@ function el(tag, className, text) {
 }
 
 function runNode(run) {
-  const span = el('span', 'run' + (run.bold ? ' run--bold' : '') + (run.underline ? ' run--underline' : ''));
+  const span = el('span', 'run' + (run.bold ? ' run--bold' : '') + (run.underline ? ' run--underline' : '') + (run.reverse ? ' run--reverse' : ''));
   if (run.width === 1 && run.height === 1) {
     span.textContent = run.text;
     return span;

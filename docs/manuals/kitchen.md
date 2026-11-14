@@ -12,6 +12,14 @@ Each station sees its own tickets, oldest first, with table, time waiting and no
 takeaway order shows **TAKEAWAY #12** where a table would be, as on its KOT. Late
 tickets change colour. Allergy and special notes are shown in bold on the ticket.
 
+## Reading a printed KOT
+
+From the top: the table (or TAKEAWAY #12) in large letters, the station in a black band, the
+KOT number and the time, who sent it, the guests, and "2nd KOT for this table" when you have had
+one for that table already. Each dish is large with its quantity and size; add-ons (+) and notes
+(!) are under it. Dishes under ON HOLD are not to be cooked yet: a later KOT marked FIRE sends
+them. CANCELLED and REPRINT slips say so in a black band.
+
 ## Working a ticket
 
 Tap an item to mark it **preparing**, then **ready** when it is at the pass. The waiter is

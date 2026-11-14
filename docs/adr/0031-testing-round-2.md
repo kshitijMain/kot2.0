@@ -88,3 +88,24 @@ recorded a sender fall back to the order's creator, then the table's opener. The
 and "out of stock" alerts already went to the KOT's sender. The table's details keep "Opened by".
 
 **Changed tests.** The printed KOT's layout test reads "Sent by:" instead of "Waiter:".
+
+## E. A KOT the kitchen reads at a glance
+
+**Now** (`renderKotTicket`, 80 mm and 58 mm):
+
+- "TABLE 3" or "TAKEAWAY #12" very large, then the station ("KITCHEN", "BAR") as a white-on-black
+  banner across the paper (GS B; a printer without it prints the word plainly).
+- "CHANGED", "CANCELLED" (with "Do not cook these.") and "REPRINT" in inverted banners of their
+  own, after a white line.
+- The KOT number and time large on one line; "Sent by: …" (with "QR order" or "table tablet
+  order" when a diner ordered); the guests and the order number; "2nd KOT for this table" in bold
+  when the station had KOTs for this table before.
+- Each dish tall and bold with its quantity and size ("2 x Paneer Tikka (Full)"), add-ons and
+  notes indented under it; "FIRE: HELD DISHES" on a ticket that sends held dishes, and the order's
+  dishes still held at the station under "ON HOLD - DO NOT COOK YET".
+- A footer counting lines and items in words that agree with the number ("1 line, 1 item") and
+  the date. The ordering app's name ("Waiter app") is gone.
+- The virtual printer draws inverted text, so it shows the ticket as printed. Before and after
+  images at both widths are in `docs/testing/screenshots/round-2/`.
+
+**Changed tests.** The KOT layout snapshots follow the new layout (the brief changes it).

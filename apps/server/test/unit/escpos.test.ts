@@ -23,6 +23,8 @@ function readable(bytes: Uint8Array): string {
     '1d2111': '<DOUBLE>',
     '1d2101': '<TALL>',
     '1d564203': '<CUT>',
+    '1d4201': '<REVERSE>',
+    '1d4200': '</REVERSE>',
   };
   let out = '';
   let index = 0;
@@ -115,10 +117,10 @@ describe('ESC/POS rendering', () => {
     expect(Array.from(bytes.slice(-4))).toEqual([0x1d, 0x56, 0x42, 0x03]);
     expect(readable(bytes)).toMatchInlineSnapshot(`
       "<INIT><CENTRE><DOUBLE><BOLD>TABLE T4
-      <NORMAL></BOLD>Kitchen
-      <LEFT>KOT 17                                  Order 42
-      Sent by: Ravi Kumar                   Waiter app
-      26-09-2026 13:05
+      <REVERSE>        KITCHEN         
+      </REVERSE><NORMAL></BOLD><LEFT><TALL><BOLD>KOT 17                                     13:05
+      <NORMAL></BOLD>Sent by: Ravi Kumar
+      Order 42
       ------------------------------------------------
       <TALL><BOLD>2 x Paneer Tikka (Full)
       <NORMAL></BOLD>    + Extra mint chutney
@@ -127,7 +129,7 @@ describe('ESC/POS rendering', () => {
       <TALL><BOLD>1 x Dal Makhani
       <NORMAL></BOLD>    (part of Veg Thali)
       ------------------------------------------------
-      2 lines                                  3 items
+      2 lines, 3 items                      26-09-2026
       <CUT>"
     `);
   });
@@ -149,21 +151,76 @@ describe('ESC/POS rendering', () => {
     );
     expect(text).toMatchInlineSnapshot(`
       "<INIT><CENTRE><DOUBLE><BOLD>TAKEAWAY #12
-      ** CHANGED **
-      REPRINT
-      <NORMAL></BOLD>Kitchen
-      <LEFT>KOT 17                  Order 42
-                                   POS
-      26-09-2026 13:05
+      <REVERSE>    KITCHEN     
+      </REVERSE><NORMAL>
+      <DOUBLE><REVERSE>    CHANGED     
+      </REVERSE><NORMAL>
+      <DOUBLE><REVERSE>    REPRINT     
+      </REVERSE><NORMAL></BOLD><LEFT><TALL><BOLD>KOT 17                     13:05
+      <NORMAL></BOLD>Order 42
       --------------------------------
       <TALL><BOLD>-1 x Dal Makhani
       <NORMAL></BOLD>--------------------------------
-      1 lines                  1 items
+      1 line, 1 item        26-09-2026
       <CUT>"
     `);
-    expect(readable(renderKotTicket({ ...TICKET, kind: 'CANCELLED' }, 80))).toContain(
-      '** CANCELLED **',
+    // ADR-0031: an inverted banner instead of "** CANCELLED **".
+    expect(readable(renderKotTicket({ ...TICKET, kind: 'CANCELLED' }, 80))).toMatch(
+      /<REVERSE> +CANCELLED +\n/,
     );
+  });
+
+  it('[ORD-007] [KDS-008] reads at a glance: place, station banner, KOT and time, sender (ADR-0031)', () => {
+    const ticket: KotTicket = { ...TICKET, covers: 4, tableKotNumber: 2 };
+    for (const width of [80, 58] as const) {
+      const text = readable(renderKotTicket(ticket, width));
+      // The table first and largest, then the station as an inverted banner.
+      expect(text.startsWith('<INIT><CENTRE><DOUBLE><BOLD>TABLE T4\n')).toBe(true);
+      expect(text).toMatch(/<DOUBLE><BOLD>TABLE T4\n<REVERSE> +KITCHEN +\n<\/REVERSE>/);
+      expect(text).toMatch(/<TALL><BOLD>KOT 17 +13:05\n/);
+      expect(text).toContain('Sent by: Ravi Kumar\n');
+      expect(text).toContain('4 guests');
+      expect(text).toContain('2nd KOT for this table');
+      // No device or app name: it is not what the kitchen needs.
+      expect(text).not.toContain('Waiter app');
+    }
+  });
+
+  it('[KDS-008] counts lines and items in words that agree with the number (ADR-0031)', () => {
+    const one: KotTicket = { ...TICKET, lines: [{ ...TICKET.lines[1]!, comboName: null }] };
+    const text = readable(renderKotTicket(one, 80));
+    expect(text).toContain('1 line');
+    expect(text).toContain('1 item');
+    expect(text).not.toContain('1 lines');
+    expect(text).not.toContain('1 items');
+    expect(readable(renderKotTicket(TICKET, 80))).toContain('2 lines, 3 items');
+    // The first KOT of a table says nothing about it; a takeaway has no guests.
+    expect(text).not.toContain('KOT for this table');
+    expect(
+      readable(renderKotTicket({ ...TICKET, destination: { type: 'TAKEAWAY', token: 12 } }, 80)),
+    ).not.toContain('guests');
+  });
+
+  it('[ORD-016] [KDS-008] marks dishes held for later and tickets that fire them (ADR-0031)', () => {
+    const held = readable(
+      renderKotTicket(
+        { ...TICKET, held: [{ quantity: 1, name: 'Gulab Jamun', variantName: null }] },
+        80,
+      ),
+    );
+    expect(held).toContain('ON HOLD - DO NOT COOK YET');
+    expect(held).toMatch(/ON HOLD - DO NOT COOK YET\n.*1 x Gulab Jamun/);
+    expect(readable(renderKotTicket({ ...TICKET, fired: true }, 80))).toContain(
+      'FIRE: HELD DISHES',
+    );
+  });
+
+  it('[ORD-011] [KDS-008] marks reprints and cancelled slips large and inverted (ADR-0031)', () => {
+    const reprint = readable(renderKotTicket({ ...TICKET, reprint: true }, 58));
+    expect(reprint).toMatch(/<REVERSE> +REPRINT +\n<\/REVERSE>/);
+    const cancelled = readable(renderKotTicket({ ...TICKET, kind: 'CANCELLED' }, 58));
+    expect(cancelled).toMatch(/<REVERSE> +CANCELLED +\n<\/REVERSE>/);
+    expect(cancelled).toContain('Do not cook');
   });
 
   it('[KDS-008] never prints a line wider than the paper', () => {

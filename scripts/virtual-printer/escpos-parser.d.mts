@@ -5,6 +5,8 @@ export interface PrintedRun {
   readonly text: string;
   readonly bold: boolean;
   readonly underline: boolean;
+  /** White on black (GS B). */
+  readonly reverse: boolean;
   /** 1 for normal, 2 for double width, up to 8. */
   readonly width: number;
   readonly height: number;

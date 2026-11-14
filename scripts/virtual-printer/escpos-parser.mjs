@@ -41,7 +41,7 @@ export function parseEscPos(input) {
   let align;
 
   const reset = () => {
-    style = { bold: false, underline: false, width: 1, height: 1 };
+    style = { bold: false, underline: false, reverse: false, width: 1, height: 1 };
     align = 'left';
   };
   const flushRun = () => {
@@ -152,7 +152,9 @@ export function parseEscPos(input) {
           cut();
           break;
         }
-        case 0x42: // GS B n reverse
+        case 0x42: // GS B n reverse: white on black (ADR-0031's station banner)
+          setStyle({ reverse: ((next() ?? 0) & 1) === 1 });
+          break;
         case 0x66: // GS f n barcode font
         case 0x68: // GS h n barcode height
         case 0x77: // GS w n barcode width

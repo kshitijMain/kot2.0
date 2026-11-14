@@ -22,6 +22,9 @@ const BOLD_OFF = [ESC, 0x45, 0];
 const SIZE_NORMAL = [GS, 0x21, 0x00];
 const SIZE_DOUBLE = [GS, 0x21, 0x11];
 const SIZE_TALL = [GS, 0x21, 0x01];
+/** White on black (GS B); a printer without it prints the text plainly, still readable. */
+const REVERSE_ON = [GS, 0x42, 1];
+const REVERSE_OFF = [GS, 0x42, 0];
 /** Feed three lines so the last text clears the cutter, then a partial cut. */
 const FEED_AND_CUT = [GS, 0x56, 0x42, 0x03];
 
@@ -70,19 +73,24 @@ export interface KotTicket {
   readonly lines: readonly KotTicketLine[];
   /** Printed again on request or on another printer (KDS-008). */
   readonly reprint: boolean;
+  /** Guests at the table; null for a takeaway (ADR-0031). */
+  readonly covers?: number | null;
+  /** Which new KOT this is for the table, 1 for the first (ADR-0031: "2nd KOT for this table"). */
+  readonly tableKotNumber?: number | null;
+  /** The ticket sends dishes that were held for later (ORD-016). */
+  readonly fired?: boolean;
+  /** Dishes of the order at this station still held: listed, not to cook yet (ORD-016). */
+  readonly held?: readonly {
+    readonly quantity: number;
+    readonly name: string;
+    readonly variantName: string | null;
+  }[];
 }
-
-const SOURCE_LABELS: Readonly<Record<KotTicket['source'], string>> = {
-  POS: 'POS',
-  WAITER_APP: 'Waiter app',
-  TABLE_TABLET: 'Table tablet',
-  QR: 'QR',
-};
 
 const KIND_BANNERS: Readonly<Record<KotTicket['kind'], string | null>> = {
   NEW: null,
-  MODIFIED: '** CHANGED **',
-  CANCELLED: '** CANCELLED **',
+  MODIFIED: 'CHANGED',
+  CANCELLED: 'CANCELLED',
 };
 
 /** A phone keyboard's quotes and dashes, printed as the plain ones (QA-019). */
@@ -187,10 +195,49 @@ function quantityText(quantity: number): string {
   return `${String(quantity)} x `;
 }
 
+/** "1 item", "3 items": the word agrees with the number (ADR-0031). */
+function counted(count: number, one: string, many: string): string {
+  return `${String(count)} ${count === 1 ? one : many}`;
+}
+
+/** "1st", "2nd", "3rd", "11th", "22nd". */
+export function ordinal(value: number): string {
+  const tens = value % 100;
+  const suffix =
+    tens >= 11 && tens <= 13
+      ? 'th'
+      : value % 10 === 1
+        ? 'st'
+        : value % 10 === 2
+          ? 'nd'
+          : value % 10 === 3
+            ? 'rd'
+            : 'th';
+  return `${String(value)}${suffix}`;
+}
+
+/** Centres text in a full-width line, so an inverted banner runs across the paper. */
+function banner(text: string, width: number): string[] {
+  return wrap(text, width).map((part) => {
+    const left = Math.floor((width - part.length) / 2);
+    return `${' '.repeat(left)}${part}`.padEnd(width);
+  });
+}
+
+const SOURCE_NOTES: Readonly<Record<KotTicket['source'], string | null>> = {
+  POS: null,
+  WAITER_APP: null,
+  TABLE_TABLET: 'table tablet order',
+  QR: 'QR order',
+};
+
 /**
- * A kitchen order ticket (ORD-007, KDS-008): the table or token large at the top so the pass can
- * read it from a distance, a banner when it changes an earlier ticket, then one block per line
- * with its variant, modifiers and instructions.
+ * A kitchen order ticket (ORD-007, KDS-008), laid out for reading at a glance (ADR-0031): the
+ * table or takeaway number very large, the station as an inverted banner, the KOT number and time
+ * large, who sent it, the guests and whether the table had KOTs before; then each dish large with
+ * its quantity, size, add-ons and notes indented under it, dishes held for later marked, and a
+ * footer counting lines and items in words that agree with the number. Reprints, changed and
+ * cancelled slips say so in an inverted banner of their own.
  */
 export function renderKotTicket(ticket: KotTicket, paperWidthMm: PaperWidthMm): Uint8Array {
   const width = charactersPerLine(paperWidthMm);
@@ -199,24 +246,47 @@ export function renderKotTicket(ticket: KotTicket, paperWidthMm: PaperWidthMm): 
 
   receipt.command(ALIGN_CENTRE).command(SIZE_DOUBLE).command(BOLD_ON);
   receipt.lines(wrap(destinationText(ticket.destination), doubleWidth));
-  const banner = KIND_BANNERS[ticket.kind];
-  if (banner !== null) receipt.lines(wrap(banner, doubleWidth));
-  if (ticket.reprint) receipt.lines(wrap('REPRINT', doubleWidth));
+  receipt.command(REVERSE_ON);
+  receipt.lines(banner(ticket.stationName.toUpperCase(), doubleWidth));
+  receipt.command(REVERSE_OFF);
+  const kind = KIND_BANNERS[ticket.kind];
+  for (const text of [kind, ticket.reprint ? 'REPRINT' : null]) {
+    if (text === null) continue;
+    // A white line keeps it apart from the station's banner.
+    receipt.command(SIZE_NORMAL).line().command(SIZE_DOUBLE);
+    receipt.command(REVERSE_ON).lines(banner(text, doubleWidth)).command(REVERSE_OFF);
+  }
+  if (ticket.fired === true) receipt.lines(wrap('FIRE: HELD DISHES', doubleWidth));
   receipt.command(SIZE_NORMAL).command(BOLD_OFF);
-  receipt.lines(wrap(ticket.stationName, width));
+  if (ticket.kind === 'CANCELLED') receipt.lines(wrap('Do not cook these.', width));
 
-  receipt.command(ALIGN_LEFT);
-  receipt.line(
-    spread(`KOT ${String(ticket.kotNumber)}`, `Order ${String(ticket.orderNumber)}`, width),
-  );
+  receipt.command(ALIGN_LEFT).command(SIZE_TALL).command(BOLD_ON);
   receipt.line(
     spread(
-      ticket.sentByName === null ? '' : `Sent by: ${ticket.sentByName}`,
-      SOURCE_LABELS[ticket.source],
+      `KOT ${String(ticket.kotNumber)}`,
+      formatLocal(ticket.createdAt, ticket.timeZone).slice(-5),
       width,
     ),
   );
-  receipt.line(formatLocal(ticket.createdAt, ticket.timeZone));
+  receipt.command(SIZE_NORMAL).command(BOLD_OFF);
+  if (ticket.sentByName !== null) {
+    const note = SOURCE_NOTES[ticket.source];
+    receipt.lines(wrap(`Sent by: ${ticket.sentByName}${note === null ? '' : ` (${note})`}`, width));
+  }
+  const covers = ticket.destination.type === 'TABLE' ? (ticket.covers ?? null) : null;
+  receipt.line(
+    [
+      ...(covers === null ? [] : [counted(covers, 'guest', 'guests')]),
+      `Order ${String(ticket.orderNumber)}`,
+    ].join(', '),
+  );
+  const nth = ticket.tableKotNumber ?? null;
+  if (ticket.kind === 'NEW' && ticket.destination.type === 'TABLE' && nth !== null && nth > 1) {
+    receipt
+      .command(BOLD_ON)
+      .line(`${ordinal(nth)} KOT for this table`)
+      .command(BOLD_OFF);
+  }
   receipt.line('-'.repeat(width));
 
   for (const item of ticket.lines) {
@@ -246,9 +316,25 @@ export function renderKotTicket(ticket: KotTicket, paperWidthMm: PaperWidthMm): 
     }
   }
 
+  const held = ticket.held ?? [];
+  if (held.length > 0) {
+    receipt.line('-'.repeat(width));
+    receipt.command(BOLD_ON).lines(wrap('ON HOLD - DO NOT COOK YET', width)).command(BOLD_OFF);
+    for (const item of held) {
+      const name = item.variantName === null ? item.name : `${item.name} (${item.variantName})`;
+      receipt.lines(wrap(`${quantityText(item.quantity)}${name}`, width));
+    }
+  }
+
   receipt.line('-'.repeat(width));
   const count = ticket.lines.reduce((sum, item) => sum + Math.abs(item.quantity), 0);
-  receipt.line(spread(`${String(ticket.lines.length)} lines`, `${String(count)} items`, width));
+  receipt.line(
+    spread(
+      `${counted(ticket.lines.length, 'line', 'lines')}, ${counted(count, 'item', 'items')}`,
+      formatLocal(ticket.createdAt, ticket.timeZone).slice(0, 10),
+      width,
+    ),
+  );
   return receipt.finish();
 }
 

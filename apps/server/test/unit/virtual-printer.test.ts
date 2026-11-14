@@ -147,6 +147,12 @@ describe('the virtual printer (development tooling)', () => {
     expect(paperWidthOf(job)).toBe(80);
   });
 
+  it('[KDS-008] draws the station banner white on black, as the printer prints it (ADR-0031)', () => {
+    const job = parseEscPos(renderKotTicket(TICKET, 80));
+    expect(lineWith(job, 'KITCHEN').runs[0]).toMatchObject({ reverse: true, bold: true });
+    expect(lineWith(job, 'TABLE T4').runs[0]).toMatchObject({ reverse: false });
+  });
+
   it('[BILL-002] reads a bill, the total tall and bold; prices come as "Rs", as the encoder sends', () => {
     const job = parseEscPos(
       renderBill(INVOICE, { paperWidthMm: 58, duplicate: false, timeZone: 'Asia/Kolkata' }),
