@@ -34,6 +34,20 @@ When the guests want to pay, open the table and press **Request bill for this ta
 managers see it in their pending bills and print it. The table then says "Bill requested at 21:42";
 there is no need to ask twice. When the bill is printed the table says **Bill printed**.
 
+## Takeaway
+
+Takeaway orders are yours to take: the manager's screen has none.
+
+1. Home → **Menu** → **New takeaway**.
+2. Add the dishes. The customer's name and phone are optional.
+3. **Send to kitchen.** The order gets the day's next takeaway number, for example **Takeaway
+   #12**. The kitchen display and the KOT show **TAKEAWAY #12**.
+4. When a dish is ready you, the waiter who sent it, get **Takeaway ready** on your phone and pager
+   (`TAKEAWAY #12 READY`). Nobody else is called.
+5. When the customer is ready to pay, press **Request bill** on the order under **Open takeaway
+   orders**. The managers see it in their pending bills and take the payment. The order then says
+   "Bill requested at 21:42"; there is no need to ask twice.
+
 ## Customers ordering themselves
 
 A guest may order from the QR code or the table tablet. Orders that need your approval appear

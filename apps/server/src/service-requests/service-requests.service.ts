@@ -221,6 +221,11 @@ export class ServiceRequestsService {
         if (canTransition(tableMachine, session.table.state, 'REQUEST_BILL')) {
           const state = transition(tableMachine, session.table.state, 'REQUEST_BILL').to;
           await tx.diningTable.update({ where: { id: tableId }, data: { state } });
+          // When it was asked, for the managers' Pending bills (ADR-0030).
+          await tx.tableSession.update({
+            where: { id: session.id },
+            data: { billRequestedAt: now },
+          });
           events.push({ type: 'TableStateChanged', payload: { tableId, state } });
         }
         events.push({

@@ -1,12 +1,29 @@
 # Manager's manual
 
 You run the floor and the day, and you do the billing: there is no cashier role. Managers and
-the Owner prepare bills and take payments from the POS. Most other tasks
-below are in the dashboard (open from the main menu).
+the Owner do everything from the **manager dashboard**. There is no POS screen and no kitchen
+display for you, and no mode switcher: the kitchen display is the kitchen's.
+
+The dashboard's pages, down the side (above the page on a phone):
+
+| Page                                                  | What it is for                                                                        |
+| ----------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| **Bills** (count)                                     | Bills to print or to take payment for; History of printed bills                       |
+| **Modifications** (count)                             | Orders from table tablets and QR menus waiting for approval                           |
+| **Alerts** (count)                                    | Your alerts: bill requests, food waiting, guests waiting                              |
+| **Take order**                                        | Take a table's order (dine-in only)                                                   |
+| **Tables**                                            | Which tables are open, guests, time seated, amount; open a table's bill               |
+| **Menu**, **Menu availability**, **Staff**            | The menu, what is out of stock, people and pagers                                     |
+| **Reports and analytics**, **Cancelled KOTs**         | The reports; dishes cancelled or voided                                               |
+| **Restaurant**, **Set-up**, **Devices**, **QR codes** | The restaurant's details and set-up                                                   |
+| **Cash drawer**                                       | Your own cash shift, if you use one (optional)                                        |
+| More                                                  | Overview, Orders, Audit trail, Floor, Kitchen and printers, Settings, System, Licence |
+
+The number beside Bills, Modifications and Alerts is how many are waiting. It changes by itself.
 
 ## Start of day
 
-Overview: check alerts, the printers and that waiters have signed in. There are no sections to
+Overview (under More): check alerts, the printers and that waiters have signed in. There are no sections to
 give out: any waiter serves any table, and everything they do is recorded under their name.
 Staff → Pagers: hand out the wrist pagers. Floor page: tables, floor areas and tablet
 locations.
@@ -57,19 +74,38 @@ lost device. Pagers page: issue and collect wrist pagers.
 
 ## During service
 
-Orders page: the live feed with late dishes highlighted. Approve a waiter's void after
-preparation started by entering your PIN on their device; the reason is recorded. Move or merge
-tables.
+- **Tables:** every open table with its guests, how long they have been seated, who opened it and
+  the amount so far. It is for looking: the one thing you do from here is **Open bill**.
+- **Modifications:** orders from table tablets and QR menus wait here. Approve them as they are,
+  change a quantity once the guest agrees, or reject with a reason the guest sees.
+- **Orders** (under More): the live feed with late dishes highlighted.
+- Approve a waiter's void after preparation started by entering your PIN on their device; the
+  reason is recorded. Waiters move and merge tables on their phones.
 
-## Billing and payments (POS)
+## Taking an order (Take order)
 
-Sign in at the POS with your PIN. You can take cash straight away: you do not need a shift.
+Take order is for tables only: takeaway orders are taken by waiters on their phones.
 
-- Taking an order at the counter: pick the table or counter, add items, choose sizes and add-ons,
-  send. The kitchen gets it at once. The system works out prices and tax; nobody types a price.
-- Billing: open the table, print the bill, apply a discount if needed (always with a reason),
-  choose the payment type (cash, card, UPI, split or part-payments). The invoice number is given
-  when the bill is printed and is never reused. To split a bill by item or by amount use Split.
+1. Pick the table. A free table asks how many guests; if they are more than its seats it asks
+   "Table 3 seats 4. Open it for 5 guests anyway?" (**Yes, open it** or **Change**).
+2. Add dishes, choose sizes and add-ons, add a note, and send. The kitchen gets it at once. The
+   system works out prices and tax; nobody types a price.
+
+## Bills and payments (Bills)
+
+You can take cash straight away: you do not need a shift.
+
+- **Pending** (it opens here) lists every bill still to deal with, longest waiting first: the
+  table or takeaway number, the amount, how long it has waited and where it stands:
+  - **Bill requested:** a waiter, a guest (QR menu or tablet) or you asked for it; not printed yet.
+  - **Printed, not paid.**
+  - **Needs a new bill:** more was ordered after the bill was printed; print it again.
+- **Open bill** opens it: print it, give a discount (always with a reason), split it by item or by
+  amount, reprint it, or cancel it with a reason. **Take payment** (on a printed bill) takes cash,
+  card, UPI or a split across them. The invoice number is given when the bill is printed and is
+  never reused.
+- **History** lists the bills already printed, by date, with search by bill number or phone.
+- A takeaway's bill appears here once the waiter asks for it (Takeaway #12).
 - Mistakes: a printed bill is not changed freely. Reprint is allowed. To change a printed bill
   use Edit bill, or void the invoice and issue a new one; give the reason each time. Do not
   hand-write over a printed bill.
@@ -83,7 +119,7 @@ it, and everyone decides for themselves.
 
 - **What it does:** you start with the cash you put in the drawer. Every cash payment you take is
   added automatically. When you close, you count the drawer and the system shows any difference.
-- **To use it:** POS → Shift → enter the opening cash → Open shift. When you finish, enter the
+- **To use it:** Cash drawer → enter the opening cash → Open shift. When you finish, enter the
   counted cash and close it.
 - **Only your own cash goes in.** Cash taken by someone else never goes into your shift. Cash taken
   by someone with no shift open is recorded normally, with no shift.
@@ -93,7 +129,7 @@ it, and everyone decides for themselves.
 
 ## Ending the day
 
-Close open tables, then run the day-end. The day-end report is produced; the business day changes at
+Close open tables, then Bills → **Day end**. The day-end report is produced; the business day changes at
 04:00 by default. Check Reports for the day.
 
 If a shift is still open, day-end says "<name>'s shift is still open" and offers, for each one:

@@ -65,7 +65,7 @@ describe('[BILL-001] [BILL-005] [AUTH-011] the bill', () => {
     const { user, container } = await renderConsole({
       fake,
       signedIn: 'MANAGER',
-      path: `/pos/bill/${B.bill}`,
+      path: `/manage/bills/bill/${B.bill}`,
     });
     expect(
       await screen.findByRole('heading', {
@@ -137,7 +137,7 @@ describe('[BILL-001] [BILL-005] [AUTH-011] the bill', () => {
     const { user } = await renderConsole({
       fake,
       signedIn: 'MANAGER',
-      path: `/pos/bill/${B.bill}`,
+      path: `/manage/bills/bill/${B.bill}`,
     });
     await user.click(await screen.findByRole('button', { name: t('billing.printBill') }));
     expect(
@@ -176,7 +176,7 @@ describe('[BILL-001] [BILL-005] [AUTH-011] the bill', () => {
     const { user, container } = await renderConsole({
       fake,
       signedIn: 'MANAGER',
-      path: `/pos/bill/${B.bill}`,
+      path: `/manage/bills/bill/${B.bill}`,
     });
     expect(await screen.findByText(t('billing.unbilledNotice', { count: 1 }))).toBeInTheDocument();
     expect(screen.getByText(t('billing.notYetBilled'))).toBeInTheDocument();
@@ -213,7 +213,7 @@ describe('[BILL-001] [BILL-005] [AUTH-011] the bill', () => {
     const { user } = await renderConsole({
       fake,
       signedIn: 'MANAGER',
-      path: `/pos/bill/${B.bill}`,
+      path: `/manage/bills/bill/${B.bill}`,
     });
     expect(
       await screen.findByText(t('billing.voidedPartNotice', { count: 1 })),
@@ -234,7 +234,7 @@ describe('[BILL-001] [BILL-005] [AUTH-011] the bill', () => {
     const { user } = await renderConsole({
       fake,
       signedIn: 'MANAGER',
-      path: `/pos/bill/${B.bill}`,
+      path: `/manage/bills/bill/${B.bill}`,
     });
     await user.click(await screen.findByRole('button', { name: t('billing.removeServiceCharge') }));
     const dialog = await screen.findByRole('dialog', { name: t('billing.removeServiceCharge') });
@@ -274,7 +274,7 @@ describe('[BILL-008] taking payment', () => {
     const { user } = await renderConsole({
       fake,
       signedIn: 'MANAGER',
-      path: `/pos/pay/${B.invoice}?bill=${B.bill}`,
+      path: `/manage/bills/pay/${B.invoice}?bill=${B.bill}`,
     });
     const amount = await screen.findByLabelText(t('payment.amount'));
     expect(amount).toHaveValue('704.00');
@@ -329,7 +329,7 @@ describe('[BILL-008] taking payment', () => {
     const { user } = await renderConsole({
       fake,
       signedIn: 'MANAGER',
-      path: `/pos/pay/${B.invoice}`,
+      path: `/manage/bills/pay/${B.invoice}`,
     });
     await user.click(await screen.findByRole('button', { name: t('payment.record') }));
     await waitFor(() => {
@@ -347,7 +347,7 @@ describe('[BILL-008] taking payment', () => {
     const { user } = await renderConsole({
       fake,
       signedIn: 'MANAGER',
-      path: `/pos/pay/${B.invoice}`,
+      path: `/manage/bills/pay/${B.invoice}`,
     });
     const amount = await screen.findByLabelText(t('payment.amount'));
     await user.clear(amount);
@@ -367,7 +367,7 @@ describe('[BILL-013] the manager’s cash shift', () => {
     const { user, container } = await renderConsole({
       fake,
       signedIn: 'MANAGER',
-      path: '/pos/shift',
+      path: '/manage/cash-drawer',
     });
     expect(await screen.findByText(t('shift.addOn'))).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
@@ -391,7 +391,11 @@ describe('[BILL-013] the manager’s cash shift', () => {
         () => ({ status: 200, body: { shift: shiftView() } }),
       )
       .on('POST', '/api/v1/shifts', () => ({ status: 201, body: shiftView() }));
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/shift' });
+    const { user } = await renderConsole({
+      fake,
+      signedIn: 'MANAGER',
+      path: '/manage/cash-drawer',
+    });
     await user.type(await screen.findByLabelText(t('shift.openingFloat')), '1000');
     await user.click(screen.getByRole('button', { name: t('shift.open') }));
     expect(await screen.findByText(t('shift.expected'))).toBeInTheDocument();
@@ -414,7 +418,11 @@ describe('[BILL-013] the manager’s cash shift', () => {
           closedAt: '2026-09-26T20:00:00.000Z',
         }),
       }));
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/shift' });
+    const { user } = await renderConsole({
+      fake,
+      signedIn: 'MANAGER',
+      path: '/manage/cash-drawer',
+    });
     expect(await screen.findByText('₹1,400.00')).toBeInTheDocument();
     await user.type(screen.getByLabelText(t('shift.movementAmount')), '250');
     await user.type(screen.getByLabelText(t('shift.movementReason')), 'Milk from the shop');
@@ -442,7 +450,11 @@ describe('[BILL-013] the manager’s cash shift', () => {
           closedAt: '2026-09-26T20:00:00.000Z',
         }),
       }));
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/shift' });
+    const { user } = await renderConsole({
+      fake,
+      signedIn: 'MANAGER',
+      path: '/manage/cash-drawer',
+    });
     await user.click(await screen.findByLabelText(t('shift.byNotes')));
     await user.type(screen.getByLabelText(t('shift.noteCount', { note: '500' })), '2');
     await user.type(screen.getByLabelText(t('shift.noteCount', { note: '100' })), '3');
@@ -478,7 +490,11 @@ describe('[BILL-013] the manager’s cash shift', () => {
           body: { opened: true, error: null, printerId: B.printer, shiftId: B.shift },
         }),
       );
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/shift' });
+    const { user } = await renderConsole({
+      fake,
+      signedIn: 'MANAGER',
+      path: '/manage/cash-drawer',
+    });
     expect(await screen.findByText(t('shift.noSaleNote'))).toBeVisible();
     await user.type(screen.getByLabelText(t('shift.noSaleReason')), 'Change for a 500 note');
     await user.click(screen.getByRole('button', { name: t('shift.noSaleOpen') }));
@@ -552,7 +568,7 @@ describe('[BILL-012] [BILL-011] digital bills on the POS', () => {
     const { user, container } = await renderConsole({
       fake,
       signedIn: 'MANAGER',
-      path: `/pos/bill/${B.bill}`,
+      path: `/manage/bills/bill/${B.bill}`,
     });
     expect(
       await screen.findByText(
@@ -594,7 +610,7 @@ describe('[BILL-012] [BILL-011] digital bills on the POS', () => {
         status: 200,
         body: { channel: 'OFF', phone: '+91 ******3210', bills: [] },
       }));
-    await renderConsole({ fake, signedIn: 'MANAGER', path: `/pos/bill/${B.bill}` });
+    await renderConsole({ fake, signedIn: 'MANAGER', path: `/manage/bills/bill/${B.bill}` });
     expect(await screen.findByText(t('billing.settled'))).toBeInTheDocument();
     await waitFor(() => {
       expect(fake.callsTo('GET', `/api/v1/invoices/${B.invoice}/digital-bills`)).toHaveLength(1);
@@ -623,7 +639,7 @@ describe('[BILL-012] [BILL-011] digital bills on the POS', () => {
     const { user } = await renderConsole({
       fake,
       signedIn: 'MANAGER',
-      path: `/pos/pay/${B.invoice}?bill=${B.bill}`,
+      path: `/manage/bills/pay/${B.invoice}?bill=${B.bill}`,
     });
     await screen.findByLabelText(t('payment.amount'));
     await user.selectOptions(screen.getByLabelText(t('payment.mode')), t('payment.modes.UPI'));

@@ -141,12 +141,11 @@ describe('[UPD-006] a console older than its server', () => {
 });
 
 describe('[MGR-001] [KDS-001] modes', () => {
-  it('offers managers every mode and signs them out', async () => {
+  it('gives managers the dashboard alone, with no mode switcher, and signs them out (ADR-0030)', async () => {
     const { user } = await renderConsole({ fake: signsInAs(server(), 'MANAGER') });
     await signIn(user, 'Meera', '2222');
-    const modes = await screen.findByRole('navigation', { name: t('modes.navigation') });
-    await user.click(within(modes).getByRole('link', { name: t('modes.kds') }));
-    expect(await screen.findByRole('heading', { level: 1, name: t('modes.kds') })).toBeVisible();
+    expect(await screen.findByRole('heading', { level: 1, name: t('modes.manage') })).toBeVisible();
+    expect(screen.queryByRole('navigation', { name: t('modes.navigation') })).toBeNull();
     await user.click(screen.getByRole('button', { name: t('login.signOut') }));
     expect(await screen.findByRole('heading', { name: t('login.title') })).toBeInTheDocument();
   });

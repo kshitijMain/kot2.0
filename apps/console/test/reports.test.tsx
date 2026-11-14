@@ -89,7 +89,7 @@ describe('[RPT-016] the Reports area', () => {
     const fake = reportsServer();
     const { container, user } = await renderConsole({
       fake,
-      path: '/manage',
+      path: '/manage/overview',
       signedIn: 'MANAGER',
     });
     await user.click(

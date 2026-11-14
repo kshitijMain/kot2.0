@@ -67,7 +67,7 @@ export function DayEndScreen({
     <section className="pos-order" aria-labelledby="day-end-title">
       <header className="pos-order__header">
         <Button variant="ghost" startIcon={<Icon name="close" />} onClick={onBack}>
-          {t('pos.backToTables')}
+          {t('bills.back')}
         </Button>
         <h2 id="day-end-title" className="pos-floor__heading">
           {data.status === 'ready'

@@ -4,6 +4,12 @@
  * What a person has seen is kept per person on this device (not secret, never sent anywhere).
  */
 export const HELP_TOPICS = [
+  'bills',
+  'modifications',
+  'takeOrder',
+  'tables',
+  'cancelledKots',
+  'cashDrawer',
   'overview',
   'orders',
   'alerts',
@@ -25,7 +31,15 @@ export const HELP_TOPICS = [
 export type HelpTopic = (typeof HELP_TOPICS)[number];
 
 const PATH_TOPICS: Readonly<Record<string, HelpTopic>> = {
-  '': 'overview',
+  // The dashboard opens on the pending bills (ADR-0030).
+  '': 'bills',
+  bills: 'bills',
+  modifications: 'modifications',
+  'take-order': 'takeOrder',
+  tables: 'tables',
+  'cancelled-kots': 'cancelledKots',
+  'cash-drawer': 'cashDrawer',
+  overview: 'overview',
   orders: 'orders',
   alerts: 'alerts',
   reports: 'reports',

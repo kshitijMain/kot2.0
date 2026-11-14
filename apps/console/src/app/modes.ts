@@ -22,15 +22,31 @@ export function grantOf(person: Person, capability: Capability): Grant {
   );
 }
 
-/** What opens each mode (never DENY for any of them); the dashboard has several areas. */
+/**
+ * What opens each mode (never DENY for any of them); the dashboard has several areas, and its
+ * Bills page is where bills are printed and paid (ADR-0030).
+ */
 const MODE_CAPABILITIES: Readonly<Record<Mode, readonly Capability[]>> = {
   pos: ['ORDER_CREATE'],
   kds: ['ITEM_MARK_PREPARING_READY'],
-  manage: ['OPERATIONS_CONFIGURE', 'MENU_MANAGE', 'STAFF_MANAGE', 'DEVICE_PAIR'],
+  manage: [
+    'OPERATIONS_CONFIGURE',
+    'MENU_MANAGE',
+    'STAFF_MANAGE',
+    'DEVICE_PAIR',
+    'BILL_PRINT_AND_PAYMENT',
+  ],
 };
+
+/**
+ * Managers and the Owner work from the dashboard alone: everything they did at the POS is on it,
+ * and the kitchen display is the kitchen's (ADR-0030).
+ */
+const DASHBOARD_ONLY: readonly Role[] = ['OWNER', 'MANAGER'];
 
 /** The modes a person may open. The server still checks every call (AUTH-010). */
 export function modesFor(person: Person): Mode[] {
+  if (DASHBOARD_ONLY.includes(person.role)) return ['manage'];
   return MODES.filter((mode) =>
     MODE_CAPABILITIES[mode].some((capability) => grantOf(person, capability) !== 'DENY'),
   );

@@ -4,8 +4,9 @@ import { deviceSummary } from './fakes.js';
 
 describe('[MGR-001] [KDS-001] console modes by role (BRD §4.2)', () => {
   it('opens the modes the permission matrix allows', () => {
-    expect(modesFor({ role: 'OWNER' })).toEqual(['pos', 'kds', 'manage']);
-    expect(modesFor({ role: 'MANAGER' })).toEqual(['pos', 'kds', 'manage']);
+    // ADR-0030: managers and the Owner have the dashboard only, so no mode switcher.
+    expect(modesFor({ role: 'OWNER' })).toEqual(['manage']);
+    expect(modesFor({ role: 'MANAGER' })).toEqual(['manage']);
     expect(modesFor({ role: 'WAITER' })).toEqual(['pos']);
     expect(modesFor({ role: 'KITCHEN' })).toEqual(['kds']);
   });
@@ -33,6 +34,11 @@ describe('[MGR-001] [KDS-001] console modes by role (BRD §4.2)', () => {
 describe('[AUTH-012] a custom role opens what it adds', () => {
   it('opens the dashboard for a waiter whose custom role edits the menu', () => {
     expect(modesFor({ role: 'WAITER', capabilities: ['MENU_MANAGE'] })).toEqual(['pos', 'manage']);
+    // Billing is on the dashboard's Bills page (ADR-0030).
+    expect(modesFor({ role: 'WAITER', capabilities: ['BILL_PRINT_AND_PAYMENT'] })).toEqual([
+      'pos',
+      'manage',
+    ]);
     expect(modesFor({ role: 'WAITER', capabilities: ['ITEM_MARK_PREPARING_READY'] })).toEqual([
       'pos',
       'kds',

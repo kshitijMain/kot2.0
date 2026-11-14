@@ -6,7 +6,9 @@ import { RESTAURANT_ID } from './fakes.js';
 import { expectNoAxeViolations, renderConsole, server, signsInAs, t } from './harness.js';
 import { IDS, MENU, sentOrder } from '@rp/ordering/testing';
 
-const TABLE_PATH = `/pos/table/${IDS.session}?label=T1`;
+// Managers take orders from the dashboard's Take order (ADR-0030); waiters from the POS.
+const TABLE_PATH = `/manage/take-order/table/${IDS.session}?label=T1`;
+const POS_TABLE_PATH = `/pos/table/${IDS.session}?label=T1`;
 
 function orderServer(): FakeServer {
   return signsInAs(server(), 'MANAGER')
@@ -102,7 +104,7 @@ describe('[ORD-001] [MENU-012] taking an order at a table', () => {
           closeReason: null,
         },
       }));
-    const { user } = await renderConsole({ fake, signedIn: 'WAITER', path: TABLE_PATH });
+    const { user } = await renderConsole({ fake, signedIn: 'WAITER', path: POS_TABLE_PATH });
     await card(/^Paneer Tikka/);
     expect(screen.queryByRole('button', { name: t('pos.billTable') })).toBeNull();
     await user.click(screen.getByRole('button', { name: t('mobile.tables.requestBill') }));
@@ -453,9 +455,9 @@ describe('[ORD-001] [MENU-012] taking an order at a table', () => {
   });
 });
 
-describe('[TBL-008] takeaway', () => {
+describe('[TBL-008] takeaway, the waiters’ job (ADR-0030)', () => {
   it('sends a takeaway order with the customer’s name and shows the token', async () => {
-    const fake = signsInAs(server(), 'MANAGER')
+    const fake = signsInAs(server(), 'WAITER')
       .on('GET', '/api/v1/menu', () => ({ status: 200, body: MENU }))
       .on('GET', '/api/v1/orders/takeaway', () => ({ status: 200, body: { orders: [] } }))
       .on('POST', '/api/v1/orders', () => accepted)
@@ -468,7 +470,7 @@ describe('[TBL-008] takeaway', () => {
           customerName: 'Anil',
         }),
       }));
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/takeaway' });
+    const { user } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos/takeaway' });
     expect(await screen.findByRole('heading', { name: t('pos.takeaway') })).toBeInTheDocument();
     await user.click(await screen.findByRole('button', { name: 'Main Course' }));
     await user.click(await card(/^Dal Makhani/));
@@ -486,7 +488,7 @@ describe('[TBL-008] takeaway', () => {
   });
 
   it('is reached from the floor, and the back button returns there', async () => {
-    const fake = signsInAs(server(), 'MANAGER')
+    const fake = signsInAs(server(), 'WAITER')
       .on('GET', '/api/v1/floor', () => ({ status: 200, body: { sections: [] } }))
       .on('GET', '/api/v1/tables/overview', () => ({
         status: 200,
@@ -506,7 +508,7 @@ describe('[TBL-008] takeaway', () => {
       }))
       .on('GET', '/api/v1/menu', () => ({ status: 200, body: MENU }))
       .on('GET', '/api/v1/orders/takeaway', () => ({ status: 200, body: { orders: [] } }));
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos' });
     await user.click(await screen.findByRole('button', { name: t('pos.takeaway') }));
     expect(await screen.findByRole('heading', { name: t('pos.takeaway') })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: t('pos.backToTables') }));

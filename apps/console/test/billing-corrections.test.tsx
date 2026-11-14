@@ -53,7 +53,7 @@ describe('[BILL-007] splitting a bill', () => {
     const { user } = await renderConsole({
       fake,
       signedIn: 'MANAGER',
-      path: `/pos/bill/${B.bill}`,
+      path: `/manage/bills/bill/${B.bill}`,
     });
     await user.click(await screen.findByRole('button', { name: t('billing.split.open') }));
     const dialog = await screen.findByRole('dialog', { name: t('billing.split.title') });
@@ -80,7 +80,7 @@ describe('[BILL-007] splitting a bill', () => {
     const { user } = await renderConsole({
       fake,
       signedIn: 'MANAGER',
-      path: `/pos/bill/${B.bill}`,
+      path: `/manage/bills/bill/${B.bill}`,
     });
     await user.click(await screen.findByRole('button', { name: t('billing.split.open') }));
     const dialog = await screen.findByRole('dialog', { name: t('billing.split.title') });
@@ -128,7 +128,7 @@ describe('[BILL-010] [AUTH-011] correcting a printed bill', () => {
     const { user } = await renderConsole({
       fake,
       signedIn: 'MANAGER',
-      path: `/pos/bill/${B.bill}`,
+      path: `/manage/bills/bill/${B.bill}`,
     });
     const voidFor = t('billing.voidFor', { number: 'INV/26-27/000012' });
     await user.click(await screen.findByRole('button', { name: voidFor }));
@@ -172,7 +172,7 @@ describe('[BILL-010] [AUTH-011] correcting a printed bill', () => {
     const { user } = await renderConsole({
       fake,
       signedIn: 'MANAGER',
-      path: `/pos/bill/${B.bill}`,
+      path: `/manage/bills/bill/${B.bill}`,
     });
     const editFor = t('billing.editFor', { number: 'INV/26-27/000012' });
     await user.click(await screen.findByRole('button', { name: editFor }));
@@ -207,7 +207,7 @@ describe('[BILL-010] [AUTH-011] correcting a printed bill', () => {
     const { user } = await renderConsole({
       fake,
       signedIn: 'MANAGER',
-      path: `/pos/bill/${B.bill}`,
+      path: `/manage/bills/bill/${B.bill}`,
     });
     await user.click(await screen.findByRole('button', { name: t('billing.reprint') }));
     expect(await screen.findByText(t('billing.reprinted'))).toBeInTheDocument();
@@ -276,7 +276,7 @@ describe('[BILL-013] [RPT-005] closing the day', () => {
     const { user, container } = await renderConsole({
       fake,
       signedIn: 'MANAGER',
-      path: '/pos/day-end',
+      path: '/manage/bills/day-end',
     });
     expect(
       await screen.findByRole('heading', { name: t('dayEnd.title', { date: '26-09-2026' }) }),
@@ -329,7 +329,7 @@ describe('[BILL-013] [RPT-005] closing the day', () => {
       status: 200,
       body: dayEnd(),
     }));
-    await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/day-end' });
+    await renderConsole({ fake, signedIn: 'MANAGER', path: '/manage/bills/day-end' });
     const label = await screen.findByText(t('dayEnd.outsideShift'));
     expect(label.nextElementSibling).toHaveTextContent('₹125.00');
   });
@@ -339,7 +339,11 @@ describe('[BILL-013] [RPT-005] closing the day', () => {
       status: 200,
       body: dayEnd({ openShifts: [openShift] }),
     }));
-    const { container } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/day-end' });
+    const { container } = await renderConsole({
+      fake,
+      signedIn: 'MANAGER',
+      path: '/manage/bills/day-end',
+    });
     expect(await screen.findByText(t('dayEnd.shiftOpen', { name: 'Asha' }))).toBeInTheDocument();
     expect(screen.getByRole('button', { name: t('dayEnd.close') })).toBeEnabled();
     await expectNoAxeViolations(container);
@@ -357,7 +361,11 @@ describe('[BILL-013] [RPT-005] closing the day', () => {
         status: 200,
         body: { ...closedView, countedCash: 149_000, variance: -1_000, notCounted: false },
       }));
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/day-end' });
+    const { user } = await renderConsole({
+      fake,
+      signedIn: 'MANAGER',
+      path: '/manage/bills/day-end',
+    });
     await user.click(
       await screen.findByRole('button', { name: t('dayEnd.countOf', { name: 'Asha' }) }),
     );
@@ -380,7 +388,11 @@ describe('[BILL-013] [RPT-005] closing the day', () => {
         status: 200,
         body: { ...closedView, countedCash: null, variance: null, notCounted: true },
       }));
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/day-end' });
+    const { user } = await renderConsole({
+      fake,
+      signedIn: 'MANAGER',
+      path: '/manage/bills/day-end',
+    });
     await user.click(
       await screen.findByRole('button', { name: t('dayEnd.notCountedOf', { name: 'Asha' }) }),
     );
@@ -404,7 +416,11 @@ describe('[BILL-013] [RPT-005] closing the day', () => {
         status: 409,
         body: { code: 'DAY_END_BLOCKED', message: 'Settle the unpaid bills first.' },
       }));
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/day-end' });
+    const { user } = await renderConsole({
+      fake,
+      signedIn: 'MANAGER',
+      path: '/manage/bills/day-end',
+    });
     expect(await screen.findByText(t('dayEnd.noBlockers'))).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: t('dayEnd.close') }));
     await user.click(
@@ -418,7 +434,11 @@ describe('[BILL-013] [RPT-005] closing the day', () => {
       status: 200,
       body: dayEnd({ blockers: { openTables: [], unsettledInvoices: [] } }),
     }));
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/day-end' });
+    const { user } = await renderConsole({
+      fake,
+      signedIn: 'MANAGER',
+      path: '/manage/bills/day-end',
+    });
     await user.click(await screen.findByRole('button', { name: t('dayEnd.close') }));
     const dialog = await screen.findByRole('dialog', {
       name: t('dayEnd.confirmTitle', { date: '26-09-2026' }),
@@ -445,7 +465,11 @@ describe('[BILL-013] [RPT-005] closing the day', () => {
         status: 200,
         body: paymentsView(),
       }));
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/day-end' });
+    const { user } = await renderConsole({
+      fake,
+      signedIn: 'MANAGER',
+      path: '/manage/bills/day-end',
+    });
     await user.click(
       await screen.findByRole('button', {
         name: t('dayEnd.payInvoice', { number: 'INV/26-27/000012' }),

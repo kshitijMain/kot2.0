@@ -17,8 +17,12 @@ class FakeStorage {
 
 describe('[NFR-U07] help topics', () => {
   it('maps dashboard paths to topics', () => {
-    expect(topicForPath('/manage')).toBe('overview');
-    expect(topicForPath('/manage/')).toBe('overview');
+    // ADR-0030: the dashboard opens on the pending bills.
+    expect(topicForPath('/manage')).toBe('bills');
+    expect(topicForPath('/manage/')).toBe('bills');
+    expect(topicForPath('/manage/overview')).toBe('overview');
+    expect(topicForPath('/manage/bills/history')).toBe('bills');
+    expect(topicForPath('/manage/take-order/table/x')).toBe('takeOrder');
     expect(topicForPath('/manage/menu/photos')).toBe('menu');
     expect(topicForPath('/manage/qr-codes')).toBe('qrCodes');
     expect(topicForPath('/manage/nowhere')).toBeUndefined();
@@ -70,7 +74,11 @@ describe('[NFR-U07] help on the dashboard', () => {
 
   it('shows a tip once, then only the Help button', async () => {
     const fake = managerServer();
-    const { user, container } = await renderConsole({ fake, path: '/manage', signedIn: 'MANAGER' });
+    const { user, container } = await renderConsole({
+      fake,
+      path: '/manage/overview',
+      signedIn: 'MANAGER',
+    });
     const tip = await screen.findByRole('complementary', { name: t('help.tipLabel') });
     expect(tip.textContent).toContain(t('help.overview.tip'));
     await expectNoAxeViolations(container);
@@ -85,7 +93,7 @@ describe('[NFR-U07] help on the dashboard', () => {
   it('does not show the tip again to a person who has seen it', async () => {
     const first = await renderConsole({
       fake: managerServer(),
-      path: '/manage',
+      path: '/manage/overview',
       signedIn: 'MANAGER',
     });
     await first.user.click(
@@ -95,7 +103,7 @@ describe('[NFR-U07] help on the dashboard', () => {
       ),
     );
     first.unmount();
-    await renderConsole({ fake: managerServer(), path: '/manage', signedIn: 'MANAGER' });
+    await renderConsole({ fake: managerServer(), path: '/manage/overview', signedIn: 'MANAGER' });
     await screen.findByRole('button', { name: t('help.button') });
     expect(screen.queryByRole('complementary', { name: t('help.tipLabel') })).toBeNull();
   });

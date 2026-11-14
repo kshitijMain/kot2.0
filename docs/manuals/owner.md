@@ -1,6 +1,7 @@
 # Owner's manual
 
-You can do everything a manager can, plus the things that put the business at risk if misused.
+You can do everything a manager can, from the manager dashboard (you have no POS or kitchen
+display, as managers have none), plus the things that put the business at risk if misused.
 Those ask for your password and a code from your authenticator app.
 
 ## Your own sign-in
@@ -17,7 +18,8 @@ own phone. The Security page shows recent sign-ins, locked people and unusual at
 
 ## Every day
 
-Overview shows today's sales, open tables and alerts. Reports shows sales by day, dish, waiter
+Bills shows what is still to print or to pay. Overview (under More) shows today's sales, open
+tables and alerts. Reports shows sales by day, dish, waiter
 and payment type; the day-end report is the Z-report. Audit shows who did what, with who
 approved it and why. Look at alerts first (late dishes, failed backup, low pager battery).
 

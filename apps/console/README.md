@@ -3,9 +3,13 @@
 React 19 + TypeScript (Vite, React Router), served by the local server. One codebase with
 role-based modes:
 
-- POS (`/pos`): tables, order entry, billing, shifts, day-end (Phase 1);
-- KDS (`/kds`): kitchen station screens, device-authenticated (Phase 1);
-- Manager dashboard (`/manage`): overview, live order feed and alert centre (P4-01, P2-06c),
+- POS (`/pos`): tables and order entry, for waiters at a PC (Phase 1; billing moved to the
+  dashboard, ADR-0030);
+- KDS (`/kds`): kitchen station screens, device-authenticated, for the kitchen only (Phase 1);
+- Manager dashboard (`/manage`), where managers and the Owner do everything (ADR-0030): Bills
+  (pending and history, with the bill, payment and day-end screens), Modifications, Take order,
+  the live Tables, Cancelled KOTs and the cash drawer; overview, live order feed and alert centre
+  (P4-01, P2-06c),
   staff and the Owner's sign-in security (P4-02a), pagers (P4-02b), Menu availability
   (`/manage/availability`, ADR-0023, also on the KDS); more
   management, configuration and reports (Phase 4).
@@ -23,6 +27,7 @@ screens come with P1-08, P1-09, P1-12 and P4-01 to P4-07.
   keyboard). A KDS device skips login and shows its station (station mode, AUTH-005).
 - Modes: people land in their home mode (Owner and Manager: Manage; Waiter: POS;
   Kitchen: KDS) and may open the modes their role allows (`src/app/modes.ts`, BRD §4.2 matrix).
+  The Owner and managers have Manage alone, so no mode switcher (ADR-0030).
 - Connection banner (NFR-P11) from the live connection's status; Sign out in the header. Nobody is
   signed out for being idle (ADR-0030).
 - Storage (`src/app/storage.ts`): the key pair (as a key object), device token and device summary
@@ -42,11 +47,15 @@ screens come with P1-08, P1-09, P1-12 and P4-01 to P4-07.
   bump and recall, pick-up at the pass, "Notify manager" for ready food waiting, sounds
   (`sounds.ts`, on after the first touch), an all-day summary and a full-screen notice while
   disconnected. The rules are in `kds-view.ts`.
-- Billing (`/pos/bill/:billId`, `/pos/pay/:invoiceId`, `/pos/shift`, P1-12a): `src/billing/`
+- Billing (`/manage/bills/bill/:billId`, `/manage/bills/pay/:invoiceId`, `/manage/cash-drawer`,
+  P1-12a; on the POS until ADR-0030): `src/billing/`
   shows the bill preview, discounts (with a manager's PIN in place when above a custom role's
   limit, `override.tsx`), service charge, customer, print (issue and print), payments across
   modes with change and one idempotency key per set, and the manager's own cash shift, an optional add-on (no cashier, ADR-0023; optional, ADR-0029). P1-12b adds split
-  bills (`SplitDialog`), void and edit after print with approval, and `/pos/day-end`.
+  bills (`SplitDialog`), void and edit after print with approval, and day-end
+  (`/manage/bills/day-end`). `BillsArea.tsx` (ADR-0030) is the dashboard's Bills page: Pending
+  (`GET /api/v1/bills/pending`, kept live, also the count beside Bills) and History (the bill
+  history over a date range).
 - Alerts (P2-06c, MGR-008, NTF-004, NTF-008): `src/alerts/` reads the signed-in person's open
   alerts in the POS and manage modes (managers and the Owner see every open alert) and reads them
   again after each alert event and after a reconnect. The header's Alerts button counts those
@@ -58,8 +67,10 @@ screens come with P1-08, P1-09, P1-12 and P4-01 to P4-07.
   quick messages from `notifications.nudgePresets`, or up to 40 characters of their own. The
   kitchen display has no alerts button.
 - Manager dashboard (`/manage`, P4-01, MGR-001 to MGR-003, MGR-011): `src/manage/ManageHome.tsx`
-  has three pages, Overview (`/manage`), Orders (`/manage/orders`) and Alerts (`/manage/alerts`,
-  the alert centre), with the navigation beside them from 60rem and above them on a phone.
+  opens on Bills and lists the pages in the order ADR-0030 gives (counts beside Bills,
+  Modifications and Alerts), then the rest under More; Take order is
+  `src/manage/take-order/`, Tables `src/manage/tables/`. Overview (`/manage/overview`), Orders
+  (`/manage/orders`) and Alerts (`/manage/alerts`, the alert centre) came first, with the navigation beside them from 60rem and above them on a phone.
   `Overview.tsx` shows the restaurant at a glance (tables occupied and guests, orders, dishes
   waiting for approval, in the kitchen, ready and late, open alerts, with links to the orders, the
   late dishes and the alerts) and the live floor from the POS's overview; an occupied table opens

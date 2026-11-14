@@ -328,15 +328,13 @@ describe('[SEC-003] [AUTH-010] who opens the Staff page', () => {
     ).toBeInTheDocument();
   });
 
-  it('takes the Owner from the old Security address back to the overview', async () => {
+  it('takes the Owner from the old Security address back to the first page, Bills (ADR-0030)', async () => {
     await renderConsole({
       fake: staffServer('OWNER'),
       signedIn: 'OWNER',
       path: '/manage/security',
     });
-    expect(
-      await screen.findByRole('region', { name: t('dashboard.overview.glance') }),
-    ).toBeVisible();
+    expect(await screen.findByRole('heading', { name: t('bills.title') })).toBeVisible();
   });
 });
 

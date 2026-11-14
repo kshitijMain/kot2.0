@@ -23,7 +23,7 @@ export function useOpenBill(): {
       controller.api
         .openBill({ body: target })
         .then(
-          (bill) => navigate(`/pos/bill/${bill.id}`),
+          (bill) => navigate(`/manage/bills/bill/${bill.id}`),
           (failure: unknown) => {
             toast.show({ title: messageOf(failure, t), tone: 'danger' });
           },

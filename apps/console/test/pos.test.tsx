@@ -106,7 +106,7 @@ const overview = (...tables: TableOverviewEntry[]): TableOverviewResponse => ({
 });
 
 function posServer(...overviews: TableOverviewResponse[]): FakeServer {
-  return signsInAs(server(), 'MANAGER')
+  return signsInAs(server(), 'WAITER')
     .on('GET', '/api/v1/floor', () => ({ status: 200, body: FLOOR }))
     .on(
       'GET',
@@ -134,7 +134,7 @@ describe('[TBL-007] the POS floor', () => {
         entry(T3, 'T3', TERRACE),
       ),
     );
-    const { container } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    const { container } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos' });
     const hall = await screen.findByRole('region', { name: 'Hall' });
     expect(
       within(hall).getByRole('button', {
@@ -153,7 +153,7 @@ describe('[TBL-007] the POS floor', () => {
       overview(entry(T1, 'T1', HALL), entry(T2, 'T2', HALL), entry(T3, 'T3', TERRACE)),
       overview(entry(T1, 'T1', HALL, {}), entry(T2, 'T2', HALL), entry(T3, 'T3', TERRACE)),
     );
-    const { sockets } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    const { sockets } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos' });
     await tile(/^T1, Free$/);
     act(() => {
       sockets.sync(0);
@@ -178,7 +178,7 @@ describe('[TBL-007] the POS floor', () => {
 describe('[NFR-P11] the POS floor after a dropped connection', () => {
   it('reads the floor again when the connection comes back, not on the first connect', async () => {
     const fake = posServer(overview(entry(T1, 'T1', HALL)), overview(entry(T1, 'T1', HALL, {})));
-    const { sockets } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    const { sockets } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos' });
     await tile(/^T1, Free$/);
     act(() => {
       sockets.sync(0);
@@ -204,7 +204,7 @@ describe('[TBL-003] opening a table', () => {
       status: 201,
       body: sessionView(T1, 'T1'),
     }));
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos' });
     await user.click(await tile(/^T1, Free$/));
     const dialog = await screen.findByRole('dialog', {
       name: t('pos.open.title', { table: 'T1' }),
@@ -238,7 +238,7 @@ describe('[TBL-003] opening a table', () => {
         body: { code: 'TABLE_NOT_FREE', message: 'T1 was just opened on another device.' },
       }),
     );
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos' });
     await user.click(await tile(/^T1, Free$/));
     const dialog = await screen.findByRole('dialog');
     await user.type(within(dialog).getByLabelText(t('pos.open.more')), '3');
@@ -254,7 +254,7 @@ describe('[TBL-003] opening a table', () => {
       `/api/v1/tables/${T1}/open`,
       () => ({ status: 201, body: sessionView(T1, 'T1') }),
     );
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos' });
     await user.click(await tile(/^T1, Free$/));
     const dialog = await screen.findByRole('dialog');
     const picker = within(dialog).getByRole('group', { name: t('pos.open.howMany') });
@@ -286,7 +286,7 @@ describe('[TBL-005] moving a table', () => {
       status: 200,
       body: sessionView(T3, 'T3'),
     }));
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos' });
     await user.click(await tile(/^T1, Occupied/));
     const details = await screen.findByRole('dialog', {
       name: t('pos.table.title', { table: 'T1' }),
@@ -336,7 +336,7 @@ describe('[TBL-005] moving a table', () => {
     expect(fake.callsTo('POST', `/api/v1/table-sessions/${SESSION}/request-bill`)).toHaveLength(1);
   });
 
-  it('[QR-011] [WTR-005] shows what the tables asked for: the bill opens, On my way, Done (P9-15)', async () => {
+  it('[QR-011] [WTR-005] shows a waiter what the tables asked for: On my way, Done (P9-15)', async () => {
     const REQUEST = '0199a0e0-0000-7000-8000-00000000d001';
     const request = {
       id: REQUEST,
@@ -360,7 +360,7 @@ describe('[TBL-005] moving a table', () => {
         body: { ...request, state: 'ACKNOWLEDGED' },
       }))
       .on('POST', '/api/v1/bills', () => ({ status: 200, body: billView() }));
-    const { user, container } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    const { user, container } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos' });
     const panel = within(
       await screen.findByRole('region', { name: t('mobile.requests.title', { count: 1 }) }),
     );
@@ -372,40 +372,8 @@ describe('[TBL-005] moving a table', () => {
       panel.getByRole('button', { name: t('pos.tableRequests.onMyWayOf', { title }) }),
     );
     expect(fake.callsTo('POST', `/api/v1/service-requests/${REQUEST}/acknowledge`)).toHaveLength(1);
-    await user.click(panel.getByRole('button', { name: t('pos.tableRequests.openBill') }));
-    await waitFor(() => {
-      expect(fake.callsTo('POST', '/api/v1/bills')[0]?.body).toEqual({ tableSessionId: SESSION });
-    });
-  });
-
-  it('[BILL-001] opens the table’s bill from its details, and says when it cannot', async () => {
-    let refuse = true;
-    const fake = posServer(overview(entry(T1, 'T1', HALL, {}))).on('POST', '/api/v1/bills', () =>
-      refuse
-        ? {
-            status: 409,
-            body: { code: 'NOTHING_TO_BILL', message: 'Nothing on this table to bill yet.' },
-          }
-        : { status: 200, body: billView() },
-    );
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
-    await user.click(await tile(/^T1, Occupied/));
-    const details = await screen.findByRole('dialog', {
-      name: t('pos.table.title', { table: 'T1' }),
-    });
-    await user.click(within(details).getByRole('button', { name: t('pos.billTable') }));
-    expect(await screen.findByText('Nothing on this table to bill yet.')).toBeInTheDocument();
-    expect(fake.callsTo('POST', '/api/v1/bills')[0]?.body).toEqual({ tableSessionId: SESSION });
-
-    refuse = false;
-    await user.click(within(details).getByRole('button', { name: t('pos.billTable') }));
-    // The bill screen takes over from the floor.
-    await waitFor(() => {
-      expect(
-        screen.queryByRole('dialog', { name: t('pos.table.title', { table: 'T1' }) }),
-      ).toBeNull();
-    });
-    expect(fake.callsTo('POST', '/api/v1/bills')).toHaveLength(2);
+    // The managers bill from the dashboard's Pending bills (ADR-0030): no Open bill here.
+    expect(panel.queryByRole('button', { name: t('pos.tableRequests.openBill') })).toBeNull();
   });
 
   it('keeps roles without the POS off the floor', async () => {
@@ -435,7 +403,7 @@ describe('[TBL-006] merging tables and moving dishes', () => {
       status: 200,
       body: { ...sessionView(T2, 'T2'), id: SESSION_2, covers: 6 },
     }));
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos' });
     await user.click(await tile(/^T1, Occupied/));
     const details = await screen.findByRole('dialog', {
       name: t('pos.table.title', { table: 'T1' }),
@@ -479,7 +447,7 @@ describe('[TBL-006] merging tables and moving dishes', () => {
           orderItemIds: [IDS.orderItem],
         },
       }));
-    const { user, container } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    const { user, container } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos' });
     await user.click(await tile(/^T1, Occupied/));
     await user.click(await screen.findByRole('button', { name: t('pos.table.transfer') }));
     const transfer = await screen.findByRole('dialog', {
@@ -516,13 +484,13 @@ describe('[ONB-004] [TBL-007] the floor plan on the POS', () => {
         ),
       })),
     };
-    const fake = signsInAs(server(), 'MANAGER')
+    const fake = signsInAs(server(), 'WAITER')
       .on('GET', '/api/v1/floor', () => ({ status: 200, body: placed }))
       .on('GET', '/api/v1/tables/overview', () => ({
         status: 200,
         body: overview(entry(T1, 'T1', HALL, {}), entry(T2, 'T2', HALL), entry(T3, 'T3', TERRACE)),
       }));
-    const { user, container } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    const { user, container } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos' });
     await user.click(await screen.findByRole('button', { name: t('floorPage.plan') }));
     const hall = screen.getByRole('group', { name: 'Hall' });
     const t1 = within(hall).getByRole('button', { name: /^T1, Occupied/ });
@@ -539,7 +507,7 @@ describe('[ONB-004] [TBL-007] the floor plan on the POS', () => {
   it('is not offered before any table is placed', async () => {
     await renderConsole({
       fake: posServer(overview(entry(T1, 'T1', HALL))),
-      signedIn: 'MANAGER',
+      signedIn: 'WAITER',
       path: '/pos',
     });
     expect(await tile(/^T1, Free/)).toBeInTheDocument();
@@ -557,7 +525,7 @@ describe('[TBL-004] a table that needs cleaning', () => {
       status: 200,
       body: { tableId: T3, state: 'FREE' },
     }));
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos' });
     await user.click(await tile(/^T3, Needs cleaning/));
     const details = await screen.findByRole('dialog', {
       name: t('pos.table.title', { table: 'T3' }),
@@ -589,7 +557,7 @@ describe('[TBL-004] freeing a table opened by mistake', () => {
     }));
     const { user, container } = await renderConsole({
       fake,
-      signedIn: 'MANAGER',
+      signedIn: 'WAITER',
       path: '/pos',
     });
     await user.click(await tile(/^T1, Occupied/));
@@ -623,7 +591,7 @@ describe('[TBL-004] freeing a table opened by mistake', () => {
         entry(T2, 'T2', HALL, { amountSoFar: 0, pendingApprovals: 1 }),
       ),
     );
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos' });
     for (const label of ['T1', 'T2']) {
       await user.click(await tile(new RegExp(`^${label}, Occupied`)));
       const details = await screen.findByRole('dialog', {
@@ -640,7 +608,7 @@ describe('[TBL-004] freeing a table opened by mistake', () => {
 
   it('offers only Move on a table whose bill is printed: merging and moving dishes are refused then (QA-036)', async () => {
     const fake = posServer(overview({ ...entry(T1, 'T1', HALL, {}), state: 'BILL_PRINTED' }));
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos' });
     await user.click(await tile(/^T1, Bill printed/));
     const details = await screen.findByRole('dialog', {
       name: t('pos.table.title', { table: 'T1' }),
@@ -654,7 +622,7 @@ describe('[TBL-004] freeing a table opened by mistake', () => {
     const fake = posServer(
       overview({ ...entry(T1, 'T1', HALL, { amountSoFar: 0 }), state: 'BILL_REQUESTED' }),
     );
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos' });
     await user.click(await tile(/^T1, Bill requested/));
     const details = await screen.findByRole('dialog', {
       name: t('pos.table.title', { table: 'T1' }),
@@ -674,7 +642,7 @@ describe('[TBL-004] freeing a table opened by mistake', () => {
         },
       }),
     );
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos' });
     await user.click(await tile(/^T1, Occupied/));
     const details = await screen.findByRole('dialog');
     await user.click(within(details).getByRole('button', { name: t('pos.table.free') }));
@@ -689,7 +657,7 @@ describe('[TBL-004] freeing a table opened by mistake', () => {
 
 describe('[TBL-007] when the floor cannot be read', () => {
   it('says what went wrong and retries', async () => {
-    const fake = signsInAs(server(), 'MANAGER')
+    const fake = signsInAs(server(), 'WAITER')
       .on('GET', '/api/v1/floor', () => ({ status: 200, body: FLOOR }))
       .on(
         'GET',
@@ -697,7 +665,7 @@ describe('[TBL-007] when the floor cannot be read', () => {
         () => ({ status: 500, body: { code: 'INTERNAL', message: 'The server had a problem.' } }),
         () => ({ status: 200, body: overview(entry(T1, 'T1', HALL)) }),
       );
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    const { user } = await renderConsole({ fake, signedIn: 'WAITER', path: '/pos' });
     expect(await screen.findByText('The server had a problem.')).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: t('states.retry') }));
     expect(await tile(/^T1, Free$/)).toBeInTheDocument();

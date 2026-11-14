@@ -276,6 +276,38 @@ describe('[SEC-017] [SEC-003] [AUTH-010] the authorisation sweep over every endp
     expect(await mismatches(expected)).toEqual([]);
   });
 
+  it('[AUTH-010] keeps billing with the managers and the Owner after testing round 1 (ADR-0030)', async () => {
+    // The endpoints round 1 added, with the capability each needs; the sweep above calls them.
+    const added = {
+      'GET /api/v1/bills/pending': 'BILL_PRINT_AND_PAYMENT',
+      'POST /api/v1/orders/:orderId/request-bill': 'BILL_REQUEST',
+    };
+    for (const [key, capability] of Object.entries(added)) {
+      expect(routes.find((route) => `${route.method} ${route.path}` === key)?.capability).toBe(
+        capability,
+      );
+    }
+    const refused = (capability: Capability) =>
+      ROLES.filter((role) => DEFAULT_PERMISSION_MATRIX[capability][role] === 'DENY');
+    // Waiters ask for bills (a table's or a takeaway's) and never print or take payment; the
+    // kitchen does neither. Managers and the Owner do it all, now from the dashboard only.
+    expect(refused('BILL_PRINT_AND_PAYMENT')).toEqual(['WAITER', 'KITCHEN']);
+    expect(refused('BILL_REQUEST')).toEqual(['KITCHEN']);
+    expect(refused('DAY_END_CLOSE')).toEqual(['WAITER', 'KITCHEN']);
+    const pending = routes.find((route) => route.operationId === 'listPendingBills');
+    if (pending === undefined) throw new Error('No pending bills route');
+    expect(
+      await mismatches(
+        (['WAITER', 'KITCHEN'] as const).map((role) => ({
+          route: pending,
+          headers: authHeaders(kit.deviceId, sessions[role]),
+          status: 403,
+          code: 'FORBIDDEN',
+        })),
+      ),
+    ).toEqual([]);
+  });
+
   it('[AUTH-005] lets a kitchen screen with nobody signed in reach only its station’s endpoints', async () => {
     await prisma.setting.update({
       where: {

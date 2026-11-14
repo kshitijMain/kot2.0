@@ -3,7 +3,7 @@ import { Button } from '@rp/ui-web';
 import { useNavigate } from 'react-router';
 import { useConsole, useConsoleState } from '../app/console-context.js';
 import { useT } from '../app/i18n.js';
-import { grantOf } from '../app/modes.js';
+import { grantOf, modesFor } from '../app/modes.js';
 import { useLive } from '../app/use-live.js';
 import { useOpenBill } from '../billing/use-open-bill.js';
 
@@ -20,7 +20,8 @@ export function TableActions({ tableId }: { tableId: string }) {
   const { openBill, opening } = useOpenBill();
   const { data } = useLive(() => controller.api.getTableOverview(), affectsFloor);
   const mayBill = person !== undefined && grantOf(person, 'BILL_PRINT_AND_PAYMENT') !== 'DENY';
-  const mayUsePos = person !== undefined && grantOf(person, 'ORDER_CREATE') !== 'DENY';
+  // Managers have no POS (ADR-0030): only someone who also works the POS gets its table actions.
+  const mayUsePos = person !== undefined && modesFor(person).includes('pos');
   const table =
     data.status === 'ready'
       ? data.value.tables.find((entry) => entry.tableId === tableId)

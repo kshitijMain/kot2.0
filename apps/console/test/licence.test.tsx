@@ -80,7 +80,7 @@ describe('[LIC-005] [LIC-008] the licence on staff screens', () => {
     await renderConsole({
       fake: withLicence('MANAGER', quietLicence({ state: 'RESTRICTED', recorded: 'RESTRICTED' })),
       signedIn: 'MANAGER',
-      path: '/pos',
+      path: '/manage',
     });
     await waitFor(() => {
       expect(screen.queryByRole('alert')).toBeNull();

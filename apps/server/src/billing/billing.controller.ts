@@ -10,6 +10,7 @@ import {
   IssueInvoiceRequest,
   OpenBillRequest,
   OVERRIDE_TOKEN_HEADER,
+  type PendingBillsResponse,
   PrintInvoiceRequest,
   type PrintInvoiceResponse,
   type PrintTableBillResponse,
@@ -29,6 +30,7 @@ import { BillSplitService, type ParsedSplit } from './bill-split.service.js';
 import { BillsService, type ParsedDiscount } from './bills.service.js';
 import { InvoiceActionsService } from './invoice-actions.service.js';
 import { InvoicesService } from './invoices.service.js';
+import { PendingBillsService } from './pending-bills.service.js';
 
 function principalOf(request: AuthenticatedRequest): Principal {
   if (request.principal === undefined) throw authErrors.unauthenticated();
@@ -47,7 +49,15 @@ export class BillsController {
     private readonly bills: BillsService,
     private readonly invoices: InvoicesService,
     private readonly splits: BillSplitService,
+    private readonly pending: PendingBillsService,
   ) {}
+
+  /** ADR-0030: the dashboard's Pending bills. Before `:id`, which would take "pending". */
+  @Get('pending')
+  @RequireCapability('BILL_PRINT_AND_PAYMENT')
+  listPending(@Req() request: AuthenticatedRequest): Promise<PendingBillsResponse> {
+    return this.pending.list(principalOf(request).restaurantId);
+  }
 
   @Post(':id/split')
   @RequireCapability('BILL_PRINT_AND_PAYMENT')

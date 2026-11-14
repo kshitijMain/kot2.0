@@ -7,12 +7,19 @@ import { BillSplitService } from './bill-split.service.js';
 import { BillsService } from './bills.service.js';
 import { InvoiceActionsService } from './invoice-actions.service.js';
 import { InvoicesService } from './invoices.service.js';
+import { PendingBillsService } from './pending-bills.service.js';
 
 /** Bills and GST invoices (P1-10). */
 @Module({
   imports: [AuthModule, SettingsModule, PrintingModule],
   controllers: [BillsController, InvoicesController, TableBillsController],
-  providers: [BillsService, InvoicesService, InvoiceActionsService, BillSplitService],
+  providers: [
+    BillsService,
+    InvoicesService,
+    InvoiceActionsService,
+    BillSplitService,
+    PendingBillsService,
+  ],
   exports: [BillsService, InvoicesService],
 })
 export class BillingModule {}

@@ -26,9 +26,10 @@ const AGREED = 'agreed';
 /**
  * Diners' orders waiting for approval at the POS (ORD-004, WTR-004): a manager
  * approves one in one press, changes quantities or removes lines with the diner's agreement, or
- * rejects it with the reason the diner sees. Shown above the floor only while something waits.
+ * rejects it with the reason the diner sees. Shown above the floor only while something waits;
+ * the dashboard's Modifications page (ADR-0030) says `empty` when nothing does.
  */
-export function Approvals() {
+export function Approvals({ empty }: { empty?: string } = {}) {
   const t = useT();
   const controller = useConsole();
   const toast = useToast();
@@ -40,7 +41,10 @@ export function Approvals() {
   const [open, setOpen] = useState<Open | undefined>();
   const [busy, setBusy] = useState<string | undefined>();
 
-  if (data.status !== 'ready' || data.value.length === 0) return null;
+  if (data.status !== 'ready') return null;
+  if (data.value.length === 0) {
+    return empty === undefined ? null : <p className="dashboard-section__hint">{empty}</p>;
+  }
   const titleOf = (entry: Entry) =>
     entry.tableLabel === null
       ? t('approvals.orderTakeaway', { number: entry.order.orderNumber })

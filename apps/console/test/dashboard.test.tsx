@@ -30,8 +30,11 @@ function managerServer(
 }
 
 const nav = () => screen.getByRole('navigation', { name: t('dashboard.navigation') });
-const navLink = (section: 'overview' | 'orders' | 'alerts') =>
-  within(nav()).getByRole('link', { name: t(`dashboard.section.${section}`) });
+/** A dashboard link, by its name alone or with its live count ("Alerts, 2 waiting", ADR-0030). */
+const navLink = (section: 'overview' | 'orders' | 'alerts' | 'bills') =>
+  within(nav()).getByRole('link', {
+    name: (name) => name.split(', ')[0] === t(`dashboard.section.${section}`),
+  });
 const ordersRegion = () => screen.findByRole('region', { name: t('dashboard.orders.title') });
 const orderCards = async () => within(await ordersRegion()).queryAllByRole('article');
 const cardTitles = async () =>
@@ -47,12 +50,15 @@ afterEach(() => {
 });
 
 describe('[MGR-001] [MGR-011] the dashboard’s navigation', () => {
-  it('opens on the overview and moves between overview, orders and alerts', async () => {
+  it('opens on the pending bills and moves between overview, orders and alerts (ADR-0030)', async () => {
     const { user, container } = await renderConsole({
       fake: managerServer(),
       path: '/manage',
       signedIn: 'MANAGER',
     });
+    expect(await screen.findByRole('heading', { name: t('bills.title') })).toBeInTheDocument();
+    expect(navLink('bills')).toHaveAttribute('aria-current', 'page');
+    await user.click(navLink('overview'));
     await screen.findByRole('region', { name: t('dashboard.overview.glance') });
     expect(navLink('overview')).toHaveAttribute('aria-current', 'page');
     expect(navLink('orders')).not.toHaveAttribute('aria-current');
@@ -71,18 +77,16 @@ describe('[MGR-001] [MGR-011] the dashboard’s navigation', () => {
     await expectNoAxeViolations(container);
   });
 
-  it('goes back to the overview from an address it does not know', async () => {
+  it('goes back to its first page, the pending bills, from an address it does not know', async () => {
     await renderConsole({ fake: managerServer(), path: '/manage/nowhere', signedIn: 'MANAGER' });
-    expect(
-      await screen.findByRole('region', { name: t('dashboard.overview.glance') }),
-    ).toBeInTheDocument();
-    expect(navLink('overview')).toHaveAttribute('aria-current', 'page');
+    expect(await screen.findByRole('heading', { name: t('bills.title') })).toBeInTheDocument();
+    expect(navLink('bills')).toHaveAttribute('aria-current', 'page');
   });
 });
 
 describe('[MGR-002] the overview', () => {
   it('shows the restaurant at a glance: tables, guests, orders, late dishes and alerts', async () => {
-    await renderConsole({ fake: managerServer(), path: '/manage', signedIn: 'MANAGER' });
+    await renderConsole({ fake: managerServer(), path: '/manage/overview', signedIn: 'MANAGER' });
     const glance = await screen.findByRole('region', { name: t('dashboard.overview.glance') });
     await waitFor(() => {
       expect(glance).toHaveTextContent(t('dashboard.overview.orders', { count: 3 }));
@@ -105,7 +109,7 @@ describe('[MGR-002] the overview', () => {
   it('[TBL-007] shows the live floor; an occupied table opens its orders, a free one is not a button that does nothing', async () => {
     const { user, container } = await renderConsole({
       fake: managerServer(),
-      path: '/manage',
+      path: '/manage/overview',
       signedIn: 'MANAGER',
     });
     const hall = await screen.findByRole('region', { name: 'Hall' });
@@ -151,13 +155,16 @@ describe('[MGR-002] the overview', () => {
       .on('GET', '/api/v1/alerts', () => ({ status: 200, body: { alerts: [] } }))
       .on('POST', '/api/v1/bills', () => ({ status: 200, body: billView() }))
       .on('GET', `/api/v1/bills/${B.bill}`, () => ({ status: 200, body: billView() }));
-    const { user, container } = await renderConsole({ fake, path: '/manage', signedIn: 'MANAGER' });
+    const { user, container } = await renderConsole({
+      fake,
+      path: '/manage/overview',
+      signedIn: 'MANAGER',
+    });
     const hall = await screen.findByRole('region', { name: 'Hall' });
     await user.click(within(hall).getByRole('button', { name: /^T1, Bill requested/ }));
     const bill = await screen.findByRole('button', { name: t('pos.billTable') });
-    expect(
-      screen.getByRole('button', { name: t('dashboard.orders.tableActions') }),
-    ).toBeInTheDocument();
+    // Managers have no POS (ADR-0030): its table actions are the waiters'.
+    expect(screen.queryByRole('button', { name: t('dashboard.orders.tableActions') })).toBeNull();
     await expectNoAxeViolations(container);
     await user.click(bill);
     expect(fake.callsTo('POST', '/api/v1/bills')[0]?.body).toEqual({
@@ -170,26 +177,10 @@ describe('[MGR-002] the overview', () => {
     ).toBeInTheDocument();
   });
 
-  it('[TBL-007] opens the table’s actions on the POS from the floor (QA-023)', async () => {
-    const { user } = await renderConsole({
-      fake: managerServer([feed()]),
-      path: '/manage',
-      signedIn: 'MANAGER',
-    });
-    const hall = await screen.findByRole('region', { name: 'Hall' });
-    await user.click(within(hall).getByRole('button', { name: /^T1, Occupied/ }));
-    await user.click(
-      await screen.findByRole('button', { name: t('dashboard.orders.tableActions') }),
-    );
-    expect(
-      await screen.findByRole('dialog', { name: t('pos.table.title', { table: 'T1' }) }),
-    ).toBeInTheDocument();
-  });
-
   it('opens the late dishes from the glance', async () => {
     const { user } = await renderConsole({
       fake: managerServer(),
-      path: '/manage',
+      path: '/manage/overview',
       signedIn: 'MANAGER',
     });
     await user.click(await screen.findByRole('link', { name: t('dashboard.overview.seeDelayed') }));
@@ -203,7 +194,7 @@ describe('[MGR-002] the overview', () => {
     const fake = managerServer([feed()], [])
       .on('GET', '/api/v1/floor', () => ({ status: 200, body: { sections: [] } }))
       .on('GET', '/api/v1/tables/overview', () => ({ status: 200, body: { tables: [] } }));
-    await renderConsole({ fake, path: '/manage', signedIn: 'MANAGER' });
+    await renderConsole({ fake, path: '/manage/overview', signedIn: 'MANAGER' });
     expect(await screen.findByText(t('dashboard.overview.noTables'))).toBeInTheDocument();
     const glance = screen.getByRole('region', { name: t('dashboard.overview.glance') });
     await waitFor(() => {
@@ -222,7 +213,7 @@ describe('[MGR-002] the overview', () => {
     const fake = managerServer()
       .on('GET', '/api/v1/tables/overview', down, () => ({ status: 200, body: OVERVIEW }))
       .on('GET', '/api/v1/order-feed', down, () => ({ status: 200, body: SERVICE }));
-    const { user } = await renderConsole({ fake, path: '/manage', signedIn: 'MANAGER' });
+    const { user } = await renderConsole({ fake, path: '/manage/overview', signedIn: 'MANAGER' });
     const glance = await screen.findByRole('region', { name: t('dashboard.overview.glance') });
     await waitFor(() => {
       // Tables and orders; today's takings (P9-26) has no report here and offers Retry too.

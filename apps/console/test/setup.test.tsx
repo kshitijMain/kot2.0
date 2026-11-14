@@ -171,7 +171,7 @@ describe('[ONB-004] the setup page', () => {
       status: 200,
       body: onboarding(),
     }));
-    await renderConsole({ fake, path: '/manage', signedIn: 'MANAGER' });
+    await renderConsole({ fake, path: '/manage/overview', signedIn: 'MANAGER' });
     expect(
       await screen.findByText(t('setupPage.banner', { finished: 4, total: 11 })),
     ).toBeVisible();

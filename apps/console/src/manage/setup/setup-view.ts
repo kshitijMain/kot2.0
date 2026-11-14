@@ -12,7 +12,7 @@ export const STEP_PAGES: Readonly<Record<OnboardingStep, string>> = {
   STAFF: '/manage/staff',
   DEVICES: '/manage/devices',
   QR: '/manage/qr-codes',
-  GO_LIVE: '/pos',
+  GO_LIVE: '/manage/take-order',
 };
 
 /** Steps done or skipped, out of all. */

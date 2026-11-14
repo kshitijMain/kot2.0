@@ -87,7 +87,12 @@ describe('[RPT-006] [DATA-012] past bills', () => {
       path: '/manage/reports',
       signedIn: 'MANAGER',
     });
-    await user.click(await screen.findByRole('link', { name: t('history.link') }));
+    // The Reports' own link: the dashboard's Bills is a link of the same name (ADR-0030).
+    await user.click(
+      within(
+        await screen.findByRole('navigation', { name: t('reportsPage.navigation') }),
+      ).getByRole('link', { name: t('history.link') }),
+    );
     const table = within(await screen.findByRole('table', { name: t('history.table') }));
     expect(
       fake.calls.some(

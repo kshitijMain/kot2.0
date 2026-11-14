@@ -1,0 +1,4 @@
+{
+  "input": { "type": "string", "enum": ["REQUESTED", "PRINTED", "NEEDS_NEW_BILL"] },
+  "output": { "type": "string", "enum": ["REQUESTED", "PRINTED", "NEEDS_NEW_BILL"] }
+}

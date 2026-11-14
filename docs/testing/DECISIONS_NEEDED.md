@@ -465,3 +465,46 @@ times its seats.
 
 **Recommendation:** A. It already stops absurd numbers, and C would refuse a real party on a small
 table that the staff have just confirmed.
+
+## D-36: the POS for waiters at a PC
+
+**Situation.** Managers and the Owner no longer have the POS. Waiters normally use their phones,
+but the POS still opens for a waiter who signs in at a PC.
+
+**Today.** The POS stays for waiters (and custom roles on the waiter base): the floor, open,
+move, merge and free tables, take dine-in and takeaway orders, ask for the bill. Its billing,
+shift and day-end parts are gone (they are on the dashboard).
+
+**Options.** A: keep the POS for waiters. B: remove the POS mode entirely, so a waiter at a PC
+uses the waiter app in the browser.
+
+**Recommendation:** A, the safer default: nothing a waiter can do today is lost. B can follow once
+nobody uses the POS.
+
+## D-37: dashboard pages the brief did not list
+
+**Situation.** The brief lists the dashboard's navigation. Overview, Orders, Audit trail, Floor,
+Kitchen and printers, Settings, System and Licence were not in it, but they hold work nothing else
+does (backups, printers, notification rules, the audit trail).
+
+**Today.** They stay, after the brief's list, under a **More** heading. The dashboard opens on
+Bills instead of Overview.
+
+**Options.** A: keep them under More. B: fold them into Set-up. C: remove some.
+
+**Recommendation:** A. Nothing is lost and the brief's pages come first.
+
+## D-38: what "Modifications" holds
+
+**Situation.** The brief names a Modifications page with a count, without saying what it lists.
+
+**Today.** Orders from table tablets and QR menus that wait for approval, which a manager
+approves, changes (with the guest's agreement) or rejects: the inbox the POS and the overview
+showed. The count is how many wait.
+
+**Options.** A: as today. B: also list waiters' void requests after cooking started (today a
+manager approves those with a PIN on the waiter's phone). C: a log of every change to orders
+(cancellations, voids, moves).
+
+**Recommendation:** A now; B if waiters' voids should be approved from the dashboard instead of on
+the phone, which is a rule change for Part 2.

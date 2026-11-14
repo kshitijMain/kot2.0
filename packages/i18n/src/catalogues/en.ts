@@ -669,6 +669,36 @@ export const en = {
     gotIt: 'Got it',
     tipLabel: 'Tip for this page',
     tryThis: 'Tip:',
+    bills: {
+      title: 'Bills to print and to take payment for',
+      body: 'Pending lists every bill a waiter, a guest or you asked for, every printed bill not yet paid, and every bill that needs printing again because more was ordered. History has the bills already printed.',
+      tip: 'Open a bill to print it, give a discount, split it, take payment or cancel it with a reason.',
+    },
+    modifications: {
+      title: 'Orders waiting for approval',
+      body: 'Orders from table tablets and QR menus wait here until someone approves them. Approve as they are, change quantities with the guest’s agreement, or reject with a reason the guest sees.',
+      tip: 'The number beside Modifications is how many are waiting.',
+    },
+    takeOrder: {
+      title: 'Take an order for a table',
+      body: 'Pick a table. A free one is opened for its guests first; then add dishes with their sizes, add-ons and notes and send the KOT. Takeaway orders are taken by waiters on their phones.',
+      tip: 'A table with more guests than seats asks before it opens.',
+    },
+    tables: {
+      title: 'Which tables are open',
+      body: 'Every open table with its guests, how long they have been seated, who opened it and the amount so far, kept up to date as orders come in.',
+      tip: 'Open bill takes you straight to a table’s bill.',
+    },
+    cancelledKots: {
+      title: 'Cancelled and voided dishes',
+      body: 'Every dish cancelled or voided after its KOT was sent, with the stage it had reached, who did it, who approved it and why; and bills cancelled after printing.',
+      tip: 'Choose a range of dates to look further back.',
+    },
+    cashDrawer: {
+      title: 'Your cash drawer (optional)',
+      body: 'A shift counts the cash in your drawer: open it with the float, record cash in or out, and close it by counting. Cash payments are taken with or without one.',
+      tip: 'Day end lists shifts still open and lets you close them.',
+    },
     overview: {
       title: 'Your restaurant at a glance',
       body: 'The cards show tables, dishes in the kitchen and open alerts. Below them, every table is a tile that changes colour as guests order, eat and ask for the bill.',
@@ -758,7 +788,17 @@ export const en = {
       add: 'Add the UPI ID',
     },
     navigation: 'Dashboard',
+    /** ADR-0030: a live count beside Bills, Modifications and Alerts. */
+    badge: '{count} waiting',
+    /** ADR-0030: the pages beyond the day-to-day ones. */
+    more: 'More',
     section: {
+      bills: 'Bills',
+      modifications: 'Modifications',
+      takeOrder: 'Take order',
+      tables: 'Tables',
+      cancelledKots: 'Cancelled KOTs',
+      cashDrawer: 'Cash drawer',
       overview: 'Overview',
       orders: 'Orders',
       alerts: 'Alerts',
@@ -768,11 +808,11 @@ export const en = {
       devices: 'Devices',
       printing: 'Kitchen and printers',
       restaurant: 'Restaurant',
-      reports: 'Reports',
+      reports: 'Reports and analytics',
       audit: 'Audit trail',
       system: 'System',
       settings: 'Settings',
-      setup: 'Setup',
+      setup: 'Set-up',
       licence: 'Licence',
       qrCodes: 'QR codes',
       floor: 'Floor',
@@ -1951,6 +1991,71 @@ until you press Publish.
     },
   },
   /** The Reports area (P4-05d, RPT-001 to RPT-016). */
+  /** ADR-0030: the dashboard's Bills page, Pending and History. */
+  bills: {
+    title: 'Bills',
+    tabs: 'Bills',
+    pending: 'Pending',
+    history: 'History',
+    intro: 'Every bill still to print or to take payment for, longest waiting first.',
+    none: 'No bills waiting. A bill asked for by a waiter, a guest or you appears here.',
+    loadFailed: 'Could not load the pending bills.',
+    list: 'Pending bills',
+    column: {
+      place: 'Table or takeaway',
+      amount: 'Amount',
+      waiting: 'Waiting',
+      status: 'Status',
+      actions: 'Actions',
+    },
+    table: 'Table {table}',
+    takeaway: 'Takeaway #{token}',
+    status: {
+      REQUESTED: 'Bill requested',
+      PRINTED: 'Printed, not paid',
+      NEEDS_NEW_BILL: 'Needs a new bill',
+    },
+    open: 'Open bill',
+    pay: 'Take payment',
+    dayEnd: 'Day end',
+    back: 'Back to bills',
+  },
+  /** ADR-0030: the dashboard's live, read-only view of the tables. */
+  tablesPage: {
+    title: 'Tables',
+    summary:
+      '{open, plural, =0 {No tables open} one {# table open} other {# tables open}} of {total}',
+    none: 'No tables are open.',
+    list: 'Open tables',
+    column: {
+      table: 'Table',
+      guests: 'Guests',
+      seated: 'Seated',
+      openedBy: 'Opened by',
+      amount: 'Amount so far',
+      state: 'Status',
+      actions: 'Actions',
+    },
+    openBill: 'Open bill',
+    openBillFor: 'Open the bill of table {table}',
+  },
+  /** ADR-0030: the dashboard's Take order: dine-in only. */
+  takeOrder: {
+    title: 'Take order',
+    intro: 'Pick a table. A free table is opened for its guests first.',
+    notReady: 'Table {table} is waiting to be cleaned.',
+  },
+  /** ADR-0030: diners' orders waiting for approval, on the dashboard. */
+  modifications: {
+    title: 'Modifications',
+    intro:
+      'Orders from table tablets and QR menus that wait for approval: approve, change or reject them.',
+    none: 'Nothing waits for approval.',
+  },
+  /** ADR-0030: the cancellation report as its own dashboard page. */
+  cancelledKots: {
+    title: 'Cancelled KOTs',
+  },
   history: {
     nav: 'History',
     link: 'Bills',

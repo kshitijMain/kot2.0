@@ -86,44 +86,49 @@ export function quietLicence(overrides: Record<string, unknown> = {}) {
 }
 
 export function server(type: 'POS' | 'KDS' = 'POS'): FakeServer {
-  return new FakeServer()
-    .on('GET', '/api/v1/licence', () => ({ status: 200, body: quietLicence() }))
-    .on('POST', '/api/v1/devices/pair', () => ({
-      status: 201,
-      body: {
-        deviceId: DEVICE_ID,
-        restaurantId: RESTAURANT_ID,
-        type,
-        name: 'Counter POS',
-        tableId: null,
-        stationId: null,
-        stationIds: [],
-        staffId: null,
-      },
-    }))
-    .on('POST', '/api/v1/devices/challenge', () => ({
-      status: 200,
-      body: { challenge: 'challenge-0123456789', expiresAt: inMinutes(1) },
-    }))
-    .on('POST', '/api/v1/devices/token', () => ({
-      status: 200,
-      body: { deviceToken: 'device-token-1', expiresAt: inMinutes(60) },
-    }))
-    .on('GET', '/api/v1/devices/current', () => ({
-      status: 200,
-      body: deviceSummary({ type, name: type === 'KDS' ? 'Tandoor screen' : 'Counter POS' }),
-    }))
-    .on('GET', '/api/v1/auth/staff-tiles', () => ({
-      status: 200,
-      body: { staff: Object.values(STAFF) },
-    }))
-    .on('GET', '/api/v1/kds/tickets', () => ({ status: 200, body: EMPTY_KDS }))
-    .on('GET', '/api/v1/floor', () => ({ status: 200, body: { sections: [] } }))
-    .on('GET', '/api/v1/tables/overview', () => ({ status: 200, body: { tables: [] } }))
-    .on('GET', '/api/v1/order-feed', () => ({ status: 200, body: EMPTY_FEED }))
-    .on('GET', '/api/v1/alerts', () => ({ status: 200, body: { alerts: [] } }))
-    .on('POST', '/api/v1/auth/logout', () => ({ status: 204 }))
-    .on('GET', '/api/v1/auth/session', () => ({ status: 200, body: {} }));
+  return (
+    new FakeServer()
+      .on('GET', '/api/v1/licence', () => ({ status: 200, body: quietLicence() }))
+      .on('POST', '/api/v1/devices/pair', () => ({
+        status: 201,
+        body: {
+          deviceId: DEVICE_ID,
+          restaurantId: RESTAURANT_ID,
+          type,
+          name: 'Counter POS',
+          tableId: null,
+          stationId: null,
+          stationIds: [],
+          staffId: null,
+        },
+      }))
+      .on('POST', '/api/v1/devices/challenge', () => ({
+        status: 200,
+        body: { challenge: 'challenge-0123456789', expiresAt: inMinutes(1) },
+      }))
+      .on('POST', '/api/v1/devices/token', () => ({
+        status: 200,
+        body: { deviceToken: 'device-token-1', expiresAt: inMinutes(60) },
+      }))
+      .on('GET', '/api/v1/devices/current', () => ({
+        status: 200,
+        body: deviceSummary({ type, name: type === 'KDS' ? 'Tandoor screen' : 'Counter POS' }),
+      }))
+      .on('GET', '/api/v1/auth/staff-tiles', () => ({
+        status: 200,
+        body: { staff: Object.values(STAFF) },
+      }))
+      .on('GET', '/api/v1/kds/tickets', () => ({ status: 200, body: EMPTY_KDS }))
+      .on('GET', '/api/v1/floor', () => ({ status: 200, body: { sections: [] } }))
+      .on('GET', '/api/v1/tables/overview', () => ({ status: 200, body: { tables: [] } }))
+      .on('GET', '/api/v1/order-feed', () => ({ status: 200, body: EMPTY_FEED }))
+      .on('GET', '/api/v1/alerts', () => ({ status: 200, body: { alerts: [] } }))
+      // The dashboard's counts beside Bills and Modifications (ADR-0030).
+      .on('GET', '/api/v1/bills/pending', () => ({ status: 200, body: { bills: [] } }))
+      .on('GET', '/api/v1/orders/pending-approval', () => ({ status: 200, body: { orders: [] } }))
+      .on('POST', '/api/v1/auth/logout', () => ({ status: 204 }))
+      .on('GET', '/api/v1/auth/session', () => ({ status: 200, body: {} }))
+  );
 }
 
 export function signsInAs(

@@ -127,7 +127,7 @@ export function BillScreen({
     <section className="pos-order" aria-labelledby="bill-title">
       <header className="pos-order__header">
         <Button variant="ghost" startIcon={<Icon name="close" />} onClick={onBack}>
-          {t('pos.backToTables')}
+          {t('bills.back')}
         </Button>
         <h2 id="bill-title" className="pos-floor__heading">
           {t('billing.billFor', { target })}

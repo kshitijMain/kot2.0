@@ -1,5 +1,10 @@
 import type { INestApplication } from '@nestjs/common';
-import { BillView, type LoginResponse, ServiceRequestView } from '@rp/contracts';
+import {
+  BillView,
+  type LoginResponse,
+  PendingBillsResponse,
+  ServiceRequestView,
+} from '@rp/contracts';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { PrismaService } from '../../src/database/prisma.service.js';
 import {
@@ -65,6 +70,17 @@ describe('[BILL-015] [WTR-005] a diner asks for the bill', () => {
     expect(alertId).not.toBeNull();
 
     const as = authHeaders(kit.deviceId, manager.accessToken);
+    // The managers' Pending bills shows it, waiting since the diner asked (ADR-0030).
+    const pending = PendingBillsResponse.parse(
+      (await api(app).get('/api/v1/bills/pending').set(as)).body,
+    ).bills;
+    expect(pending).toMatchObject([{ tableSessionId: sessionId, status: 'REQUESTED' }]);
+    expect(Date.now() - Date.parse(pending[0]?.since ?? '')).toBeLessThan(60_000);
+    const { billRequestedAt } = await prisma.tableSession.findUniqueOrThrow({
+      where: { id: sessionId },
+    });
+    expect(billRequestedAt?.toISOString()).toBe(pending[0]?.since);
+
     const bill = BillView.parse(
       (await api(app).post('/api/v1/bills').set(as).send({ tableSessionId: sessionId })).body,
     );

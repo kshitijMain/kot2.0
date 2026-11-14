@@ -99,7 +99,6 @@ export function TableOverview() {
   );
   const canMove = person !== undefined && grantOf(person, 'TABLE_MOVE_MERGE') !== 'DENY';
   const canFree = person !== undefined && grantOf(person, 'ORDER_CREATE') !== 'DENY';
-  const canCloseDay = person !== undefined && grantOf(person, 'DAY_END_CLOSE') !== 'DENY';
   // Who prints the bill and takes payment opens it; a waiter asks the managers for it (BRD §4.2).
   const billing: Billing =
     person !== undefined && grantOf(person, 'BILL_PRINT_AND_PAYMENT') !== 'DENY'
@@ -135,24 +134,6 @@ export function TableOverview() {
           {t('pos.summary', { free: free.length, total: tables.length })}
         </p>
         <div className="bill__actions">
-          <Button
-            variant="secondary"
-            onClick={() => {
-              void navigate('shift');
-            }}
-          >
-            {t('pos.shift')}
-          </Button>
-          {canCloseDay ? (
-            <Button
-              variant="secondary"
-              onClick={() => {
-                void navigate('day-end');
-              }}
-            >
-              {t('dayEnd.open')}
-            </Button>
-          ) : null}
           <Button
             variant="secondary"
             onClick={() => {

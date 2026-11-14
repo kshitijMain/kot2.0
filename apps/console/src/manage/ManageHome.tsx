@@ -1,10 +1,21 @@
 import type { Capability } from '@rp/domain';
-import { grantOf } from '../app/modes.js';
+import { affectsApprovals } from '@rp/ordering';
+import { Badge } from '@rp/ui-web';
 import { useEffect, useRef } from 'react';
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router';
 import { AlertCentre } from '../alerts/AlertCentre.js';
-import { useConsoleState } from '../app/console-context.js';
+import { alertsForMe } from '../alerts/alert-view.js';
+import { useAlerts } from '../alerts/alerts-context.js';
+import { useConsole, useConsoleState } from '../app/console-context.js';
 import { useT } from '../app/i18n.js';
+import { grantOf } from '../app/modes.js';
+import { useLive } from '../app/use-live.js';
+import { BillsArea, CashDrawer, usePendingBills } from '../billing/BillsArea.js';
+import { Approvals } from '../pos/Approvals.js';
+import { ControlReport } from './reports/ControlReports.js';
+import { RangedPage } from './reports/RangedPage.js';
+import { TablesScreen } from './tables/TablesScreen.js';
+import { TakeOrderArea } from './take-order/TakeOrderArea.js';
 import { AvailabilityScreen } from '../stock/AvailabilityScreen.js';
 import { ScreenHelp } from '../help/ScreenHelp.js';
 import { DevicesScreen } from './devices/DevicesScreen.js';
@@ -29,17 +40,70 @@ import { StaffArea } from './staff/StaffArea.js';
 import { ArchiveViewerScreen } from './system/ArchiveViewerScreen.js';
 import { SystemScreen } from './system/SystemScreen.js';
 
+/** A dashboard link, with its live count when something waits (ADR-0030). */
+function Section({
+  to,
+  end = false,
+  label,
+  count,
+}: {
+  to: string;
+  end?: boolean;
+  label: string;
+  count?: number;
+}) {
+  const t = useT();
+  const waiting = count !== undefined && count > 0;
+  return (
+    <NavLink
+      to={to}
+      end={end}
+      className="dashboard__link"
+      {...(waiting && { 'aria-label': `${label}, ${t('dashboard.badge', { count })}` })}
+    >
+      {label}
+      {waiting ? (
+        <Badge tone="warning" variant="solid" aria-hidden>
+          {count}
+        </Badge>
+      ) : null}
+    </NavLink>
+  );
+}
+
+/** How many pending bills there are, kept live, or nothing until known. */
+function useBillCount(enabled: boolean): number | undefined {
+  const { data } = usePendingBills(enabled);
+  return enabled && data.status === 'ready' ? data.value.length : undefined;
+}
+
+/** How many diners' orders wait for approval, kept live. */
+function useApprovalCount(enabled: boolean): number | undefined {
+  const controller = useConsole();
+  const { data } = useLive(
+    async () => (enabled ? (await controller.api.listPendingApprovals()).orders.length : 0),
+    affectsApprovals,
+  );
+  return enabled && data.status === 'ready' ? data.value : undefined;
+}
+
+/** How many alerts are the signed-in person's, as the header's bell counts them. */
+function useAlertCount(): number | undefined {
+  const state = useAlerts();
+  if (state?.alerts.status !== 'ready') return undefined;
+  return alertsForMe(state.alerts.value, state.person.id).length;
+}
+
 /**
- * The manager dashboard (P4-01, MGR-001): the overview, the live order feed and the alert centre,
- * one at a time under `/manage`, then the setup pages: Staff for people who manage staff (people,
- * today's sections and pagers; P4-02a, P4-02b, MGR-004), the menu editor (P4-02d, MGR-005), Devices for people
- * who pair them (P4-02c, MGR-006), the restaurant's profile, tax groups and invoice series
- * (P4-03e, ONB-004), the reports (P4-05d, RPT-016), the kitchen stations and printers (P4-03d,
- * KDS-008), the
- * settings with their own pages (P4-03a to P4-03c, MGR-007) and the System page (P4-04, MGR-010).
- * The navigation sits beside them on a wide screen and above them on a phone
- * (MGR-011); the page shown is marked for screen readers, not by colour alone. Pages a role cannot
- * use are neither linked nor opened; the server refuses their calls anyway.
+ * The manager dashboard (P4-01, MGR-001), where managers and the Owner do everything (ADR-0030):
+ * Bills (pending and history, with the bill, payment and day-end screens the POS had),
+ * Modifications (diners' orders to approve), Alerts, Take order (dine-in), the live Tables, the
+ * menu and its availability, staff, reports, cancelled KOTs, the restaurant, set-up, devices, QR
+ * codes and the optional cash drawer; then, under More, the overview, the live order feed, the
+ * audit trail, the floor, kitchen and printers, settings, the System page and the licence. Each
+ * page shows for the people who may use it (BRD §4.2, AUTH-012); the server refuses the rest
+ * anyway. The navigation sits beside the page on a wide screen and above it on a phone
+ * (MGR-011); the page shown is marked for screen readers, not by colour alone.
  */
 export function ManageHome() {
   const t = useT();
@@ -49,6 +113,8 @@ export function ManageHome() {
   // The overview, order feed and alerts are the managers' view of service (OPERATIONS_CONFIGURE);
   // a custom role that only adds, say, the menu opens straight on its own page (AUTH-012).
   const operates = allows('OPERATIONS_CONFIGURE');
+  const bills = person !== undefined && grantOf(person, 'BILL_PRINT_AND_PAYMENT') !== 'DENY';
+  const takesOrders = operates && allows('ORDER_CREATE');
   const managesStaff = allows('STAFF_MANAGE');
   const pairsDevices = allows('DEVICE_PAIR');
   const managesMenu = allows('MENU_MANAGE');
@@ -58,6 +124,9 @@ export function ManageHome() {
   const viewsAudit = allows('AUDIT_VIEW');
   const viewsLicence = person !== undefined && grantOf(person, 'LICENSE_VIEW') !== 'DENY';
   const managesLicence = person !== undefined && grantOf(person, 'LICENSE_MANAGE') !== 'DENY';
+  const billCount = useBillCount(bills);
+  const approvalCount = useApprovalCount(operates);
+  const alertCount = useAlertCount();
   // On a phone the sections are one row that scrolls sideways: keep the open one in view.
   const navRef = useRef<HTMLElement>(null);
   const { pathname } = useLocation();
@@ -67,117 +136,109 @@ export function ManageHome() {
       open.scrollIntoView({ block: 'nearest', inline: 'center' });
     }
   }, [pathname]);
-  const first = operates
-    ? undefined
-    : seesReports
-      ? 'reports'
-      : managesMenu
-        ? 'menu'
-        : managesStaff
-          ? 'staff'
-          : pairsDevices
-            ? 'devices'
-            : undefined;
+  // The first page each person has: bills for whoever takes payment, else their own page.
+  const first = bills
+    ? 'bills'
+    : operates
+      ? 'overview'
+      : seesReports
+        ? 'reports'
+        : managesMenu
+          ? 'menu'
+          : managesStaff
+            ? 'staff'
+            : pairsDevices
+              ? 'devices'
+              : undefined;
+  const more = operates || viewsAudit || managesStaff || viewsLicence;
   return (
     <div className="dashboard">
       <nav aria-label={t('dashboard.navigation')} className="dashboard__nav" ref={navRef}>
+        {bills ? (
+          <Section to="/manage/bills" label={t('dashboard.section.bills')} count={billCount} />
+        ) : null}
         {operates ? (
           <>
-            <NavLink to="/manage" end className="dashboard__link">
-              {t('dashboard.section.overview')}
-            </NavLink>
-            <NavLink to="/manage/orders" className="dashboard__link">
-              {t('dashboard.section.orders')}
-            </NavLink>
-            <NavLink to="/manage/alerts" className="dashboard__link">
-              {t('dashboard.section.alerts')}
-            </NavLink>
+            <Section
+              to="/manage/modifications"
+              label={t('dashboard.section.modifications')}
+              count={approvalCount}
+            />
+            <Section to="/manage/alerts" label={t('dashboard.section.alerts')} count={alertCount} />
           </>
         ) : null}
-        {seesReports ? (
-          <NavLink to="/manage/reports" className="dashboard__link">
-            {t('dashboard.section.reports')}
-          </NavLink>
+        {takesOrders ? (
+          <Section to="/manage/take-order" label={t('dashboard.section.takeOrder')} />
         ) : null}
-        {viewsAudit ? (
-          <NavLink to="/manage/audit" className="dashboard__link">
-            {t('dashboard.section.audit')}
-          </NavLink>
+        {operates || bills ? (
+          <Section to="/manage/tables" label={t('dashboard.section.tables')} />
         ) : null}
-        {managesStaff ? (
-          <NavLink to="/manage/staff" className="dashboard__link">
-            {t('dashboard.section.staff')}
-          </NavLink>
-        ) : null}
-        {managesStaff ? (
-          <NavLink to="/manage/floor" className="dashboard__link">
-            {t('dashboard.section.floor')}
-          </NavLink>
-        ) : null}
-        {managesStaff ? (
-          <NavLink to="/manage/qr-codes" className="dashboard__link">
-            {t('dashboard.section.qrCodes')}
-          </NavLink>
-        ) : null}
-        {managesMenu ? (
-          <NavLink to="/manage/menu" className="dashboard__link">
-            {t('dashboard.section.menu')}
-          </NavLink>
-        ) : null}
+        {managesMenu ? <Section to="/manage/menu" label={t('dashboard.section.menu')} /> : null}
         {managesStock ? (
-          <NavLink to="/manage/availability" className="dashboard__link">
-            {t('dashboard.section.availability')}
-          </NavLink>
+          <Section to="/manage/availability" label={t('dashboard.section.availability')} />
+        ) : null}
+        {managesStaff ? <Section to="/manage/staff" label={t('dashboard.section.staff')} /> : null}
+        {seesReports ? (
+          <>
+            <Section to="/manage/reports" label={t('dashboard.section.reports')} />
+            <Section to="/manage/cancelled-kots" label={t('dashboard.section.cancelledKots')} />
+          </>
+        ) : null}
+        {operates ? (
+          <>
+            <Section to="/manage/restaurant" label={t('dashboard.section.restaurant')} />
+            <Section to="/manage/setup" label={t('dashboard.section.setup')} />
+          </>
         ) : null}
         {pairsDevices ? (
-          <NavLink to="/manage/devices" className="dashboard__link">
-            {t('dashboard.section.devices')}
-          </NavLink>
+          <Section to="/manage/devices" label={t('dashboard.section.devices')} />
         ) : null}
+        {managesStaff ? (
+          <Section to="/manage/qr-codes" label={t('dashboard.section.qrCodes')} />
+        ) : null}
+        {bills ? (
+          <Section to="/manage/cash-drawer" label={t('dashboard.section.cashDrawer')} />
+        ) : null}
+        {more ? <span className="dashboard__more">{t('dashboard.more')}</span> : null}
         {operates ? (
           <>
-            <NavLink to="/manage/setup" className="dashboard__link">
-              {t('dashboard.section.setup')}
-            </NavLink>
-            <NavLink to="/manage/restaurant" className="dashboard__link">
-              {t('dashboard.section.restaurant')}
-            </NavLink>
+            <Section to="/manage/overview" label={t('dashboard.section.overview')} />
+            <Section to="/manage/orders" label={t('dashboard.section.orders')} />
           </>
         ) : null}
+        {viewsAudit ? <Section to="/manage/audit" label={t('dashboard.section.audit')} /> : null}
+        {managesStaff ? <Section to="/manage/floor" label={t('dashboard.section.floor')} /> : null}
         {operates ? (
-          <NavLink to="/manage/printing" className="dashboard__link">
-            {t('dashboard.section.printing')}
-          </NavLink>
-        ) : null}
-        {operates ? (
-          <NavLink to="/manage/settings" className="dashboard__link">
-            {t('dashboard.section.settings')}
-          </NavLink>
-        ) : null}
-        {operates ? (
-          <NavLink to="/manage/system" className="dashboard__link">
-            {t('dashboard.section.system')}
-          </NavLink>
+          <>
+            <Section to="/manage/printing" label={t('dashboard.section.printing')} />
+            <Section to="/manage/settings" label={t('dashboard.section.settings')} />
+            <Section to="/manage/system" label={t('dashboard.section.system')} />
+          </>
         ) : null}
         {viewsLicence ? (
-          <NavLink to="/manage/licence" className="dashboard__link">
-            {t('dashboard.section.licence')}
-          </NavLink>
+          <Section to="/manage/licence" label={t('dashboard.section.licence')} />
         ) : null}
       </nav>
       <div className="dashboard__content">
         <ScreenHelp />
         <Routes>
-          {operates ? (
-            <>
-              <Route index element={<Overview />} />
-              <Route path="orders" element={<OrderFeedScreen />} />
-              <Route path="alerts" element={<AlertsSection />} />
-            </>
-          ) : first === undefined ? null : (
+          {first === undefined ? null : (
             <Route index element={<Navigate to={`/manage/${first}`} replace />} />
           )}
+          {bills ? <Route path="bills/*" element={<BillsArea />} /> : null}
+          {bills ? <Route path="cash-drawer" element={<CashDrawer />} /> : null}
+          {operates || bills ? <Route path="tables" element={<TablesScreen />} /> : null}
+          {operates ? (
+            <>
+              <Route path="overview" element={<Overview />} />
+              <Route path="orders" element={<OrderFeedScreen />} />
+              <Route path="alerts" element={<AlertsSection />} />
+              <Route path="modifications" element={<ModificationsSection />} />
+            </>
+          ) : null}
+          {takesOrders ? <Route path="take-order/*" element={<TakeOrderArea />} /> : null}
           {seesReports ? <Route path="reports/*" element={<ReportsArea />} /> : null}
+          {seesReports ? <Route path="cancelled-kots" element={<CancelledKots />} /> : null}
           {seesReports ? <Route path="archives/:id" element={<ArchiveViewerScreen />} /> : null}
           {viewsAudit ? <Route path="audit" element={<AuditScreen />} /> : null}
           {managesStaff ? <Route path="staff/*" element={<StaffArea />} /> : null}
@@ -207,6 +268,33 @@ export function ManageHome() {
         </Routes>
       </div>
     </div>
+  );
+}
+
+/** Diners' orders waiting for approval (ORD-004, WTR-004) as a dashboard page (ADR-0030). */
+function ModificationsSection() {
+  const t = useT();
+  return (
+    <section className="dashboard-section" aria-labelledby="dashboard-modifications">
+      <h2 id="dashboard-modifications" className="dashboard-section__heading">
+        {t('modifications.title')}
+      </h2>
+      <p className="dashboard-section__hint">{t('modifications.intro')}</p>
+      <Approvals empty={t('modifications.none')} />
+    </section>
+  );
+}
+
+/** The cancellation report (RPT-008) as its own page, today by default (ADR-0030). */
+function CancelledKots() {
+  const t = useT();
+  return (
+    <section className="dashboard-section" aria-labelledby="dashboard-cancelled">
+      <h2 id="dashboard-cancelled" className="dashboard-section__heading">
+        {t('cancelledKots.title')}
+      </h2>
+      <RangedPage>{(range) => <ControlReport slug="cancellations" range={range} />}</RangedPage>
+    </section>
   );
 }
 

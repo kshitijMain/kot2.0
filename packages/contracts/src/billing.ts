@@ -162,6 +162,39 @@ export const BillView = z.object({
 });
 export type BillView = z.infer<typeof BillView>;
 
+/**
+ * Where a pending bill stands (ADR-0030): asked for (by a waiter, a diner or a manager) and not
+ * printed; printed and not paid; or printed, then dishes were ordered, so it is printed again.
+ */
+export const PendingBillStatus = z.enum(['REQUESTED', 'PRINTED', 'NEEDS_NEW_BILL']);
+export type PendingBillStatus = z.infer<typeof PendingBillStatus>;
+
+/** A bill a manager still has to print or take payment for: a table's or a takeaway's. */
+export const PendingBill = z.object({
+  kind: z.enum(['TABLE', 'TAKEAWAY']),
+  tableSessionId: Id.nullable(),
+  orderId: Id.nullable(),
+  tableLabel: z.string().nullable(),
+  takeawayToken: z.int().positive().nullable(),
+  status: PendingBillStatus,
+  /**
+   * Still to pay: the bill's total less what was paid, or, before anyone opened the bill, the
+   * dishes so far before tax (as on the Tables page).
+   */
+  amount: Paise,
+  /** Waiting since: when the bill was asked for, else when it was printed. */
+  since: Timestamp,
+  /** The open bill, once someone opened it. */
+  billId: Id.nullable(),
+  /** Its printed bills still to pay, oldest first. */
+  invoiceIds: z.array(Id),
+});
+export type PendingBill = z.infer<typeof PendingBill>;
+
+/** Pending bills, longest waiting first (ADR-0030). */
+export const PendingBillsResponse = z.object({ bills: z.array(PendingBill) });
+export type PendingBillsResponse = z.infer<typeof PendingBillsResponse>;
+
 /** The seller's particulars as printed on the invoice (BILL-002). */
 export const InvoiceParticulars = z.object({
   displayName: z.string(),

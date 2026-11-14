@@ -37,6 +37,7 @@ import {
   BillDiscountParams,
   BillParams,
   BillView,
+  PendingBillsResponse,
   DiscountRequest,
   InvoiceParams,
   InvoiceView,
@@ -4256,6 +4257,22 @@ export const ROUTES = [
       200: { description: 'The bill as it stands.', schema: BillView },
       ...standardErrors,
       404: { description: 'No such open table session or takeaway order.', schema: ApiError },
+    },
+  },
+  {
+    operationId: 'listPendingBills',
+    method: 'GET',
+    path: '/api/v1/bills/pending',
+    summary: 'Bills to print or take payment for: the dashboard’s Pending bills',
+    description:
+      'ADR-0030. Tables and takeaways whose bill was asked for and not printed, printed and not ' +
+      'paid, or printed before more dishes were ordered. Longest waiting first.',
+    tags: ['billing'],
+    requirements: ['BILL-001', 'MGR-001'],
+    capability: 'BILL_PRINT_AND_PAYMENT',
+    responses: {
+      200: { description: 'The pending bills.', schema: PendingBillsResponse },
+      ...standardErrors,
     },
   },
   {

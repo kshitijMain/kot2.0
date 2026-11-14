@@ -152,7 +152,7 @@ function TodayGlance() {
         </p>
       )}
       <p className="glance-card__links">
-        <Link to="reports" className="glance-card__link">
+        <Link to="/manage/reports" className="glance-card__link">
           {t('dashboard.overview.seeReports')}
         </Link>
       </p>
@@ -232,11 +232,11 @@ function OrdersGlance({
         </p>
       ) : null}
       <p className="glance-card__links">
-        <Link to="orders" className="glance-card__link">
+        <Link to="/manage/orders" className="glance-card__link">
           {t('dashboard.overview.seeOrders')}
         </Link>
         {late ? (
-          <Link to={`orders?${FILTER_PARAMS.delayed}=1`} className="glance-card__link">
+          <Link to={`/manage/orders?${FILTER_PARAMS.delayed}=1`} className="glance-card__link">
             {t('dashboard.overview.seeDelayed')}
           </Link>
         ) : null}
@@ -259,7 +259,7 @@ function AlertsGlance() {
             {t('dashboard.overview.alerts', { count: alerts.value.length })}
           </p>
           <p className="glance-card__links">
-            <Link to="alerts" className="glance-card__link">
+            <Link to="/manage/alerts" className="glance-card__link">
               {t('dashboard.overview.seeAlerts')}
             </Link>
           </p>
@@ -321,7 +321,7 @@ function FloorSection({ data, reload, now }: { data: FloorData; reload: () => vo
                           [FILTER_PARAMS.table]: table.tableId,
                           [FILTER_PARAMS.tableLabel]: table.label,
                         });
-                        void navigate(`orders?${search.toString()}`);
+                        void navigate(`/manage/orders?${search.toString()}`);
                       }}
                     />
                   );
