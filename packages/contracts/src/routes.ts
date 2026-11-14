@@ -526,6 +526,29 @@ export const ROUTES = [
     },
   },
   {
+    operationId: 'requestTakeawayBill',
+    method: 'POST',
+    path: '/api/v1/orders/:orderId/request-bill',
+    summary: "Ask for a takeaway's bill; it waits in the managers' pending bills",
+    description:
+      "ADR-0030: takeaway is the waiter's job; the waiter asks for the bill and a manager takes " +
+      "payment. Asked again, it is the same request and nobody is told twice. A table's bill is " +
+      'asked for from the table (`requestBill`).',
+    tags: ['orders'],
+    requirements: ['TBL-008', 'WTR-008', 'WTR-013'],
+    capability: 'BILL_REQUEST',
+    request: { params: OrderParams },
+    responses: {
+      200: { description: 'The order, with when its bill was asked for.', schema: OrderView },
+      ...standardErrors,
+      404: { description: 'No such order.', schema: ApiError },
+      409: {
+        description: 'Not a takeaway, or already paid or cancelled.',
+        schema: ApiError,
+      },
+    },
+  },
+  {
     operationId: 'listSessionOrders',
     method: 'GET',
     path: '/api/v1/table-sessions/:sessionId/orders',

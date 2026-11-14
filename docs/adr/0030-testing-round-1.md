@@ -77,3 +77,30 @@ Everything else was already shown only to people allowed to use it: the waiter a
 and Print bill, the alert centre's Approve, Reject and Nudge, and the Owner-only parts of the
 dashboard (tax groups, invoice series, backups and restore, data export, the licence). A manager's
 approval on a waiter's phone (voiding a dish) is asked for on the phone, as designed.
+
+## E. Takeaway is taken by waiters
+
+**Was.** A waiter could send a takeaway order from the phone (WTR-013), but its bill could only be
+started at the POS, and the "food ready" alert for a takeaway went to the expo, not to the waiter
+who took the order. Managers could also make takeaway orders from their screens.
+
+**Now.**
+
+- The waiter takes the order on the phone: the customer's name and phone (both optional), the
+  dishes, **Send to kitchen**. The order gets the day's next takeaway number (TBL-008).
+- The kitchen display shows `TAKEAWAY #12` where a table would be, and so does the printed KOT.
+  The app and the dashboard call it "Takeaway #12".
+- When a dish of a takeaway order is ready, the alert **Takeaway ready** (`TAKEAWAY_READY`, rule
+  `KOT_SENDER` on pager and phone) goes to the waiter who sent the KOT, with the pager text
+  `TAKEAWAY #12 READY`. It clears when nothing in the order is still waiting at the pass.
+- Each open takeaway order on the phone has **Request bill**. It records when it was asked
+  (`orders.bill_requested_at`, `POST /api/v1/orders/:orderId/request-bill`, capability
+  `BILL_REQUEST`) and tells the managers (`BILL_REQUEST`, as for a table). Asking again changes
+  nothing. The order then shows "Bill requested at 14:05" and appears in the manager's **Pending
+  bills** (item A). Printing the bill clears the alert.
+- Taking a takeaway order is the waiter's job: the phone offers **New takeaway** only to a
+  waiter, and the manager dashboard has no takeaway screen (item A). Takeaway orders from the
+  QR menu are not affected.
+
+**Changed tests.** Tests that read "Token 7" now read "Takeaway #7" (or `TAKEAWAY #7` on the
+kitchen display), because this brief renames it.

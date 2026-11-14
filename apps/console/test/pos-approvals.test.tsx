@@ -65,6 +65,7 @@ const order: OrderView = {
   tableId: ID(8301),
   takeawayToken: null,
   customerName: null,
+  billRequestedAt: null,
   businessDate: '2026-09-26',
   createdAt: new Date(Date.now() - 3 * 60_000).toISOString(),
   note: null,

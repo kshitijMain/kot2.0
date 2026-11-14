@@ -275,6 +275,7 @@ describe('[ORD-003] [ORD-004] a diner’s order waiting for approval, decided in
     tableId: approval.tableId,
     takeawayToken: null,
     customerName: null,
+    billRequestedAt: null,
     businessDate: '2026-09-27',
     createdAt: approval.createdAt,
     note: null,

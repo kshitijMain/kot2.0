@@ -203,7 +203,7 @@ export function TablesScreen({
       {menuOpen ? (
         <HomeMenu
           breakState={breakState}
-          {...(onTakeaway !== undefined && { onTakeaway })}
+          {...(onTakeaway !== undefined && person.role === 'WAITER' && { onTakeaway })}
           onClose={() => {
             setMenuOpen(false);
           }}

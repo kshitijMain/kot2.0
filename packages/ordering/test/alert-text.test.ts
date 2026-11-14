@@ -90,7 +90,7 @@ describe('[WTR-006] [NFR-U04] what an alert says on the waiter app and the POS',
         }),
         t,
       ).title,
-    ).toBe('Token 7 · Food waiting at the pass');
+    ).toBe('Takeaway #7 · Food waiting at the pass');
     expect(
       describeAlert(alert({ type: 'READY_NOT_COLLECTED', payload: { items: ['Naan'] } }), t).detail,
     ).toBe('Naan');

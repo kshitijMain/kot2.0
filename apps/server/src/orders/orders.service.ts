@@ -111,6 +111,7 @@ export function orderView(
     tableId: order.tableId,
     takeawayToken: order.takeawayToken,
     customerName: order.customerName,
+    billRequestedAt: order.billRequestedAt?.toISOString() ?? null,
     businessDate: isoDateOf(order.businessDate),
     createdAt: order.createdAt.toISOString(),
     note: order.notes,

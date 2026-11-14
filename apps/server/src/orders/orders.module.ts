@@ -4,6 +4,7 @@ import { AuthModule } from '../auth/auth.module.js';
 import { MenuModule } from '../menu/menu.module.js';
 import { EventsModule } from '../events/events.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
+import { TakeawayBillsService } from './takeaway-bills.service.js';
 import { SettingsModule } from '../settings/settings.module.js';
 import { OrderApprovalsService } from './order-approvals.service.js';
 import { OrderFeedService } from './order-feed.service.js';
@@ -45,6 +46,7 @@ import { StockOutService } from './stock-out.service.js';
     OrderFeedService,
     OrderApprovalsService,
     StockOutService,
+    TakeawayBillsService,
   ],
   exports: [OrdersService, OrderItemsService],
 })

@@ -93,7 +93,7 @@ export function tableLabelOf(
   return orders.find((order) => order.tableId === tableId)?.tableLabel ?? '';
 }
 
-/** Where the food goes: "Table T4", or "Token 12" for a takeaway. */
+/** Where the food goes: "Table T4", or "Takeaway #12" for a takeaway. */
 export function orderPlace(order: OrderFeedEntry, t: Translator): string {
   if (order.tableLabel !== null) return t('dashboard.orders.atTable', { table: order.tableLabel });
   if (order.takeawayToken !== null) {

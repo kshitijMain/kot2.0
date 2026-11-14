@@ -1,6 +1,6 @@
 import { timeOfDayOf } from '@rp/domain';
 import { en } from '@rp/i18n';
-import { eventFrame } from '@rp/mobile-core/testing';
+import { eventFrame, login } from '@rp/mobile-core/testing';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
 import { BackHandler } from 'react-native';
 import { PAGER_REFRESH_MS } from '../src/PagerCard';
@@ -419,6 +419,38 @@ describe('[NTF-009] on break', () => {
 });
 
 describe('[WTR-013] a takeaway order from the phone', () => {
+  it('asks for a takeaway’s bill once, then says when (ADR-0030)', async () => {
+    const restaurant = new Restaurant();
+    const { server } = await signedInApp(restaurant);
+    await openMenu();
+    await fireEvent.press(await screen.findByTestId('new-takeaway'));
+    await fireEvent.press(screen.getByRole('button', { name: 'Main Course' }));
+    await fireEvent.press(screen.getByRole('button', { name: /^Dal Makhani,/ }));
+    await fireEvent.press(screen.getByTestId('send-takeaway'));
+    await fireEvent.press(await screen.findByTestId('takeaway-bill-61'));
+    const order = restaurant.takeaway[0];
+    expect(server.callsTo('POST', `/api/v1/orders/${order?.id ?? ''}/request-bill`)).toHaveLength(
+      1,
+    );
+    const at = timeOfDayOf(new Date(restaurant.takeaway[0]?.billRequestedAt ?? ''));
+    expect(await screen.findByText(`Bill requested at ${at}`)).toBeOnTheScreen();
+    expect(screen.queryByTestId('takeaway-bill-61')).toBeNull();
+  });
+
+  it('is the waiter’s job: a manager on a phone is not offered a new takeaway (ADR-0030)', async () => {
+    const restaurant = new Restaurant();
+    const server = restaurant
+      .server()
+      .on('POST', '/api/v1/auth/pin-login', () => ({ status: 200, body: login('MANAGER') }))
+      .on('GET', '/api/v1/auth/session', () => {
+        const { session, staff } = login('MANAGER');
+        return { status: 200, body: { session, staff } };
+      });
+    await signedInApp(restaurant, server);
+    await openMenu();
+    expect(screen.queryByTestId('new-takeaway')).toBeNull();
+  });
+
   it('sends it to the kitchen with the customer’s name, and shows its token', async () => {
     const restaurant = new Restaurant();
     const back = jest.spyOn(BackHandler, 'addEventListener');
@@ -430,7 +462,7 @@ describe('[WTR-013] a takeaway order from the phone', () => {
     await fireEvent.press(screen.getByRole('button', { name: /^Dal Makhani,/ }));
     await fireEvent.changeText(screen.getByLabelText(en.mobile.takeaway.customer), 'Asha');
     await fireEvent.press(screen.getByTestId('send-takeaway'));
-    expect(await screen.findByText('Token 61: order 21 sent to the kitchen')).toBeOnTheScreen();
+    expect(await screen.findByText('Takeaway #61: order 21 sent to the kitchen')).toBeOnTheScreen();
     const [body] = server.callsTo('POST', '/api/v1/orders').map((call) => call.body);
     expect(body).toMatchObject({
       source: 'WAITER_APP',
@@ -439,7 +471,7 @@ describe('[WTR-013] a takeaway order from the phone', () => {
       lines: [{ itemId: IDS.dal, quantity: 1 }],
     });
     expect(await screen.findByTestId('takeaway-61')).toBeOnTheScreen();
-    expect(screen.getByText('Token 61 · Asha')).toBeOnTheScreen();
+    expect(screen.getByText('Takeaway #61 · Asha')).toBeOnTheScreen();
 
     // The phone's back button goes back to the tables, not out of the app.
     const handler = back.mock.calls.at(-1)?.[1];

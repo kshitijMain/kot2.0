@@ -1,5 +1,6 @@
 import { newIdempotencyKey, uuidV4 } from '@rp/api-client';
-import type { MenuItem } from '@rp/contracts';
+import { timeOfDayOf } from '@rp/domain';
+import type { MenuItem, OrderView } from '@rp/contracts';
 import { elevation, fontSize, fontWeight, radius, spacing } from '@rp/design-tokens';
 import {
   AlertBell,
@@ -38,7 +39,8 @@ const affectsTakeaway = (eventType: string) =>
 /**
  * A takeaway order from the waiter app (WTR-013): dishes from the menu, the customer's name and
  * phone if given, sent straight to the kitchen with a token (TBL-008), and the open takeaway
- * orders with their tokens and progress, until paid. Billing stays at the POS.
+ * orders with their tokens and progress, until paid. The waiter asks for each one's bill, which
+ * the manager prints from Pending bills (ADR-0030).
  */
 export function TakeawayScreen({
   onBack,
@@ -60,6 +62,7 @@ export function TakeawayScreen({
   const [phone, setPhone] = useState('');
   const [sending, setSending] = useState(false);
   const [notice, setNotice] = useState<string | undefined>();
+  const [asking, setAsking] = useState<string | undefined>();
   /** The key of the order being sent, kept while the same order is sent again. */
   const attempt = useRef<{ key: string; signature: string } | undefined>(undefined);
   const open = useLive(
@@ -148,6 +151,20 @@ export function TakeawayScreen({
     }
   };
 
+  /** Asks for a takeaway's bill; asking again changes nothing on the server (ADR-0030). */
+  const requestBill = async (order: OrderView) => {
+    setAsking(order.id);
+    try {
+      await session.api.requestTakeawayBill({ params: { orderId: order.id } });
+      toast.show({ title: t('mobile.takeaway.billAsked'), tone: 'success' });
+      open.reload();
+    } catch (failure) {
+      toast.show({ title: messageOf(failure, t), tone: 'danger' });
+    } finally {
+      setAsking(undefined);
+    }
+  };
+
   return (
     <Screen
       title={t('mobile.takeaway.title')}
@@ -230,6 +247,22 @@ export function TakeawayScreen({
                   <StatusChip state={item.state} label={t(`pos.itemState.${item.state}`)} />
                 </View>
               ))}
+            {order.billRequestedAt === null ? (
+              <Button
+                variant="secondary"
+                testID={`takeaway-bill-${String(order.takeawayToken ?? order.orderNumber)}`}
+                disabled={asking === order.id}
+                onPress={() => void requestBill(order)}
+              >
+                {t('mobile.takeaway.requestBill')}
+              </Button>
+            ) : (
+              <Note>
+                {t('mobile.tables.billRequestedAt', {
+                  time: timeOfDayOf(new Date(order.billRequestedAt)),
+                })}
+              </Note>
+            )}
           </View>
         ))
       )}

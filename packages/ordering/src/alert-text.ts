@@ -65,7 +65,8 @@ function detailOf(alert: AlertView, t: Translator): string | null {
       }
       return t('alerts.outOfStock', { quantity, item });
     }
-    case 'ITEM_READY': {
+    case 'ITEM_READY':
+    case 'TAKEAWAY_READY': {
       const items = namesOf(payload.items);
       return items.length === 0 ? null : items.join(', ');
     }

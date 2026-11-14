@@ -84,7 +84,7 @@ describe('[MGR-003] the order feed’s view helpers', () => {
 
   it('says where the food goes and what each line is', () => {
     expect(orderPlace(tikkaAtT1, t)).toBe('Table T1');
-    expect(orderPlace(naanToken7, t)).toBe('Token 7');
+    expect(orderPlace(naanToken7, t)).toBe('Takeaway #7');
     expect(orderPlace({ ...naanToken7, takeawayToken: null }, t)).toBe(
       t('dashboard.orders.takeaway'),
     );

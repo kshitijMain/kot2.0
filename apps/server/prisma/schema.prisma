@@ -1042,6 +1042,8 @@ model Order {
   tableId        String?       @map("table_id") @db.Uuid
   table          DiningTable?  @relation(fields: [tableId], references: [id])
   takeawayToken  Int?          @map("takeaway_token")
+  /// When the waiter asked for a takeaway's bill (ADR-0030); null until asked.
+  billRequestedAt DateTime?    @map("bill_requested_at") @db.Timestamptz(3)
   createdById    String?       @map("created_by_id") @db.Uuid
   deviceId       String?       @map("device_id") @db.Uuid
   customerName   String?       @map("customer_name")

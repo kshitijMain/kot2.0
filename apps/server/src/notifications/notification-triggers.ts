@@ -99,8 +99,12 @@ export class NotificationTriggers implements OnModuleInit {
         // The bill was printed as asked; nobody needs to be told any more.
         const invoice = await tx.invoice.findUnique({
           where: { id: event.payload.invoiceId },
-          select: { tableSessionId: true },
+          select: { tableSessionId: true, bill: { select: { orderId: true } } },
         });
+        const orderId = invoice?.bill?.orderId ?? null;
+        if (orderId !== null) {
+          await this.notifications.clear(tx, { restaurantId, dedupeKey: `bill:order:${orderId}` });
+        }
         const sessionId = invoice?.tableSessionId ?? null;
         if (sessionId === null) return;
         await this.notifications.clear(tx, { restaurantId, dedupeKey: `bill:${sessionId}` });
@@ -243,11 +247,20 @@ export class NotificationTriggers implements OnModuleInit {
   ): Promise<void> {
     const order = await tx.order.findUnique({
       where: { id: change.orderId },
-      select: { tableId: true, tableSessionId: true, tableSession: { select: { status: true } } },
+      select: {
+        tableId: true,
+        tableSessionId: true,
+        orderType: true,
+        takeawayToken: true,
+        tableSession: { select: { status: true } },
+      },
     });
     if (order === null) return;
+    if (change.to === 'READY' && order.orderType === 'TAKEAWAY') {
+      await this.takeawayReady(tx, restaurantId, change, order.takeawayToken);
+      return;
+    }
     if (change.to === 'READY') {
-      // Takeaway food is called by its token on the counter display, not by a waiter's pager.
       if (order.tableSessionId === null) return;
       // Nobody carries food to guests who have paid and left (P9-23): the alert would stay open
       // for good, as no table closes after it to clear it.
@@ -276,6 +289,12 @@ export class NotificationTriggers implements OnModuleInit {
     // Something left the pass (picked up, served, cancelled): clear what no longer waits.
     const stillReady = async (where: object) =>
       (await tx.orderItem.count({ where: { ...where, state: 'READY' } })) > 0;
+    if (order.orderType === 'TAKEAWAY' && !(await stillReady({ orderId: change.orderId }))) {
+      await this.notifications.clear(tx, {
+        restaurantId,
+        dedupeKey: `ready:order:${change.orderId}`,
+      });
+    }
     if (
       order.tableSessionId !== null &&
       !(await stillReady({ order: { tableSessionId: order.tableSessionId } }))
@@ -300,5 +319,39 @@ export class NotificationTriggers implements OnModuleInit {
       if (!(await stillReady({ kotLines: { some: { kotId: alert.kotId } } }))) done.push(alert.id);
     }
     if (done.length > 0) await this.notifications.clear(tx, { restaurantId, ids: done });
+  }
+
+  /**
+   * A takeaway's dish is ready (ADR-0030): the waiter who sent its ticket hears it, as
+   * "TAKEAWAY #12 READY" on the pager, and nobody else. One alert per order, ringing again for each
+   * dish, until everything is picked up.
+   */
+  private async takeawayReady(
+    tx: TransactionClient,
+    restaurantId: string,
+    change: { orderId: string; orderItemId: string },
+    token: number | null,
+  ): Promise<void> {
+    const item = await tx.orderItem.findUnique({
+      where: { id: change.orderItemId },
+      select: {
+        name: true,
+        kotLines: { select: { kot: { select: { sentById: true } } }, take: 1 },
+      },
+    });
+    const name = item?.name;
+    await this.notifications.raise(tx, {
+      restaurantId,
+      type: 'TAKEAWAY_READY',
+      orderId: change.orderId,
+      kotSenderId: item?.kotLines[0]?.kot.sentById ?? null,
+      placeLabel: token === null ? 'TAKEAWAY' : `TAKEAWAY #${String(token)}`,
+      dedupeKey: `ready:order:${change.orderId}`,
+      payload: { items: name === undefined ? [] : [name], takeawayToken: token },
+      renotify: (before) => {
+        const items: unknown[] = Array.isArray(before.items) ? (before.items as unknown[]) : [];
+        return { ...before, items: name === undefined ? items : [...items, name] };
+      },
+    });
   }
 }

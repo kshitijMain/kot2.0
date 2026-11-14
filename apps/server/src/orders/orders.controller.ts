@@ -29,6 +29,7 @@ import { type Approver, OrderApprovalsService } from './order-approvals.service.
 import { OrderFeedService } from './order-feed.service.js';
 import { OrderItemsService } from './order-items.service.js';
 import { OrdersService } from './orders.service.js';
+import { TakeawayBillsService } from './takeaway-bills.service.js';
 
 function principalOf(request: AuthenticatedRequest): Principal {
   if (request.principal === undefined) throw authErrors.unauthenticated();
@@ -90,6 +91,7 @@ export class OrdersController {
     private readonly orders: OrdersService,
     private readonly approvals: OrderApprovalsService,
     private readonly items: OrderItemsService,
+    private readonly takeawayBills: TakeawayBillsService,
   ) {}
 
   @Post()
@@ -169,6 +171,17 @@ export class OrdersController {
   @RequireCapability('ORDER_CREATE')
   takeaway(@Req() request: AuthenticatedRequest): Promise<OrderListResponse> {
     return this.orders.listOpenTakeaway(principalOf(request).restaurantId);
+  }
+
+  /** ADR-0030: a waiter asks for a takeaway's bill; the managers take payment for it. */
+  @Post(':orderId/request-bill')
+  @HttpCode(200)
+  @RequireCapability('BILL_REQUEST')
+  requestTakeawayBill(
+    @Req() request: AuthenticatedRequest,
+    @Param(new ZodValidationPipe(OrderParams)) params: OrderParams,
+  ): Promise<OrderView> {
+    return this.takeawayBills.requestBill(principalOf(request), params.orderId);
   }
 
   @Get(':orderId')

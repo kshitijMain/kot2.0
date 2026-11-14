@@ -44,6 +44,7 @@ function sent(
     tableId: null,
     takeawayToken: null,
     customerName: null,
+    billRequestedAt: null,
     businessDate: '2026-09-26',
     createdAt: '2026-09-26T08:10:00.000Z',
     note: null,

@@ -59,6 +59,8 @@ export const DEFAULT_VIBRATION: Readonly<Record<NotificationEvent, VibrationPatt
   OUT_OF_STOCK: 'THREE',
   // ADR-0024: a diner says they paid by UPI; someone checks and settles.
   PAYMENT_CLAIMED: 'TWO_SHORT',
+  // ADR-0030: food ready, as for a table.
+  TAKEAWAY_READY: 'ONE_LONG',
   GUEST_WAITING: 'TWO_SHORT',
 };
 

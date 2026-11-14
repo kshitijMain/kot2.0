@@ -140,7 +140,7 @@ describe('[KDS-001] [KDS-002] [KDS-003] [KDS-004] the station board', () => {
       within(first).getByRole('button', { name: t('kds.bumpFor', { number: 1 }) }),
     ).toBeDisabled();
 
-    const slip = await card(/^KOT 2, Token 7$/);
+    const slip = await card(/^KOT 2, TAKEAWAY #7$/);
     expect(slip).toHaveAttribute('data-age', 'red');
     // The slip's badge and the item's own state chip both say so.
     expect(within(slip).getAllByText(t('kds.badge.CANCELLED'))).toHaveLength(2);

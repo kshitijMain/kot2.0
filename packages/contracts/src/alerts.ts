@@ -27,6 +27,7 @@ export const NotificationEventType = z.enum([
   'OUT_OF_STOCK',
   'PAYMENT_CLAIMED',
   'GUEST_WAITING',
+  'TAKEAWAY_READY',
 ]);
 export type NotificationEventType = z.infer<typeof NotificationEventType>;
 

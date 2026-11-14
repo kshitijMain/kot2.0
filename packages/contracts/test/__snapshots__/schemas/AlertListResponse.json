@@ -34,7 +34,8 @@
                 "SIGN_IN_LOCKED",
                 "OUT_OF_STOCK",
                 "PAYMENT_CLAIMED",
-                "GUEST_WAITING"
+                "GUEST_WAITING",
+                "TAKEAWAY_READY"
               ]
             },
             "status": { "type": "string", "enum": ["OPEN", "ACKNOWLEDGED", "CLEARED"] },
@@ -201,7 +202,8 @@
                 "SIGN_IN_LOCKED",
                 "OUT_OF_STOCK",
                 "PAYMENT_CLAIMED",
-                "GUEST_WAITING"
+                "GUEST_WAITING",
+                "TAKEAWAY_READY"
               ]
             },
             "status": { "type": "string", "enum": ["OPEN", "ACKNOWLEDGED", "CLEARED"] },

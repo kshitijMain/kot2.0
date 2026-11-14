@@ -35,6 +35,8 @@ export const NOTIFICATION_EVENTS = [
    * Business Owner's answer to P9-23's question. Every waiter on duty and the managers hear it.
    */
   'GUEST_WAITING',
+  /** A takeaway's food is ready: the waiter who sent it collects it (ADR-0030). */
+  'TAKEAWAY_READY',
 ] as const;
 export type NotificationEvent = (typeof NOTIFICATION_EVENTS)[number];
 
@@ -184,6 +186,8 @@ export const DEFAULT_NOTIFICATION_RULES: Readonly<Record<NotificationEvent, Noti
   VENDOR_RESTORE_CODE: rule(['OWNER'], ['POS', 'DASHBOARD'], null, false, 'NONE'),
   // Not in Appendix C: a lockout may be someone guessing PINs, and a manager can lift it (PC-S5).
   SIGN_IN_LOCKED: rule(['OWNER', 'MANAGERS_ON_DUTY'], ['POS', 'DASHBOARD'], null, false, 'NONE'),
+  // ADR-0030: a takeaway's food is ready; only the waiter who sent it is called.
+  TAKEAWAY_READY: rule(['KOT_SENDER'], ['PAGER', 'WAITER_APP'], '{table} READY', false, 'NONE'),
   // ADR-0023: one per ticket line whose units were cancelled, to whoever sent the ticket.
   OUT_OF_STOCK: rule(
     ['KOT_SENDER'],

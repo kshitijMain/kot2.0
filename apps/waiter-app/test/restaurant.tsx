@@ -491,6 +491,7 @@ export class Restaurant {
       // TBL-008: takeaway orders get the next token of the day.
       takeawayToken: takeaway ? 40 + this.nextOrder : null,
       customerName: request.customerName ?? null,
+      billRequestedAt: null,
       businessDate: '2026-09-26',
       createdAt: AT,
       note: null,
@@ -538,6 +539,7 @@ export class Restaurant {
       tableId: table.id,
       takeawayToken: null,
       customerName: null,
+      billRequestedAt: null,
       businessDate: '2026-09-26',
       createdAt: new Date(Date.now() - minutesAgo * 60_000).toISOString(),
       note: null,
@@ -657,6 +659,14 @@ export class Restaurant {
           status: 200,
           body: { orders: this.takeaway },
         }))
+        .on('POST', '/api/v1/orders/:orderId/request-bill', (call) => {
+          const index = this.takeaway.findIndex((entry) => call.path.includes(entry.id));
+          const order = this.takeaway[index];
+          if (order === undefined) return { status: 404, body: {} };
+          const asked = order.billRequestedAt ?? new Date().toISOString();
+          this.takeaway[index] = { ...order, billRequestedAt: asked };
+          return { status: 200, body: this.takeaway[index] };
+        })
         .on('GET', '/api/v1/orders/:orderId', (call) => {
           const order = [...this.orders.values()]
             .flat()

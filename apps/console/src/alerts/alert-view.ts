@@ -39,6 +39,7 @@ const GROUP_OF_TYPE: Readonly<
   SIGN_IN_LOCKED: 'staff',
   OUT_OF_STOCK: 'kitchen',
   PAYMENT_CLAIMED: 'tables',
+  TAKEAWAY_READY: 'tables',
   GUEST_WAITING: 'tables',
 };
 

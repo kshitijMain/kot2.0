@@ -196,7 +196,7 @@ describe('[MGR-002] the overview', () => {
     expect(
       await screen.findByRole('checkbox', { name: t('dashboard.orders.delayedOnly') }),
     ).toBeChecked();
-    expect(await cardTitles()).toEqual(['Table T1 · Order 12', 'Token 7 · Order 13']);
+    expect(await cardTitles()).toEqual(['Table T1 · Order 12', 'Takeaway #7 · Order 13']);
   });
 
   it('says when there are no tables, nothing in progress and no alerts', async () => {
@@ -251,7 +251,7 @@ describe('[MGR-003] the live order feed', () => {
     const [tikka, naan, lassi] = await orderCards();
     expect(await cardTitles()).toEqual([
       'Table T1 · Order 12',
-      'Token 7 · Order 13',
+      'Takeaway #7 · Order 13',
       'Table T3 · Order 14',
     ]);
     expect(
@@ -313,7 +313,7 @@ describe('[MGR-003] the live order feed', () => {
       within(filters()).getByRole('combobox', { name: t('dashboard.orders.station') }),
       'Tandoor',
     );
-    expect(await cardTitles()).toEqual(['Table T1 · Order 12', 'Token 7 · Order 13']);
+    expect(await cardTitles()).toEqual(['Table T1 · Order 12', 'Takeaway #7 · Order 13']);
     const [tikka] = await orderCards();
     expect(within(tikka!).getAllByRole('listitem')).toHaveLength(1);
     expect(tikka).not.toHaveTextContent('Dal Makhani');
@@ -345,7 +345,7 @@ describe('[MGR-003] the live order feed', () => {
     await user.click(
       within(filters()).getByRole('checkbox', { name: t('dashboard.orders.delayedOnly') }),
     );
-    expect(await cardTitles()).toEqual(['Table T1 · Order 12', 'Token 7 · Order 13']);
+    expect(await cardTitles()).toEqual(['Table T1 · Order 12', 'Takeaway #7 · Order 13']);
     expect(
       screen.getByText(t('dashboard.orders.summary', { orders: 2, ready: 1, delayed: 2 })),
     ).toBeInTheDocument();

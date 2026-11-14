@@ -1539,6 +1539,7 @@ components:
         - OUT_OF_STOCK
         - PAYMENT_CLAIMED
         - GUEST_WAITING
+        - TAKEAWAY_READY
     OrderApproved:
       type: object
       properties:

@@ -10,7 +10,8 @@
         "maximum": 9007199254740991
       },
       "soundVolumePercent": { "type": "integer", "minimum": 0, "maximum": 100 },
-      "theme": { "type": "string", "enum": ["LIGHT", "DARK"] }
+      "theme": { "type": "string", "enum": ["LIGHT", "DARK"] },
+      "mayManageStock": { "default": true, "type": "boolean" }
     },
     "required": [
       "ageAmberMinutes",
@@ -31,14 +32,16 @@
         "maximum": 9007199254740991
       },
       "soundVolumePercent": { "type": "integer", "minimum": 0, "maximum": 100 },
-      "theme": { "type": "string", "enum": ["LIGHT", "DARK"] }
+      "theme": { "type": "string", "enum": ["LIGHT", "DARK"] },
+      "mayManageStock": { "default": true, "type": "boolean" }
     },
     "required": [
       "ageAmberMinutes",
       "ageRedMinutes",
       "readyNotCollectedMinutes",
       "soundVolumePercent",
-      "theme"
+      "theme",
+      "mayManageStock"
     ],
     "additionalProperties": false
   }

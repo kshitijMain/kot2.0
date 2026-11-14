@@ -65,6 +65,8 @@ export interface RaiseAlert {
   readonly askedById?: string | null;
   /** Who sent the KOT the alert is about: KOT_SENDER rules go to them (ADR-0023). */
   readonly kotSenderId?: string | null;
+  /** What a pager calls the place when there is no table, e.g. "TAKEAWAY #12" (ADR-0030). */
+  readonly placeLabel?: string | null;
   /**
    * Raised again while open, the alert rings once more with this payload instead of staying
    * quiet: another dish ready for the same table, now that nobody acknowledges food ready.
@@ -237,7 +239,7 @@ export class NotificationsService implements OnApplicationBootstrap, OnModuleDes
     const resolved = resolveRecipients(rule, context);
     const deadlines = initialDeadlines(rule, now, timing, resolved.escalateNow);
     const pagerText = pagerTextFor(rule.pagerText, {
-      table: table?.label ?? null,
+      table: table?.label ?? input.placeLabel ?? null,
       message: input.message ?? null,
     });
     const alert = await tx.alert.create({
