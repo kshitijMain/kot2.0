@@ -1,23 +1,16 @@
 import type { ThemeName } from '@rp/design-tokens';
 import { Button, ConnectionBanner, ThemeRoot } from '@rp/ui-web';
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { Navigate, NavLink, Outlet, useLocation, useNavigate } from 'react-router';
 import type { ConsoleSnapshot } from '../app/console-controller.js';
 import { useConsole, useConsoleState } from '../app/console-context.js';
 import { BrandLogo } from '../app/brand.js';
 import { useT } from '../app/i18n.js';
-import { InactivityTracker } from '../app/inactivity.js';
 import { modeOfPath, modesFor, type Person } from '../app/modes.js';
 import { AlertPanels, AlertsButton } from '../alerts/AlertCentre.js';
 import { AlertsProvider } from '../alerts/alerts-context.js';
 import { KdsThemeProvider } from '../kds/kds-theme.js';
 import { LicenceBanner } from '../licence/LicenceBanner.js';
-
-/** Warn this long before signing an idle person out. */
-const WARN_MS = 30_000;
-/** Tell the server the person is still here at most this often. */
-const KEEP_ALIVE_MS = 60_000;
-const INPUT_EVENTS = ['pointerdown', 'keydown', 'wheel', 'touchstart'] as const;
 
 function bannerStatus(
   connection: ConsoleSnapshot['connection'],
@@ -29,8 +22,8 @@ function bannerStatus(
 
 /**
  * The frame of every mode: who is signed in, the modes they may open, sign-out, the connection
- * banner (NFR-P11), the licence's reminder or banner (LIC-005), the inactivity sign-out (AUTH-005)
- * and, on the POS and the dashboard, the person's alerts (P2-06c, MGR-008).
+ * banner (NFR-P11), the licence's reminder or banner (LIC-005) and, on the POS and the dashboard,
+ * the person's alerts (P2-06c, MGR-008). Nobody is signed out for being idle (ADR-0030).
  */
 export function ModeLayout() {
   const t = useT();
@@ -41,7 +34,7 @@ export function ModeLayout() {
   // The kitchen display's theme comes with its tickets (`kds.theme`); light until then.
   const [kdsTheme, setKdsTheme] = useState<ThemeName>('kds');
   if (state.phase !== 'paired') return <Navigate to="/pair" replace />;
-  const { person, session } = state;
+  const { person } = state;
   const status = bannerStatus(state.connection);
   const mode = modeOfPath(pathname);
 
@@ -90,9 +83,6 @@ export function ModeLayout() {
       {person === undefined ? null : (
         <LicenceBanner paymentReminder={mode === 'pos' || mode === 'manage'} />
       )}
-      {person !== undefined && session !== undefined ? (
-        <InactivityGuard key={session.id} timeoutSeconds={session.inactivityTimeoutSeconds} />
-      ) : null}
       <main className="console-main">
         <KdsThemeProvider onTheme={setKdsTheme}>
           <Outlet />
@@ -122,50 +112,5 @@ function ModeLinks({ person }: { person: Person }) {
         </NavLink>
       ))}
     </nav>
-  );
-}
-
-/** Warns, then signs the person out after the session's inactivity timeout. */
-function InactivityGuard({ timeoutSeconds }: { timeoutSeconds: number }) {
-  const t = useT();
-  const controller = useConsole();
-  const navigate = useNavigate();
-  const [secondsLeft, setSecondsLeft] = useState<number | undefined>();
-  const tracker = useRef<InactivityTracker | undefined>(undefined);
-
-  useEffect(() => {
-    const current = new InactivityTracker({
-      timeoutMs: timeoutSeconds * 1000,
-      warnMs: Math.min(WARN_MS, (timeoutSeconds * 1000) / 2),
-      keepAliveMs: KEEP_ALIVE_MS,
-      onWarn: setSecondsLeft,
-      onActive: () => {
-        setSecondsLeft(undefined);
-      },
-      onKeepAlive: () => {
-        void controller.keepAlive();
-      },
-      onExpire: () => {
-        void controller
-          .signOut('signedOutInactive')
-          .then(() => navigate('/login', { replace: true }));
-      },
-    });
-    tracker.current = current;
-    const onInput = (): void => {
-      current.activity();
-    };
-    for (const name of INPUT_EVENTS) window.addEventListener(name, onInput, { passive: true });
-    return () => {
-      current.stop();
-      for (const name of INPUT_EVENTS) window.removeEventListener(name, onInput);
-    };
-  }, [controller, navigate, timeoutSeconds]);
-
-  if (secondsLeft === undefined) return null;
-  return (
-    <div className="console-inactivity" role="alert">
-      {t('session.inactivityWarning', { seconds: secondsLeft })}
-    </div>
   );
 }

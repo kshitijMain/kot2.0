@@ -16,6 +16,13 @@ function isStaffDevice(device: AuthenticatedDevice): boolean {
   return (STAFF_DEVICE_TYPES as readonly string[]).includes(device.type);
 }
 
+/** A session nobody limits ends this far ahead: in practice never (ADR-0030). */
+const NO_END_MS = 100 * 365 * 86_400_000;
+/**
+ * Sent as `inactivityTimeoutSeconds` for apps built before ADR-0030; nothing is signed out for
+ * being idle. Kept under 24 days so an old app's timer (milliseconds in 32 bits) cannot overflow.
+ */
+const LEGACY_IDLE_SECONDS = 20 * 86_400;
 /** Writes of `lastActiveAt` are skipped within this interval to save a write per request. */
 const TOUCH_INTERVAL_MS = 30_000;
 
@@ -90,17 +97,14 @@ export class SessionService {
     private readonly audit: AuditService,
   ) {}
 
-  inactivityMs(settings: AuthSettings, device: AuthenticatedDevice, role: Role): number {
-    // AUTH-005: kitchen screens stay on (station mode has no inactivity timeout). A kitchen person
-    // signed in on one, as in PIN-only mode (ADR-0025), is the kitchen screen: only the session's
-    // lifetime ends it (P9-23). It had been signed out after 10 idle minutes, and the next
-    // tickets then waited on a sign-in screen.
-    if (role === 'KITCHEN') return settings.sessionMaxHours * 60 * 60_000;
-    const minutes =
-      device.type === 'MANAGER_BROWSER'
-        ? settings.managerBrowserInactivityMinutes
-        : settings.inactivityMinutes;
-    return minutes * 60_000;
+  /**
+   * When a session started at `now` ends by itself: never, unless the restaurant sets a session
+   * length (`auth.sessionMaxHours`, 0 for none). Nobody is signed out for being idle (ADR-0030);
+   * a session ends on sign-out, deactivation, unpairing or a PIN change.
+   */
+  private expiryOf(settings: AuthSettings, now: Date): Date {
+    const hours = settings.sessionMaxHours;
+    return new Date(now.getTime() + (hours > 0 ? hours * 3_600_000 : NO_END_MS));
   }
 
   /** Starts a session inside the caller's transaction and returns its refresh token. */
@@ -122,7 +126,7 @@ export class SessionService {
         staffId: input.staffId,
         deviceId: input.device.deviceId,
         tokenHash: sha256Hex(refreshToken),
-        expiresAt: new Date(input.now.getTime() + input.settings.sessionMaxHours * 3_600_000),
+        expiresAt: this.expiryOf(input.settings, input.now),
         lastActiveAt: input.now,
       },
       select: { id: true, restaurantId: true, expiresAt: true },
@@ -166,8 +170,7 @@ export class SessionService {
       session: {
         id: session.id,
         expiresAt: session.expiresAt.toISOString(),
-        inactivityTimeoutSeconds:
-          this.inactivityMs(settings, input.device, input.staff.role) / 1000,
+        inactivityTimeoutSeconds: LEGACY_IDLE_SECONDS,
       },
       staff: {
         id: input.staff.id,
@@ -179,21 +182,16 @@ export class SessionService {
   }
 
   /** The signed-in person's session as their app sees it, without tokens (AUTH-005). */
-  async describe(
-    principal: Principal,
-    device: AuthenticatedDevice,
-  ): Promise<CurrentSessionResponse> {
+  async describe(principal: Principal): Promise<CurrentSessionResponse> {
     const session = await this.prisma.session.findUniqueOrThrow({
       where: { id: principal.sessionId },
       include: SESSION_STAFF,
     });
-    const settings = await this.settings.get(session.restaurantId);
     return {
       session: {
         id: session.id,
         expiresAt: session.expiresAt.toISOString(),
-        inactivityTimeoutSeconds:
-          this.inactivityMs(settings, device, session.staff.role.baseRole) / 1000,
+        inactivityTimeoutSeconds: LEGACY_IDLE_SECONDS,
       },
       staff: {
         id: session.staffId,
@@ -230,8 +228,7 @@ export class SessionService {
       include: SESSION_STAFF,
     });
     if (session === null) return { failure: authErrors.sessionRevoked() };
-    const settings = await this.settings.get(session.restaurantId);
-    const failure = await this.check(session, device, settings, now);
+    const failure = await this.check(session, device, now);
     if (failure !== undefined) return { failure };
     const activeAt = now.getTime() - idleMs;
     if (activeAt - session.lastActiveAt.getTime() > TOUCH_INTERVAL_MS) {
@@ -270,16 +267,10 @@ export class SessionService {
       include: SESSION_STAFF,
     });
     const byId = new Map(sessions.map((session) => [session.id, session]));
-    const settingsOf = new Map<string, AuthSettings>();
     for (const { sessionId, device } of entries) {
       const session = byId.get(sessionId);
       if (session === undefined) continue;
-      let settings = settingsOf.get(session.restaurantId);
-      if (settings === undefined) {
-        settings = await this.settings.get(session.restaurantId);
-        settingsOf.set(session.restaurantId, settings);
-      }
-      if ((await this.check(session, device, settings, now)) === undefined) {
+      if ((await this.check(session, device, now)) === undefined) {
         live.set(sessionId, session.staff.role.baseRole);
       }
     }
@@ -288,12 +279,12 @@ export class SessionService {
 
   /**
    * Why a session can no longer be used on `device`, or undefined when it can. A session found
-   * expired, idle or belonging to a deactivated person is revoked on the spot.
+   * past the restaurant's session length, or belonging to a deactivated person, is revoked on the
+   * spot. Being idle ends nothing (ADR-0030).
    */
   private async check(
     session: SessionWithStaff,
     device: AuthenticatedDevice,
-    settings: AuthSettings,
     now: Date,
   ): Promise<AppError | undefined> {
     if (session.revokedAt !== null || session.deviceId !== device.deviceId) {
@@ -301,12 +292,8 @@ export class SessionService {
     }
     // A session on a table tablet or a pager counts for nothing (AUTH-009, SEC-003).
     if (!isStaffDevice(device)) return authErrors.deviceNotAllowed();
-    const idleFor = now.getTime() - session.lastActiveAt.getTime();
-    if (
-      session.expiresAt <= now ||
-      idleFor > this.inactivityMs(settings, device, session.staff.role.baseRole)
-    ) {
-      await this.revoke(session.id, session.expiresAt <= now ? 'EXPIRED' : 'INACTIVITY');
+    if (session.expiresAt <= now) {
+      await this.revoke(session.id, 'EXPIRED');
       return authErrors.sessionExpired();
     }
     if (!session.staff.active || session.staff.archivedAt !== null) {
@@ -372,12 +359,8 @@ export class SessionService {
     if (session.deviceId !== device.deviceId) throw authErrors.deviceMismatch();
     if (session.revokedAt !== null) throw authErrors.sessionRevoked();
     const settings = await this.settings.get(session.restaurantId);
-    const idleFor = now.getTime() - session.lastActiveAt.getTime();
-    if (
-      session.expiresAt <= now ||
-      idleFor > this.inactivityMs(settings, device, session.staff.role.baseRole)
-    ) {
-      await this.revoke(session.id, session.expiresAt <= now ? 'EXPIRED' : 'INACTIVITY');
+    if (session.expiresAt <= now) {
+      await this.revoke(session.id, 'EXPIRED');
       throw authErrors.sessionExpired();
     }
     if (!session.staff.active || session.staff.archivedAt !== null) {

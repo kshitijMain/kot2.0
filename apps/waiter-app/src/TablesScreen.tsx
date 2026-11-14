@@ -126,6 +126,21 @@ export function TablesScreen({
       }
     >
       <NotificationsOff />
+      {/* Nobody is signed out for being idle, so Sign out is always in view (ADR-0030). */}
+      <View style={styles.signedIn}>
+        <Text style={[styles.signedInName, { color: colors.textMuted }]}>
+          {t('mobile.signedInAs', { name: person.displayName })}
+        </Text>
+        <Button
+          variant="secondary"
+          testID="sign-out-home"
+          onPress={() => {
+            void session.signOut();
+          }}
+        >
+          {t('login.signOut')}
+        </Button>
+      </View>
       <BreakCard state={breakState} onlyOnBreak />
       <PagerCard onlyWarnings />
       <UnsentHome onOpen={onOpenTable} />
@@ -214,6 +229,13 @@ export function TablesScreen({
 
 const styles = StyleSheet.create({
   headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing[1] },
+  signedIn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing[2],
+  },
+  signedInName: { flexShrink: 1, fontSize: fontSize.sm },
   section: { gap: spacing[2] },
   grid: {
     flexDirection: 'row',

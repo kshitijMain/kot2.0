@@ -23,11 +23,7 @@ export interface AuthSettings {
   readonly refuseEasyPins: boolean;
   /** AUTH-005: at most 15 minutes. */
   readonly accessTokenMinutes: number;
-  /** AUTH-005: POS and waiter devices. */
-  readonly inactivityMinutes: number;
-  /** Manager browsers (dashboard): longer, they are personal devices. */
-  readonly managerBrowserInactivityMinutes: number;
-  /** Absolute session length, whatever the activity (one long shift). */
+  /** A session length the restaurant sets, whatever the activity; 0 for none (ADR-0030). */
   readonly sessionMaxHours: number;
   /** AUTH-011: how long a manager's override approval can be used. */
   readonly overrideSeconds: number;
@@ -65,8 +61,6 @@ export class AuthSettingsService {
       tabletLockoutMaxFailures: values.get('auth.tabletLockoutMaxFailures'),
       refuseEasyPins: values.get('auth.refuseEasyPins'),
       accessTokenMinutes: values.get('auth.accessTokenMinutes'),
-      inactivityMinutes: values.get('auth.inactivityMinutes'),
-      managerBrowserInactivityMinutes: values.get('auth.managerBrowserInactivityMinutes'),
       sessionMaxHours: values.get('auth.sessionMaxHours'),
       overrideSeconds: values.get('auth.overrideSeconds'),
       // PIN-only (ADR-0025): the kitchen signs in with its PIN like everyone else.

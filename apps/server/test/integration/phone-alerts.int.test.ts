@@ -133,12 +133,13 @@ describe('[WTR-006] [AUTH-005] a waiter phone alerts its holder, signed in or no
     expect(listed.alerts[0]?.escalatedTo).toEqual([kit.staff.MANAGER]);
   });
 
-  it('keeps alerting after an inactivity sign-out, and acknowledges as the holder', async () => {
+  it('keeps alerting after the session ends by itself, and acknowledges as the holder', async () => {
     const [alert] = (await phoneAlerts()).alerts;
     if (alert === undefined) throw new Error('No alert on the phone');
     await prisma.session.update({
       where: { id: phoneLogin.session.id },
-      data: { lastActiveAt: new Date(Date.now() - 60 * 60_000) },
+      // A restaurant may still set a session length (`auth.sessionMaxHours`); it ran out.
+      data: { expiresAt: new Date(Date.now() - 60_000) },
     });
     const signedOut = await server()
       .get('/api/v1/alerts')

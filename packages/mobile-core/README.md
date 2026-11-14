@@ -25,8 +25,8 @@ here with Vitest:
 - `MenuCache`: the published menu on the device, refreshed on a newer version or reconnect, with
   availability changes applied (MENU-006, MENU-013).
 - `AlertCenter` (P2-06a, WTR-006): on a waiter phone (`followAlerts`), the open alerts of the
-  person the phone alerts, its holder: whoever last signed in on it, kept after an inactivity
-  sign-out so the phone goes on alerting like a pager (AUTH-005). They are read through the
+  person the phone alerts, its holder: whoever last signed in on it, kept after the session ends
+  by itself so the phone goes on alerting like a pager (AUTH-005). They are read through the
   device's own endpoint when the connection comes up or back (NTF-006) and after an alert event for
   the holder; each alert and each repeat is announced once to the `AlertNotifier` (the Android
   notifications of P2-06b). The phone never acknowledges (2026-10-25): an alert goes when it is

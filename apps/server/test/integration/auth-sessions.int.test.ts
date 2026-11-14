@@ -10,6 +10,7 @@ import {
   type AuthKit,
   createAuthKit,
   signIn,
+  renewDeviceToken,
 } from '../helpers/auth-kit.js';
 import { AuthProbeController } from '../helpers/auth-probe.js';
 import { createTestApp, httpServer } from '../helpers/test-app.js';
@@ -80,37 +81,52 @@ describe('[AUTH-005] access tokens', () => {
   });
 });
 
-describe('[AUTH-005] inactivity', () => {
-  it('ends a POS session after 10 idle minutes; activity keeps it alive', async () => {
+describe('[AUTH-005] no automatic sign-out (ADR-0030)', () => {
+  it('keeps a waiter signed in through hours without a touch', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
-    const session = await signIn(app, kit, 'WAITER');
+    const phone = await addDevice(app, kit, 'WAITER_PHONE');
+    const session = await signIn(app, kit, 'WAITER', phone);
     minutes(8);
-    expect((await me(kit.deviceId, session.accessToken)).status).toBe(200);
-    minutes(8);
-    // 16 minutes since sign-in but only 8 idle: still signed in (the token itself is renewed).
-    const renewed = LoginResponse.parse((await refresh(kit.deviceId, session.refreshToken)).body);
-    minutes(11);
-    expect(codeOf(await me(kit.deviceId, renewed.accessToken))).toBe('SESSION_EXPIRED');
-    expect(codeOf(await refresh(kit.deviceId, renewed.refreshToken))).toBe('SESSION_REVOKED');
+    expect((await me(phone, session.accessToken)).status).toBe(200);
+    // Five hours in a pocket: only the short-lived access token has to be renewed.
+    minutes(5 * 60);
+    expect(codeOf(await me(phone, session.accessToken))).toBe('TOKEN_EXPIRED');
+    const renewed = LoginResponse.parse((await refresh(phone, session.refreshToken)).body);
+    expect((await me(phone, renewed.accessToken)).status).toBe(200);
     const row = await prisma.session.findUniqueOrThrow({ where: { id: session.session.id } });
-    expect(row.revokeReason).toBe('INACTIVITY');
+    expect(row.revokedAt).toBeNull();
   });
 
-  it('gives manager browsers 30 minutes', async () => {
+  it('keeps a manager’s dashboard signed in overnight and through the next day', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     const browser = await addDevice(app, kit, 'MANAGER_BROWSER');
     const session = await signIn(app, kit, 'MANAGER', browser);
-    expect(session.session.inactivityTimeoutSeconds).toBe(1800);
-    minutes(12);
-    expect((await me(browser, session.accessToken)).status).toBe(200);
+    minutes(40 * 60);
+    // The browser signs a new challenge for its device token, as it does every hour or so.
+    await renewDeviceToken(app, browser);
+    const answer = await refresh(browser, session.refreshToken);
+    expect(answer.status, JSON.stringify(answer.body)).toBe(200);
+    const renewed = LoginResponse.parse(answer.body);
+    expect((await me(browser, renewed.accessToken)).status).toBe(200);
+    // No time limit unless the restaurant sets one: the session's end is far away.
+    expect(Date.parse(renewed.session.expiresAt)).toBeGreaterThan(Date.now() + 365 * 86_400_000);
+  });
+
+  it('still ends the session when the person signs out', async () => {
+    const phone = await addDevice(app, kit, 'WAITER_PHONE');
+    const session = await signIn(app, kit, 'WAITER', phone);
+    await server()
+      .post('/api/v1/auth/logout')
+      .set(authHeaders(phone, session.accessToken))
+      .expect(204);
+    expect(codeOf(await me(phone, session.accessToken))).toBe('SESSION_REVOKED');
   });
 });
 
 describe('[AUTH-005] [KDS-001] a kitchen person on a kitchen screen (P9-23)', () => {
-  it('is not signed out for being idle, as station mode is not; the lifetime still ends it', async () => {
+  it('is not signed out for being idle, as station mode is not', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     const session = await signIn(app, kit, 'KITCHEN');
-    expect(session.session.inactivityTimeoutSeconds).toBeGreaterThan(60 * 60);
     // A quiet hour between lunch and dinner: the screen still shows the next tickets.
     minutes(90);
     const renewed = LoginResponse.parse((await refresh(kit.deviceId, session.refreshToken)).body);
@@ -160,12 +176,9 @@ describe('[AUTH-005] refresh tokens', () => {
     expect(codeOf(await refresh(kit.deviceId, 'x'.repeat(43)))).toBe('SESSION_REVOKED');
   });
 
-  it('stop at the absolute session length whatever the activity', async () => {
+  it('stop at the session length a restaurant sets, whatever the activity', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
-    for (const [name, value] of [
-      ['sessionMaxHours', 1],
-      ['inactivityMinutes', 240],
-    ] as const) {
+    for (const [name, value] of [['sessionMaxHours', 1]] as const) {
       await prisma.setting.upsert({
         where: { restaurantId_key: { restaurantId: kit.restaurantId, key: authSettingKey(name) } },
         create: { restaurantId: kit.restaurantId, key: authSettingKey(name), value },
@@ -187,7 +200,7 @@ describe('[AUTH-005] refresh tokens', () => {
     expect(codeOf(await refresh(deviceId, tokens.refreshToken))).toBe('SESSION_EXPIRED');
     await prisma.setting.deleteMany({
       where: {
-        key: { in: [authSettingKey('sessionMaxHours'), authSettingKey('inactivityMinutes')] },
+        key: { in: [authSettingKey('sessionMaxHours')] },
       },
     });
     app.get(AuthSettingsService).invalidate();
@@ -277,12 +290,13 @@ describe('[AUTH-005] the current session', () => {
       session: {
         id: session.session.id,
         expiresAt: session.session.expiresAt,
-        inactivityTimeoutSeconds: 30 * 60,
+        // Kept for apps built before ADR-0030; nothing signs anyone out for being idle.
+        inactivityTimeoutSeconds: session.session.inactivityTimeoutSeconds,
       },
       staff: session.staff,
     });
     expect(JSON.stringify(current.body)).not.toMatch(/Token/);
-    // Still alive 25 minutes later thanks to that call (manager browsers idle out after 30).
+    // 25 minutes later only the access token has run out; the session itself goes on.
     minutes(25);
     await server()
       .get('/api/v1/auth/session')

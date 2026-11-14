@@ -23,8 +23,8 @@ screens come with P1-08, P1-09, P1-12 and P4-01 to P4-07.
   keyboard). A KDS device skips login and shows its station (station mode, AUTH-005).
 - Modes: people land in their home mode (Owner and Manager: Manage; Waiter: POS;
   Kitchen: KDS) and may open the modes their role allows (`src/app/modes.ts`, BRD §4.2 matrix).
-- Connection banner (NFR-P11) from the live connection's status; inactivity warning and sign-out
-  (AUTH-005) with a keep-alive while the person is using the screen.
+- Connection banner (NFR-P11) from the live connection's status; Sign out in the header. Nobody is
+  signed out for being idle (ADR-0030).
 - Storage (`src/app/storage.ts`): the key pair (as a key object), device token and device summary
   in IndexedDB; the session in `sessionStorage` (this tab only, so a shared terminal never reopens
   signed in); the resume point in `localStorage`.

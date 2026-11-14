@@ -7,6 +7,9 @@ You use the waiter app on your phone, and sometimes a wrist pager.
 Open the app and enter your PIN. The phone must stay on the restaurant Wi-Fi. Keep
 notifications on and the phone charged; the manager has shown you the battery settings.
 
+The app never signs you out by itself. When you finish, or hand the phone to someone else, press
+**Sign out** at the top of the home screen.
+
 ## Your tables
 
 There are no sections: you may serve any table. Home shows every table by floor area; press

@@ -92,8 +92,8 @@ of truth for the restaurant.
 - Sessions (`SessionService`): refresh token stored as SHA-256, rotated on every refresh; reusing a
   replaced refresh token revokes the session. Access token: JWT HS256 (`jose`), at most 15 minutes,
   bound to staff, role, restaurant, device and session; checked on every request together with the
-  session (revoked, absolute expiry 16 h, inactivity 10 min on POS/waiter devices, 30 min on manager
-  browsers, person still active). The current role applies at once.
+  session (revoked, past the restaurant's session length if it sets one, person still active).
+  Nobody is signed out for being idle (ADR-0030). The current role applies at once.
 - Owner: signs in with a PIN like everyone else; `OWNER_ONLY_CAPABILITIES` need nothing more
   (ADR-0026, overriding AUTH-006: no password, authenticator, recovery codes or step-up).
 - Manager override (AUTH-011): `POST /api/v1/auth/override` with a manager's PIN returns a
@@ -103,7 +103,7 @@ of truth for the restaurant.
 - Secrets (`SecretStore`): pepper and token signing keys, among others. `FileSecretStore` keeps them in
   `<RP_DATA_DIR>/secrets` (or `RP_SECRET_*` variables); the installer swaps in DPAPI (P0-16).
 - Settings (`AuthSettingsService`, keys `auth.*` in the settings table, defaults in
-  `auth-settings.ts`): PIN length, lockout, rate limit, token and inactivity times, session length,
+  `auth-settings.ts`): PIN length, lockout, rate limit, token time, session length (0: none),
   override validity, kitchen logins. Since P1-01a they are settings registry keys.
 - Audit (AUTH-013): LOGIN, LOGIN_FAILED, LOGIN_LOCKED, LOGOUT, STAFF_UNLOCKED, OVERRIDE_GRANTED,
   OVERRIDE_DENIED, REFRESH_TOKEN_REUSED. PINs, passwords, codes and tokens are redacted from logs.
@@ -483,11 +483,11 @@ bill in `test/unit/virtual-printer.test.ts`.
 ## Alerts on the waiter phone (P2-06a)
 
 - A waiter phone alerts its holder, `devices.staff_id`: the person who last signed in on it
-  (`session.service.ts`), as a pager alerts its wearer. The holder stays after an inactivity
-  sign-out; signing out on the phone (`auth.service.ts` `logout`) or signing in on another phone
+  (`session.service.ts`), as a pager alerts its wearer. The holder stays after the session ends by
+  itself; signing out on the phone (`auth.service.ts` `logout`) or signing in on another phone
   clears it.
 - `DeviceAlertsController` (`GET /api/v1/devices/current/alerts`, `POST .../:alertId/acknowledge`)
-  is device-authenticated, so a phone signed out for inactivity still lists and acknowledges its
+  is device-authenticated, so a phone whose session ended still lists and acknowledges its
   holder's alerts; acknowledging there is the holder acknowledging, like the pager's button.
 - What reaches a pager and a phone is one rule, `@rp/domain` `reachesPagerAndApp`: the person is a
   recipient and the rule names the pager or the app, or the alert was escalated to them.

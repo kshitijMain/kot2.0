@@ -4,6 +4,9 @@ You use the kitchen display (KDS) and the kitchen printer.
 
 ## The screen
 
+A kitchen screen stays signed in until someone presses **Sign out** at the top; it never signs
+out by itself.
+
 Each station sees its own tickets, oldest first, with table, time waiting and notes. Late
 tickets change colour. Allergy and special notes are shown in bold on the ticket.
 

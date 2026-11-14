@@ -47,7 +47,7 @@ export class AuthController {
   @Get('session')
   @RequireSession()
   currentSession(@Req() request: AuthenticatedRequest): Promise<CurrentSessionResponse> {
-    return this.sessions.describe(principalOf(request), deviceOf(request));
+    return this.sessions.describe(principalOf(request));
   }
 
   @Post('pin-login')

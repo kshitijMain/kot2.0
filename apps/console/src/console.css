@@ -234,13 +234,6 @@ body {
   font-size: var(--rp-font-size-xs);
 }
 
-.console-inactivity {
-  padding: var(--rp-space-3) var(--rp-space-6);
-  background: var(--rp-color-warning-subtle);
-  color: var(--rp-color-warning-text);
-  font-weight: var(--rp-font-weight-medium);
-}
-
 .console-main {
   flex: 1;
   padding: var(--rp-space-8);

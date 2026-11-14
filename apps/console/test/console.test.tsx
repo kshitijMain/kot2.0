@@ -199,35 +199,25 @@ describe('[NFR-P11] connection banner', () => {
   });
 });
 
-describe('[AUTH-005] inactivity', () => {
+describe('[AUTH-005] staying signed in (ADR-0030)', () => {
   afterEach(() => {
     vi.useRealTimers();
   });
 
-  it('warns with a countdown, then signs the person out and says why', async () => {
-    // Fake time drives the countdown, so a busy machine cannot sleep through the warning. It still
-    // moves with real time, which the fake server and the testing library's waits rely on.
+  it('never signs an idle person out, and keeps Sign out in view', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true, toFake: ['setTimeout', 'clearTimeout', 'Date'] });
-    await renderConsole({
+    const { fake } = await renderConsole({
       fake: signsInAs(server(), 'MANAGER', 60),
       signedIn: 'MANAGER',
-      path: '/pos',
+      path: '/manage',
     });
-    await screen.findByRole('heading', { level: 1, name: t('modes.pos') });
-    const warning = (seconds: number) => t('session.inactivityWarning', { seconds });
-    expect(screen.queryByText(warning(30))).toBeNull();
-
-    // A 60 s timeout warns for its last 30 s, counting down every second.
-    await act(() => vi.advanceTimersByTimeAsync(30_000));
-    expect(screen.getByText(warning(30))).toBeVisible();
-    await act(() => vi.advanceTimersByTimeAsync(29_000));
-    expect(
-      screen.getByText('Signing out in 1 second. Tap anywhere to stay signed in.'),
-    ).toBeVisible();
-
-    await act(() => vi.advanceTimersByTimeAsync(1_000));
-    expect(await screen.findByText(t('login.signedOutInactive'))).toBeVisible();
-    expect(screen.getByRole('heading', { name: t('login.title') })).toBeInTheDocument();
+    await screen.findByRole('heading', { level: 1, name: t('modes.manage') });
+    // An hour with nobody at the screen, against a session that once timed out after a minute.
+    await act(() => vi.advanceTimersByTimeAsync(60 * 60_000));
+    expect(screen.queryByText(/Signing out in/)).toBeNull();
+    expect(screen.queryByRole('heading', { name: t('login.title') })).toBeNull();
+    expect(fake.callsTo('POST', '/api/v1/auth/logout')).toHaveLength(0);
+    expect(screen.getByRole('button', { name: t('login.signOut') })).toBeVisible();
   });
 
   it('shows the pairing screen again after the device is unpaired', async () => {

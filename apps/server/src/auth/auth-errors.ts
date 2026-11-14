@@ -10,11 +10,7 @@ export const authErrors = {
     new AppError(401, 'TOKEN_EXPIRED', 'Your sign-in needs renewing. The app will do this now.'),
   tokenInvalid: () => new AppError(401, 'TOKEN_INVALID', 'Please sign in again.'),
   sessionExpired: () =>
-    new AppError(
-      401,
-      'SESSION_EXPIRED',
-      'You were signed out after a period of inactivity. Sign in again.',
-    ),
+    new AppError(401, 'SESSION_EXPIRED', 'Your sign-in has ended. Sign in again.'),
   sessionRevoked: () =>
     new AppError(401, 'SESSION_REVOKED', 'You have been signed out. Sign in again.'),
   deviceNotRecognised: () =>

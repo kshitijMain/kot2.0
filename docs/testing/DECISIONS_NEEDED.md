@@ -432,3 +432,22 @@ drawer should have held. It adds nothing to the day's cash difference, and no re
 **Options.** A: keep it. B: require a typed reason. C: only the Owner may close as not counted.
 
 **Recommendation:** B, because the Owner will want to know why.
+
+---
+
+# Fixes from testing, round 1 (ADR-0030)
+
+## D-34: a device left signed in
+
+**Situation.** Nobody is signed out for being idle any more. A phone or browser left on the counter
+stays signed in as its last user, and anyone who picks it up acts in their name.
+
+**Today (as asked).** No idle sign-out anywhere. A session ends on Sign out, deactivation,
+unpairing or a PIN change. `auth.sessionMaxHours` is 0 (no limit) unless the restaurant sets it.
+
+**Options.** A: keep it. B: set a default session length, e.g. 16 hours, so everyone signs in
+again each day. C: sign out a manager browser (not phones or the kitchen) after a long idle time,
+e.g. 4 hours.
+
+**Recommendation:** B (the safest default that does not interrupt a shift). Shipped as A, as asked;
+the Owner can choose B in Settings without a new build.

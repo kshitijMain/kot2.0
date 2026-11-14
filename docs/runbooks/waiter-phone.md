@@ -6,7 +6,7 @@ NTF-007, P2-06a and P2-06b.
 A waiter phone rings for the alerts of the person who last signed in on it, like their pager: food
 ready, a new order to approve, a bill asked for, a manager's message. It keeps ringing with the
 screen off, the phone locked or the app closed from the recents list, until that person signs out
-on the phone or signs in on another one. An inactivity sign-out does not stop the alerts.
+on the phone or signs in on another one. Nobody is signed out for being idle (ADR-0030).
 
 ## How to tell it is listening
 

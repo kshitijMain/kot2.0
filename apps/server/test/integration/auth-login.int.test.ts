@@ -106,7 +106,6 @@ describe('[AUTH-001] [AUTH-002] [AUTH-005] PIN login', () => {
     expect(response.status).toBe(200);
     const body = LoginResponse.parse(response.body);
     expect(body.staff).toMatchObject({ id: kit.staff.MANAGER, role: 'MANAGER' });
-    expect(body.session.inactivityTimeoutSeconds).toBe(600);
     const expiresIn = Date.parse(body.accessTokenExpiresAt) - Date.now();
     expect(expiresIn).toBeGreaterThan(14 * 60_000);
     expect(expiresIn).toBeLessThanOrEqual(15 * 60_000);
@@ -367,66 +366,33 @@ describe('[PC-S5] [SEC-009] wrong PINs counted per device', () => {
   });
 });
 
-describe('[AUTH-005] [MOBILE-E3] inactivity as the app sees it', () => {
+describe('[AUTH-005] [MOBILE-E3] an app left alone stays signed in (ADR-0030)', () => {
   const me = (deviceId: string, accessToken: string, idleSeconds?: number) => {
     const call = server().get('/api/v1/probe-auth/me').set(authHeaders(deviceId, accessToken));
     return idleSeconds === undefined ? call : call.set('x-rp-idle-seconds', String(idleSeconds));
   };
 
-  it('does not keep a session alive with calls the app made by itself while the person was away', async () => {
+  it('does not sign a phone out however long nobody touches it', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     const start = Date.now();
     const deviceId = await addDevice(app, kit, 'WAITER_PHONE');
-    const session = await signIn(app, kit, 'WAITER', deviceId);
-    // The phone reads every minute by itself; nobody touches it after signing in.
-    for (let minute = 1; minute <= 9; minute += 1) {
+    let tokens = await signIn(app, kit, 'WAITER', deviceId);
+    // The phone reads by itself for two hours and says nobody touched it (apps built earlier do).
+    for (let minute = 10; minute <= 120; minute += 10) {
       vi.setSystemTime(start + minute * 60_000);
-      expect((await me(deviceId, session.accessToken, minute * 60)).status).toBe(200);
+      const refreshed = await server()
+        .post('/api/v1/auth/refresh')
+        .set(authHeaders(deviceId))
+        .set('x-rp-idle-seconds', String(minute * 60))
+        .send({ refreshToken: tokens.refreshToken });
+      expect(refreshed.status).toBe(200);
+      tokens = LoginResponse.parse(refreshed.body);
+      expect((await me(deviceId, tokens.accessToken, minute * 60)).status).toBe(200);
     }
-    const refreshed = await server()
-      .post('/api/v1/auth/refresh')
-      .set(authHeaders(deviceId))
-      .set('x-rp-idle-seconds', String(9 * 60))
-      .send({ refreshToken: session.refreshToken });
-    expect(refreshed.status).toBe(200);
-    const renewed = LoginResponse.parse(refreshed.body);
-    vi.setSystemTime(start + 10 * 60_000 + 5_000);
-    const late = await me(deviceId, renewed.accessToken, 605);
-    expect(late.status).toBe(401);
-    expect(ApiError.parse(late.body).code).toBe('SESSION_EXPIRED');
-  });
-
-  it('keeps it alive as of the last touch, and every call counts without the header', async () => {
-    vi.useFakeTimers({ toFake: ['Date'] });
-    const start = Date.now();
-    const deviceId = await addDevice(app, kit, 'WAITER_PHONE');
-    const session = await signIn(app, kit, 'WAITER', deviceId);
-    // Touched 30 s before this call: active as of 7:30.
-    vi.setSystemTime(start + 8 * 60_000);
-    expect((await me(deviceId, session.accessToken, 30)).status).toBe(200);
-    // 9:30 after that touch the person taps again; the refresh counts it.
-    vi.setSystemTime(start + 17 * 60_000);
-    const refreshed = await server()
-      .post('/api/v1/auth/refresh')
-      .set(authHeaders(deviceId))
-      .set('x-rp-idle-seconds', '0')
-      .send({ refreshToken: session.refreshToken });
-    expect(refreshed.status).toBe(200);
-    vi.setSystemTime(start + 26 * 60_000);
-    const renewed = LoginResponse.parse(refreshed.body);
-    expect((await me(deviceId, renewed.accessToken, 0)).status).toBe(200);
-
-    // An app that does not say: every call counts, as before; so does a header that is no number.
-    const other = await addDevice(app, kit, 'WAITER_PHONE');
-    const old = await signIn(app, kit, 'WAITER', other);
-    for (const minute of [30, 34, 38]) {
-      vi.setSystemTime(start + minute * 60_000);
-      expect((await me(other, old.accessToken)).status).toBe(200);
-    }
-    vi.setSystemTime(start + 40 * 60_000);
-    expect((await me(other, old.accessToken).set('x-rp-idle-seconds', 'soon')).status).toBe(200);
-    const row = await prisma.session.findUniqueOrThrow({ where: { id: old.session.id } });
-    expect(row.lastActiveAt.getTime()).toBe(Date.now());
+    // A header that is no number changes nothing either.
+    expect((await me(deviceId, tokens.accessToken).set('x-rp-idle-seconds', 'soon')).status).toBe(
+      200,
+    );
   });
 });
 

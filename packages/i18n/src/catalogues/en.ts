@@ -625,12 +625,8 @@ export const en = {
     attemptsLeft:
       'Wrong PIN. {count, plural, one {# try} other {# tries}} left before you are locked out.',
     signOut: 'Sign out',
-    signedOutInactive: 'Signed out after inactivity.',
+    signedOutInactive: 'Your sign-in ended. Sign in again.',
     signedOut: 'Signed out.',
-  },
-  session: {
-    inactivityWarning:
-      '{seconds, plural, one {Signing out in # second} other {Signing out in # seconds}}. Tap anywhere to stay signed in.',
   },
   modes: {
     navigation: 'Modes',
@@ -3707,9 +3703,7 @@ until you press Publish.
       tabletLockoutMaxFailures: 'Wrong PINs before a table tablet stops taking them',
       refuseEasyPins: 'Refuse easily guessed PINs',
       accessTokenMinutes: 'Re-check sign-in every',
-      inactivityMinutes: 'Sign out POS and waiter phones after',
-      managerBrowserInactivityMinutes: 'Sign out manager browsers after',
-      sessionMaxHours: 'Longest session',
+      sessionMaxHours: 'Sign everyone out after',
       overrideSeconds: 'Manager approval lasts',
       kitchenIndividualLogins: 'Kitchen staff sign in one by one',
       pairingCodeMinutes: 'Pairing code lasts',
@@ -3866,10 +3860,8 @@ until you press Publish.
       refuseEasyPins: 'Refuse PINs like 1234, 1111 or a year.',
       accessTokenMinutes:
         'How often a signed-in screen re-confirms with the restaurant PC. Up to 15 minutes.',
-      inactivityMinutes: 'Inactivity after which a POS or waiter device signs the person out.',
-      managerBrowserInactivityMinutes:
-        'Sign out manager laptops and phones after this much inactivity.',
-      sessionMaxHours: 'Sign out after this long, even if active.',
+      sessionMaxHours:
+        'Hours after which everyone has to sign in again, however busy. 0: nobody is signed out until they sign out.',
       overrideSeconds: 'How long a manager’s PIN approval can be used for the action it approved.',
       kitchenIndividualLogins:
         'Each cook signs in with their own PIN instead of sharing the kitchen screen.',

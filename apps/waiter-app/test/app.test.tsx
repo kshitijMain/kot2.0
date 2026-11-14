@@ -187,10 +187,9 @@ describe('[WTR-001] waiter app smoke flow', () => {
     jest.useRealTimers();
     expect(await screen.findByRole('button', { name: 'T1, Occupied' })).toBeOnTheScreen();
 
-    // Who is signed in, and signing out, are in the Menu.
-    await fireEvent.press(screen.getByTestId('home-menu'));
+    // Who is signed in, and Sign out, are on the home screen itself (ADR-0030).
     expect(screen.getByText('Signed in as Ravi')).toBeOnTheScreen();
-    await fireEvent.press(screen.getByRole('button', { name: 'Sign out' }));
+    await fireEvent.press(screen.getByTestId('sign-out-home'));
     expect(await screen.findByText('Tap your name')).toBeOnTheScreen();
     expect(server.callsTo('POST', '/api/v1/auth/logout')).toHaveLength(1);
     expect(server.callsTo('POST', '/api/v1/devices/pairing-codes/phone')).toHaveLength(1);
@@ -322,16 +321,17 @@ describe('[WTR-006] the waiter’s alerts on the phone', () => {
     ).toHaveLength(0);
   });
 
-  it('[AUTH-005] opens on the waiter’s PIN pad after an inactivity sign-out', async () => {
+  it('[AUTH-005] opens on the waiter’s PIN pad when the session ends by itself', async () => {
     const restaurant = new Restaurant();
     restaurant.alerts.push(ready);
     const { session, server, sockets } = await signedInApp(restaurant);
     expect(await screen.findByRole('button', { name: /^T2, Occupied/ })).toBeOnTheScreen();
 
-    // The server signs Ravi out for inactivity; the phone still alerts him, like his pager.
+    // The restaurant's session length ran out (ADR-0030: never by default); the phone still
+    // alerts Ravi, like his pager.
     server.on('GET', '/api/v1/auth/session', () => ({
       status: 401,
-      body: { code: 'SESSION_EXPIRED', message: 'Signed out after inactivity.' },
+      body: { code: 'SESSION_EXPIRED', message: 'Your sign-in has ended. Sign in again.' },
     }));
     await act(async () => {
       await session.keepAlive();

@@ -43,8 +43,8 @@ anything on the phone (2026-10-25): an alert goes when its cause is dealt with (
 the food up, the order is approved, the request resolved, the bill printed), a manager's nudge
 closes itself after `notifications.autoCloseMinutes`. Food nobody picks up calls the manager after
 `kds.readyNotCollectedMinutes` (KDS-006); the other alerts after N when their cause is still
-there. The bell in each header counts the open alerts and lists them for one that was missed. An
-inactivity sign-out keeps the alerts coming; signing out on the phone, or signing in on another
+there. The bell in each header counts the open alerts and lists them for one that was missed. A
+session that ends by itself keeps the alerts coming; signing out on the phone, or signing in on another
 phone, ends them.
 
 They are hard to miss outside the app too (P2-06b, WTR-005). While someone holds the phone, a

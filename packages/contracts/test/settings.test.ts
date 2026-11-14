@@ -59,7 +59,7 @@ describe('[MGR-007] [UPD-010] settings catalogue', () => {
       'auth.pinLength': 4, // AUTH-001
       'auth.lockoutMinutes': 15, // AUTH-003
       'auth.accessTokenMinutes': 15, // AUTH-005
-      'auth.inactivityMinutes': 10, // AUTH-005
+      'auth.sessionMaxHours': 0, // AUTH-005, ADR-0030: no automatic sign-out
       'auth.kitchenIndividualLogins': false, // AUTH-005
       'auth.pairingCodeMinutes': 10, // AUTH-007
       'stock.kitchenMayManage': true, // OI-11

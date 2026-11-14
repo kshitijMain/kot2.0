@@ -18,7 +18,6 @@ describe('[NFR-L02] translator and catalogues', () => {
       'Wrong PIN. 1 try left before you are locked out.',
     );
     expect(t('ui.pinPad.progress', { entered: 2, length: 4 })).toBe('2 of 4 digits entered');
-    expect(t('session.inactivityWarning', { seconds: 1 })).toMatch(/^Signing out in 1 second\./);
     expect(t('roles.KITCHEN')).toBe('Kitchen');
   });
 
