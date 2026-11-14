@@ -8,9 +8,15 @@ import { Id, IsoDate, Paise, TableState, Timestamp } from './common.js';
  * mistake, closed without a bill.
  */
 
+/**
+ * The most guests one table session takes (TBL-003). More than the table's seats is allowed once
+ * the person confirms it on their screen (ADR-0030); a party this size is booked across tables.
+ */
+export const MAX_COVERS = 99;
+
 export const OpenTableRequest = z.strictObject({
   /** Guests seated (TBL-003). The person opening it is recorded; any waiter serves it (ADR-0023). */
-  covers: z.int().min(1).max(99),
+  covers: z.int().min(1).max(MAX_COVERS),
 });
 export type OpenTableRequest = z.infer<typeof OpenTableRequest>;
 

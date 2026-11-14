@@ -451,3 +451,17 @@ e.g. 4 hours.
 
 **Recommendation:** B (the safest default that does not interrupt a shift). Shipped as A, as asked;
 the Owner can choose B in Settings without a new build.
+
+## D-35: the most guests at one table
+
+**Situation.** A table can now be opened for more guests than its seats after a warning. The server
+still needs an upper limit to refuse typing mistakes.
+
+**Today.** 1 to 99 guests per table session, as before (`MAX_COVERS`). A larger party is seated
+across tables and merged.
+
+**Options.** A: keep 99. B: a lower limit, e.g. 30. C: a limit relative to the table, e.g. three
+times its seats.
+
+**Recommendation:** A. It already stops absurd numbers, and C would refuse a real party on a small
+table that the staff have just confirmed.

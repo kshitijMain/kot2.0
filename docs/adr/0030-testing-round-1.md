@@ -34,3 +34,16 @@ countdown on the console. Every session also ended after 16 hours (`auth.session
 **Consequences.** A phone or browser left signed in stays usable by whoever picks it up until
 someone signs out. Restaurants that worry about this can set a session length or lock the device.
 This is decision D-34.
+
+## D. More guests than seats
+
+**Decision.**
+
+- Opening a table for more guests than its seats asks first, on the POS, the manager's Take order
+  screen and the waiter app: "Table 3 seats 4. Open it for 5 guests anyway?" with **Yes, open it**
+  and **Change**. The wording comes from one place (`@rp/ordering` `coversWarning`).
+- The server accepts any whole number from 1 to `MAX_COVERS` (99, `@rp/contracts`) and refuses 0,
+  negative, fractional or larger numbers with `VALIDATION_FAILED`, as before. It does not check the
+  seats itself: the person confirmed on their screen. This is decision D-35.
+- No screen changes the guests of a table already open, so there is nothing to warn about there.
+  Merging two tables adds their guests together without asking, as before.

@@ -1,4 +1,5 @@
-import type { TableOverviewEntry } from '@rp/contracts';
+import { MAX_COVERS, type TableOverviewEntry } from '@rp/contracts';
+import { coversWarning } from '@rp/ordering';
 import { Button, Dialog, TextField, useToast } from '@rp/ui-web';
 import { useId, useState } from 'react';
 import { useConsole } from '../app/console-context.js';
@@ -10,8 +11,9 @@ const QUICK_GUESTS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 
 /**
  * Seat guests at a free table (TBL-003): one tap on the number of guests opens it (P9-26: it took
- * a field and a keypad before); a bigger party is typed. Any waiter serves any table, so none is
- * chosen; the server records who opened it (ADR-0023).
+ * a field and a keypad before); a bigger party is typed. More guests than the table seats asks
+ * first (ADR-0030). Any waiter serves any table, so none is chosen; the server records who opened
+ * it (ADR-0023).
  */
 export function OpenTableDialog({
   table,
@@ -29,14 +31,22 @@ export function OpenTableDialog({
   const [guests, setGuests] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [working, setWorking] = useState(false);
+  /** Guests chosen over the table's seats, waiting for "Yes, open it" (ADR-0030). */
+  const [asking, setAsking] = useState<number | undefined>();
   const formId = useId();
 
-  const submit = async (count?: number) => {
+  const submit = async (count?: number, confirmed = false) => {
     const covers = count ?? Number(guests);
-    if (!Number.isInteger(covers) || covers < 1 || covers > 99) {
+    if (!Number.isInteger(covers) || covers < 1 || covers > MAX_COVERS) {
       setError(t('pos.open.invalidGuests'));
       return;
     }
+    if (!confirmed && coversWarning(table, covers, t) !== undefined) {
+      setError(undefined);
+      setAsking(covers);
+      return;
+    }
+    setAsking(undefined);
     setWorking(true);
     setError(undefined);
     try {
@@ -51,6 +61,40 @@ export function OpenTableDialog({
       setWorking(false);
     }
   };
+
+  if (asking !== undefined) {
+    return (
+      <Dialog
+        open
+        onClose={onClose}
+        dismissible={!working}
+        title={t('pos.open.title', { table: table.label })}
+        footer={
+          <>
+            <Button
+              variant="secondary"
+              onClick={() => {
+                setAsking(undefined);
+                setGuests('');
+              }}
+            >
+              {t('pos.open.change')}
+            </Button>
+            <Button
+              loading={working}
+              onClick={() => {
+                void submit(asking, true);
+              }}
+            >
+              {t('pos.open.anyway')}
+            </Button>
+          </>
+        }
+      >
+        <p className="console-notice console-notice--warning">{coversWarning(table, asking, t)}</p>
+      </Dialog>
+    );
+  }
 
   return (
     <Dialog

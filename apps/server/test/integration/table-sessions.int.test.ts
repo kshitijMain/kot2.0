@@ -2,6 +2,7 @@ import type { INestApplication } from '@nestjs/common';
 import {
   ApiError,
   type LoginResponse,
+  MAX_COVERS,
   TableOverviewResponse,
   TableSessionView,
 } from '@rp/contracts';
@@ -37,7 +38,7 @@ beforeAll(async () => {
   const base = { restaurantId: kit.restaurantId };
   const hall = await prisma.section.create({ data: { ...base, name: 'Hall' } });
 
-  for (const [index, label] of ['T1', 'T2', 'T3', 'T4', 'T7'].entries()) {
+  for (const [index, label] of ['T1', 'T2', 'T3', 'T4', 'T7', 'T9'].entries()) {
     tables[label] = (
       await prisma.diningTable.create({
         data: { ...base, sectionId: hall.id, label, displayOrder: index },
@@ -168,6 +169,19 @@ describe('[TBL-003] [TBL-004] table sessions', () => {
     // There is no waiter to choose (ADR-0023).
     const withWaiter = await open(manager, 'T2', { covers: 2, waiterId: kit.staff.WAITER });
     expect([withWaiter.status, codeOf(withWaiter)]).toEqual([400, 'VALIDATION_FAILED']);
+  });
+
+  it('[TBL-003] seats more guests than the table holds, but never 0, fewer or absurdly many', async () => {
+    await prisma.diningTable.update({ where: { id: tables.T9 }, data: { capacity: 4 } });
+    for (const covers of [0, -2, 1.5, MAX_COVERS + 1]) {
+      const refused = await open(manager, 'T9', { covers });
+      expect([covers, refused.status, codeOf(refused)]).toEqual([covers, 400, 'VALIDATION_FAILED']);
+    }
+    // The person opening it confirmed the warning on their screen; the server accepts it.
+    const crowded = await open(waiter, 'T9', { covers: 5 });
+    expect(crowded.status, JSON.stringify(crowded.body)).toBe(201);
+    expect(TableSessionView.parse(crowded.body).covers).toBe(5);
+    expect(await stateOf('T9')).toBe('OCCUPIED');
   });
 
   it('lets exactly one of two devices open the same table at once', async () => {
@@ -312,6 +326,8 @@ describe('[TBL-007] table overview', () => {
       ['T3', 'OCCUPIED'],
       ['T4', 'FREE'],
       ['T7', 'OCCUPIED'],
+      // Seated over its 4 seats by the capacity test above.
+      ['T9', 'OCCUPIED'],
     ]);
     const t7 = overview.find((table) => table.label === 'T7');
     expect(t7?.session).toMatchObject({

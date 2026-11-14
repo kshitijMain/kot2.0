@@ -3,6 +3,7 @@ import { createTranslator } from '@rp/i18n';
 import { describe, expect, it } from 'vitest';
 import {
   affectsFloor,
+  coversWarning,
   floorSections,
   freeTables,
   minutesSince,
@@ -172,5 +173,21 @@ describe('[WTR-002] tables I sent KOTs to today', () => {
 
   it('offers only free tables to move to', () => {
     expect(freeTables(overview).map((table) => table.label)).toEqual(['T1', 'T2', 'T3', 'T4']);
+  });
+});
+
+describe('[TBL-003] more guests than seats (ADR-0030)', () => {
+  const t3 = { label: '3', capacity: 4 };
+
+  it('asks before seating more guests than the table holds', () => {
+    expect(coversWarning(t3, 5, t)).toBe('Table 3 seats 4. Open it for 5 guests anyway?');
+    expect(coversWarning({ label: '12', capacity: 1 }, 2, t)).toBe(
+      'Table 12 seats 1. Open it for 2 guests anyway?',
+    );
+  });
+
+  it('says nothing up to the table’s seats', () => {
+    expect(coversWarning(t3, 4, t)).toBeUndefined();
+    expect(coversWarning(t3, 1, t)).toBeUndefined();
   });
 });

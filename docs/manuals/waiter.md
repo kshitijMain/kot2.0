@@ -16,6 +16,12 @@ There are no sections: you may serve any table. Home shows every table by floor 
 **Tables I sent KOTs to today** to see only the tables you sent orders to. Everything you do is
 recorded under your name.
 
+## Opening a table
+
+Tap a free table, set the number of guests and press **Open table**. If there are more guests than
+the table seats, the app asks first ("Table 3 seats 4. Open it for 5 guests anyway?"); press
+**Yes, open it** or **Change**.
+
 ## Taking an order
 
 Tap the table, add items with their variants and modifiers, add notes, and send. If the phone

@@ -58,6 +58,25 @@ describe('[TBL-003] opening a table', () => {
     expect(await tile(/^T1, Occupied, 3 guests/)).toBeOnTheScreen();
   });
 
+  it('asks before seating more guests than the table holds, and opens it on Yes (ADR-0030)', async () => {
+    const { server, restaurant } = await signedInApp();
+    await fireEvent.press(await tile('T1, Free'));
+    // T1 seats 4: from 2, three more makes 5.
+    for (let more = 0; more < 3; more += 1) {
+      await fireEvent.press(screen.getByRole('button', { name: 'One more' }));
+    }
+    await fireEvent.press(screen.getByTestId('open-table'));
+    expect(screen.getByText('Table T1 seats 4. Open it for 5 guests anyway?')).toBeOnTheScreen();
+    const opens = () => server.callsTo('POST', `/api/v1/tables/${restaurant.table('T1').id}/open`);
+    expect(opens()).toHaveLength(0);
+    await fireEvent.press(screen.getByRole('button', { name: 'Change' }));
+    expect(screen.queryByText(/seats 4/)).toBeNull();
+    await fireEvent.press(screen.getByTestId('open-table'));
+    await fireEvent.press(screen.getByTestId('open-anyway'));
+    expect(await screen.findByText('Table T1 is open')).toBeOnTheScreen();
+    expect(opens()).toEqual([expect.objectContaining({ body: { covers: 5 } })]);
+  });
+
   it('keeps the sheet open with the server’s answer when another device got there first', async () => {
     const restaurant = new Restaurant();
     const server = restaurant.server();

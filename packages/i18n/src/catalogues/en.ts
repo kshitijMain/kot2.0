@@ -4065,6 +4065,11 @@ until you press Publish.
       submit: 'Open table',
       opened: 'Table {table} is open',
       invalidGuests: 'Enter the number of guests, from 1 to 99.',
+      /** ADR-0030: more guests than seats, after the warning. */
+      overCapacity:
+        'Table {table} seats {seats}. Open it for {guests, plural, one {# guest} other {# guests}} anyway?',
+      anyway: 'Yes, open it',
+      change: 'Change',
     },
     table: {
       title: 'Table {table}',

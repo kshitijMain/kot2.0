@@ -1,6 +1,7 @@
-import type { TableOverviewEntry, TableSessionView } from '@rp/contracts';
+import { MAX_COVERS, type TableOverviewEntry, type TableSessionView } from '@rp/contracts';
 import { messageOf, Note, useDeviceSession, useT } from '@rp/mobile-shell';
 import { fontSize, fontWeight } from '@rp/design-tokens';
+import { coversWarning } from '@rp/ordering';
 import { Button, QuantityStepper, Sheet, Text, useTheme, weight } from '@rp/ui-native';
 import { useState } from 'react';
 import { StyleSheet } from 'react-native';
@@ -10,8 +11,9 @@ const DEFAULT_COVERS = 2;
 
 /**
  * Opens a free table with its guests (TBL-003); the waiter then lands on the table to take the
- * order. The server decides: when another device opened it first, its answer is shown here. A
- * table that needs cleaning (TBL-004) is marked clean first, then opened the same way.
+ * order. More guests than the table seats asks first (ADR-0030). The server decides: when another
+ * device opened it first, its answer is shown here. A table that needs cleaning (TBL-004) is
+ * marked clean first, then opened the same way.
  */
 export function OpenTableSheet({
   table,
@@ -29,6 +31,9 @@ export function OpenTableSheet({
   const [error, setError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
   const [dirty, setDirty] = useState(table.state === 'NEEDS_CLEANING');
+  /** More guests than seats: asked once before opening (ADR-0030). */
+  const [asking, setAsking] = useState(false);
+  const warning = coversWarning(table, covers, t);
 
   const clean = () => {
     setBusy(true);
@@ -45,7 +50,12 @@ export function OpenTableSheet({
     );
   };
 
-  const open = () => {
+  const open = (confirmed = false) => {
+    if (!confirmed && warning !== undefined) {
+      setAsking(true);
+      return;
+    }
+    setAsking(false);
     setBusy(true);
     setError(undefined);
     session.api.openTable({ params: { tableId: table.tableId }, body: { covers } }).then(
@@ -71,8 +81,39 @@ export function OpenTableSheet({
           <Button size="lg" fullWidth loading={busy} testID="mark-clean" onPress={clean}>
             {t('pos.table.clean')}
           </Button>
+        ) : asking ? (
+          <>
+            <Button
+              size="lg"
+              fullWidth
+              loading={busy}
+              testID="open-anyway"
+              onPress={() => {
+                open(true);
+              }}
+            >
+              {t('pos.open.anyway')}
+            </Button>
+            <Button
+              variant="secondary"
+              fullWidth
+              onPress={() => {
+                setAsking(false);
+              }}
+            >
+              {t('pos.open.change')}
+            </Button>
+          </>
         ) : (
-          <Button size="lg" fullWidth loading={busy} testID="open-table" onPress={open}>
+          <Button
+            size="lg"
+            fullWidth
+            loading={busy}
+            testID="open-table"
+            onPress={() => {
+              open();
+            }}
+          >
             {t('pos.open.submit')}
           </Button>
         )
@@ -83,13 +124,17 @@ export function OpenTableSheet({
       <Text style={[styles.label, { color: colors.text }]}>{t('pos.open.guests')}</Text>
       <QuantityStepper
         value={covers}
-        onChange={setCovers}
+        onChange={(next) => {
+          setAsking(false);
+          setCovers(next);
+        }}
         min={1}
-        max={99}
+        max={MAX_COVERS}
         label={t('pos.open.guests')}
         decreaseLabel={t('pos.item.fewer')}
         increaseLabel={t('pos.item.more')}
       />
+      {asking && warning !== undefined ? <Note tone="text">{warning}</Note> : null}
       {error === undefined ? null : <Note tone="danger">{error}</Note>}
     </Sheet>
   );

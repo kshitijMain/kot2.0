@@ -1,6 +1,19 @@
 import type { FloorResponse, TableOverviewEntry, TableOverviewResponse } from '@rp/contracts';
 import type { Translator } from '@rp/i18n';
 
+/**
+ * The question to ask before seating more guests than a table holds (TBL-003, ADR-0030), or
+ * nothing when they fit. Opening it anyway is allowed; the server only refuses 0 or absurd numbers.
+ */
+export function coversWarning(
+  table: { readonly label: string; readonly capacity: number },
+  covers: number,
+  t: Translator,
+): string | undefined {
+  if (covers <= table.capacity) return undefined;
+  return t('pos.open.overCapacity', { table: table.label, seats: table.capacity, guests: covers });
+}
+
 /** One section of the POS floor, in the manager's display order, active tables only. */
 export interface FloorSection {
   readonly id: string;

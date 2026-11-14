@@ -240,11 +240,39 @@ describe('[TBL-003] opening a table', () => {
     const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
     await user.click(await tile(/^T1, Free$/));
     const dialog = await screen.findByRole('dialog');
-    await user.type(within(dialog).getByLabelText(t('pos.open.more')), '12');
+    await user.type(within(dialog).getByLabelText(t('pos.open.more')), '3');
     await user.click(within(dialog).getByRole('button', { name: t('pos.open.submit') }));
     expect(
       await within(dialog).findByText('T1 was just opened on another device.'),
     ).toBeInTheDocument();
+  });
+
+  it('asks before seating more guests than the table holds, and opens it on Yes (ADR-0030)', async () => {
+    const fake = posServer(overview(entry(T1, 'T1', HALL))).on(
+      'POST',
+      `/api/v1/tables/${T1}/open`,
+      () => ({ status: 201, body: sessionView(T1, 'T1') }),
+    );
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos' });
+    await user.click(await tile(/^T1, Free$/));
+    const dialog = await screen.findByRole('dialog');
+    const picker = within(dialog).getByRole('group', { name: t('pos.open.howMany') });
+    await user.click(
+      within(picker).getByRole('button', { name: t('pos.open.guestsCount', { count: 6 }) }),
+    );
+    // T1 seats 4: nothing is sent until the person says yes.
+    expect(
+      await within(dialog).findByText('Table T1 seats 4. Open it for 6 guests anyway?'),
+    ).toBeInTheDocument();
+    expect(fake.callsTo('POST', `/api/v1/tables/${T1}/open`)).toHaveLength(0);
+    // Change goes back to the guests, to pick again.
+    await user.click(within(dialog).getByRole('button', { name: t('pos.open.change') }));
+    expect(within(dialog).queryByText(/seats 4/)).toBeNull();
+    await user.type(within(dialog).getByLabelText(t('pos.open.more')), '5');
+    await user.click(within(dialog).getByRole('button', { name: t('pos.open.submit') }));
+    await user.click(await within(dialog).findByRole('button', { name: t('pos.open.anyway') }));
+    expect(await screen.findByText(t('pos.open.opened', { table: 'T1' }))).toBeInTheDocument();
+    expect(fake.callsTo('POST', `/api/v1/tables/${T1}/open`)[0]?.body).toEqual({ covers: 5 });
   });
 });
 
