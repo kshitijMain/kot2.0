@@ -10,7 +10,9 @@ import { useOpenBill } from '../../billing/use-open-bill.js';
 import { useFloor } from '../../pos/use-floor.js';
 import { moneyColumn, textColumn } from '../reports/ReportParts.js';
 
-type OpenTable = TableOverviewEntry & { readonly session: NonNullable<TableOverviewEntry['session']> };
+type OpenTable = TableOverviewEntry & {
+  readonly session: NonNullable<TableOverviewEntry['session']>;
+};
 
 /**
  * The dashboard's Tables (ADR-0030): which tables are open, with their guests, how long they have

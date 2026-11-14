@@ -28,7 +28,7 @@ with a switcher between them. Bills, payments, the cash shift and day-end were o
   under More, the pages that were already there: Overview (now `/manage/overview`), Orders, Audit
   trail, Floor, Kitchen and printers, Settings, System and Licence (D-37).
 - **Bills → Pending** is `GET /api/v1/bills/pending` (capability `BILL_PRINT_AND_PAYMENT`): every
-  open table and takeaway whose bill was asked for and not printed (`REQUESTED`), printed and not
+  open table and takeaway whose bill was asked for (by a waiter, a diner, or a manager opening the bill) and not printed (`REQUESTED`), printed and not
   fully paid (`PRINTED`), or printed before more dishes were ordered (`NEEDS_NEW_BILL`, the
   existing `unbilledOrderItemIds` or voided parts of a split). Each row has the table or takeaway
   number, the amount still to pay (before a bill is opened: the dishes so far, as on Tables), how

@@ -36,8 +36,8 @@ async function signIn(page: Page, person: { name: string; pin: string }): Promis
 }
 
 async function signOut(page: Page): Promise<void> {
-  await page.getByTestId('home-menu').click();
-  await page.getByTestId('sign-out').click();
+  // Sign out is on the home screen, in view, since nobody is signed out for being idle (ADR-0030).
+  await page.getByTestId('sign-out-home').click();
   await expect(page.getByText('Tap your name')).toBeVisible();
 }
 
@@ -142,8 +142,10 @@ test.describe.serial('[P9-28] the waiter app in a phone’s browser', () => {
     await page.getByText('Ordered by mistake', { exact: true }).click();
     await page.getByTestId('end-item-confirm').click();
     await expect(page.getByText(`${DISH} cancelled`)).toBeVisible();
-    await page.getByText('Request bill', { exact: true }).click();
+    await page.getByText('Request bill for this table', { exact: true }).click();
     await expect(page.getByText('Bill requested for 1.')).toBeVisible();
+    // Asked once: the table says when, and offers no second request (ADR-0030).
+    await expect(page.getByText(/^Bill requested at \d{2}:\d{2}$/)).toBeVisible();
   });
 
   test('[P9-28] the browser’s back (an iPhone’s swipe) closes the table, not the app', async () => {
@@ -169,7 +171,13 @@ test.describe.serial('[P9-28] the waiter app in a phone’s browser', () => {
     await page.getByText('Masala Chai', { exact: true }).first().click();
     await page.getByLabel('Customer name (optional)').fill('Meera');
     await page.getByTestId('send-takeaway').click();
-    await expect(page.getByText(/Token \d+: order \d+ sent to the kitchen/)).toBeVisible();
+    await expect(page.getByText(/Takeaway #\d+: order \d+ sent to the kitchen/)).toBeVisible();
+    // The waiter asks for its bill; the managers take the payment (ADR-0030).
+    await page
+      .getByTestId(/^takeaway-bill-\d+$/)
+      .first()
+      .click();
+    await expect(page.getByText(/^Bill requested at \d{2}:\d{2}$/).first()).toBeVisible();
     await page.goBack();
     await expect(page.getByText('All tables', { exact: true })).toBeVisible();
   });
@@ -197,8 +205,10 @@ test.describe.serial('[P9-28] the waiter app in a phone’s browser', () => {
   test('[MGR-001] the Owner works from the phone, with the full dashboard a tap away', async () => {
     await signOut(page);
     await signIn(page, OWNER);
-    await page.getByTestId('home-menu').click();
     await expect(page.getByText('Signed in as Asha (Owner)')).toBeVisible();
+    await page.getByTestId('home-menu').click();
+    // Takeaway is the waiters' (ADR-0030).
+    await expect(page.getByTestId('new-takeaway')).toHaveCount(0);
     // The Owner covers nobody's break.
     await expect(page.getByText('Go on break')).toHaveCount(0);
     await expect(page.getByTestId('web-alerts')).toBeVisible();

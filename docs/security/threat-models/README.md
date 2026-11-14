@@ -80,8 +80,8 @@ Written by `pnpm security:threats --write` from the models; do not edit it by ha
 | [The licence mechanism](licence-mechanism.md)           |      20 |        14 |                4 |             0 |        2 |               7 |                         0 |
 | [The Vendor Control Plane](control-plane.md)            |      22 |        16 |                5 |             0 |        1 |               7 |                         0 |
 | [The desktop shell](desktop-shell.md)                   |      14 |        11 |                2 |             0 |        1 |               5 |                         0 |
-| [The phones and tablets](phones-and-tablets.md)         |      18 |        13 |                4 |             0 |        1 |               5 |                         0 |
-| All                                                     |     196 |       148 |               33 |             2 |       13 |              62 |                         2 |
+| [The phones and tablets](phones-and-tablets.md)         |      18 |        12 |                4 |             0 |        2 |               6 |                         0 |
+| All                                                     |     196 |       147 |               33 |             2 |       14 |              63 |                         2 |
 
 Open threats and their plans, by date:
 

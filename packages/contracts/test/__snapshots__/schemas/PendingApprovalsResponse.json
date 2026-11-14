@@ -51,7 +51,6 @@
                 },
                 "customerName": { "type": ["string", "null"] },
                 "billRequestedAt": {
-                  "default": null,
                   "anyOf": [
                     {
                       "type": "string",
@@ -302,7 +301,6 @@
                 },
                 "customerName": { "type": ["string", "null"] },
                 "billRequestedAt": {
-                  "default": null,
                   "anyOf": [
                     {
                       "type": "string",
@@ -479,7 +477,6 @@
                 "tableId",
                 "takeawayToken",
                 "customerName",
-                "billRequestedAt",
                 "businessDate",
                 "createdAt",
                 "note",

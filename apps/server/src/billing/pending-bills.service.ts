@@ -16,12 +16,13 @@ interface Target {
   readonly asked: boolean;
   readonly askedAt: Date | null;
   readonly startedAt: Date;
-  readonly bill: { readonly id: string } | null;
+  readonly bill: { readonly id: string; readonly createdAt: Date } | null;
 }
 
 /**
  * Pending bills (ADR-0030, item A): the bills a manager still has to print or take payment for,
- * for the dashboard's Bills page and its live count.
+ * for the dashboard's Bills page and its live count. A bill is asked for by a waiter or a diner
+ * (the table's or takeaway's request) or by a manager, who opens it.
  */
 @Injectable()
 export class PendingBillsService {
@@ -37,14 +38,14 @@ export class PendingBillsService {
         where: {
           restaurantId,
           status: 'OPEN',
-          OR: [{ table: { state: { in: [...waiting] } } }, { bill: { status: 'INVOICED' } }],
+          OR: [{ table: { state: { in: [...waiting] } } }, { bill: { isNot: null } }],
         },
         select: {
           id: true,
           openedAt: true,
           billRequestedAt: true,
           table: { select: { label: true, state: true } },
-          bill: { select: { id: true } },
+          bill: { select: { id: true, createdAt: true } },
         },
       }),
       this.prisma.order.findMany({
@@ -52,14 +53,14 @@ export class PendingBillsService {
           restaurantId,
           orderType: 'TAKEAWAY',
           status: 'OPEN',
-          OR: [{ billRequestedAt: { not: null } }, { bill: { status: 'INVOICED' } }],
+          OR: [{ billRequestedAt: { not: null } }, { bill: { isNot: null } }],
         },
         select: {
           id: true,
           takeawayToken: true,
           billRequestedAt: true,
           createdAt: true,
-          bill: { select: { id: true } },
+          bill: { select: { id: true, createdAt: true } },
         },
       }),
     ]);
@@ -130,11 +131,12 @@ export class PendingBillsService {
     const stale =
       view.status === 'INVOICED' &&
       (view.unbilledOrderItemIds.length > 0 || view.voidedPartIds.length > 0);
+    // A bill someone opened is asked for: only a manager opens one (ADR-0030).
     const status = stale
       ? 'NEEDS_NEW_BILL'
       : unpaid.length > 0
         ? 'PRINTED'
-        : view.status === 'OPEN' && target.asked
+        : view.status === 'OPEN'
           ? 'REQUESTED'
           : null;
     if (status === null) return null;
@@ -146,12 +148,16 @@ export class PendingBillsService {
           : invoice.payments.reduce((part, payment) => part + payment.amount, 0)),
       0,
     );
-    const since = target.askedAt ?? unpaid[0]?.issuedAt ?? invoices.at(-1)?.issuedAt;
+    const since =
+      (target.asked ? target.askedAt : null) ??
+      unpaid[0]?.issuedAt ??
+      invoices.at(-1)?.issuedAt ??
+      target.bill.createdAt;
     return {
       ...base,
       status,
       amount: Math.max(0, view.grandTotal - paid),
-      since: (since ?? target.startedAt).toISOString(),
+      since: since.toISOString(),
       billId: view.id,
       invoiceIds: unpaid.map((invoice) => invoice.id),
     };

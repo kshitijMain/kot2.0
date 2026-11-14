@@ -33,7 +33,8 @@ test('[ONB-001] [ONB-004] [ONB-009] a fresh install: restaurant and Owner, then 
     await expect(page.getByRole('heading', { name: t('login.title') })).toBeVisible();
     await page.getByRole('button', { name: /^Asha Rao/ }).click();
     await page.keyboard.type('4829');
-    await expect(page).toHaveURL(/\/manage$/);
+    // The dashboard opens on Bills (ADR-0030), which shows the set-up's progress too.
+    await expect(page).toHaveURL(/\/manage\/bills$/);
     const signedIn = Date.now();
     await expect(page.getByText(t('setupPage.banner', { finished: 0, total: 11 }))).toBeVisible();
 

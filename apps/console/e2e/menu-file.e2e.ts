@@ -216,11 +216,9 @@ test('[ONB-005] [ONB-007] [MENU-008] the menu file: fill, load, publish, export,
     ).toBeVisible();
     await addAndPublish(page);
 
-    // 4. The POS shows the new dishes with their photos.
+    // 4. The POS shows the new dishes with their photos: a waiter's (ADR-0030).
     await page.getByRole('button', { name: t('login.signOut') }).click();
-    await signIn(page, 'Neha (Manager)', '3333');
-    // A manager lands on Manage (ADR-0023 removed the cashier role); takeaways are on the POS.
-    await page.getByRole('link', { name: t('modes.pos') }).click();
+    await signIn(page, 'Ravi', '4444');
     await page.getByRole('button', { name: t('pos.takeaway') }).click();
     await page.getByLabel(t('pos.menu.search')).fill('Kadhai Mushroom');
     const card = page.getByRole('button', { name: /^Kadhai Mushroom, / });

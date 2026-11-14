@@ -149,8 +149,11 @@ export const OrderView = z.object({
   tableId: Id.nullable(),
   takeawayToken: z.int().positive().nullable(),
   customerName: z.string().nullable(),
-  /** When a waiter asked for a takeaway's bill (ADR-0030); null until asked, and for tables. */
-  billRequestedAt: Timestamp.nullable().default(null),
+  /**
+   * When a waiter asked for a takeaway's bill (ADR-0030); null until asked, and for tables. The
+   * server always sends it; optional so that answers and fixtures from before it still parse.
+   */
+  billRequestedAt: Timestamp.nullable().optional(),
   businessDate: z.iso.date(),
   createdAt: Timestamp,
   note: z.string().nullable(),

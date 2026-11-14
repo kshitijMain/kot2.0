@@ -16,13 +16,26 @@ const t = createTranslator();
 
 /** People from the development seed (apps/server/src/database/dev-seed.ts). */
 const PEOPLE = [
-  { name: 'Asha (Owner)', role: 'OWNER', pin: '1111', mode: 'manage' },
-  { name: 'Vikram (Manager)', role: 'MANAGER', pin: '2222', mode: 'manage' },
+  // Managers and the Owner have the dashboard alone, opening on Bills (ADR-0030).
+  { name: 'Asha (Owner)', role: 'OWNER', pin: '1111', mode: 'manage', lands: '/manage/bills' },
+  {
+    name: 'Vikram (Manager)',
+    role: 'MANAGER',
+    pin: '2222',
+    mode: 'manage',
+    lands: '/manage/bills',
+  },
   // Formerly the cashier (ADR-0023 removed the role): a manager now, landing on Manage.
-  { name: 'Neha (Manager)', role: 'MANAGER', pin: '3333', mode: 'manage' },
-  { name: 'Ravi', role: 'WAITER', pin: '4444', mode: 'pos' },
-  { name: 'Chef Imran', role: 'KITCHEN', pin: '6666', mode: 'kds' },
+  { name: 'Neha (Manager)', role: 'MANAGER', pin: '3333', mode: 'manage', lands: '/manage/bills' },
+  { name: 'Ravi', role: 'WAITER', pin: '4444', mode: 'pos', lands: '/pos' },
+  { name: 'Chef Imran', role: 'KITCHEN', pin: '6666', mode: 'kds', lands: '/kds' },
 ] as const;
+
+/** A dashboard link by its name, with or without its live count ("Bills, 2 waiting"). */
+const section = (page: Page, key: string) =>
+  page.getByRole('navigation', { name: t('dashboard.navigation') }).getByRole('link', {
+    name: new RegExp(`^${escape(t(`dashboard.section.${key}` as 'dashboard.section.bills'))}(,|$)`),
+  });
 
 function escape(text: string): string {
   return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
@@ -157,10 +170,12 @@ test.describe.serial('the web console', () => {
         page.getByRole('heading', { name: t('login.pinFor', { name: person.name }) }),
       ).toBeVisible();
       await page.keyboard.type(person.pin);
-      await expect(page).toHaveURL(new RegExp(`/${person.mode}$`));
+      await expect(page).toHaveURL(new RegExp(`${escape(person.lands)}$`));
       await expect(
         page.getByRole('heading', { level: 1, name: t(`modes.${person.mode}`) }),
       ).toBeVisible();
+      // Nobody has a mode switcher: each role has one mode (ADR-0030).
+      await expect(page.getByRole('navigation', { name: t('modes.navigation') })).toHaveCount(0);
       // The header names who is signed in (P9-15 replaced "Signed in as …").
       await expect(page.getByRole('banner').getByText(person.name, { exact: true })).toBeVisible();
       await page.getByRole('button', { name: t('login.signOut') }).click();
@@ -169,11 +184,9 @@ test.describe.serial('the web console', () => {
   });
 
   test('[NFR-P11] shows the offline banner while the server is down and recovers when it is back', async () => {
-    await page.getByRole('button', { name: /^Neha \(Manager\)/ }).click();
-    await page.keyboard.type('3333');
-    // A manager lands on Manage (ADR-0023 removed the cashier role); the POS is one tap away.
-    await expect(page).toHaveURL(/\/manage$/);
-    await page.getByRole('link', { name: t('modes.pos') }).click();
+    // The POS is the waiters' (ADR-0030).
+    await page.getByRole('button', { name: /^Ravi/ }).click();
+    await page.keyboard.type('4444');
     await expect(page).toHaveURL(/\/pos$/);
     // Connected and in sync, with the floor read: no banner, and no read cut short by the stop.
     await expect(page.getByRole('region', { name: 'Main Hall' })).toBeVisible();
@@ -273,9 +286,9 @@ test.describe.serial('the web console', () => {
       .getByRole('complementary', { name: t('pos.cart.title') })
       .getByRole('button', { name: t('pos.cart.send') })
       .click();
-    await expect(page.getByText(/^Token \d+: order \d+ sent to the kitchen$/)).toBeVisible();
+    await expect(page.getByText(/^Takeaway #\d+: order \d+ sent to the kitchen$/)).toBeVisible();
     const open = page.getByRole('region', { name: t('pos.sent.openTakeaway') });
-    await expect(open.getByText(/Token \d+ · Anil/)).toBeVisible();
+    await expect(open.getByText(/Takeaway #\d+ · Anil/)).toBeVisible();
     await expect(open.getByText('1 × Butter Naan')).toBeVisible();
   });
 
@@ -288,7 +301,7 @@ test.describe.serial('the web console', () => {
     await expect(ticket).toBeVisible();
     await expect(ticket.getByText('Veg Thali Combo')).toBeVisible();
     await expect(ticket.getByText(/Chicken Tikka \(Full\)/)).toBeVisible();
-    await expect(page.getByRole('article', { name: /^KOT \d+, Token \d+$/ })).toBeVisible();
+    await expect(page.getByRole('article', { name: /^KOT \d+, TAKEAWAY #\d+$/ })).toBeVisible();
 
     await ticket.getByRole('button', { name: t('kds.allPreparing') }).click();
     await expect(ticket.getByRole('button', { name: t('kds.allReady') })).toBeVisible();
@@ -330,11 +343,10 @@ test.describe.serial('the web console', () => {
     await page.getByRole('button', { name: t('login.signOut') }).click();
     await page.getByRole('button', { name: /^Vikram \(Manager\)/ }).click();
     await page.keyboard.type('2222');
-    await expect(page).toHaveURL(/\/manage$/);
+    await expect(page).toHaveURL(/\/manage\/bills$/);
 
-    const nav = page.getByRole('navigation', { name: t('dashboard.navigation') });
-    const link = (section: 'overview' | 'orders' | 'alerts') =>
-      nav.getByRole('link', { name: t(`dashboard.section.${section}`) });
+    const link = (key: 'overview' | 'orders' | 'alerts') => section(page, key);
+    await link('overview').click();
     await expect(link('overview')).toHaveAttribute('aria-current', 'page');
     const glance = page.getByRole('region', { name: t('dashboard.overview.glance') });
     await expect(
@@ -356,7 +368,7 @@ test.describe.serial('the web console', () => {
     const feed = page.getByRole('region', { name: t('dashboard.orders.title') });
     await expect(page.getByText(t('dashboard.orders.table', { table: '7' }))).toBeVisible();
     const table7 = feed.getByRole('article', { name: /^Table 7 · Order \d+$/ });
-    const token = feed.getByRole('article', { name: /^Token \d+ · Order \d+$/ });
+    const token = feed.getByRole('article', { name: /^Takeaway #\d+ · Order \d+$/ });
     await expect(table7).toBeVisible();
     await expect(table7.getByText(t('pos.itemState.READY')).first()).toBeVisible();
     await expect(table7.getByText(/^1 × Chicken Tikka \(Full\)$/)).toBeVisible();
@@ -400,16 +412,16 @@ test.describe.serial('the web console', () => {
     await page.setViewportSize({ width: 1280, height: 720 });
   });
 
-  test('[ORD-010] the POS sees the kitchen’s progress', async () => {
+  test('[ORD-010] [MGR-001] the manager’s Take order sees the kitchen’s progress (ADR-0030)', async () => {
     await page.getByRole('button', { name: t('login.signOut') }).click();
     await page.getByRole('button', { name: /^Neha \(Manager\)/ }).click();
     await page.keyboard.type('3333');
-    // A manager lands on Manage (ADR-0023 removed the cashier role); the POS is one tap away.
-    await expect(page).toHaveURL(/\/manage$/);
-    await page.getByRole('link', { name: t('modes.pos') }).click();
-    await expect(page).toHaveURL(/\/pos$/);
+    await expect(page).toHaveURL(/\/manage\/bills$/);
+    await section(page, 'takeOrder').click();
     await page.getByRole('button', { name: /^7, Occupied/ }).click();
-    await page.getByRole('button', { name: t('pos.table.takeOrder') }).click();
+    await expect(
+      page.getByRole('heading', { name: t('pos.table.title', { table: '7' }) }),
+    ).toBeVisible();
     const sent = page.getByRole('region', { name: t('pos.sent.title') });
     // Picked up at the pass is served (kds.pickupMarksServed, decided 2026-10-25).
     await expect(sent.getByText(t('pos.itemState.SERVED')).first()).toBeVisible();
@@ -418,15 +430,15 @@ test.describe.serial('the web console', () => {
 
   test('[BILL-005] [BILL-008] [AUTH-011] bills a table with a manager-approved discount and a split payment in under a minute', async () => {
     const started = Date.now();
-    await page.getByRole('button', { name: t('pos.backToTables') }).click();
-    await page.getByRole('button', { name: t('pos.shift') }).click();
+    // The optional cash drawer is a dashboard page (ADR-0029, ADR-0030).
+    await section(page, 'cashDrawer').click();
     await page.getByLabel(t('shift.openingFloat')).fill('1000');
     await page.getByRole('button', { name: t('shift.open') }).click();
     await expect(page.getByText(t('shift.expected'))).toBeVisible();
-    await page.getByRole('button', { name: t('pos.backToTables') }).click();
 
-    await page.getByRole('button', { name: /^7, Occupied/ }).click();
-    await page.getByRole('button', { name: t('pos.billTable') }).click();
+    // Tables: read-only, with the table's bill one press away.
+    await section(page, 'tables').click();
+    await page.getByRole('button', { name: t('tablesPage.openBillFor', { table: '7' }) }).click();
     await expect(
       page.getByRole('heading', {
         name: t('billing.billFor', { target: t('pos.table.title', { table: '7' }) }),
@@ -457,8 +469,10 @@ test.describe.serial('the web console', () => {
     await expect(page.getByText(t('billing.settled'), { exact: true })).toBeVisible();
     expect(Date.now() - started).toBeLessThan(60_000);
 
-    // Paid in full: the table is free again.
-    await page.getByRole('button', { name: t('pos.backToTables') }).click();
+    // Paid in full: nothing pending, and the table is free again.
+    await page.getByRole('button', { name: t('billing.back') }).click();
+    await expect(page.getByText(t('bills.none'))).toBeVisible();
+    await section(page, 'takeOrder').click();
     await expect(page.getByRole('button', { name: '7, Free' })).toBeVisible();
   });
 
@@ -474,11 +488,21 @@ test.describe.serial('the web console', () => {
     const cart = page.getByRole('complementary', { name: t('pos.cart.title') });
     await cart.getByRole('button', { name: t('pos.cart.send') }).click();
     await expect(page.getByText(/^Order \d+ sent to the kitchen$/)).toBeVisible();
-    await page.getByRole('button', { name: t('pos.backToTables') }).click();
+    // Asked for from the order screen: it is then on the pending bills, counted.
+    await page.getByRole('button', { name: t('pos.billTable') }).click();
+    await expect(
+      page.getByRole('heading', {
+        name: t('billing.billFor', { target: t('pos.table.title', { table: '2' }) }),
+      }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: t('bills.back') }).click();
+    const pending = page.getByRole('table', { name: t('bills.list') });
+    await expect(pending.getByRole('row').filter({ hasText: 'Table 2' })).toBeVisible();
 
     const started = Date.now();
-    await hall.getByRole('button', { name: /^2, Occupied/ }).click();
-    await page.getByRole('button', { name: t('pos.billTable') }).click();
+    await pending
+      .getByRole('button', { name: `${t('bills.open')}: ${t('bills.table', { table: '2' })}` })
+      .click();
     await page.getByRole('button', { name: t('billing.split.open') }).click();
     const split = page.getByRole('dialog', { name: t('billing.split.title') });
     await split.getByRole('button', { name: t('billing.split.submit') }).click();
@@ -498,7 +522,9 @@ test.describe.serial('the web console', () => {
     await expect(page.getByText(t('billing.settled'), { exact: true })).toHaveCount(2);
     expect(Date.now() - started).toBeLessThan(60_000);
 
-    await page.getByRole('button', { name: t('pos.backToTables') }).click();
+    await page.getByRole('button', { name: t('bills.back') }).click();
+    await expect(page.getByText(t('bills.none'))).toBeVisible();
+    await section(page, 'takeOrder').click();
     await expect(hall.getByRole('button', { name: '2, Free' })).toBeVisible();
   });
 
@@ -506,11 +532,8 @@ test.describe.serial('the web console', () => {
     await page.getByRole('button', { name: t('login.signOut') }).click();
     await page.getByRole('button', { name: /^Vikram \(Manager\)/ }).click();
     await page.keyboard.type('2222');
-    await expect(page).toHaveURL(/\/manage$/);
-    await page
-      .getByRole('navigation', { name: t('dashboard.navigation') })
-      .getByRole('link', { name: t('dashboard.section.alerts') })
-      .click();
+    await expect(page).toHaveURL(/\/manage\/bills$/);
+    await section(page, 'alerts').click();
     await expect(page.getByRole('heading', { level: 2, name: t('alerts.title') })).toBeVisible();
 
     await page.getByRole('button', { name: t('alerts.nudge.open') }).click();
@@ -539,7 +562,7 @@ test.describe.serial('the web console', () => {
     await page.getByRole('button', { name: t('login.signOut') }).click();
     await page.getByRole('button', { name: /^Vikram \(Manager\)/ }).click();
     await page.keyboard.type('2222');
-    await expect(page).toHaveURL(/\/manage$/);
+    await expect(page).toHaveURL(/\/manage\/bills$/);
     await page
       .getByRole('navigation', { name: t('dashboard.navigation') })
       .getByRole('link', { name: t('dashboard.section.staff') })
@@ -599,7 +622,7 @@ test.describe.serial('the web console', () => {
     await page.getByRole('button', { name: t('login.signOut') }).click();
     await page.getByRole('button', { name: /^Asha \(Owner\)/ }).click();
     await page.keyboard.type('1111');
-    await expect(page).toHaveURL(/\/manage$/);
+    await expect(page).toHaveURL(/\/manage\/bills$/);
     const nav = page.getByRole('navigation', { name: t('dashboard.navigation') });
     // No Security page any more (ADR-0026).
     await expect(nav.getByRole('link', { name: 'Security' })).toHaveCount(0);
@@ -623,7 +646,7 @@ test.describe.serial('the web console', () => {
     await page.getByRole('button', { name: t('login.signOut') }).click();
     await page.getByRole('button', { name: /^Vikram \(Manager\)/ }).click();
     await page.keyboard.type('2222');
-    await expect(page).toHaveURL(/\/manage$/);
+    await expect(page).toHaveURL(/\/manage\/bills$/);
     await page
       .getByRole('navigation', { name: t('dashboard.navigation') })
       .getByRole('link', { name: t('dashboard.section.staff') })
@@ -690,7 +713,7 @@ test.describe.serial('the web console', () => {
     await page.getByRole('button', { name: t('login.signOut') }).click();
     await page.getByRole('button', { name: /^Vikram \(Manager\)/ }).click();
     await page.keyboard.type('2222');
-    await expect(page).toHaveURL(/\/manage$/);
+    await expect(page).toHaveURL(/\/manage\/bills$/);
     await page
       .getByRole('navigation', { name: t('dashboard.navigation') })
       .getByRole('link', { name: t('dashboard.section.devices') })
@@ -776,7 +799,7 @@ test.describe.serial('the web console', () => {
     await page.getByRole('button', { name: t('login.signOut') }).click();
     await page.getByRole('button', { name: /^Vikram \(Manager\)/ }).click();
     await page.keyboard.type('2222');
-    await expect(page).toHaveURL(/\/manage$/);
+    await expect(page).toHaveURL(/\/manage\/bills$/);
     await page
       .getByRole('navigation', { name: t('dashboard.navigation') })
       .getByRole('link', { name: t('dashboard.section.menu'), exact: true })
@@ -848,13 +871,10 @@ test.describe.serial('the web console', () => {
     expect(await sidewaysOverflow(page)).toBeLessThanOrEqual(0);
     await page.setViewportSize({ width: 1280, height: 720 });
 
-    // The cashier sells it at once, with its sizes and add-ons (MENU-012).
+    // A waiter sells it at once on the POS, with its sizes and add-ons (MENU-012).
     await page.getByRole('button', { name: t('login.signOut') }).click();
-    await page.getByRole('button', { name: /^Neha \(Manager\)/ }).click();
-    await page.keyboard.type('3333');
-    // A manager lands on Manage (ADR-0023 removed the cashier role); the POS is one tap away.
-    await expect(page).toHaveURL(/\/manage$/);
-    await page.getByRole('link', { name: t('modes.pos') }).click();
+    await page.getByRole('button', { name: /^Ravi/ }).click();
+    await page.keyboard.type('4444');
     await expect(page).toHaveURL(/\/pos$/);
     await page.getByRole('button', { name: t('pos.takeaway') }).click();
     await page.getByRole('button', { name: 'Breads', exact: true }).click();
@@ -869,7 +889,7 @@ test.describe.serial('the web console', () => {
     await page.getByRole('button', { name: t('login.signOut') }).click();
     await page.getByRole('button', { name: /^Vikram \(Manager\)/ }).click();
     await page.keyboard.type('2222');
-    await expect(page).toHaveURL(/\/manage$/);
+    await expect(page).toHaveURL(/\/manage\/bills$/);
     await page
       .getByRole('navigation', { name: t('dashboard.navigation') })
       .getByRole('link', { name: t('dashboard.section.settings') })
@@ -940,7 +960,7 @@ test.describe.serial('the web console', () => {
   test('[MGR-008] [MGR-010] [UPD-004] a manager acknowledges a system alert and approves an update', async () => {
     // Still the manager.
     const nav = page.getByRole('navigation', { name: t('dashboard.navigation') });
-    await nav.getByRole('link', { name: t('dashboard.section.alerts') }).click();
+    await section(page, 'alerts').click();
     const acknowledge = page.getByRole('button', {
       name: t('alerts.acknowledgeOf', { title: t('alerts.type.DISK_OR_BACKUP') }),
     });
@@ -1012,30 +1032,36 @@ test.describe.serial('the web console', () => {
     await page.getByRole('button', { name: t('login.signOut') }).click();
     await page.getByRole('button', { name: /^Vikram \(Manager\)/ }).click();
     await page.keyboard.type('2222');
-    await expect(page).toHaveURL(/\/manage$/);
-    await page.getByRole('link', { name: t('modes.pos') }).click();
+    await expect(page).toHaveURL(/\/manage\/bills$/);
 
-    // Cash from someone with no shift open: nothing asks for one.
-    await page.getByRole('button', { name: t('pos.takeaway') }).click();
+    // Cash from someone with no shift open: nothing asks for one. A table's order from Take
+    // order, its bill from the order screen (ADR-0030).
+    await section(page, 'takeOrder').click();
+    await page
+      .getByRole('region', { name: 'Main Hall' })
+      .getByRole('button', { name: '3, Free' })
+      .click();
+    await page
+      .getByRole('dialog', { name: t('pos.open.title', { table: '3' }) })
+      .getByRole('button', { name: t('pos.open.guestsCount', { count: 1 }) })
+      .click();
     await page.getByRole('button', { name: 'Breads', exact: true }).click();
     await page.getByRole('button', { name: /^Butter Naan, / }).click();
-    await page.getByLabel(t('pos.cart.customer')).fill('Cash guest');
     await page
       .getByRole('complementary', { name: t('pos.cart.title') })
       .getByRole('button', { name: t('pos.cart.send') })
       .click();
-    const open = page.getByRole('region', { name: t('pos.sent.openTakeaway') });
-    const guest = open.getByRole('article').filter({ hasText: 'Cash guest' });
-    await guest.getByRole('button', { name: /^Bill order \d+$/ }).click();
+    await expect(page.getByText(/^Order \d+ sent to the kitchen$/)).toBeVisible();
+    await page.getByRole('button', { name: t('pos.billTable') }).click();
     await page.getByRole('button', { name: t('billing.printBill') }).click();
     await page.getByRole('button', { name: t('billing.pay') }).click();
     await expect(page.getByRole('heading', { name: /^Payment for invoice / })).toBeVisible();
     await page.getByRole('button', { name: t('payment.record') }).click();
     await expect(page.getByText(/^Invoice .* is paid$/)).toBeVisible();
-    await page.getByRole('button', { name: t('pos.backToTables') }).click();
+    await page.getByRole('button', { name: t('billing.back') }).click();
 
     // The add-on is always there, and says what it needs.
-    await page.getByRole('button', { name: t('pos.shift') }).click();
+    await section(page, 'cashDrawer').click();
     await expect(page.getByText(t('shift.addOn'))).toBeVisible();
     await page.getByRole('button', { name: t('shift.noSale') }).click();
     await expect(page.getByText(t('shift.needsShift'))).toBeVisible();
@@ -1045,10 +1071,10 @@ test.describe.serial('the web console', () => {
     await page.getByLabel(t('shift.openingFloat')).fill('500');
     await page.getByRole('button', { name: t('shift.open') }).click();
     await expect(page.getByText(t('shift.expected'))).toBeVisible();
-    await page.getByRole('button', { name: t('pos.backToTables') }).click();
 
-    // Day end names both open shifts: one counted and closed, one closed as not counted.
-    await page.getByRole('button', { name: t('dayEnd.open') }).click();
+    // Day end, from Bills, names both open shifts: one counted and closed, one not counted.
+    await section(page, 'bills').click();
+    await page.getByRole('button', { name: t('bills.dayEnd') }).click();
     await expect(page.getByText(t('dayEnd.outsideShift'))).toBeVisible();
     const vikram = 'Vikram (Manager)';
     const neha = 'Neha (Manager)';
@@ -1067,7 +1093,7 @@ test.describe.serial('the web console', () => {
     await page.getByRole('button', { name: t('dayEnd.notCountedConfirm') }).click();
     await expect(page.getByText(t('dayEnd.notCountedDone', { name: neha }))).toBeVisible();
     await expect(page.getByText(t('dayEnd.shiftsTitle'))).toHaveCount(0);
-    await page.getByRole('button', { name: t('pos.backToTables') }).click();
+    await page.getByRole('button', { name: t('bills.back') }).click();
   });
 
   test('[SEC-003] a waiter cannot open the Staff page', async () => {

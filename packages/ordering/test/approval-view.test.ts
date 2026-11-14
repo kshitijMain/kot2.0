@@ -39,6 +39,7 @@ const order: OrderView = {
   tableId: ID(3),
   takeawayToken: null,
   customerName: null,
+  billRequestedAt: null,
   businessDate: '2026-10-02',
   createdAt: '2026-10-02T08:00:00.000Z',
   note: null,

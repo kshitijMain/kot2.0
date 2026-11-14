@@ -14,8 +14,9 @@ ADR-0023), grouped by floor area two to a row with state, guests, time seated, w
 anything waiting, with a filter "Tables I sent KOTs to today". Above them only what asks for the
 waiter: orders on the phone not yet sent, orders to approve, requests from the tables, the pager
 when it is offline or low (WTR-014) and the break while it lasts. The header has the alerts' bell
-and Menu: who is signed in, the pager with its connection and battery, On break, New takeaway and
-Sign out.
+and Menu: who is signed in, the pager with its connection and battery, On break and, for waiters,
+New takeaway (ADR-0030: takeaway is the waiters'; each open takeaway has Request bill, and its
+"ready" alert goes to the waiter who sent it). Sign out is on the home screen.
 
 Tapping an open table opens its table screen; a free table is opened with its guests first
 (TBL-003) and then lands there. The table screen has the new items and the menu (categories,

@@ -166,6 +166,18 @@ describe('[ONB-004] the setup page', () => {
     });
   });
 
+  it('shows the progress on Bills, the first page, until the setup is done (ADR-0030)', async () => {
+    const fake = signsInAs(server(), 'MANAGER').on('GET', '/api/v1/onboarding', () => ({
+      status: 200,
+      body: onboarding(),
+    }));
+    await renderConsole({ fake, path: '/manage', signedIn: 'MANAGER' });
+    expect(await screen.findByRole('heading', { name: t('bills.title') })).toBeVisible();
+    expect(
+      await screen.findByText(t('setupPage.banner', { finished: 4, total: 11 })),
+    ).toBeVisible();
+  });
+
   it('shows the progress on the Overview until the setup is done', async () => {
     const fake = signsInAs(server(), 'MANAGER').on('GET', '/api/v1/onboarding', () => ({
       status: 200,

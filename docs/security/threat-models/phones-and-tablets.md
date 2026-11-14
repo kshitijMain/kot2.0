@@ -315,25 +315,25 @@ mode, `adb`, or a tablet that is only screen-pinned.
 
 A waiter's phone is left unlocked and signed in; someone else uses it as the waiter.
 
-- Mitigation: the app tells the server how long ago the person last touched it on every call
-  (`x-rp-idle-seconds`), and the server counts them active as of then, so the reads the app makes
-  by itself (the pager card, live lists, a reconnection) no longer keep the session alive: a phone
-  left alone signs out after the inactivity time (10 minutes). Managers can also unpair it, which
-  ends everything at once.
-- Code: `packages/mobile-shell/src/context.tsx` (`ShellProvider`);
-  `packages/mobile-core/src/device-session.ts` (`touched`); `packages/api-client/src/client.ts`
-  (`idleSeconds`); `apps/server/src/auth/activity.ts` (`idleMsOf`);
-  `apps/server/src/auth/session.service.ts` (`SessionService`).
-- Tests: `apps/server/test/integration/auth-login.int.test.ts` "does not keep a session alive
-  with calls the app made by itself while the person was away", "keeps it alive as of the last
-  touch, and every call counts without the header"; `packages/mobile-core/test/device-session.test.ts`
-  "tells the server how long ago the person last touched the phone";
-  `packages/mobile-shell/test/shell.test.tsx` "counts a touch anywhere in the app, and nothing
-  else, as the person being there"; `apps/server/test/integration/devices.int.test.ts` "stops the
-  device token and every session on the device at once".
-- Risk: likelihood Low, impact Medium: Low.
-- Status: Mitigated (P8-03b2a: the pager card read every minute and every read counted as
-  activity, so the Tables screen never signed out).
+- Mitigation: since ADR-0030 (the Business Owner's decision, D-34) nobody is signed out for
+  being idle: a phone, browser or kitchen screen stays signed in until someone presses **Sign
+  out**, which every app keeps in view. A session still ends when the person signs out, is
+  deactivated or changes their PIN, and when a manager unpairs the device, which ends everything
+  on it at once. `auth.sessionMaxHours` (0, no limit, by default) can make everyone sign in again
+  after a number of hours. The app still tells the server how long ago the person last touched it
+  (`x-rp-idle-seconds`), so the last activity recorded is the person's, not the app's own reads.
+- Code: `apps/server/src/auth/session.service.ts` (`SessionService`, `expiryOf`);
+  `packages/mobile-core/src/device-session.ts` (`touched`); `apps/server/src/auth/activity.ts`
+  (`idleMsOf`); `apps/waiter-app/src/TablesScreen.tsx` (Sign out on the home screen).
+- Tests: `apps/server/test/integration/auth-login.int.test.ts` "does not sign a phone out however
+  long nobody touches it"; `apps/server/test/integration/auth-sessions.int.test.ts` "a deactivated
+  person is signed out at their next request"; `apps/server/test/integration/devices.int.test.ts`
+  "stops the device token and every session on the device at once";
+  `packages/mobile-core/test/device-session.test.ts` "tells the server how long ago the person
+  last touched the phone".
+- Risk: likelihood Medium, impact Medium: Medium.
+- Status: Accepted: the Business Owner chose no idle sign-out (ADR-0030, D-34; it was mitigated by an idle sign-out,
+  P8-03b2a). Recommended: set `auth.sessionMaxHours` (e.g. 16) so everyone signs in each day.
 
 #### MOBILE-E4 A rooted phone
 

@@ -1020,6 +1020,28 @@ anyone"; ADR-0025 amended):
 838. Unchanged without the flag: AUTH-007 pairing, and the table tablet, which still pairs with a
      code (no tablets in the pilot).
 
+Decided 2026-11-14 (fixes from the Business Owner's testing, round 1, ADR-0030; open business
+choices are D-34 to D-38 in `docs/testing/DECISIONS_NEEDED.md`):
+
+860. Managers and the Owner have the manager dashboard alone (MGR-001, KDS-001 changed): no POS, no
+     kitchen display, no mode switcher. The kitchen display is the kitchen's; the POS stays for
+     waiters at a PC without billing, shift or day-end (D-36).
+861. The dashboard opens on Bills; its navigation follows the brief, with live counts beside Bills,
+     Modifications and Alerts; the other pages stay under More (D-37).
+862. Pending bills (`GET /api/v1/bills/pending`, `BILL_PRINT_AND_PAYMENT`): asked for (by a waiter,
+     a diner or a manager opening the bill) and not printed, printed and not fully paid, or printed
+     before more dishes were ordered. Longest waiting first. A diner's request now records
+     `bill_requested_at` too.
+863. Modifications is the approvals inbox of diners' orders (D-38); Cancelled KOTs is the
+     cancellation report; Take order is dine-in only; Tables is read-only with Open bill.
+864. No automatic sign-out anywhere; `auth.sessionMaxHours` defaults to 0 (no limit) (D-34).
+865. A table may be opened for more guests than its seats after a warning; 1 to 99 guests (D-35).
+866. Takeaway is the waiters': the phone's New takeaway is for waiters only, Request bill per
+     takeaway (`orders.bill_requested_at`), `TAKEAWAY_READY` to the KOT's sender, "TAKEAWAY #n" on
+     the kitchen display and KOT, "Takeaway #n" on screens.
+867. A waiter's Bill button asks for the bill; the table shows when it was asked and "Bill
+     printed". The kitchen display hides Menu availability when the kitchen may not manage stock.
+
 Decided 2026-11-09 (the optional cash drawer, at the Business Owner's request, ADR-0029; open
 business choices are D-30 to D-33 in `docs/testing/DECISIONS_NEEDED.md`):
 
@@ -4672,6 +4694,28 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-11-14: fixes from testing, round 1 (ADR-0030)
+
+Branch `fix/testing-round-1` (local only), one commit per item: B (no automatic sign-out), C (the
+optional cash drawer merged in and checked), D (capacity warning), F (waiters ask for the bill;
+the button sweep), E (takeaway in the waiter app), A (managers on the dashboard alone). Decisions
+860 to 867, D-34 to D-38.
+
+- Server: `table_sessions.bill_requested_at` and `orders.bill_requested_at` (two migrations),
+  `POST /orders/:orderId/request-bill`, `GET /bills/pending` (`PendingBillsService`), the
+  `TAKEAWAY_READY` alert to the KOT's sender, a diner's bill request timed too.
+- Console: `modesFor` (managers: Manage only), `ManageHome` (new navigation with counts),
+  `BillsArea` (Pending, History, bill, payment, day-end), `TakeOrderArea`, `TablesScreen`,
+  Modifications, Cancelled KOTs, Cash drawer; the POS lost its billing routes.
+- Waiter app: Request bill per takeaway, New takeaway for waiters only, sign-out on the home screen.
+- Tests changed only where the brief changed the rule (each commit says which). The authorisation
+  sweep names the new endpoints; the e2e flows bill from the dashboard.
+
+Gotchas: the dashboard's counts read `/bills/pending` and `/orders/pending-approval` on every
+dashboard page, so console tests answer both by default (`harness.tsx`); a queue of answers for
+either is used up by the count, so tests keep state in the fake instead. `/manage` redirects to
+`/manage/bills`; the overview is `/manage/overview`.
 
 ### 2026-11-10: the Parosaa brand (ADR-0028)
 

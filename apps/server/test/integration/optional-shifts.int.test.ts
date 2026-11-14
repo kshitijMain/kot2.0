@@ -14,7 +14,16 @@ import {
   SuspiciousActivityResponse,
 } from '@rp/contracts';
 import request from 'supertest';
-import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import {
+  afterAll,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  type MockInstance,
+  vi,
+} from 'vitest';
 import { PrismaService } from '../../src/database/prisma.service.js';
 import { CashDrawerService } from '../../src/payments/cash-drawer.service.js';
 import { authHeaders, type AuthKit, createAuthKit, signIn } from '../helpers/auth-kit.js';
@@ -36,7 +45,7 @@ let manager: LoginResponse;
 let biller: LoginResponse;
 let waiter: LoginResponse;
 let restaurant: SmallRestaurant;
-let kick: ReturnType<typeof vi.spyOn>;
+let kick: MockInstance<(restaurantId: string) => void>;
 
 beforeAll(async () => {
   database = await createTestDatabase();
@@ -166,7 +175,7 @@ describe('[BILL-008] [BILL-013] cash without a shift (ADR-0029)', () => {
     const mine = await current(manager);
     const theirs = await openShift(biller, 50_000);
     const [first, second] = await Promise.all([bill(manager), bill(biller)]);
-    if (first === undefined || second === undefined || mine === null) throw new Error('setup');
+    if (mine === null) throw new Error('setup');
     const [paidMine, paidTheirs] = await Promise.all([
       payCash(first, manager),
       payCash(second, biller),

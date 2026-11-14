@@ -10,6 +10,7 @@ import { useLive } from '../app/use-live.js';
 import { useNow } from '../app/use-now.js';
 import { BillHistory } from '../manage/reports/BillHistory.js';
 import { RangedPage } from '../manage/reports/RangedPage.js';
+import { SetupBanner } from '../manage/setup/SetupScreen.js';
 import { moneyColumn, textColumn } from '../manage/reports/ReportParts.js';
 import { BillScreen } from './BillScreen.js';
 import { DayEndScreen } from './DayEndScreen.js';
@@ -76,6 +77,8 @@ function Tabbed({ page }: { page: 'pending' | 'history' }) {
           </Button>
         ) : null}
       </div>
+      {/* The first page anyone opens: a set-up not finished says so here too. */}
+      <SetupBanner />
       <nav aria-label={t('bills.tabs')} className="staff-pages">
         <NavLink to={BILLS} end className="staff-pages__link">
           {t('bills.pending')}

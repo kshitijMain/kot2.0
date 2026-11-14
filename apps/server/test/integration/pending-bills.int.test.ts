@@ -181,6 +181,29 @@ describe('[BILL-001] [MGR-001] pending bills on the manager dashboard (ADR-0030)
     expect(await pending()).toEqual([]);
   });
 
+  it('counts a bill a manager opened as asked for, by the manager', async () => {
+    const { sessionId } = await seatAndOrder(app, kit, waiter, restaurant.tables.T2 ?? '', [
+      [restaurant.items.Naan, 2],
+    ]);
+    expect(await pending()).toEqual([]);
+    const bill = BillView.parse(
+      await ok(api(app).post('/api/v1/bills').set(as(manager)).send({ tableSessionId: sessionId })),
+    );
+    const [opened] = await pending();
+    expect(opened).toMatchObject({
+      tableSessionId: sessionId,
+      status: 'REQUESTED',
+      billId: bill.id,
+      amount: bill.grandTotal,
+    });
+    expect(Date.now() - Date.parse(opened?.since ?? '')).toBeLessThan(60_000);
+    const invoice = InvoiceView.parse(
+      await ok(api(app).post(`/api/v1/bills/${bill.id}/invoice`).set(as(manager)).send({})),
+    );
+    await pay(invoice);
+    expect(await pending()).toEqual([]);
+  });
+
   it('is for the people who take payment: a waiter is refused', async () => {
     const refused = await api(app).get('/api/v1/bills/pending').set(as(waiter));
     expect(refused.status).toBe(403);

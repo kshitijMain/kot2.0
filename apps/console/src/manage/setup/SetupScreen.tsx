@@ -276,7 +276,7 @@ function MenuWays() {
   );
 }
 
-/** On the Overview until the setup is done: how far it is, and the way back to it. */
+/** On the Overview and Bills until the setup is done: how far it is, and the way back to it. */
 export function SetupBanner() {
   const { person } = useConsoleState();
   if (person === undefined || grantOf(person, 'OPERATIONS_CONFIGURE') === 'DENY') return null;

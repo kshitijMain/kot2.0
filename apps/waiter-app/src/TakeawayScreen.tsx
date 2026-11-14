@@ -247,7 +247,7 @@ export function TakeawayScreen({
                   <StatusChip state={item.state} label={t(`pos.itemState.${item.state}`)} />
                 </View>
               ))}
-            {order.billRequestedAt === null ? (
+            {order.billRequestedAt === null || order.billRequestedAt === undefined ? (
               <Button
                 variant="secondary"
                 testID={`takeaway-bill-${String(order.takeawayToken ?? order.orderNumber)}`}

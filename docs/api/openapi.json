@@ -21052,13 +21052,6 @@
         "required": ["orders"],
         "additionalProperties": false
       },
-      "OrderListResponseInput": {
-        "type": "object",
-        "properties": {
-          "orders": { "type": "array", "items": { "$ref": "#/components/schemas/OrderViewInput" } }
-        },
-        "required": ["orders"]
-      },
       "OrderParams": {
         "type": "object",
         "properties": { "orderId": { "$ref": "#/components/schemas/Id" } },
@@ -21166,7 +21159,6 @@
           },
           "customerName": { "type": ["string", "null"] },
           "billRequestedAt": {
-            "default": null,
             "anyOf": [{ "$ref": "#/components/schemas/Timestamp" }, { "type": "null" }]
           },
           "businessDate": {
@@ -21270,7 +21262,6 @@
           "tableId",
           "takeawayToken",
           "customerName",
-          "billRequestedAt",
           "businessDate",
           "createdAt",
           "note",
@@ -21278,134 +21269,6 @@
           "kots"
         ],
         "additionalProperties": false
-      },
-      "OrderViewInput": {
-        "type": "object",
-        "properties": {
-          "id": { "$ref": "#/components/schemas/Id" },
-          "orderNumber": { "type": "integer", "exclusiveMinimum": 0, "maximum": 9007199254740991 },
-          "orderType": { "$ref": "#/components/schemas/OrderType" },
-          "source": { "$ref": "#/components/schemas/OrderSource" },
-          "status": { "type": "string", "enum": ["OPEN", "CLOSED", "CANCELLED"] },
-          "tableSessionId": {
-            "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }]
-          },
-          "tableId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
-          "takeawayToken": {
-            "anyOf": [
-              { "type": "integer", "exclusiveMinimum": 0, "maximum": 9007199254740991 },
-              { "type": "null" }
-            ]
-          },
-          "customerName": { "type": ["string", "null"] },
-          "billRequestedAt": {
-            "default": null,
-            "anyOf": [{ "$ref": "#/components/schemas/Timestamp" }, { "type": "null" }]
-          },
-          "businessDate": {
-            "type": "string",
-            "format": "date",
-            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))$"
-          },
-          "createdAt": { "$ref": "#/components/schemas/Timestamp" },
-          "note": { "type": ["string", "null"] },
-          "items": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": { "$ref": "#/components/schemas/Id" },
-                "itemId": { "$ref": "#/components/schemas/Id" },
-                "parentOrderItemId": {
-                  "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }]
-                },
-                "name": { "type": "string" },
-                "variantId": {
-                  "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }]
-                },
-                "variantName": { "type": ["string", "null"] },
-                "modifiers": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "optionId": { "$ref": "#/components/schemas/Id" },
-                      "name": { "type": "string" },
-                      "priceDelta": {
-                        "type": "integer",
-                        "minimum": -9007199254740991,
-                        "maximum": 9007199254740991
-                      }
-                    },
-                    "required": ["optionId", "name", "priceDelta"]
-                  }
-                },
-                "quantity": {
-                  "type": "integer",
-                  "exclusiveMinimum": 0,
-                  "maximum": 9007199254740991
-                },
-                "unitPrice": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
-                "lineTotal": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
-                "stationId": { "$ref": "#/components/schemas/Id" },
-                "state": { "$ref": "#/components/schemas/OrderItemState" },
-                "instructions": { "type": ["string", "null"] },
-                "endReason": { "type": ["string", "null"] },
-                "onPrintedBill": { "type": "boolean" }
-              },
-              "required": [
-                "id",
-                "itemId",
-                "parentOrderItemId",
-                "name",
-                "variantId",
-                "variantName",
-                "modifiers",
-                "quantity",
-                "unitPrice",
-                "lineTotal",
-                "stationId",
-                "state",
-                "instructions"
-              ]
-            }
-          },
-          "kots": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "id": { "$ref": "#/components/schemas/Id" },
-                "kotNumber": {
-                  "type": "integer",
-                  "exclusiveMinimum": 0,
-                  "maximum": 9007199254740991
-                },
-                "stationId": { "$ref": "#/components/schemas/Id" },
-                "stationName": { "type": "string" },
-                "kind": { "type": "string", "enum": ["NEW", "MODIFIED", "CANCELLED"] },
-                "printStatus": { "$ref": "#/components/schemas/KotPrintStatus" }
-              },
-              "required": ["id", "kotNumber", "stationId", "stationName", "kind", "printStatus"]
-            }
-          }
-        },
-        "required": [
-          "id",
-          "orderNumber",
-          "orderType",
-          "source",
-          "status",
-          "tableSessionId",
-          "tableId",
-          "takeawayToken",
-          "customerName",
-          "businessDate",
-          "createdAt",
-          "note",
-          "items",
-          "kots"
-        ]
       },
       "OrdersMoved": {
         "type": "object",
@@ -21951,24 +21814,6 @@
         },
         "required": ["orders"],
         "additionalProperties": false
-      },
-      "PendingApprovalsResponseInput": {
-        "type": "object",
-        "properties": {
-          "orders": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "order": { "$ref": "#/components/schemas/OrderViewInput" },
-                "tableLabel": { "type": ["string", "null"] },
-                "waiterId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] }
-              },
-              "required": ["order", "tableLabel", "waiterId"]
-            }
-          }
-        },
-        "required": ["orders"]
       },
       "PendingBill": {
         "type": "object",
@@ -25572,18 +25417,6 @@
         },
         "required": ["tableSessionId", "orders", "runningTotal", "pendingTotal"],
         "additionalProperties": false
-      },
-      "TabletOrdersResponseInput": {
-        "type": "object",
-        "properties": {
-          "tableSessionId": {
-            "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }]
-          },
-          "orders": { "type": "array", "items": { "$ref": "#/components/schemas/OrderViewInput" } },
-          "runningTotal": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
-          "pendingTotal": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
-        },
-        "required": ["tableSessionId", "orders", "runningTotal", "pendingTotal"]
       },
       "TabletTableView": {
         "type": "object",
