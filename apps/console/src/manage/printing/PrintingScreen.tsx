@@ -19,6 +19,7 @@ import {
   printerAddress,
   printerState,
   redirectTargets,
+  stationReach,
   stationsOn,
 } from './printing-view.js';
 
@@ -46,13 +47,20 @@ export function PrintingScreen() {
   const toast = useToast();
   const { data, reload } = useLive(
     async () => {
-      const [printers, stations] = await Promise.all([
+      const [printers, stations, devices] = await Promise.all([
         controller.api.listPrinters(),
         controller.api.listStations(),
+        // Which kitchen screens show each station (ADR-0031); someone who cannot list devices
+        // sees no warning rather than no page.
+        controller.api.listDevices().then(
+          (answer) => answer.devices,
+          () => undefined,
+        ),
       ]);
-      return { printers: printers.printers, stations: stations.stations };
+      return { printers: printers.printers, stations: stations.stations, devices };
     },
-    (type) => type === 'RestaurantChanged' || type === 'PrinterStatusChanged',
+    (type) =>
+      type === 'RestaurantChanged' || type === 'PrinterStatusChanged' || type === 'DeviceRevoked',
   );
   const [open, setOpen] = useState<Open | undefined>();
   const [busy, setBusy] = useState(false);
@@ -299,6 +307,16 @@ export function PrintingScreen() {
                           ? t('printing.stations.noPrinter')
                           : t('printing.stations.printer', { name: printer })}
                       </p>
+                      {(() => {
+                        const devices = data.value.devices;
+                        if (devices === undefined) return null;
+                        const reach = stationReach(station, data.value.printers, devices);
+                        return reach === 'OK' ? null : (
+                          <p className="console-notice console-notice--warning">
+                            {t(`printing.stations.reach.${reach}`, { name: station.name })}
+                          </p>
+                        );
+                      })()}
                     </div>
                     <div
                       className="staff-row__actions"

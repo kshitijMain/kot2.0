@@ -332,3 +332,16 @@ export const MenuPublishResponse = z.object({
   published: z.boolean(),
 });
 export type MenuPublishResponse = z.infer<typeof MenuPublishResponse>;
+
+/**
+ * Whether the menu has changes devices do not have yet (ADR-0031): what the editor and the
+ * dashboard show as "Unpublished changes: Publish". Availability and stock are live, never here.
+ */
+export const MenuPublishStatus = z.object({
+  publishedVersion: z.int().positive().nullable(),
+  publishedAt: Timestamp.nullable(),
+  unpublished: z.boolean(),
+  /** Dishes added, changed or removed since the last publish, by name. */
+  changedItems: z.array(z.string()),
+});
+export type MenuPublishStatus = z.infer<typeof MenuPublishStatus>;

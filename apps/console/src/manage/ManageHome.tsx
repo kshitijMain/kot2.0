@@ -22,6 +22,7 @@ import { DevicesScreen } from './devices/DevicesScreen.js';
 import { MenuFileScreen } from './menu/MenuFileScreen.js';
 import { BulkPhotosScreen } from './menu/BulkPhotosScreen.js';
 import { MenuEditor } from './menu/MenuEditor.js';
+import { DashboardUnpublishedNotice } from './menu/UnpublishedNotice.js';
 import { PrintingScreen } from './printing/PrintingScreen.js';
 import { AuditScreen } from './audit/AuditScreen.js';
 import { ReportsArea } from './reports/ReportsArea.js';
@@ -221,6 +222,7 @@ export function ManageHome() {
       </nav>
       <div className="dashboard__content">
         <ScreenHelp />
+        {managesMenu ? <DashboardUnpublishedNotice /> : null}
         <Routes>
           {first === undefined ? null : (
             <Route index element={<Navigate to={`/manage/${first}`} replace />} />

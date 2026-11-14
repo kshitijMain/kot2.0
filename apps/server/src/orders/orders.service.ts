@@ -245,7 +245,8 @@ export class OrdersService {
 
       const businessDate = await currentBusinessDate(tx, actor.restaurantId, now);
       const table = await this.prepareTable(tx, actor.restaurantId, request, itemState, options);
-      const response = await this.create(tx, actor, request, lines, {
+      const routed = await this.routeToLiveStations(tx, actor.restaurantId, lines);
+      const response = await this.create(tx, actor, request, routed, {
         businessDate,
         itemState,
         menu,
@@ -314,6 +315,38 @@ export class OrdersService {
       orderBy: [{ createdAt: 'asc' }, { orderNumber: 'asc' }],
     });
     return { orders: orders.map(orderView) };
+  }
+
+  /**
+   * Each dish goes to its station as it stands now, not as the last published menu had it
+   * (ADR-0031): a dish moved to the Bar in the menu editor went on reaching the Kitchen until the
+   * menu was published. A station is kitchen set-up, like whether it prints, which is read live
+   * too. A dish whose station has since been archived keeps the published one.
+   */
+  private async routeToLiveStations(
+    tx: TransactionClient,
+    restaurantId: string,
+    lines: readonly ResolvedLine[],
+  ): Promise<ResolvedLine[]> {
+    const ids = new Set(
+      lines.flatMap((line) => [line.item.id, ...line.components.map((part) => part.item.id)]),
+    );
+    const rows = await tx.item.findMany({
+      where: { restaurantId, id: { in: [...ids] }, station: { archivedAt: null } },
+      select: { id: true, stationId: true },
+    });
+    const live = new Map(rows.map((row) => [row.id, row.stationId]));
+    const routed = <T extends { readonly id: string; readonly stationId: string }>(item: T): T => {
+      const stationId = live.get(item.id);
+      return stationId === undefined || stationId === item.stationId
+        ? item
+        : { ...item, stationId };
+    };
+    return lines.map((line) => ({
+      ...line,
+      item: routed(line.item),
+      components: line.components.map((part) => ({ ...part, item: routed(part.item) })),
+    }));
   }
 
   /** Items whose counted stock is short, checked under the item row locks (MENU-006). */

@@ -1,4 +1,9 @@
-import type { MenuDraftResponse, StationView, TaxGroupView } from '@rp/contracts';
+import type {
+  MenuDraftResponse,
+  MenuPublishStatus,
+  StationView,
+  TaxGroupView,
+} from '@rp/contracts';
 import { menuHealth } from '@rp/domain';
 import { Button, ErrorState, Icon, LoadingState, Tabs } from '@rp/ui-web';
 import { type ReactNode, useMemo, useState } from 'react';
@@ -14,10 +19,13 @@ import { ItemsTab } from './ItemsTab.js';
 import { healthInputOf } from './menu-view.js';
 import { ExportMenuFile } from './MenuFileScreen.js';
 import { PublishDialog } from './PublishDialog.js';
+import { UnpublishedNotice } from './UnpublishedNotice.js';
 
 /** What every tab of the editor reads, and how it asks for a fresh copy after a change. */
 export interface MenuData {
   readonly draft: MenuDraftResponse;
+  /** Whether the devices have every change (ADR-0031). */
+  readonly publishStatus: MenuPublishStatus;
   readonly taxGroups: readonly TaxGroupView[];
   readonly stations: readonly StationView[];
 }
@@ -41,12 +49,13 @@ export function MenuEditor() {
   const navigate = useNavigate();
   const { data, reload } = useLive(
     async (): Promise<MenuData> => {
-      const [draft, taxGroups, stations] = await Promise.all([
+      const [draft, taxGroups, stations, publishStatus] = await Promise.all([
         controller.api.getMenuDraft(),
         controller.api.listTaxGroups(),
         controller.api.listStations(),
+        controller.api.getMenuPublishStatus(),
       ]);
-      return { draft, taxGroups: taxGroups.taxGroups, stations: stations.stations };
+      return { draft, taxGroups: taxGroups.taxGroups, stations: stations.stations, publishStatus };
     },
     (type) =>
       type === 'MenuPublished' ||
@@ -79,6 +88,12 @@ export function MenuEditor() {
     const props = { data: data.value, reload };
     content = (
       <>
+        <UnpublishedNotice
+          status={data.value.publishStatus}
+          onPublish={() => {
+            setPublishing(true);
+          }}
+        />
         {health === undefined ? null : (
           <HealthPanel data={data.value} health={health} reload={reload} />
         )}

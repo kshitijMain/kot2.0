@@ -56,6 +56,9 @@ stock (the kitchen can too). Prices include or exclude tax as the restaurant is 
   dishes with one name).
 - Publish: the step shows what changes on the devices, then which devices have the new menu and
   which get it when they reconnect.
+- **Unpublished changes:** while the menu has changes the devices do not have yet, the menu and
+  every dashboard page say so, naming the dishes. Press **Publish now**. A dish's kitchen station
+  applies at once, published or not; everything guests see waits for publishing.
 
 ## Menu availability
 

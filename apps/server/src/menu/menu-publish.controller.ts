@@ -7,6 +7,7 @@ import {
   type ItemAvailabilityView,
   MenuEntityParams,
   type MenuPublishResponse,
+  type MenuPublishStatus,
   type MenuSnapshot,
 } from '@rp/contracts';
 import { authErrors } from '../auth/auth-errors.js';
@@ -31,6 +32,13 @@ export class MenuPublishController {
   current(@Req() request: AuthenticatedRequest): Promise<MenuSnapshot> {
     if (request.device === undefined) throw authErrors.deviceNotRecognised();
     return this.menu.current(request.device.restaurantId);
+  }
+
+  /** ADR-0031: what the editor shows as "Unpublished changes". Before `publish`, which posts. */
+  @Get('publish-status')
+  @RequireCapability('MENU_MANAGE')
+  publishStatus(@Req() request: AuthenticatedRequest): Promise<MenuPublishStatus> {
+    return this.menu.publishStatus(principalOf(request).restaurantId);
   }
 
   @Post('publish')

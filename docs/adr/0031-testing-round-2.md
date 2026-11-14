@@ -26,3 +26,27 @@ for the waiter to collect, and Recall brings the ticket back within the hour, as
 
 **Changed tests.** The kitchen display's tests that expected Bump to wait for the pick-up now
 expect it as soon as everything is ready (the brief changes P9-21's rule).
+
+## B. A Bar dish went to the Kitchen
+
+**Cause.** A KOT took each dish's station from the last _published_ menu. Moving "Lime soda" to
+the Bar in the menu editor saved it to the draft; until someone published, every Lime soda kept
+going to the Kitchen. Nothing on the dashboard said the menu had unpublished changes. (The Bar
+station itself was fine: whether a station prints and on which printer is read live already.)
+
+**Now.**
+
+- A dish goes to its station as it stands when the KOT is made (`routeToLiveStations` in the
+  order engine), like the station's print setting: a station is kitchen set-up, not something the
+  guests see. A dish whose station has been archived keeps the published one. Prices, names and
+  everything guests see still wait for publishing (D-39).
+- `GET /api/v1/menu/publish-status` (`MENU_MANAGE`) compares the draft with the published menu,
+  leaving out availability and stock (they are live), and names the dishes added, changed or
+  removed. The menu editor shows **Unpublished changes** above the dishes with **Publish now**;
+  every other dashboard page shows the same notice with a link to the menu.
+- The Kitchen and printers page warns about a station whose tickets appear nowhere (no kitchen
+  screen shows it and it does not print) and one set to print with no printer.
+
+**Tests.** A dish moved to the Bar without publishing makes a Bar KOT only, shown on the Bar's
+screen and printed on the Bar's printer; a mixed order makes one KOT per station, each on its own
+screen and printer (`station-routing.int.test.ts`, which failed before the fix).

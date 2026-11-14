@@ -159,6 +159,7 @@ import {
   ItemPhotoRequest,
   MenuEntityParams,
   MenuPublishResponse,
+  MenuPublishStatus,
   ModifierGroupRequest,
   ModifierGroupView,
 } from './menu-admin.js';
@@ -2874,6 +2875,22 @@ export const ROUTES = [
       200: { description: 'Availability as it is now.', schema: ItemAvailabilityView },
       ...standardErrors,
       404: { description: 'No such active item.', schema: ApiError },
+    },
+  },
+  {
+    operationId: 'getMenuPublishStatus',
+    method: 'GET',
+    path: '/api/v1/menu/publish-status',
+    summary: 'Whether the menu has changes that are not published yet',
+    description:
+      'ADR-0031: the menu editor and the dashboard show "Unpublished changes: Publish" from it. ' +
+      'Availability and stock are live and never count as unpublished.',
+    tags: ['menu'],
+    requirements: ['MENU-013', 'MGR-005'],
+    capability: 'MENU_MANAGE',
+    responses: {
+      200: { description: 'The status.', schema: MenuPublishStatus },
+      ...standardErrors,
     },
   },
   {

@@ -377,6 +377,52 @@ describe('[MGR-005] [MENU-002] [MENU-006] the dishes', () => {
   });
 });
 
+const UNPUBLISHED = {
+  publishedVersion: 3,
+  publishedAt: '2026-09-26T09:00:00.000Z',
+  unpublished: true,
+  changedItems: ['Lime soda'],
+};
+
+describe('[MENU-013] unpublished changes cannot be missed (ADR-0031)', () => {
+  it('says so above the dishes, names them, and publishes from there', async () => {
+    const fake = menuServer()
+      .on('GET', '/api/v1/menu/publish-status', () => ({ status: 200, body: UNPUBLISHED }))
+      .on('GET', '/api/v1/menu', () => ({ status: 200, body: publishedMenu({}) }))
+      .on('GET', '/api/v1/devices', () => ({ status: 200, body: { devices: [] } }));
+    const { user, container } = await renderConsole({ fake, path: PATH, signedIn: 'MANAGER' });
+    const notice = await screen.findByRole('region', { name: t('menuEditor.unpublished.title') });
+    expect(notice).toHaveTextContent(
+      t('menuEditor.unpublished.body', { count: 1, names: 'Lime soda', version: 3 }),
+    );
+    await expectNoAxeViolations(container);
+    await user.click(
+      within(notice).getByRole('button', { name: t('menuEditor.unpublished.publish') }),
+    );
+    expect(
+      await screen.findByRole('dialog', { name: t('menuEditor.publishing.title') }),
+    ).toBeVisible();
+  });
+
+  it('says nothing when the devices have everything', async () => {
+    await renderConsole({ fake: menuServer(), path: PATH, signedIn: 'MANAGER' });
+    await screen.findByRole('heading', { name: t('menuEditor.title') });
+    await screen.findAllByRole('heading', { level: 3 });
+    expect(screen.queryByRole('region', { name: t('menuEditor.unpublished.title') })).toBeNull();
+  });
+
+  it('shows on every dashboard page, with the way to the menu', async () => {
+    const fake = signsInAs(server(), 'MANAGER').on('GET', '/api/v1/menu/publish-status', () => ({
+      status: 200,
+      body: UNPUBLISHED,
+    }));
+    const { user } = await renderConsole({ fake, path: '/manage/bills', signedIn: 'MANAGER' });
+    const banner = await screen.findByRole('region', { name: t('menuEditor.unpublished.title') });
+    await user.click(within(banner).getByRole('link', { name: t('menuEditor.unpublished.open') }));
+    expect(await screen.findByRole('heading', { name: t('menuEditor.title') })).toBeVisible();
+  });
+});
+
 describe('[MENU-013] publishing', () => {
   it('says what changes, publishes, and names the devices that have it and those that will', async () => {
     const fake = menuServer()

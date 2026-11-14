@@ -10,14 +10,18 @@ import {
   redirectTargets,
   stationDraftOf,
   stationRequestOf,
+  stationReach,
   stationsOn,
 } from '../src/manage/printing/printing-view.js';
+import { deviceView } from './devices-fixture.js';
 import {
   BAR_PRINTER,
   KITCHEN_PRINTER,
   printers,
+  BAR,
   printerView,
   stations,
+  stationView,
 } from './printing-fixture.js';
 
 describe('[KDS-008] [ONB-004] a printer as the form holds it', () => {
@@ -103,5 +107,32 @@ describe('[KDS-008] how a printer is doing', () => {
     // A printer that is itself redirected cannot take another's tickets.
     const barAway = { ...all[1]!, redirectToId: KITCHEN_PRINTER };
     expect(redirectTargets(all[0]!, [all[0]!, barAway])).toEqual([]);
+  });
+});
+
+describe('[KDS-002] [KDS-008] where a station’s tickets appear (ADR-0031)', () => {
+  const barScreen = deviceView({ type: 'KDS', stationId: BAR, stationIds: [BAR] });
+  const bar = stationView({ id: BAR, name: 'Bar', mode: 'SCREEN', printerId: null });
+
+  it('says when a station neither prints nor shows on any kitchen screen', () => {
+    expect(stationReach(bar, printers(), [])).toBe('NOWHERE');
+    // A screen for it, or a screen for every station, shows its tickets.
+    expect(stationReach(bar, printers(), [barScreen])).toBe('OK');
+    expect(
+      stationReach(bar, printers(), [deviceView({ type: 'KDS', stationId: null, stationIds: [] })]),
+    ).toBe('OK');
+    // A screen that was unpaired shows nothing.
+    expect(
+      stationReach(bar, printers(), [{ ...barScreen, revokedAt: '2026-09-26T10:00:00.000Z' }]),
+    ).toBe('NOWHERE');
+    // Printing on a printer that is there is enough.
+    expect(stationReach({ ...bar, mode: 'PRINT', printerId: BAR_PRINTER }, printers(), [])).toBe(
+      'OK',
+    );
+  });
+
+  it('says when a station is set to print but has no printer', () => {
+    expect(stationReach({ ...bar, mode: 'BOTH' }, printers(), [barScreen])).toBe('NO_PRINTER');
+    expect(stationReach({ ...bar, mode: 'PRINT' }, printers(), [barScreen])).toBe('NO_PRINTER');
   });
 });

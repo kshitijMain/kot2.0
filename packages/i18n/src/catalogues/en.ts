@@ -1366,6 +1366,13 @@ until you press Publish.
     intro:
       'Changes here are a draft. Devices keep the published menu until you publish; availability and stock change at once.',
     publish: 'Publish menu',
+    /** ADR-0031: changes the devices do not have yet, impossible to miss. */
+    unpublished: {
+      title: 'Unpublished changes',
+      body: '{count, plural, =0 {The menu has changes} one {# dish changed: {names}} other {# dishes changed: {names}}}. Waiters, tablets and the QR menu still show version {version} until you publish.',
+      publish: 'Publish now',
+      open: 'Open the menu to publish',
+    },
     published: 'Menu version {version} is published. Every device has it now.',
     unchanged: 'Nothing changed since version {version}.',
     loadFailed: 'The menu could not be loaded.',
@@ -3648,6 +3655,13 @@ until you press Publish.
       },
       printer: 'Printer: {name}',
       noPrinter: 'No printer',
+      /** ADR-0031: where a station's tickets appear. */
+      reach: {
+        NOWHERE:
+          'No kitchen screen shows {name} and it does not print: its tickets appear nowhere. Give a kitchen screen this station (Devices), or a printer.',
+        NO_PRINTER:
+          '{name} is set to print but has no printer: choose one, or set it to screen only.',
+      },
       actionsFor: 'Actions for {name}',
       edit: 'Change',
       archive: 'Archive',

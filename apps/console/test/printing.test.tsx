@@ -92,6 +92,22 @@ describe('[KDS-008] [ONB-004] stations and printers', () => {
     await expectNoAxeViolations(container);
   });
 
+  it('warns when a station’s tickets would appear nowhere (ADR-0031)', async () => {
+    // No kitchen screen shows the Bar, and the Bar does not print.
+    const fake = printingServer().on('GET', '/api/v1/devices', () => ({
+      status: 200,
+      body: { devices: [] },
+    }));
+    await renderConsole({ fake, path: '/manage/printing', signedIn: 'MANAGER' });
+    expect(
+      await screen.findByText(t('printing.stations.reach.NOWHERE', { name: 'Bar' })),
+    ).toBeVisible();
+    // The kitchen prints on its printer: nothing to say.
+    expect(
+      screen.queryByText(t('printing.stations.reach.NOWHERE', { name: 'Kitchen' })),
+    ).toBeNull();
+  });
+
   it('adds a network printer after checking its address', async () => {
     const fake = printingServer();
     const { user } = await renderConsole({ fake, path: PATH, signedIn: 'MANAGER' });

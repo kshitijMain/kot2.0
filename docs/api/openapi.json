@@ -6670,6 +6670,42 @@
         "x-requirements": ["MENU-013", "MENU-012", "MGR-005", "AUD-001"]
       }
     },
+    "/api/v1/menu/publish-status": {
+      "get": {
+        "operationId": "getMenuPublishStatus",
+        "summary": "Whether the menu has changes that are not published yet",
+        "description": "ADR-0031: the menu editor and the dashboard show \"Unpublished changes: Publish\" from it. Availability and stock are live and never count as unpublished.",
+        "tags": ["menu"],
+        "responses": {
+          "200": {
+            "description": "The status.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/MenuPublishStatus" } }
+            }
+          },
+          "400": {
+            "description": "The request does not match the contract.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "No valid session or device credential.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "The signed-in role lacks the required capability.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        },
+        "x-capability": "MENU_MANAGE",
+        "x-requirements": ["MENU-013", "MGR-005"]
+      }
+    },
     "/api/v1/onboarding": {
       "get": {
         "operationId": "getOnboarding",
@@ -19776,6 +19812,24 @@
           "published": { "type": "boolean" }
         },
         "required": ["version", "publishedAt", "checksum", "published"],
+        "additionalProperties": false
+      },
+      "MenuPublishStatus": {
+        "type": "object",
+        "properties": {
+          "publishedVersion": {
+            "anyOf": [
+              { "type": "integer", "exclusiveMinimum": 0, "maximum": 9007199254740991 },
+              { "type": "null" }
+            ]
+          },
+          "publishedAt": {
+            "anyOf": [{ "$ref": "#/components/schemas/Timestamp" }, { "type": "null" }]
+          },
+          "unpublished": { "type": "boolean" },
+          "changedItems": { "type": "array", "items": { "type": "string" } }
+        },
+        "required": ["publishedVersion", "publishedAt", "unpublished", "changedItems"],
         "additionalProperties": false
       },
       "MenuPublished": {

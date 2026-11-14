@@ -126,6 +126,16 @@ export function server(type: 'POS' | 'KDS' = 'POS'): FakeServer {
       // The dashboard's counts beside Bills and Modifications (ADR-0030).
       .on('GET', '/api/v1/bills/pending', () => ({ status: 200, body: { bills: [] } }))
       .on('GET', '/api/v1/orders/pending-approval', () => ({ status: 200, body: { orders: [] } }))
+      // Nothing waiting to be published (ADR-0031).
+      .on('GET', '/api/v1/menu/publish-status', () => ({
+        status: 200,
+        body: {
+          publishedVersion: 1,
+          publishedAt: '2026-09-26T09:00:00.000Z',
+          unpublished: false,
+          changedItems: [],
+        },
+      }))
       .on('POST', '/api/v1/auth/logout', () => ({ status: 204 }))
       .on('GET', '/api/v1/auth/session', () => ({ status: 200, body: {} }))
   );

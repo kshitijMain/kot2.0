@@ -1,6 +1,7 @@
 import {
   NETWORK_HOST,
   PrinterRequest,
+  type DeviceView,
   type PrinterView,
   StationRequest,
   type StationMode,
@@ -162,4 +163,33 @@ export function redirectTargets(
   return activePrinters(printers).filter(
     (other) => other.id !== printer.id && other.redirectToId === null,
   );
+}
+
+/** Where a station's tickets appear (ADR-0031): somewhere, nowhere, or a printer is missing. */
+export type StationReach = 'OK' | 'NOWHERE' | 'NO_PRINTER';
+
+/**
+ * Whether a station's tickets reach anyone (ADR-0031): it prints on a printer that is there, or
+ * a kitchen screen shows it (one bound to it, or one showing every station). A station set to
+ * print with no printer says so first; one that neither prints nor shows anywhere, that its
+ * tickets go nowhere.
+ */
+export function stationReach(
+  station: StationView,
+  printers: readonly PrinterView[],
+  devices: readonly DeviceView[],
+): StationReach {
+  const wantsPrinter = station.mode === 'PRINT' || station.mode === 'BOTH';
+  const printer = activePrinters(printers).find((entry) => entry.id === station.printerId);
+  if (wantsPrinter && printer === undefined) return 'NO_PRINTER';
+  if (printer !== undefined && wantsPrinter) return 'OK';
+  const shown = devices.some(
+    (device) =>
+      device.type === 'KDS' &&
+      device.revokedAt === null &&
+      (device.stationIds.length === 0
+        ? device.stationId === null || device.stationId === station.id
+        : device.stationIds.includes(station.id)),
+  );
+  return shown ? 'OK' : 'NOWHERE';
 }

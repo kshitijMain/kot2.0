@@ -5,6 +5,7 @@ import {
   type ItemAvailabilityRequest,
   type ItemAvailabilityView,
   type MenuPublishResponse,
+  type MenuPublishStatus,
   MenuSnapshot,
 } from '@rp/contracts';
 import { canonicalJson, type HealthProblem, menuHealth } from '@rp/domain';
@@ -339,6 +340,57 @@ export class MenuPublishService {
       payload: { menuVersion: version },
     });
     return { version, publishedAt: publishedAt.toISOString(), checksum, published: true };
+  }
+
+  /**
+   * Whether the draft differs from the published menu (ADR-0031), and which dishes. Availability
+   * and stock change at once without publishing, so they are left out of the comparison.
+   */
+  async publishStatus(restaurantId: string): Promise<MenuPublishStatus> {
+    const [content, latest] = await Promise.all([
+      buildMenuContent(this.prisma, restaurantId),
+      this.prisma.menuVersion.findFirst({
+        where: { restaurantId },
+        orderBy: { version: 'desc' },
+        select: { version: true, publishedAt: true },
+      }),
+    ]);
+    const published = await this.published(restaurantId);
+    const draft = MenuSnapshot.parse({
+      version: 1,
+      publishedAt: new Date().toISOString(),
+      ...content,
+    });
+    const fixed = ({
+      available: _available,
+      stockCount: _stock,
+      ...rest
+    }: MenuSnapshot['items'][number]) => canonicalJson(rest);
+    const before = new Map((published?.items ?? []).map((item) => [item.id, item]));
+    const after = new Set(draft.items.map((item) => item.id));
+    const changedItems = [
+      ...draft.items
+        .filter((item) => {
+          const old = before.get(item.id);
+          return old === undefined || fixed(old) !== fixed(item);
+        })
+        .map((item) => item.name),
+      ...(published?.items ?? []).filter((item) => !after.has(item.id)).map((item) => item.name),
+    ];
+    const { items: _draftItems, version: _v1, publishedAt: _p1, ...draftRest } = draft;
+    const otherChanged =
+      published === null
+        ? draft.items.length > 0
+        : (() => {
+            const { items: _items, version: _v2, publishedAt: _p2, ...publishedRest } = published;
+            return canonicalJson(draftRest) !== canonicalJson(publishedRest);
+          })();
+    return {
+      publishedVersion: latest?.version ?? null,
+      publishedAt: latest?.publishedAt.toISOString() ?? null,
+      unpublished: changedItems.length > 0 || otherChanged,
+      changedItems,
+    };
   }
 
   /**

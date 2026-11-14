@@ -508,3 +508,20 @@ manager approves those with a PIN on the waiter's phone). C: a log of every chan
 
 **Recommendation:** A now; B if waiters' voids should be approved from the dashboard instead of on
 the phone, which is a rule change for Part 2.
+
+# Fixes from testing, round 2 (ADR-0031)
+
+## D-39: a dish's station before the menu is published
+
+**Situation.** A dish moved to another station in the menu editor kept going to the old station
+until the menu was published.
+
+**Today.** The KOT goes to the dish's station as it is now, published or not. Everything guests
+see (names, prices, photos) still waits for publishing, and the editor and the dashboard say
+plainly when there are unpublished changes.
+
+**Options.** A: as today. B: stations wait for publishing like everything else (the notice then
+matters even more).
+
+**Recommendation:** A. Routing is kitchen set-up; waiting for a publish only sends food to the
+wrong place.
