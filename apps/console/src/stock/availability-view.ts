@@ -9,13 +9,21 @@ export interface AvailabilityRow {
   readonly inStock: boolean;
 }
 
+/** Which dishes to show by whether they can be ordered (ADR-0031). */
+export const AVAILABILITY_FILTERS = ['ALL', 'AVAILABLE', 'OUT'] as const;
+export type AvailabilityFilter = (typeof AVAILABILITY_FILTERS)[number];
+
 /**
  * The dishes on the menu, by category and then as the menu orders them, that match the search
- * (name, short code or other names) and the category; archived ones are left out.
+ * (name, short code or other names), the category and the status; archived ones are left out.
  */
 export function availabilityRows(
   menu: MenuSnapshot,
-  filter: { readonly search: string; readonly categoryId: string | null },
+  filter: {
+    readonly search: string;
+    readonly categoryId: string | null;
+    readonly status: AvailabilityFilter;
+  },
 ): AvailabilityRow[] {
   const categories = new Map(menu.categories.map((entry, index) => [entry.id, { entry, index }]));
   const words = filter.search.trim().toLowerCase();
@@ -41,5 +49,14 @@ export function availabilityRows(
         categoryName: categories.get(item.categoryId)?.entry.name ?? '',
         inStock: reason !== 'SOLD_OUT' && reason !== 'NOT_AVAILABLE',
       };
-    });
+    })
+    .filter((row) => filter.status === 'ALL' || (filter.status === 'AVAILABLE') === row.inStock);
+}
+
+/**
+ * What switching a dish on asks the server for: available, and a count of 0 stops (it would
+ * sell out again at once).
+ */
+export function backInStock(item: MenuItem): { available: true; stockCount: number | null } {
+  return { available: true, stockCount: item.stockCount === 0 ? null : item.stockCount };
 }

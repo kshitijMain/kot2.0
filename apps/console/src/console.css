@@ -2707,88 +2707,198 @@ body {
   min-width: 0;
 }
 
-/* Menu availability (ADR-0023): one big switch per dish, for the kitchen and managers. */
+/* Menu availability (ADR-0023), a full page of large cards since ADR-0031. */
 .stock {
   display: flex;
   flex-direction: column;
   gap: var(--rp-space-4);
 }
 
-.stock__title {
-  margin: 0;
-  font-size: var(--rp-font-size-lg);
-}
-
-.stock__filters {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+.stock__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
   gap: var(--rp-space-3);
 }
 
-.stock__list {
+.stock__title {
+  margin: 0;
+  font-size: var(--rp-font-size-xl);
+}
+
+.stock__intro {
+  margin: 0;
+  color: var(--rp-color-text-muted);
+}
+
+.stock__filters {
   display: flex;
-  flex-direction: column;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--rp-space-3) var(--rp-space-4);
+}
+
+.stock__filters > :first-child {
+  flex: 1 1 16rem;
+}
+
+.stock__chips {
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--rp-space-2);
+}
+
+.stock__chip {
+  min-height: var(--rp-touch-min);
+  padding: 0 var(--rp-space-4);
+  border: 1px solid var(--rp-color-border-strong);
+  border-radius: var(--rp-radius-full);
+  background: var(--rp-color-surface);
+  color: var(--rp-color-text);
+  font: inherit;
+  font-weight: var(--rp-font-weight-medium);
+  cursor: pointer;
+}
+
+/* The chosen chip: filled and bold, not colour alone. */
+.stock__chip[aria-pressed='true'] {
+  border-color: var(--rp-color-primary);
+  background: var(--rp-color-primary);
+  color: var(--rp-color-on-primary);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+.stock__chip:focus-visible,
+.stock-switch:focus-visible {
+  outline: 3px solid var(--rp-color-focus-ring);
+  outline-offset: 2px;
+}
+
+.stock__bulk {
+  display: flex;
+}
+
+/* Three or four cards a row on a laptop or kitchen screen, fewer on smaller ones. */
+.stock__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(16rem, 1fr));
+  gap: var(--rp-space-4);
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.stock__row {
-  display: grid;
-  grid-template-columns: 1fr auto auto;
-  grid-template-areas:
-    'name switch count'
-    'category switch count';
-  align-items: center;
-  gap: var(--rp-space-1) var(--rp-space-3);
-  padding: var(--rp-space-3);
+.stock-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rp-space-3);
+  padding: var(--rp-space-4);
   border: 1px solid var(--rp-color-border);
-  border-radius: var(--rp-radius-md);
+  border-radius: var(--rp-radius-lg);
   background: var(--rp-color-surface);
-  min-height: var(--rp-touch-min);
 }
 
-/* Out of stock is said in words and a badge, not by colour alone. */
-.stock__row[data-out] {
+/* Out of stock: greyed, with a badge in words. */
+.stock-card[data-out] {
   background: var(--rp-color-surface-sunken);
   color: var(--rp-color-text-muted);
 }
 
-.stock__name {
-  grid-area: name;
+.stock-card__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rp-space-2);
+}
+
+.stock-card__name {
+  margin: 0;
+  font-size: var(--rp-font-size-lg);
+  font-weight: var(--rp-font-weight-semibold);
+}
+
+.stock-card__category {
+  margin: 0;
+  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-sm);
+}
+
+/* One big two-state switch: Available / Out of stock. */
+.stock-switch {
+  display: flex;
+  align-items: center;
+  gap: var(--rp-space-3);
+  min-height: var(--rp-touch-min);
+  padding: var(--rp-space-2) var(--rp-space-3);
+  border: 1px solid var(--rp-color-border-strong);
+  border-radius: var(--rp-radius-md);
+  background: var(--rp-color-surface);
+  color: var(--rp-color-text);
+  font: inherit;
+  font-size: var(--rp-font-size-md);
+  font-weight: var(--rp-font-weight-semibold);
+  cursor: pointer;
+}
+
+.stock-switch:disabled {
+  cursor: progress;
+  opacity: 0.7;
+}
+
+.stock-switch__track {
+  position: relative;
+  flex: none;
+  inline-size: 3.5rem;
+  block-size: 2rem;
+  border-radius: var(--rp-radius-full);
+  background: var(--rp-color-border-strong);
+}
+
+.stock-switch[aria-checked='true'] .stock-switch__track {
+  background: var(--rp-color-success);
+}
+
+.stock-switch__knob {
+  position: absolute;
+  inset-block-start: 0.25rem;
+  inset-inline-start: 0.25rem;
+  inline-size: 1.5rem;
+  block-size: 1.5rem;
+  border-radius: var(--rp-radius-full);
+  background: var(--rp-color-surface);
+  transition: transform var(--rp-duration-fast) var(--rp-easing-standard);
+}
+
+.stock-switch[aria-checked='true'] .stock-switch__knob {
+  transform: translateX(1.5rem);
+}
+
+.stock-card__portions {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: var(--rp-space-2);
+}
+
+.stock-card__portions-label {
+  flex-basis: 100%;
+  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-sm);
+}
+
+.stock-card__count {
+  min-inline-size: 4.5rem;
+  text-align: center;
+  font-size: var(--rp-font-size-lg);
   font-weight: var(--rp-font-weight-semibold);
+  font-variant-numeric: tabular-nums;
 }
 
-.stock__category {
-  grid-area: category;
-  color: var(--rp-color-text-muted);
-  font-size: var(--rp-font-size-sm);
-}
-
-.stock__left {
-  color: var(--rp-color-text-muted);
-  font-size: var(--rp-font-size-sm);
-  font-weight: var(--rp-font-weight-medium);
-}
-
-.stock__row > :nth-child(3) {
-  grid-area: switch;
-}
-
-.stock__row > :nth-child(4) {
-  grid-area: count;
-}
-
-@media (max-width: 30rem) {
-  .stock__row {
-    grid-template-columns: 1fr;
-    grid-template-areas: 'name' 'category' 'switch' 'count';
-  }
+/* The kitchen display's Menu availability page. */
+.kds--page {
+  padding: var(--rp-space-4);
 }
 
 /* ---------------------------------------------------------------- P9-16: on a phone */

@@ -62,11 +62,14 @@ stock (the kitchen can too). Prices include or exclude tax as the restaurant is 
 
 ## Menu availability
 
-Menu availability (also on the kitchen screen): search or pick a category, then **Out of stock**
-or **Mark as available** for each dish, or **Portions left** for a count. It applies at once on
-every device and is in the audit log. Marking a dish out cancels its portions the kitchen has not
-started, at no charge, and tells each waiter who sent one; nothing being cooked or ready is
-touched. A combo is out of stock when any fixed part, or every choice of a part, is.
+Menu availability (also on the kitchen screen) is a page of dish cards: search, a filter (All,
+Available, Out of stock) and category chips, then one big **Available / Out of stock** switch per
+dish, with **Undo** for a few seconds after each change, and **Portions left** as − 12 + with
+**Clear** (the dish sells out by itself at 0). With a category chosen, **Mark all in …
+available** puts the whole category back. Every change applies at once on every device and is in
+the audit log. Marking a dish out cancels its portions the kitchen has not started, at no charge,
+and tells each waiter who sent one; nothing being cooked or ready is touched. A combo is out of
+stock when any fixed part, or every choice of a part, is.
 
 ## Staff and devices
 

@@ -50,3 +50,27 @@ station itself was fine: whether a station prints and on which printer is read l
 **Tests.** A dish moved to the Bar without publishing makes a Bar KOT only, shown on the Bar's
 screen and printed on the Bar's printer; a mixed order makes one KOT per station, each on its own
 screen and printer (`station-routing.int.test.ts`, which failed before the fix).
+
+## C. Menu availability as a full page
+
+**Was.** A list in a side panel over the kitchen display (and a list page on the dashboard), with
+a red "Mark out of stock" button on every dish and the portion count in a dialog.
+
+**Now.** A full page, opened from the kitchen display's top bar (`/kds/availability`, with "Back
+to the tickets") and from the dashboard (`/manage/availability`):
+
+- One line saying what it does, a search box, a filter (All / Available / Out of stock) and
+  category chips.
+- A grid of large cards (three or four a row on a laptop or kitchen screen, fewer on smaller ones):
+  the dish name, its category, and one big two-state switch, Available or Out of stock. An
+  out-of-stock card is greyed with an "Out of stock" badge; no red buttons.
+- Portions left on the card as − 12 + with Clear. The presses are saved together a moment after
+  the last one (`COUNT_SAVE_DELAY_MS`); the dish sells out by itself at 0.
+- A change applies at once with a short note and Undo for six seconds instead of a dialog.
+- With a category chosen, "Mark all in {category} available" puts back every dish of it that is
+  out.
+- Large touch targets, design tokens only. Alerts, cancellations of unstarted portions and live
+  updates are unchanged (the server does them).
+
+**Changed tests.** The availability tests were rewritten for the new page (the brief replaces the
+screen); the pure filter and the live update are kept.

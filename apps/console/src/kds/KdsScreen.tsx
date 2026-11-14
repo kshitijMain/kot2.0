@@ -12,6 +12,7 @@ import {
   useToast,
 } from '@rp/ui-web';
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router';
 import { useConsole, useConsoleState } from '../app/console-context.js';
 import { useT } from '../app/i18n.js';
 import { messageOf } from '../app/messages.js';
@@ -76,7 +77,9 @@ export function KdsScreen({ sounds: given }: { sounds?: KitchenSounds }) {
   const [busy, setBusy] = useState<ReadonlySet<string>>(new Set());
   const [recallOpen, setRecallOpen] = useState(false);
   // ADR-0023: the kitchen marks dishes out of stock and back on the same screen.
-  const [stockOpen, setStockOpen] = useState(false);
+  const navigate = useNavigate();
+  // Menu availability is a page of its own (ADR-0031), not a panel over the tickets.
+  const stockOpen = useLocation().pathname === '/kds/availability';
   const known = useRef<Set<string> | undefined>(undefined);
 
   // Sounds for tickets this screen had not seen (KDS-009); the first read is silent.
@@ -137,6 +140,18 @@ export function KdsScreen({ sounds: given }: { sounds?: KitchenSounds }) {
 
   const offline = connection === 'offline';
 
+  if (stockOpen) {
+    return (
+      <div className="kds kds--page">
+        <AvailabilityScreen
+          onBack={() => {
+            void navigate('/kds');
+          }}
+        />
+      </div>
+    );
+  }
+
   return (
     // The first touch anywhere turns the sound on (browsers need a gesture before playing audio).
     <div className="kds" onPointerDown={soundOn ? undefined : enableSound}>
@@ -167,7 +182,7 @@ export function KdsScreen({ sounds: given }: { sounds?: KitchenSounds }) {
             setRecallOpen(true);
           }}
           onOpenStock={() => {
-            setStockOpen(true);
+            void navigate('/kds/availability');
           }}
           onStep={(ticket, line, event) => {
             void run(ticket.kotId, () => step(line, event));
@@ -195,18 +210,6 @@ export function KdsScreen({ sounds: given }: { sounds?: KitchenSounds }) {
           }}
         />
       )}
-      {stockOpen ? (
-        <Sheet
-          open
-          side="end"
-          title={t('stock.title')}
-          onClose={() => {
-            setStockOpen(false);
-          }}
-        >
-          <AvailabilityScreen />
-        </Sheet>
-      ) : null}
       {recallOpen && current !== undefined ? (
         <Sheet
           open
