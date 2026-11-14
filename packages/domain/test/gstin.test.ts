@@ -5,6 +5,7 @@ import {
   gstinProblem,
   isValidGstin,
   normaliseGstin,
+  placeOfSupplyText,
 } from '../src/gstin.js';
 
 // GSTINs published on invoices and in the GST portal's documentation.
@@ -47,5 +48,22 @@ describe('[BILL-002] [ONB-004] GSTIN validation', () => {
     expect(GST_STATE_CODES['29']).toBe('Karnataka');
     expect(GST_STATE_CODES['36']).toBe('Telangana');
     for (const code of Object.keys(GST_STATE_CODES)) expect(code).toMatch(/^\d{2}$/);
+  });
+});
+
+describe('[BILL-002] the place of supply as a bill prints it (ADR-0031)', () => {
+  it('prints the state code and the state name', () => {
+    expect(placeOfSupplyText('27', null)).toBe('27-Maharashtra');
+    expect(placeOfSupplyText('29', '29AAGCB7383J1Z4')).toBe('29-Karnataka');
+  });
+
+  it('takes the state from the GSTIN when the restaurant has none set', () => {
+    expect(placeOfSupplyText(null, '33AAACH7409R1Z8')).toBe('33-Tamil Nadu');
+  });
+
+  it('prints nothing it cannot name, and keeps text already written out', () => {
+    expect(placeOfSupplyText(null, null)).toBeNull();
+    expect(placeOfSupplyText('99', null)).toBe('99');
+    expect(placeOfSupplyText('27-Maharashtra', null)).toBe('27-Maharashtra');
   });
 });

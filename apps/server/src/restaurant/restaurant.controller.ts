@@ -2,6 +2,8 @@ import { Body, Controller, Get, HttpCode, Param, Post, Put, Req } from '@nestjs/
 import {
   ArchiveRequest,
   HTTP_DEVICE_TYPES,
+  InvoicePreviewRequest,
+  type InvoicePreviewResponse,
   type InvoiceSeriesListResponse,
   InvoiceSeriesParams,
   InvoiceSeriesRequest,
@@ -19,6 +21,7 @@ import { RequireCapability, RequireDevice, RequireSession } from '../auth/decora
 import type { AuthenticatedRequest, Principal } from '../auth/principal.js';
 import { ZodValidationPipe } from '../validation/zod-validation.pipe.js';
 import { InvoiceSeriesService } from './invoice-series.service.js';
+import { invoicePreviewLines } from './invoice-preview.js';
 import { RestaurantService } from './restaurant.service.js';
 import { TaxGroupsService } from './tax-groups.service.js';
 
@@ -48,6 +51,18 @@ export class RestaurantController {
     body: UpdateRestaurantProfileRequest,
   ): Promise<RestaurantProfile> {
     return this.restaurant.updateProfile(principalOf(request), body);
+  }
+
+  /** ADR-0031: a sample bill from settings being typed; nothing is saved. */
+  @Post('invoice-preview')
+  @HttpCode(200)
+  @RequireCapability('OPERATIONS_CONFIGURE')
+  async previewInvoice(
+    @Req() request: AuthenticatedRequest,
+    @Body(new ZodValidationPipe(InvoicePreviewRequest)) body: InvoicePreviewRequest,
+  ): Promise<InvoicePreviewResponse> {
+    const { timeZone } = await this.restaurant.get(principalOf(request).restaurantId);
+    return { lines: invoicePreviewLines(body, new Date(), timeZone) };
   }
 
   // Tax and invoice settings: the Owner's alone.

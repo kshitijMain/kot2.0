@@ -109,3 +109,32 @@ and "out of stock" alerts already went to the KOT's sender. The table's details 
   images at both widths are in `docs/testing/screenshots/round-2/`.
 
 **Changed tests.** The KOT layout snapshots follow the new layout (the brief changes it).
+
+## F. Invoice settings, the thank-you line and the place of supply
+
+**Now.**
+
+- The Restaurant page opens with **Invoice settings**: the bill as it prints (from the saved
+  settings) and, for the Owner, **Edit invoice settings**, one dialog with everything the set-up
+  step asks to confirm (display name, legal name, address, phone, state, GSTIN, FSSAI number, the
+  default invoice series, four header and four footer lines, the thank-you line, and whether to
+  print the phone, the FSSAI number and the total in words) beside a live preview of the bill.
+  Saving sends only what changed, with one reason for the audit. The set-up step's "Confirm how
+  invoices look" shows the same preview.
+- `POST /api/v1/restaurant/invoice-preview` (`OPERATIONS_CONFIGURE`) prints a sample bill from
+  the settings being typed with the renderer real bills use, saving nothing.
+- `bills.thankYouLine` (default "Thank you for dining at {restaurant}!") is the last line of every
+  bill, printed and digital, and of the QR menu's bill (`QrBillInvoice.footerLines`); empty prints
+  none. `bills.printPhone` and `bills.printFssai` (both on by default) leave them off the bill.
+- The place of supply prints as "27-Maharashtra" (`placeOfSupplyText`): the restaurant's state,
+  else its GSTIN's first two digits; never a fixed value. Older invoices that kept only "27" print
+  the same way (D-40).
+- Making another series the default once the current one has numbered bills warns and needs the
+  Owner to confirm (D-41).
+
+**Deploying.** The relay checks a published bill strictly, so the QR relay must run this version
+before the server does: an older relay refuses a bill with `footerLines` and the QR page shows no
+bill until it is updated.
+
+**Changed tests.** The invoice's particulars in the billing test now have the place of supply
+written out and the thank-you footer (the brief changes both).

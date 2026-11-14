@@ -1998,6 +1998,35 @@ until you press Publish.
     },
   },
   /** The Reports area (P4-05d, RPT-001 to RPT-016). */
+  /** ADR-0031: everything on the printed bill, in one place, with the bill beside it. */
+  invoiceSettings: {
+    title: 'Invoice settings',
+    hint: 'What every bill and digital bill shows: the restaurant’s particulars, the invoice numbers, the lines above and below, and what else to print.',
+    edit: 'Edit invoice settings',
+    dialogTitle: 'Invoice settings',
+    preview: 'The bill as it prints',
+    who: 'The restaurant',
+    tax: 'Tax and numbering',
+    text: 'Lines on the bill',
+    print: 'Also print',
+    headerLine: 'Line {number} under the address',
+    footerLine: 'Line {number} at the foot',
+    thankYou: 'Last line of every bill',
+    thankYouHint: "Write '{restaurant}' for the restaurant’s name. Leave it empty to print none.",
+    printPhone: 'The restaurant’s phone number',
+    printFssai: 'The FSSAI licence number',
+    amountInWords: 'The total in words',
+    series: {
+      label: 'Invoice numbers',
+      hint: 'New bills take the next number of this series.',
+      warning:
+        'Bills already carry numbers from the current series this year. From now on new bills take the other series’ numbers; each series keeps its own unbroken sequence.',
+      confirm: 'I understand: switch the series',
+      confirmFirst: 'Tick that you understand before switching the series.',
+    },
+    fixProblems: 'Some details are missing or not valid. Check the fields marked in red.',
+    saved: 'Invoice settings saved. The next bill prints them.',
+  },
   /** ADR-0030: the dashboard's Bills page, Pending and History. */
   bills: {
     title: 'Bills',
@@ -3890,6 +3919,9 @@ until you press Publish.
     bills: {
       headerLines: 'Bill header lines',
       footerLines: 'Bill footer lines',
+      thankYouLine: 'Last line of every bill',
+      printPhone: 'Print the phone number',
+      printFssai: 'Print the FSSAI number',
       amountInWords: 'Total in words',
       waiterMayPrint: 'Waiters may print bills from the app',
       printerId: 'Bill printer',
@@ -4054,6 +4086,10 @@ until you press Publish.
     bills: {
       headerLines: 'Printed under the restaurant details, up to 48 characters a line.',
       footerLines: 'Lines printed at the foot of every bill, e.g. a thank-you note.',
+      thankYouLine:
+        "Printed last on every bill and digital bill; '{restaurant}' becomes the restaurant’s name. Empty: none.",
+      printPhone: 'Bills print the restaurant’s phone number under its address.',
+      printFssai: 'Bills print the FSSAI licence number when there is one.',
       amountInWords:
         'Bills also write the total in words, like “Rupees Six Hundred Seventy-Two Only”.',
       waiterMayPrint:

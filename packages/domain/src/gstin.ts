@@ -80,3 +80,16 @@ export function isValidGstin(gstin: string): boolean {
 export function normaliseGstin(input: string): string {
   return input.toUpperCase().replace(/\s+/g, '');
 }
+
+/**
+ * The place of supply as a tax invoice prints it (BILL-002, ADR-0031): the GST state code and the
+ * state's name, "27-Maharashtra", from the restaurant's state or else its GSTIN's first two
+ * digits; never a fixed value. A code it does not know is printed as it is, and text already
+ * written out (an older invoice) is kept.
+ */
+export function placeOfSupplyText(stateCode: string | null, gstin: string | null): string | null {
+  const code = stateCode ?? (gstin === null ? null : gstin.slice(0, 2));
+  if (code === null || code.trim() === '') return null;
+  const name = GST_STATE_CODES[code];
+  return name === undefined ? code : `${code}-${name}`;
+}

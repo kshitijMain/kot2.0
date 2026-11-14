@@ -265,3 +265,29 @@ export type InvoiceSeriesListResponse = z.infer<typeof InvoiceSeriesListResponse
 
 export const InvoiceSeriesParams = z.strictObject({ seriesId: Id });
 export type InvoiceSeriesParams = z.infer<typeof InvoiceSeriesParams>;
+
+/**
+ * The invoice settings as they are being typed (ADR-0031), for a preview of the printed bill
+ * before anything is saved. `invoiceNumber` is the chosen series' example number.
+ */
+export const InvoicePreviewRequest = z.strictObject({
+  displayName: z.string().trim().min(1).max(60),
+  legalName: z.string().trim().max(120).nullable(),
+  address: Address.nullable(),
+  phone: z.string().trim().max(20).nullable(),
+  stateCode: z.string().trim().max(2).nullable(),
+  gstin: z.string().trim().max(15).nullable(),
+  fssaiNumber: z.string().trim().max(14).nullable(),
+  headerLines: z.array(z.string().trim().max(48)).max(4),
+  footerLines: z.array(z.string().trim().max(48)).max(4),
+  thankYouLine: z.string().trim().max(60),
+  printPhone: z.boolean(),
+  printFssai: z.boolean(),
+  amountInWords: z.boolean(),
+  invoiceNumber: z.string().trim().min(1).max(16),
+});
+export type InvoicePreviewRequest = z.infer<typeof InvoicePreviewRequest>;
+
+/** The sample bill's lines as the printer prints them (80 mm), top to bottom. */
+export const InvoicePreviewResponse = z.object({ lines: z.array(z.string()) });
+export type InvoicePreviewResponse = z.infer<typeof InvoicePreviewResponse>;

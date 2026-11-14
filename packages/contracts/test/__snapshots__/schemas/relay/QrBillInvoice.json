@@ -40,7 +40,13 @@
         }
       },
       "roundOff": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
-      "grandTotal": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+      "grandTotal": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+      "footerLines": {
+        "default": [],
+        "maxItems": 6,
+        "type": "array",
+        "items": { "type": "string", "maxLength": 60 }
+      }
     },
     "required": [
       "invoiceNumber",
@@ -97,7 +103,13 @@
         }
       },
       "roundOff": { "type": "integer", "minimum": -9007199254740991, "maximum": 9007199254740991 },
-      "grandTotal": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+      "grandTotal": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+      "footerLines": {
+        "default": [],
+        "maxItems": 6,
+        "type": "array",
+        "items": { "type": "string", "maxLength": 60 }
+      }
     },
     "required": [
       "invoiceNumber",
@@ -109,7 +121,8 @@
       "serviceCharge",
       "taxLines",
       "roundOff",
-      "grandTotal"
+      "grandTotal",
+      "footerLines"
     ],
     "additionalProperties": false
   }

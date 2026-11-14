@@ -1458,3 +1458,14 @@ body {
     opacity: 0.55;
   }
 }
+
+/* ADR-0031: the bill's footer, as printed. */
+.qr-invoice__footer {
+  margin-block-start: var(--rp-space-3);
+  text-align: center;
+  color: var(--rp-color-text-muted);
+}
+
+.qr-invoice__footer p {
+  margin: 0;
+}

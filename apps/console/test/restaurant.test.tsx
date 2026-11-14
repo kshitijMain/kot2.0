@@ -8,15 +8,59 @@ import { EXEMPT, profileView, seriesViews, TAKEAWAY, taxGroupViews } from './res
 const PATH = '/manage/restaurant';
 
 function restaurantServer(role: Role = 'OWNER'): FakeServer {
-  return signsInAs(server(), role)
-    .on('GET', '/api/v1/restaurant', () => ({ status: 200, body: profileView() }))
-    .on('GET', '/api/v1/tax-groups', () => ({ status: 200, body: { taxGroups: taxGroupViews() } }))
-    .on('GET', '/api/v1/invoice-series', () => ({
-      status: 200,
-      body: { invoiceSeries: seriesViews() },
-    }))
-    .on('PUT', '/api/v1/restaurant/profile', () => ({ status: 200, body: profileView() }));
+  return (
+    signsInAs(server(), role)
+      .on('GET', '/api/v1/restaurant', () => ({ status: 200, body: profileView() }))
+      .on('GET', '/api/v1/tax-groups', () => ({
+        status: 200,
+        body: { taxGroups: taxGroupViews() },
+      }))
+      .on('GET', '/api/v1/invoice-series', () => ({
+        status: 200,
+        body: { invoiceSeries: seriesViews() },
+      }))
+      .on('PUT', '/api/v1/restaurant/profile', () => ({ status: 200, body: profileView() }))
+      // ADR-0031: the bill settings and the printed bill's preview.
+      .on('GET', '/api/v1/settings', () => ({ status: 200, body: { settings: BILL_SETTINGS } }))
+      .on('POST', '/api/v1/restaurant/invoice-preview', (call) => ({
+        status: 200,
+        body: { lines: previewOf(call.body as Record<string, unknown>) },
+      }))
+  );
 }
+
+/** What the server's preview prints, enough to see each choice reach it. */
+function previewOf(body: Record<string, unknown>): string[] {
+  const footer = (body.footerLines as string[] | undefined) ?? [];
+  return [
+    String(body.legalName),
+    `Bill no ${String(body.invoiceNumber)}`,
+    ...footer,
+    String(body.thankYouLine).replace('{restaurant}', String(body.displayName)),
+  ];
+}
+
+const setting = (key: string, value: unknown) => ({
+  key,
+  value,
+  defaultValue: value,
+  isDefault: true,
+  scope: 'RESTAURANT',
+  capability: 'TAX_AND_INVOICE_SETTINGS',
+  editable: true,
+  description: '',
+  requirements: [],
+  updatedAt: null,
+});
+
+const BILL_SETTINGS = [
+  setting('bills.headerLines', []),
+  setting('bills.footerLines', []),
+  setting('bills.thankYouLine', 'Thank you for dining at {restaurant}!'),
+  setting('bills.printPhone', true),
+  setting('bills.printFssai', true),
+  setting('bills.amountInWords', true),
+];
 
 const dialog = (name: string) => screen.findByRole('dialog', { name });
 const section = async (name: string) =>
@@ -220,5 +264,81 @@ describe('[ONB-004] [BILL-002] [BILL-003] [BILL-004] the restaurant page', () =>
     const form = within(await dialog(t('restaurantPage.series.editTitle', { name: 'Dine-in' })));
     expect(form.getByText(t('restaurantPage.series.fixedHint'))).toBeVisible();
     expect(form.getByRole('textbox', { name: t('restaurantPage.series.prefix') })).toBeDisabled();
+  });
+});
+
+describe('[BILL-002] [ONB-004] invoice settings (ADR-0031)', () => {
+  it('shows the bill as it prints, with the thank-you line, to everyone', async () => {
+    await renderConsole({
+      fake: restaurantServer('MANAGER'),
+      path: '/manage/restaurant',
+      signedIn: 'MANAGER',
+    });
+    const invoice = await section(t('invoiceSettings.title'));
+    const paper = await within(invoice).findByRole('figure', {
+      name: t('invoiceSettings.preview'),
+    });
+    expect(await within(paper).findByText(/Thank you for dining at Spice Route!/)).toBeVisible();
+    // Managers see it; only the Owner changes it.
+    expect(within(invoice).queryByRole('button', { name: t('invoiceSettings.edit') })).toBeNull();
+  });
+
+  it('lets the Owner change the footer with the bill updating as they type, then saves it', async () => {
+    const fake = restaurantServer('OWNER').on(
+      'PUT',
+      '/api/v1/settings/bills.footerLines',
+      (call) => ({
+        status: 200,
+        body: setting('bills.footerLines', (call.body as { value: unknown }).value),
+      }),
+    );
+    const { user, container } = await renderConsole({
+      fake,
+      path: '/manage/restaurant',
+      signedIn: 'OWNER',
+    });
+    const invoice = await section(t('invoiceSettings.title'));
+    await user.click(within(invoice).getByRole('button', { name: t('invoiceSettings.edit') }));
+    const form = within(await dialog(t('invoiceSettings.dialogTitle')));
+    await user.type(
+      form.getByLabelText(t('invoiceSettings.footerLine', { number: 1 })),
+      'Open 11 to 11',
+    );
+    const paper = form.getByRole('figure', { name: t('invoiceSettings.preview') });
+    expect(await within(paper).findByText(/Open 11 to 11/)).toBeVisible();
+    await expectNoAxeViolations(container);
+    await user.click(form.getByRole('button', { name: t('restaurantPage.save') }));
+    await waitFor(() => {
+      expect(fake.callsTo('PUT', '/api/v1/settings/bills.footerLines')[0]?.body).toEqual({
+        value: ['Open 11 to 11'],
+      });
+    });
+    // Nothing else changed, so nothing else was sent.
+    expect(fake.callsTo('PUT', '/api/v1/restaurant/legal')).toHaveLength(0);
+    expect(fake.callsTo('PUT', '/api/v1/settings/bills.thankYouLine')).toHaveLength(0);
+  });
+
+  it('asks the Owner to confirm before another series numbers the bills mid-year', async () => {
+    const fake = restaurantServer('OWNER').on(
+      'POST',
+      `/api/v1/invoice-series/${TAKEAWAY}/default`,
+      () => ({ status: 200, body: { ...seriesViews()[1], isDefault: true } }),
+    );
+    const { user } = await renderConsole({ fake, path: '/manage/restaurant', signedIn: 'OWNER' });
+    const invoice = await section(t('invoiceSettings.title'));
+    await user.click(within(invoice).getByRole('button', { name: t('invoiceSettings.edit') }));
+    const form = within(await dialog(t('invoiceSettings.dialogTitle')));
+    await user.selectOptions(form.getByLabelText(t('invoiceSettings.series.label')), TAKEAWAY);
+    expect(form.getByText(t('invoiceSettings.series.warning'))).toBeVisible();
+    const paper = form.getByRole('figure', { name: t('invoiceSettings.preview') });
+    expect(await within(paper).findByText(/TA\/26-27\/000001/)).toBeVisible();
+    await user.click(form.getByRole('button', { name: t('restaurantPage.save') }));
+    expect(await form.findByText(t('invoiceSettings.series.confirmFirst'))).toBeVisible();
+    expect(fake.callsTo('POST', `/api/v1/invoice-series/${TAKEAWAY}/default`)).toHaveLength(0);
+    await user.click(form.getByRole('checkbox', { name: t('invoiceSettings.series.confirm') }));
+    await user.click(form.getByRole('button', { name: t('restaurantPage.save') }));
+    await waitFor(() => {
+      expect(fake.callsTo('POST', `/api/v1/invoice-series/${TAKEAWAY}/default`)).toHaveLength(1);
+    });
   });
 });

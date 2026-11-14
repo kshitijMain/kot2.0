@@ -1,5 +1,11 @@
 import type { InvoiceView } from '@rp/contracts';
-import { amountInWords, formatRupees, taxByCodeAndRate, toLocalDateTime } from '@rp/domain';
+import {
+  amountInWords,
+  formatRupees,
+  placeOfSupplyText,
+  taxByCodeAndRate,
+  toLocalDateTime,
+} from '@rp/domain';
 
 /**
  * ESC/POS rendering for kitchen tickets and test pages (P1-07a, KDS-008). Pure: it turns a ticket
@@ -496,7 +502,8 @@ function buildBill(
   );
   receipt.line(`Date: ${formatLocal(new Date(invoice.issuedAt), options.timeZone)}`);
   if (particulars.placeOfSupply !== null) {
-    receipt.line(`Place of supply: ${particulars.placeOfSupply}`);
+    // "27-Maharashtra"; an older invoice kept only the code (ADR-0031).
+    receipt.line(`Place of supply: ${placeOfSupplyText(particulars.placeOfSupply, null) ?? ''}`);
   }
   if (invoice.customer.name !== null)
     receipt.lines(wrap(`Customer: ${invoice.customer.name}`, width));

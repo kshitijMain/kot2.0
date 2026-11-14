@@ -30,6 +30,7 @@ export function qrBillInvoiceOf(invoice: InvoiceView): QrBillInvoice {
       })),
     roundOff: invoice.roundOff,
     grandTotal: invoice.grandTotal,
+    footerLines: invoice.particulars.footerLines.slice(0, 6).map((line) => line.slice(0, 60)),
   };
 }
 

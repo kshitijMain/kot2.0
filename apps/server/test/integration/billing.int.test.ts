@@ -473,8 +473,11 @@ describe('[BILL-002] [BILL-003] printing: the GST invoice', () => {
         displayName: 'Spice Route',
         legalName: 'Spice Route Foods LLP',
         fssaiNumber: '12345678901234',
-        placeOfSupply: '27',
+        // ADR-0031: the code and the state, as the bill prints it.
+        placeOfSupply: '27-Maharashtra',
         address: { line1: '12 MG Road', city: 'Pune', pincode: '411001' },
+        // ADR-0031: every bill ends with the thank-you line.
+        footerLines: ['Thank you for dining at Spice Route!'],
         // BILL-001: the total in words, on by default, kept as issued.
         amountInWords: true,
       },

@@ -315,6 +315,14 @@ function Invoice({
           <dd>{formatRupees(invoice.grandTotal)}</dd>
         </div>
       </dl>
+      {/* The bill's footer as printed, the thank-you line last (ADR-0031). */}
+      {invoice.footerLines.length === 0 ? null : (
+        <div className="qr-invoice__footer">
+          {invoice.footerLines.map((line, index) => (
+            <p key={`${String(index)}-${line}`}>{line}</p>
+          ))}
+        </div>
+      )}
       {invoice.status === 'SETTLED' ? null : payment === undefined || upi === null ? (
         <p className="qr-muted">{t('qrSite.bill.noUpi')}</p>
       ) : (

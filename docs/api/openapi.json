@@ -10290,6 +10290,52 @@
         "x-requirements": ["ONB-004", "BILL-002", "NFR-L03"]
       }
     },
+    "/api/v1/restaurant/invoice-preview": {
+      "post": {
+        "operationId": "previewInvoice",
+        "summary": "A sample bill printed from invoice settings being typed, saving nothing",
+        "description": "ADR-0031: the invoice settings page and the set-up step show it as the Owner types. The same renderer prints real bills.",
+        "tags": ["restaurant"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/InvoicePreviewRequest" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The sample bill.",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/InvoicePreviewResponse" }
+              }
+            }
+          },
+          "400": {
+            "description": "The request does not match the contract.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "No valid session or device credential.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "The signed-in role lacks the required capability.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        },
+        "x-capability": "OPERATIONS_CONFIGURE",
+        "x-requirements": ["BILL-002", "ONB-004"]
+      }
+    },
     "/api/v1/restaurant/legal": {
       "put": {
         "operationId": "updateRestaurantLegal",
@@ -17668,6 +17714,56 @@
           "payments",
           "tableClosed"
         ],
+        "additionalProperties": false
+      },
+      "InvoicePreviewRequest": {
+        "type": "object",
+        "properties": {
+          "displayName": { "type": "string", "minLength": 1, "maxLength": 60 },
+          "legalName": { "anyOf": [{ "type": "string", "maxLength": 120 }, { "type": "null" }] },
+          "address": { "anyOf": [{ "$ref": "#/components/schemas/Address" }, { "type": "null" }] },
+          "phone": { "anyOf": [{ "type": "string", "maxLength": 20 }, { "type": "null" }] },
+          "stateCode": { "anyOf": [{ "type": "string", "maxLength": 2 }, { "type": "null" }] },
+          "gstin": { "anyOf": [{ "type": "string", "maxLength": 15 }, { "type": "null" }] },
+          "fssaiNumber": { "anyOf": [{ "type": "string", "maxLength": 14 }, { "type": "null" }] },
+          "headerLines": {
+            "maxItems": 4,
+            "type": "array",
+            "items": { "type": "string", "maxLength": 48 }
+          },
+          "footerLines": {
+            "maxItems": 4,
+            "type": "array",
+            "items": { "type": "string", "maxLength": 48 }
+          },
+          "thankYouLine": { "type": "string", "maxLength": 60 },
+          "printPhone": { "type": "boolean" },
+          "printFssai": { "type": "boolean" },
+          "amountInWords": { "type": "boolean" },
+          "invoiceNumber": { "type": "string", "minLength": 1, "maxLength": 16 }
+        },
+        "required": [
+          "displayName",
+          "legalName",
+          "address",
+          "phone",
+          "stateCode",
+          "gstin",
+          "fssaiNumber",
+          "headerLines",
+          "footerLines",
+          "thankYouLine",
+          "printPhone",
+          "printFssai",
+          "amountInWords",
+          "invoiceNumber"
+        ],
+        "additionalProperties": false
+      },
+      "InvoicePreviewResponse": {
+        "type": "object",
+        "properties": { "lines": { "type": "array", "items": { "type": "string" } } },
+        "required": ["lines"],
         "additionalProperties": false
       },
       "InvoiceRegisterQuery": {

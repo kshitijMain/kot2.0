@@ -502,6 +502,8 @@ export const QrBillInvoice = z.strictObject({
   taxLines: z.array(z.strictObject({ label: z.string().min(1).max(40), amount: Paise })).max(20),
   roundOff: SignedPaise,
   grandTotal: Paise,
+  /** The bill's footer as printed, the thank-you line last (ADR-0031). */
+  footerLines: z.array(z.string().max(60)).max(6).default([]),
 });
 export type QrBillInvoice = z.infer<typeof QrBillInvoice>;
 

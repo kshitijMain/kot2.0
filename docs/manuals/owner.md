@@ -16,6 +16,15 @@ own phone. The Security page shows recent sign-ins, locked people and unusual at
 - Manage the licence (Licence page).
 - Create or remove managers (Staff page).
 
+## Invoice settings
+
+Restaurant → **Invoice settings** shows the bill as it prints. **Edit invoice settings** changes,
+in one place, the name, legal name, address, phone, state, GSTIN, FSSAI number, which invoice
+series numbers new bills, the lines above and below, the last line ("Thank you for dining at
+{restaurant}!" by default) and whether the phone, FSSAI number and total in words print. The bill
+beside the form changes as you type. Switching the series part way through the year asks you to
+confirm first. The place of supply prints as code and state, for example "27-Maharashtra".
+
 ## Every day
 
 Bills shows what is still to print or to pay. Overview (under More) shows today's sales, open

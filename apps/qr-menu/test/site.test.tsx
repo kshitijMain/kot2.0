@@ -435,6 +435,7 @@ describe('[QR-011] the bill on the diner’s phone and UPI (P9-03, P9-04)', () =
         ],
         roundOff: 2_400,
         grandTotal: 61_200,
+        footerLines: ['Thank you for dining at Parosaa!'],
       },
     ],
     upi: { upiId: 'parosaa@okhdfcbank', payeeName: 'Parosaa' },
@@ -547,6 +548,8 @@ describe('[QR-011] the bill on the diner’s phone and UPI (P9-03, P9-04)', () =
     );
     expect(screen.getByRole('img', { name: /QR code to pay ₹612\.00/ })).toBeVisible();
     expect(screen.getByText('CGST 2.5%')).toBeVisible();
+    // The bill's footer, the thank-you line last, as on the paper (ADR-0031).
+    expect(screen.getByText('Thank you for dining at Parosaa!')).toBeVisible();
     fireEvent.click(screen.getByRole('button', { name: en.qrSite.help.PAID }));
     expect(asked).toEqual(['PAID']);
   });

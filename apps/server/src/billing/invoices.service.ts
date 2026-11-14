@@ -4,6 +4,7 @@ import {
   calendarDateOf,
   financialYearOf,
   formatInvoiceNumber,
+  placeOfSupplyText,
   maxSequenceFor,
   tableMachine,
   transition,
@@ -25,23 +26,65 @@ import { withLineShares } from './line-shares.js';
 /** Sequence key of a series that runs on across financial years (PROGRESS decision 17). */
 export const CONTINUOUS_SEQUENCE = '0000-00';
 
+/** What the seller's particulars on a bill are made from: the restaurant and its bill settings. */
+export interface ParticularsInput {
+  readonly displayName: string;
+  readonly legalName: string | null;
+  readonly address: InvoiceParticulars['address'];
+  readonly phone: string | null;
+  readonly stateCode: string | null;
+  readonly gstin: string | null;
+  readonly fssaiNumber: string | null;
+  readonly headerLines: readonly string[];
+  readonly footerLines: readonly string[];
+  /** `bills.thankYouLine`, with {restaurant} for the restaurant's name; empty for none. */
+  readonly thankYouLine: string;
+  readonly printPhone: boolean;
+  readonly printFssai: boolean;
+  readonly amountInWords: boolean;
+}
+
+/**
+ * The seller's particulars on a bill (BILL-002, ADR-0031): the place of supply as code and state
+ * ("27-Maharashtra"), the phone and FSSAI number unless the Owner chose not to print them, and the
+ * thank-you line after the footer lines.
+ */
+export function particularsFrom(input: ParticularsInput): InvoiceParticulars {
+  const thanks = input.thankYouLine.replaceAll('{restaurant}', input.displayName).trim();
+  return {
+    displayName: input.displayName,
+    legalName: input.legalName,
+    address: input.address,
+    gstin: input.gstin,
+    fssaiNumber: input.printFssai ? input.fssaiNumber : null,
+    placeOfSupply: placeOfSupplyText(input.stateCode, input.gstin),
+    phone: input.printPhone ? input.phone : null,
+    headerLines: [...input.headerLines],
+    footerLines: [...input.footerLines, ...(thanks === '' ? [] : [thanks])],
+    amountInWords: input.amountInWords,
+  };
+}
+
 /** The seller's particulars as they are now, kept on each invoice as issued (BILL-002). */
 export function particularsOf(
   restaurant: Restaurant,
   snapshot: SettingsSnapshot,
 ): InvoiceParticulars {
-  return {
+  return particularsFrom({
     displayName: restaurant.displayName,
     legalName: restaurant.legalName,
     address: (restaurant.address ?? null) as InvoiceParticulars['address'],
+    phone: restaurant.phone,
+    stateCode: restaurant.stateCode,
     gstin: restaurant.gstin,
     fssaiNumber: restaurant.fssaiNumber,
-    placeOfSupply: restaurant.stateCode,
-    phone: restaurant.phone,
     headerLines: snapshot.get('bills.headerLines'),
     footerLines: snapshot.get('bills.footerLines'),
+    thankYouLine: snapshot.get('bills.thankYouLine'),
+    printPhone: snapshot.get('bills.printPhone'),
+    printFssai: snapshot.get('bills.printFssai'),
     amountInWords: snapshot.get('bills.amountInWords'),
-  };
+  });
 }
 
 export type InvoiceRow = Invoice & {

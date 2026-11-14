@@ -1,0 +1,13 @@
+{
+  "input": {
+    "type": "object",
+    "properties": { "lines": { "type": "array", "items": { "type": "string" } } },
+    "required": ["lines"]
+  },
+  "output": {
+    "type": "object",
+    "properties": { "lines": { "type": "array", "items": { "type": "string" } } },
+    "required": ["lines"],
+    "additionalProperties": false
+  }
+}

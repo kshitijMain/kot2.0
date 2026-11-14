@@ -9,6 +9,7 @@ import { grantOf } from '../../app/modes.js';
 import { useLive } from '../../app/use-live.js';
 import { EmptyMenuFileDownload } from '../menu/MenuFileScreen.js';
 import { GoLivePanel } from './GoLivePanel.js';
+import { SavedBillPreview } from '../restaurant/InvoiceSettings.js';
 import { setupCounts, STEP_PAGES } from './setup-view.js';
 
 const STATUS_TONE = { DONE: 'success', SKIPPED: 'neutral', TODO: 'warning' } as const;
@@ -214,6 +215,8 @@ export function SetupScreen() {
                 ) : null}
               </div>
               {entry.step === 'MENU' && entry.status === 'TODO' ? <MenuWays /> : null}
+              {/* ADR-0031: how the bill prints, before confirming it. */}
+              {entry.step === 'INVOICE' && entry.status === 'TODO' ? <SavedBillPreview /> : null}
             </li>
           ))}
         </ol>

@@ -51,7 +51,7 @@ export interface DialogState {
 }
 
 /** The dialog frame every form here shares: title, Cancel and Save, the reason and the error. */
-function FormDialog({
+export function FormDialog({
   title,
   busy,
   error,
@@ -313,7 +313,7 @@ export function ProfileDialog({
   );
 }
 
-const STATE_OPTIONS = Object.entries(GST_STATE_CODES)
+export const STATE_OPTIONS = Object.entries(GST_STATE_CODES)
   .map(([code, name]) => ({ value: code, label: `${name} (${code})` }))
   .sort((a, b) => a.label.localeCompare(b.label, 'en-IN'));
 

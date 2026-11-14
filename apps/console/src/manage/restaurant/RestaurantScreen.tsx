@@ -15,6 +15,7 @@ import { useConsole, useConsoleState } from '../../app/console-context.js';
 import { useT } from '../../app/i18n.js';
 import { messageOf } from '../../app/messages.js';
 import { grantOf } from '../../app/modes.js';
+import { InvoiceSettings } from './InvoiceSettings.js';
 import { useLive } from '../../app/use-live.js';
 import { ReasonDialog } from '../menu/ReasonDialog.js';
 import { bpText } from '../settings/settings-view.js';
@@ -154,6 +155,7 @@ export function RestaurantScreen() {
     const notGiven = t('restaurantPage.profile.notGiven');
     content = (
       <>
+        <InvoiceSettings />
         <section className="device-group" aria-labelledby="restaurant-profile">
           <div className="staff-header">
             <h3 id="restaurant-profile" className="device-group__heading">

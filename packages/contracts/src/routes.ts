@@ -274,6 +274,8 @@ import {
   TaxGroupRequest,
   TaxGroupView,
   UpdateRestaurantLegalRequest,
+  InvoicePreviewRequest,
+  InvoicePreviewResponse,
   UpdateRestaurantProfileRequest,
 } from './restaurant.js';
 import {
@@ -1915,6 +1917,23 @@ export const ROUTES = [
       ...standardErrors,
       409: { description: 'The cut-off change would move the business date.', schema: ApiError },
       422: { description: 'No such logo photo.', schema: ApiError },
+    },
+  },
+  {
+    operationId: 'previewInvoice',
+    method: 'POST',
+    path: '/api/v1/restaurant/invoice-preview',
+    summary: 'A sample bill printed from invoice settings being typed, saving nothing',
+    description:
+      'ADR-0031: the invoice settings page and the set-up step show it as the Owner types. The ' +
+      'same renderer prints real bills.',
+    tags: ['restaurant'],
+    requirements: ['BILL-002', 'ONB-004'],
+    capability: 'OPERATIONS_CONFIGURE',
+    request: { body: InvoicePreviewRequest },
+    responses: {
+      200: { description: 'The sample bill.', schema: InvoicePreviewResponse },
+      ...standardErrors,
     },
   },
   {

@@ -525,3 +525,31 @@ matters even more).
 
 **Recommendation:** A. Routing is kitchen set-up; waiting for a publish only sends food to the
 wrong place.
+
+## D-40: how the place of supply is written on the bill
+
+**Situation.** Bills printed the place of supply as the bare state code ("27").
+
+**Today.** "Place of supply: 27-Maharashtra": the GST state code and the state's name, from the
+restaurant's state (or its GSTIN's first two digits), never a fixed value. The test and pilot
+restaurants are in Pune, so 27-Maharashtra. Older invoices that kept only "27" print the same way.
+
+**Options.** A: "27-Maharashtra" (as today). B: "Maharashtra (27)". C: the state name only.
+
+**Recommendation:** A, the form GST portals and most billing software use. **Please confirm the
+wording with your accountant.**
+
+## D-41: changing the invoice series part way through a financial year
+
+**Situation.** An invoice series' format is fixed once it has numbered a bill (BILL-003). Making
+another series the default part way through the year means new bills carry the other series'
+numbers from then on.
+
+**Today.** Allowed, with a warning that each series keeps its own unbroken sequence, and only after
+the Owner ticks "I understand: switch the series". Only the Owner can do it.
+
+**Options.** A: warn and confirm (as today). B: refuse until the next financial year (1 April).
+C: allow without a warning.
+
+**Recommendation:** A. GST allows several series as long as each runs without gaps; refusing would
+stop a restaurant that genuinely needs a separate series (for example for takeaway).
