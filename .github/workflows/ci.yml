@@ -139,10 +139,11 @@ jobs:
       - name: Build the server, the console, the QR site and the Control Plane with its web app
         run: pnpm build
 
-      - name: Install Chromium for Playwright
-        run: pnpm --filter @rp/console exec playwright install --with-deps chromium
+      # WebKit for the phone web app on an iPhone (P9-28): every iPhone browser runs on it.
+      - name: Install Chromium and WebKit for Playwright
+        run: pnpm --filter @rp/console exec playwright install --with-deps chromium webkit
 
-      - name: Console end-to-end tests
+      - name: Console and phone web app end-to-end tests
         run: pnpm --filter @rp/console e2e
 
       - name: QR menu end-to-end tests (a phone against a real relay)
@@ -242,8 +243,8 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Build the server, the console and the POS window
-        run: pnpm turbo run build --filter=@rp/server --filter=@rp/console --filter=@rp/desktop
+      - name: Build the server, the console, the phone web app and the POS window
+        run: pnpm turbo run build --filter=@rp/server --filter=@rp/console --filter=@rp/waiter-app --filter=@rp/desktop
 
       # Node.js, PostgreSQL and WinSW, checked against their pinned SHA-256 at every use.
       - name: Downloads cache

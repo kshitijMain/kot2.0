@@ -17,7 +17,7 @@ import {
   useState,
   useSyncExternalStore,
 } from 'react';
-import { AppState, StyleSheet, View } from 'react-native';
+import { AppState, Platform, StyleSheet, View } from 'react-native';
 
 interface Shell {
   readonly session: DeviceSession;
@@ -68,6 +68,24 @@ export function ShellProvider({
     [session, translator, updater, apkUpdater],
   );
   const strings = useMemo(() => uiStrings(translator), [translator]);
+  // In a browser (P9-28) a click or a key counts as activity too, not only a touch, so nobody
+  // working with a mouse or a keyboard is signed out for inactivity (AUTH-005).
+  useEffect(() => {
+    if (Platform.OS !== 'web') return undefined;
+    const browser = globalThis as unknown as {
+      addEventListener(type: string, listener: () => void, options?: object): void;
+      removeEventListener(type: string, listener: () => void): void;
+    };
+    const touched = () => {
+      session.touched();
+    };
+    for (const type of ['pointerdown', 'keydown']) {
+      browser.addEventListener(type, touched, { passive: true });
+    }
+    return () => {
+      for (const type of ['pointerdown', 'keydown']) browser.removeEventListener(type, touched);
+    };
+  }, [session]);
   return (
     <ShellContext value={shell}>
       <ThemeProvider>

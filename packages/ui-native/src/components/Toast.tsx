@@ -50,6 +50,32 @@ export interface ToastApi {
 
 const ToastContext = createContext<ToastApi | null>(null);
 
+/** Says how tall a screen's footer is, so toasts sit above it (P9-28). */
+const ClearanceContext = createContext<(height: number) => void>(() => undefined);
+
+/**
+ * A screen's footer button bar (Send KOT, Record payment) reports its height here, so toasts sit
+ * above it instead of over it (P9-28: "Order sent" covered Send KOT). Returns the `onLayout` to put
+ * on the footer; the clearance goes back to none when the footer goes.
+ */
+export function useToastClearance(): (event: {
+  nativeEvent: { layout: { height: number } };
+}) => void {
+  const reserve = use(ClearanceContext);
+  useEffect(
+    () => () => {
+      reserve(0);
+    },
+    [reserve],
+  );
+  return useCallback(
+    (event) => {
+      reserve(event.nativeEvent.layout.height);
+    },
+    [reserve],
+  );
+}
+
 export const TONE_GLYPHS: Readonly<Record<Tone, GlyphName>> = {
   neutral: 'info',
   info: 'info',
@@ -73,8 +99,10 @@ export interface ToastProviderProps {
 export function ToastProvider({ children, duration = 5000, max = 3 }: ToastProviderProps) {
   const [toasts, setToasts] = useState<readonly ToastRecord[]>([]);
   const nextId = useRef(0);
-  // Above the navigation bar, and above a screen's footer button such as Send KOT's bar.
+  // Above the navigation bar, and above a screen's footer button such as Send KOT's bar, whose
+  // height the footer reports (`useToastClearance`); the footer already pads for the bar.
   const { bottom } = useScreenInsets();
+  const [clearance, setClearance] = useState(0);
 
   const dismiss = useCallback((id: string) => {
     setToasts((current) => current.filter((toast) => toast.id !== id));
@@ -94,11 +122,14 @@ export function ToastProvider({ children, duration = 5000, max = 3 }: ToastProvi
 
   return (
     <ToastContext value={api}>
-      {children}
+      <ClearanceContext value={setClearance}>{children}</ClearanceContext>
       <View
         pointerEvents="box-none"
         testID="toast-region"
-        style={[styles.region, { bottom: spacing[6] + bottom }]}
+        style={[
+          styles.region,
+          { bottom: clearance > 0 ? clearance + spacing[2] : spacing[6] + bottom },
+        ]}
       >
         {toasts.map((toast) => (
           <ToastItem key={toast.id} toast={toast} defaultDuration={duration} onDismiss={dismiss} />

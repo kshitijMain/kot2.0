@@ -1,3 +1,5 @@
+import { Button } from '@rp/ui-native';
+import { Platform } from 'react-native';
 import { ApkOffer, apkOffered } from './ApkOffer.js';
 import { Note, Screen } from './Screen.js';
 import { useApkUpdate, useAppUpdate, useSessionState, useT } from './context.js';
@@ -19,6 +21,26 @@ export function UpdateRequiredScreen() {
   const t = useT();
   const guests = device?.type === 'TABLE_TABLET';
   const coming = update !== undefined && ON_ITS_WAY.has(update.status);
+  // The phone web app (P9-28): the PC serves its newest version, so reloading is the update.
+  if (Platform.OS === 'web' && !guests) {
+    return (
+      <Screen title={t('mobile.update.title')}>
+        <Note tone="text" testID="update-required">
+          {t('mobile.update.web')}
+        </Note>
+        <Button
+          size="lg"
+          fullWidth
+          testID="update-reload"
+          onPress={() => {
+            (globalThis as unknown as { location: { reload(): void } }).location.reload();
+          }}
+        >
+          {t('mobile.update.reload')}
+        </Button>
+      </Screen>
+    );
+  }
   return (
     <Screen title={t(guests ? 'mobile.update.guestsTitle' : 'mobile.update.title')}>
       <Note tone="text" testID="update-required">

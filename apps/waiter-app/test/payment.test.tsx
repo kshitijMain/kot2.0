@@ -7,7 +7,11 @@ const BILL = '0199a0e0-0000-7000-8000-00000000f001';
 const INVOICE = '0199a0e0-0000-7000-8000-00000000f002';
 
 /** A table with its bill printed, and a server that knows its invoice (P9-16). */
-function printedTable(role: 'MANAGER' | 'WAITER') {
+function printedTable(
+  role: 'MANAGER' | 'WAITER',
+  /** What the server says is paid when the sheet reads the invoice, then after each payment. */
+  paidAfter: { read: number[]; recorded: number[] } = { read: [0], recorded: [64_000] },
+) {
   const restaurant = new Restaurant();
   const table = restaurant.table('T2');
   table.state = 'BILL_PRINTED';
@@ -53,11 +57,16 @@ function printedTable(role: 'MANAGER' | 'WAITER') {
         amountInWords: false,
       },
     }))
-    .on('GET', `/api/v1/invoices/${INVOICE}/payments`, () => ({ status: 200, body: due(0) }))
-    .on('POST', `/api/v1/invoices/${INVOICE}/payments`, () => ({
-      status: 200,
-      body: due(64_000),
-    }));
+    .on(
+      'GET',
+      `/api/v1/invoices/${INVOICE}/payments`,
+      ...paidAfter.read.map((paid) => () => ({ status: 200, body: due(paid) })),
+    )
+    .on(
+      'POST',
+      `/api/v1/invoices/${INVOICE}/payments`,
+      ...paidAfter.recorded.map((paid) => () => ({ status: 200, body: due(paid) })),
+    );
   return { restaurant, server };
 }
 
@@ -78,6 +87,33 @@ describe('[BILL-008] a manager takes payment at the table on the phone (P9-16)',
         },
       );
     });
+  });
+
+  it('[P9-28] keeps the sheet open after a part payment, with the rest filled in and a new key', async () => {
+    const { restaurant, server } = printedTable('MANAGER', {
+      read: [0, 20_000],
+      recorded: [20_000, 64_000],
+    });
+    await signedInApp(restaurant, server);
+    await fireEvent.press(await screen.findByRole('button', { name: /^T2, Bill printed/ }));
+    await fireEvent.press(await screen.findByTestId('take-payment'));
+    const amount = await screen.findByDisplayValue('640.00');
+    await fireEvent.changeText(amount, '200');
+    await fireEvent.press(screen.getByTestId('record-payment'));
+    // Still open: what was recorded, and the rest to pay in the amount.
+    expect(await screen.findByTestId('payment-recorded')).toHaveTextContent(
+      'Payment recorded. ₹440.00 still to pay.',
+    );
+    expect(await screen.findByDisplayValue('440.00')).toBeOnTheScreen();
+    await fireEvent.press(screen.getByTestId('record-payment'));
+    expect(await screen.findByText('Invoice INV/26-27/000042 is paid')).toBeOnTheScreen();
+    const sent = server.callsTo('POST', `/api/v1/invoices/${INVOICE}/payments`);
+    expect(
+      sent.map((call) => (call.body as { payments: { amount: number }[] }).payments[0]?.amount),
+    ).toEqual([20_000, 44_000]);
+    // Two payments, two keys: the second is not taken for a repeat of the first.
+    const keys = sent.map((call) => (call.body as { idempotencyKey: string }).idempotencyKey);
+    expect(new Set(keys).size).toBe(2);
   });
 
   it('is never offered to a waiter, who asks the managers for the bill instead', async () => {

@@ -1,0 +1,17 @@
+{
+  "$schema": "https://turborepo.com/schema.json",
+  "extends": ["//"],
+  "tasks": {
+    "build": {
+      "inputs": [
+        "$TURBO_DEFAULT$",
+        "!android/**",
+        "!test/**",
+        "!dist/**",
+        "!public/fonts/**",
+        "!.maestro/**"
+      ],
+      "outputs": ["dist/**"]
+    }
+  }
+}

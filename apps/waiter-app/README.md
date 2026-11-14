@@ -124,9 +124,29 @@ Where things are:
   The smoke flow types the development server's `http://` address, as an emulator cannot scan the
   QR code.
 
+## In a phone's browser (iPhones, P9-28)
+
+The same app builds for the web (React Native Web): `pnpm --filter @rp/waiter-app build` exports it
+into `dist/`, and the restaurant PC serves it at `https://<PC>:8080/phone/` (`RP_PHONE_DIR`; the
+installer puts it in `<install>\phone\`). Every iPhone browser runs on WebKit, so this is the
+iPhone's app, in Chrome or Safari (ADR-0028).
+
+- Only the wiring differs, in `*.web.ts(x)` files Metro picks for the web:
+  - `session.web.ts`: WebCrypto keys and IndexedDB from `@rp/mobile-core/web`, alerts with a chime
+    and the service worker's notifications, the screen kept on while signed in;
+  - `background.web.ts`;
+  - `web-setup.web.ts`: Zod jitless, for the page's CSP;
+  - `OneTab.web.tsx`: one tab at a time.
+- The page is `public/index.html`: no inline script or style. `public/sw.js` is the service worker
+  (notifications, a tapped one opens its table), and `public/manifest.webmanifest` is for Add to
+  Home Screen.
+- Tests: `apps/console/e2e/phone.e2e.ts` runs on WebKit at iPhone size and Chrome at Android size.
+- Setting up an iPhone: `docs/runbooks/phone-web-app.md`.
+
 ## Commands
 
 ```
+pnpm --filter @rp/waiter-app build         the app for phones' browsers, into dist/ (P9-28)
 pnpm --filter @rp/waiter-app test          Jest + React Native Testing Library
 pnpm --filter @rp/waiter-app bundle:check  bundle the JS with Metro (what CI does first)
 pnpm --filter @rp/waiter-app prebuild      generate android/ (never committed)

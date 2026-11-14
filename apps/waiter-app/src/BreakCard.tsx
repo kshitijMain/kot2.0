@@ -66,7 +66,10 @@ export function BreakCard({
       testID="break-card"
       style={[
         styles.card,
-        onBreak ? { backgroundColor: tone.subtle, borderColor: tone.solid } : undefined,
+        // A card only while on break: otherwise its padding indented it in the menu (P9-28).
+        onBreak
+          ? [styles.onBreak, { backgroundColor: tone.subtle, borderColor: tone.solid }]
+          : undefined,
       ]}
       accessibilityRole={onBreak ? 'alert' : 'summary'}
     >
@@ -79,6 +82,7 @@ export function BreakCard({
       )}
       <Button
         variant={onBreak ? 'primary' : 'secondary'}
+        fullWidth
         disabled={busy}
         onPress={() => {
           set(!onBreak);
@@ -92,11 +96,10 @@ export function BreakCard({
 }
 
 const styles = StyleSheet.create({
-  card: {
-    gap: spacing[2],
+  card: { gap: spacing[2] },
+  onBreak: {
     padding: spacing[4],
     borderWidth: 1,
     borderRadius: radius.lg,
-    borderColor: 'transparent',
   },
 });

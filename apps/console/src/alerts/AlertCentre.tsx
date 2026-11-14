@@ -290,7 +290,8 @@ export function AlertsButton() {
         state.setPanel('alerts');
       }}
     >
-      {t('alerts.title')}
+      {/* On a phone the bell and the count say it (P9-28); the button keeps its name. */}
+      <span className="console-header__alerts-label">{t('alerts.title')}</span>
       {mine.length === 0 ? null : (
         <Badge tone={escalated ? 'danger' : 'warning'} variant="solid">
           {mine.length}

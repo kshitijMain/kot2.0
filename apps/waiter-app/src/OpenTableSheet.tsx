@@ -78,7 +78,14 @@ export function OpenTableSheet({
       title={t('pos.open.title', { table: table.label })}
       footer={
         dirty ? (
-          <Button size="lg" fullWidth loading={busy} testID="mark-clean" onPress={clean}>
+          <Button
+            size="lg"
+            fullWidth
+            loading={busy}
+            testID="mark-clean"
+            onPress={clean}
+            style={styles.grow}
+          >
             {t('pos.table.clean')}
           </Button>
         ) : asking ? (
@@ -91,6 +98,7 @@ export function OpenTableSheet({
               onPress={() => {
                 open(true);
               }}
+              style={styles.grow}
             >
               {t('pos.open.anyway')}
             </Button>
@@ -100,11 +108,13 @@ export function OpenTableSheet({
               onPress={() => {
                 setAsking(false);
               }}
+              style={styles.grow}
             >
               {t('pos.open.change')}
             </Button>
           </>
         ) : (
+          // The footer is a row: the button takes its width (P9-28; it sat at the left).
           <Button
             size="lg"
             fullWidth
@@ -113,6 +123,7 @@ export function OpenTableSheet({
             onPress={() => {
               open();
             }}
+            style={styles.grow}
           >
             {t('pos.open.submit')}
           </Button>
@@ -142,4 +153,5 @@ export function OpenTableSheet({
 
 const styles = StyleSheet.create({
   label: { fontSize: fontSize.md, fontWeight: weight(fontWeight.semibold) },
+  grow: { flex: 1 },
 });

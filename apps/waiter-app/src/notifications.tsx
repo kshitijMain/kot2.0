@@ -76,7 +76,12 @@ export function NotificationsProvider({
     };
   }, [permission]);
   const openSettings = () => {
-    permission?.openSettings().catch(() => undefined);
+    // Asked in the browser (P9-28), or back from Android's settings: check again at once, so the
+    // card goes as soon as they are on.
+    permission
+      ?.openSettings()
+      .then(() => permission.enabled())
+      .then(setEnabled, () => undefined);
   };
   return (
     <NotificationsContext.Provider value={{ enabled, openSettings }}>

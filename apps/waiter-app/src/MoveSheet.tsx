@@ -59,7 +59,7 @@ export function MoveSheet({
       dismissible={!busy}
       title={t('mobile.tables.moveTo', { table: table.label })}
       footer={
-        <Button variant="secondary" fullWidth disabled={busy} onPress={onClose}>
+        <Button variant="secondary" fullWidth disabled={busy} onPress={onClose} style={styles.grow}>
           {t('mobile.tables.back')}
         </Button>
       }
@@ -88,4 +88,5 @@ export function MoveSheet({
 
 const styles = StyleSheet.create({
   list: { gap: spacing[2] },
+  grow: { flex: 1 },
 });

@@ -40,6 +40,11 @@ export default tseslint.config(
     languageOptions: { globals: { ...globals.node } },
   },
   {
+    // The phone web app's service worker (P9-28) runs in a worker, not in Node.
+    files: ['apps/waiter-app/public/sw.js'],
+    languageOptions: { globals: { ...globals.serviceworker } },
+  },
+  {
     files: ['**/*.{ts,tsx,mts,cts}'],
     extends: [...tseslint.configs.strictTypeChecked, ...tseslint.configs.stylisticTypeChecked],
     languageOptions: {

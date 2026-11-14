@@ -249,28 +249,40 @@ export function SentOrders({
           }}
         >
           {more.can.cancel ? (
-            <Button
-              variant="secondary"
-              fullWidth
-              accessibilityLabel={t('mobile.item.cancelOf', { name: more.line.name })}
-              onPress={() => {
-                end(more.line, 'CANCEL');
-              }}
-            >
-              {t('mobile.item.cancel')}
-            </Button>
+            <View style={styles.action}>
+              <Button
+                variant="secondary"
+                fullWidth
+                accessibilityLabel={t('mobile.item.cancelOf', { name: more.line.name })}
+                onPress={() => {
+                  end(more.line, 'CANCEL');
+                }}
+              >
+                {t('mobile.item.cancel')}
+              </Button>
+              <Text style={[styles.actionNote, { color: colors.textMuted }]}>
+                {t('mobile.item.cancelNote')}
+              </Text>
+            </View>
           ) : null}
           {more.can.void === null ? null : (
-            <Button
-              variant="danger"
-              fullWidth
-              accessibilityLabel={t('mobile.item.voidOf', { name: more.line.name })}
-              onPress={() => {
-                end(more.line, 'VOID');
-              }}
-            >
-              {t('mobile.item.void')}
-            </Button>
+            <View style={styles.action}>
+              <Button
+                variant="danger"
+                fullWidth
+                accessibilityLabel={t('mobile.item.voidOf', { name: more.line.name })}
+                onPress={() => {
+                  end(more.line, 'VOID');
+                }}
+              >
+                {t('mobile.item.void')}
+              </Button>
+              <Text style={[styles.actionNote, { color: colors.textMuted }]}>
+                {more.can.void === 'OVERRIDE'
+                  ? `${t('mobile.item.voidNote')} ${t('mobile.item.managerNote')}`
+                  : t('mobile.item.voidNote')}
+              </Text>
+            </View>
           )}
         </Sheet>
       )}
@@ -280,6 +292,8 @@ export function SentOrders({
 
 const styles = StyleSheet.create({
   section: { gap: spacing[2] },
+  action: { gap: spacing[1] },
+  actionNote: { fontSize: fontSize.sm },
   heading: { fontSize: fontSize.lg, fontWeight: weight(fontWeight.semibold) },
   order: {
     borderWidth: 1,

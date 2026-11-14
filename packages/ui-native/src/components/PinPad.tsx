@@ -1,6 +1,6 @@
 import { elevation, fontSize, fontWeight, radius, spacing, touchTarget } from '@rp/design-tokens';
-import { type ReactNode, useState } from 'react';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 import { useSecureScreen } from '../screen-guard.js';
 import { useUiStrings } from '../strings.js';
 import { useTheme, weight } from '../theme.js';
@@ -11,6 +11,15 @@ export const MIN_PIN_LENGTH = 4;
 export const MAX_PIN_LENGTH = 8;
 
 const DIGITS = ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as const;
+
+/** A browser's key press, as far as the pad reads it (this package has no DOM types). */
+interface KeyLike {
+  readonly key: string;
+  readonly ctrlKey: boolean;
+  readonly metaKey: boolean;
+  readonly altKey: boolean;
+  preventDefault(): void;
+}
 
 export interface PinPadProps {
   /** Called with the entered PIN. The pad clears itself straight after, so a retry starts empty. */
@@ -71,6 +80,38 @@ export function PinPad({
       else setDigits(next);
     }
   };
+
+  // In a browser (P9-28) the keyboard types the PIN too: digits, Backspace, Escape and Enter.
+  const latestPress = useRef(press);
+  useEffect(() => {
+    latestPress.current = press;
+  });
+  useEffect(() => {
+    if (Platform.OS !== 'web' || inactive) return undefined;
+    const browser = globalThis as unknown as {
+      addEventListener(type: 'keydown', listener: (event: KeyLike) => void): void;
+      removeEventListener(type: 'keydown', listener: (event: KeyLike) => void): void;
+    };
+    const onKey = (event: KeyLike) => {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const id = /^[0-9]$/.test(event.key)
+        ? event.key
+        : event.key === 'Backspace'
+          ? 'backspace'
+          : event.key === 'Escape'
+            ? 'clear'
+            : event.key === 'Enter'
+              ? 'submit'
+              : undefined;
+      if (id === undefined) return;
+      event.preventDefault();
+      latestPress.current(id);
+    };
+    browser.addEventListener('keydown', onKey);
+    return () => {
+      browser.removeEventListener('keydown', onKey);
+    };
+  }, [inactive]);
 
   const key = (
     id: string,

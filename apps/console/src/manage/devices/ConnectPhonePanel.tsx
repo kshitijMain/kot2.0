@@ -29,36 +29,71 @@ export function ConnectPhonePanel() {
     );
   }
   const info = data.value;
+  const pc = info.urls[0];
   return (
-    <Card className="connect-phone" aria-labelledby="connect-phone-title">
+    <>
+      <Card className="connect-phone" aria-labelledby="connect-phone-title">
+        <div className="connect-phone__text">
+          <h3 id="connect-phone-title" className="connect-phone__title">
+            {t('devices.connect.title')}
+          </h3>
+          <ol className="connect-phone__steps">
+            <li>{t('devices.connect.step1')}</li>
+            <li>{t('devices.connect.step2')}</li>
+            <li>{t('devices.connect.step3')}</li>
+          </ol>
+          {info.urls.length === 0 ? (
+            <p className="console-notice console-notice--warning">
+              {t('devices.connect.noNetwork')}
+            </p>
+          ) : (
+            <p className="connect-phone__address">
+              {t('devices.connect.address')} <strong>{info.urls[0]}</strong>
+            </p>
+          )}
+          <p className="connect-phone__note">
+            {info.announced ? t('devices.connect.announced') : t('devices.connect.notAnnounced')}
+          </p>
+        </div>
+        {info.urls.length === 0 ? null : (
+          <QrCode
+            value={info.qrPayload}
+            label={t('devices.connect.qrLabel', { name: info.restaurantName })}
+            size={176}
+            className="connect-phone__qr"
+          />
+        )}
+      </Card>
+      {pc === undefined ? null : <ConnectInBrowser pc={pc} />}
+    </>
+  );
+}
+
+/**
+ * iPhones, and phones without the app, use the waiter app in the browser (P9-28): the PC's
+ * certificate installed once, then the code that opens /phone/.
+ */
+function ConnectInBrowser({ pc }: { pc: string }) {
+  const t = useT();
+  const url = `${pc}/phone/`;
+  return (
+    <Card className="connect-phone" aria-labelledby="connect-web-title">
       <div className="connect-phone__text">
-        <h3 id="connect-phone-title" className="connect-phone__title">
-          {t('devices.connect.title')}
+        <h3 id="connect-web-title" className="connect-phone__title">
+          {t('devices.connect.webTitle')}
         </h3>
         <ol className="connect-phone__steps">
-          <li>{t('devices.connect.step1')}</li>
-          <li>{t('devices.connect.step2')}</li>
-          <li>{t('devices.connect.step3')}</li>
+          <li>{t('devices.connect.webStep1', { caUrl: `${pc}/ca.crt` })}</li>
+          <li>{t('devices.connect.webStep2', { url })}</li>
+          <li>{t('devices.connect.webStep3')}</li>
         </ol>
-        {info.urls.length === 0 ? (
-          <p className="console-notice console-notice--warning">{t('devices.connect.noNetwork')}</p>
-        ) : (
-          <p className="connect-phone__address">
-            {t('devices.connect.address')} <strong>{info.urls[0]}</strong>
-          </p>
-        )}
-        <p className="connect-phone__note">
-          {info.announced ? t('devices.connect.announced') : t('devices.connect.notAnnounced')}
-        </p>
       </div>
-      {info.urls.length === 0 ? null : (
-        <QrCode
-          value={info.qrPayload}
-          label={t('devices.connect.qrLabel', { name: info.restaurantName })}
-          size={176}
-          className="connect-phone__qr"
-        />
-      )}
+      <QrCode
+        value={url}
+        label={t('devices.connect.webQrLabel')}
+        size={176}
+        className="connect-phone__qr"
+      />
     </Card>
   );
 }

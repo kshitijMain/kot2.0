@@ -79,7 +79,7 @@ By hand, on a Windows PC with the repository:
 
 ```text
 pnpm install
-pnpm turbo run build --filter=@rp/server --filter=@rp/console --filter=@rp/desktop
+pnpm turbo run build --filter=@rp/server --filter=@rp/console --filter=@rp/waiter-app --filter=@rp/desktop
 pnpm --filter @rp/desktop package:stage     (apps/desktop/staging)
 pnpm --filter @rp/desktop package:win       (apps/desktop/release/RestaurantPlatform-Setup-<version>.exe)
 ```

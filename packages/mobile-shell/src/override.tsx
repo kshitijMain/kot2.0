@@ -141,7 +141,11 @@ function OverrideSheet({ pending, onDone }: { pending: Pending; onDone: () => vo
 
   return (
     <Sheet open onClose={cancel} dismissible={!busy} title={t('override.title')}>
-      <Note>{t('override.description')}</Note>
+      <Note tone={chosen === undefined ? 'muted' : 'text'}>
+        {chosen === undefined
+          ? t('override.description')
+          : t('override.enterPin', { name: chosen.displayName })}
+      </Note>
       {managers === undefined ? <Note>{t('states.loading')}</Note> : null}
       {managers?.length === 0 ? (
         <Note tone="danger">{error ?? t('override.noManagers')}</Note>

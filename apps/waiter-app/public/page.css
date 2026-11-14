@@ -1,0 +1,55 @@
+/* The page around the app (P9-28): full height, no page scroll (the app's lists scroll), the
+   app's off-white behind the notch and the home bar, and no grey flash on taps. */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  background: #faf7f2;
+}
+body {
+  overflow: hidden;
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+}
+#root {
+  display: flex;
+  height: 100%;
+  flex: 1;
+}
+
+/* Inter, the apps' face (ADR-0022), served by the PC so the page renders the same offline. The
+   app asks for the family "Inter" with a weight, as on Android. */
+@font-face {
+  font-family: Inter;
+  font-weight: 400;
+  font-display: swap;
+  src: url('/phone/fonts/Inter-Regular.ttf') format('truetype');
+}
+@font-face {
+  font-family: Inter;
+  font-weight: 500;
+  font-display: swap;
+  src: url('/phone/fonts/Inter-Medium.ttf') format('truetype');
+}
+@font-face {
+  font-family: Inter;
+  font-weight: 600;
+  font-display: swap;
+  src: url('/phone/fonts/Inter-SemiBold.ttf') format('truetype');
+}
+@font-face {
+  font-family: Inter;
+  font-weight: 700;
+  font-display: swap;
+  src: url('/phone/fonts/Inter-Bold.ttf') format('truetype');
+}
+body {
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    sans-serif;
+}

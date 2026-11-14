@@ -5,6 +5,7 @@
   "description": "Waiter (Captain) app for Android: connects to the restaurant PC by itself, staff PIN login, My tables, each table's orders with the menu, Send KOT through an offline outbox and Again, and the waiter's pager (C5, P2-01c, P2-02).",
   "main": "index.ts",
   "scripts": {
+    "build": "node scripts/copy-web-fonts.mjs && expo export --platform web --output-dir dist --clear",
     "start": "expo start --dev-client",
     "android": "expo run:android",
     "prebuild": "expo prebuild --platform android --clean --no-install",
@@ -12,9 +13,10 @@
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "jest",
     "test:coverage": "jest --coverage",
-    "clean": "rm -rf coverage .expo android"
+    "clean": "rm -rf coverage .expo android dist"
   },
   "dependencies": {
+    "@expo/metro-runtime": "~57.0.17",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@rp/api-client": "workspace:*",
     "@rp/contracts": "workspace:*",
@@ -38,8 +40,11 @@
     "expo-status-bar": "~57.0.1",
     "expo-updates": "~57.0.23",
     "react": "19.2.3",
+    "react-dom": "19.2.3",
     "react-native": "0.86.3",
-    "react-native-safe-area-context": "~5.7.0"
+    "react-native-safe-area-context": "~5.7.0",
+    "react-native-web": "^0.21.4",
+    "zod": "^4.6.5"
   },
   "devDependencies": {
     "@babel/core": "^8.0.6",

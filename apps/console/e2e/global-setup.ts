@@ -4,7 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import pg from 'pg';
 import { cloneTemplateDatabase, startTestDatabase } from '../../server/test/setup/postgres.js';
-import { CONSOLE_DIST, SERVER_DIST } from './paths.js';
+import { CONSOLE_DIST, PHONE_DIST, SERVER_DIST } from './paths.js';
 
 /**
  * A throwaway PostgreSQL with every migration and the development seed, shared with the tests
@@ -12,7 +12,11 @@ import { CONSOLE_DIST, SERVER_DIST } from './paths.js';
  * temporary cluster (see apps/server/test/setup/postgres.ts).
  */
 export default async function globalSetup(): Promise<() => Promise<void>> {
-  for (const built of [join(SERVER_DIST, 'main.js'), join(CONSOLE_DIST, 'index.html')]) {
+  for (const built of [
+    join(SERVER_DIST, 'main.js'),
+    join(CONSOLE_DIST, 'index.html'),
+    join(PHONE_DIST, 'index.html'),
+  ]) {
     if (!existsSync(built)) throw new Error(`${built} is missing: run pnpm build first`);
   }
   const cluster = await startTestDatabase();
@@ -99,7 +103,19 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
   process.env.RP_E2E_MENU_DATA_DIR = menuFile.dataDir;
   process.env.RP_E2E_MENU_FRESH_DATABASE_URL = menuFileFresh.database.url;
   process.env.RP_E2E_MENU_FRESH_DATA_DIR = menuFileFresh.dataDir;
+  // The phone web app (P9-28): a restaurant of its own for each phone browser it runs in, so the
+  // iPhone's and the Android phone's runs each start with every table free.
+  const phones = await Promise.all(
+    PHONE_PROJECTS.map(async (project) => {
+      const phone = await seeded(cluster);
+      await manyAttempts(phone.database.url);
+      process.env[`RP_E2E_PHONE_${project}_DATABASE_URL`] = phone.database.url;
+      process.env[`RP_E2E_PHONE_${project}_DATA_DIR`] = phone.dataDir;
+      return phone;
+    }),
+  );
   return async () => {
+    for (const phone of phones) await phone.database.drop().catch(() => undefined);
     await menuFile.database.drop().catch(() => undefined);
     await menuFileFresh.database.drop().catch(() => undefined);
     await speed.drop().catch(() => undefined);
@@ -107,6 +123,24 @@ export default async function globalSetup(): Promise<() => Promise<void>> {
     await database.drop().catch(() => undefined);
     await cluster.stop();
   };
+}
+
+/** The phone web app's Playwright projects (playwright.config.ts), as environment-name parts. */
+export const PHONE_PROJECTS = ['IPHONE', 'ANDROID'] as const;
+
+/** Many people sign in on one phone within a minute in the tests: the highest attempt limit. */
+async function manyAttempts(url: string): Promise<void> {
+  const client = new pg.Client({ connectionString: url });
+  await client.connect();
+  try {
+    await client.query(
+      `INSERT INTO settings (id, restaurant_id, key, value, updated_at)
+       SELECT gen_random_uuid(), id, 'auth.attemptsPerMinutePerDevice', '100'::jsonb, now()
+       FROM restaurants`,
+    );
+  } finally {
+    await client.end();
+  }
 }
 
 /** A database with the development seed, and the data folder whose pepper its PINs use. */

@@ -20,6 +20,7 @@ import {
   useSuggestions,
   useT,
   useUnsentOrders,
+  onBackPress,
 } from '@rp/mobile-shell';
 import {
   addLine,
@@ -39,7 +40,7 @@ import {
 } from '@rp/ordering';
 import { Button, SegmentedControl, Text, useTheme, useToast, weight } from '@rp/ui-native';
 import { useEffect, useMemo, useState } from 'react';
-import { BackHandler, StyleSheet, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { CartList } from './CartList';
 import { useCart } from './carts';
 import { EndItemSheet, type Ending } from './EndItemSheet';
@@ -153,14 +154,12 @@ export function TableScreen({
   );
 
   useEffect(() => {
-    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+    // Android's back button, or the browser's back in the phone web app (P9-28).
+    return onBackPress(() => {
       if (view === 'menu') setView('order');
       else onBack();
       return true;
     });
-    return () => {
-      subscription.remove();
-    };
   }, [onBack, view]);
 
   const table: TableOverviewEntry | undefined =

@@ -44,6 +44,11 @@ export const AppConfigSchema = z.object({
   /** Folder of the built web console (`apps/console/dist`), served at `/` when set (P0-14b). */
   consoleDir: z.string().min(1).optional(),
   /**
+   * Folder of the waiter app built for the browser (`apps/waiter-app/dist-web`), served at
+   * /phone/ when set (P9-28): the app for iPhones and phones without the APK.
+   */
+  phoneDir: z.string().min(1).optional(),
+  /**
    * The release's phone and tablet APKs with their `apps.json` (`<install>\\apps`, P7-04e2), set
    * by the installer; unset, the PC offers no APK (development, tests, a release without them).
    */
@@ -266,6 +271,7 @@ export function loadConfig(
     logPretty: env.LOG_PRETTY,
     buildId: env.RP_BUILD_ID,
     consoleDir: env.RP_CONSOLE_DIR,
+    phoneDir: env.RP_PHONE_DIR === '' ? undefined : env.RP_PHONE_DIR,
     appsDir: env.RP_APPS_DIR === '' ? undefined : env.RP_APPS_DIR,
     controlPlaneUrl: env.RP_CONTROL_PLANE_URL,
     relayUrl: env.RP_RELAY_URL,

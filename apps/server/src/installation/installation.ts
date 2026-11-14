@@ -95,6 +95,8 @@ export interface InstallationPaths {
   readonly node: string;
   readonly serverDir: string;
   readonly consoleDir: string;
+  /** The waiter app built for phones' browsers, served at /phone/ (P9-28). */
+  readonly phoneDir: string;
   /** The release's phone and tablet APKs and their `apps.json` (P7-04e2). */
   readonly appsDir: string;
   readonly pgBin: string;
@@ -119,6 +121,7 @@ export function installationPaths(installation: InstallationFile): InstallationP
     node: join(installDir, 'node', `node${exe}`),
     serverDir: join(installDir, 'server'),
     consoleDir: join(installDir, 'console'),
+    phoneDir: join(installDir, 'phone'),
     appsDir: join(installDir, 'apps'),
     pgBin: join(installDir, 'postgres', 'bin'),
     pgData: join(dataDir, 'postgres'),
@@ -242,6 +245,7 @@ export function serverEnvironment(
     DATABASE_URL: databaseUrl(installation, 'server', passwords),
     RP_DATA_DIR: installation.dataDir,
     RP_CONSOLE_DIR: paths.consoleDir,
+    RP_PHONE_DIR: paths.phoneDir,
     RP_APPS_DIR: paths.appsDir,
     RP_PG_BIN: paths.pgBin,
     RP_TLS: 'on',

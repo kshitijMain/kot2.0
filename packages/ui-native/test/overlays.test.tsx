@@ -1,12 +1,13 @@
 import { act, fireEvent, screen } from '@testing-library/react-native';
 import { useState } from 'react';
-import { Pressable, Text } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import {
   ScreenInsetsProvider,
   Sheet,
   type ToastOptions,
   ToastProvider,
   useToast,
+  useToastClearance,
 } from '../src/index.js';
 
 /** A phone with gesture navigation: 24 points of status bar, 48 of navigation bar. */
@@ -91,6 +92,39 @@ describe('[NFR-U01] Toast', () => {
       </ScreenInsetsProvider>,
     );
     expect(screen.getByTestId('toast-region')).toHaveStyle({ bottom: 24 + 48 });
+  });
+
+  it('[P9-28] sits above a screen footer that reports its height, and back down when it goes', async () => {
+    function Footer() {
+      const onLayout = useToastClearance();
+      return <View testID="footer" onLayout={onLayout} />;
+    }
+    function Screen() {
+      const [footer, setFooter] = useState(true);
+      return (
+        <>
+          {footer ? <Footer /> : null}
+          <Pressable
+            onPress={() => {
+              setFooter(false);
+            }}
+          >
+            <Text>Close</Text>
+          </Pressable>
+        </>
+      );
+    }
+    await renderUi(
+      <ToastProvider>
+        <Screen />
+      </ToastProvider>,
+    );
+    await fireEvent(screen.getByTestId('footer'), 'layout', {
+      nativeEvent: { layout: { x: 0, y: 0, width: 360, height: 96 } },
+    });
+    expect(screen.getByTestId('toast-region')).toHaveStyle({ bottom: 96 + 8 });
+    await fireEvent.press(screen.getByText('Close'));
+    expect(screen.getByTestId('toast-region')).toHaveStyle({ bottom: 24 });
   });
 
   it('hides a success toast after the duration', async () => {
