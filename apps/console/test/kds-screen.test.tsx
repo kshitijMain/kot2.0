@@ -155,6 +155,13 @@ describe('[KDS-001] [KDS-002] [KDS-003] [KDS-004] the station board', () => {
     await expectNoAxeViolations(container);
   });
 
+  it('[OI-11] hides Menu availability when the kitchen may not change it (ADR-0030)', async () => {
+    const base = board([]);
+    await renderKds(kdsServer({ ...base, settings: { ...base.settings, mayManageStock: false } }));
+    await screen.findByText(t('kds.noTickets'));
+    expect(screen.queryByRole('button', { name: t('stock.open') })).toBeNull();
+  });
+
   it('says so when there is nothing to cook', async () => {
     await renderKds(kdsServer(board([])));
     expect(screen.getByText(t('kds.noTickets'))).toBeInTheDocument();

@@ -129,6 +129,7 @@ export class KdsService {
         readyNotCollectedMinutes: snapshot.get('kds.readyNotCollectedMinutes'),
         soundVolumePercent: snapshot.get('kds.soundVolumePercent'),
         theme: snapshot.get('kds.theme'),
+        mayManageStock: actor.role !== 'KITCHEN' || snapshot.get('stock.kitchenMayManage'),
       },
       serverTime: now.toISOString(),
     };

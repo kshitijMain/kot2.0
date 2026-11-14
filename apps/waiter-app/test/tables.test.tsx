@@ -1,3 +1,4 @@
+import { timeOfDayOf } from '@rp/domain';
 import { en } from '@rp/i18n';
 import { eventFrame } from '@rp/mobile-core/testing';
 import { act, fireEvent, screen, waitFor, within } from '@testing-library/react-native';
@@ -147,14 +148,14 @@ describe('[WTR-008] printing the bill from the app', () => {
     await fireEvent.press(await tile(/^T2, Occupied/));
     expect(await screen.findByRole('header', { name: 'Table T2' })).toBeOnTheScreen();
     expect(screen.queryByTestId('print-bill')).toBeNull();
-    expect(screen.getByRole('button', { name: 'Request bill' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Request bill for this table' })).toBeOnTheScreen();
 
     restaurant.waiterMayPrint = true;
     await fireEvent.press(screen.getByRole('button', { name: 'Back to tables' }));
     await fireEvent.press(await tile(/^T2, Occupied/));
     const print = await screen.findByTestId('print-bill');
     // P9-21: who may print the bill prints it, without asking the managers for it first.
-    expect(screen.queryByRole('button', { name: 'Request bill' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Request bill for this table' })).toBeNull();
     await fireEvent.press(print);
     expect(await screen.findByText('Bill INV/26-27/000042 printed: ₹640.00')).toBeOnTheScreen();
     const sessionId = restaurant.table('T2').session?.id ?? '';
@@ -197,13 +198,15 @@ describe('[TBL-005] [WTR-008] moving a table and asking for the bill', () => {
     expect(screen.getByText('There is no free table to move to.')).toBeOnTheScreen();
     await fireEvent.press(screen.getByRole('button', { name: 'Back' }));
     expect(screen.queryByRole('header', { name: 'Move T2 to' })).toBeNull();
-    expect(screen.getByRole('button', { name: 'Request bill' })).toBeOnTheScreen();
+    expect(screen.getByRole('button', { name: 'Request bill for this table' })).toBeOnTheScreen();
   });
 
-  it('asks for the bill once, and not again while it is asked for', async () => {
-    const { server } = await signedInApp();
+  it('asks for the bill once, says when, then says it is printed (ADR-0030)', async () => {
+    const { server, restaurant } = await signedInApp();
     await fireEvent.press(await tile(/^T2, Occupied/));
-    await fireEvent.press(await screen.findByRole('button', { name: 'Request bill' }));
+    await fireEvent.press(
+      await screen.findByRole('button', { name: 'Request bill for this table' }),
+    );
     expect(await screen.findByText('Bill requested for T2.')).toBeOnTheScreen();
     expect(
       server.callsTo(
@@ -212,7 +215,17 @@ describe('[TBL-005] [WTR-008] moving a table and asking for the bill', () => {
       ),
     ).toHaveLength(1);
     expect(await screen.findByText(/^Bill requested · 3 guests/)).toBeOnTheScreen();
-    expect(screen.queryByRole('button', { name: 'Request bill' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Request bill for this table' })).toBeNull();
+    const at = timeOfDayOf(new Date(restaurant.table('T2').session?.billRequestedAt ?? ''));
+    expect(screen.getByText(`Bill requested at ${at}`)).toBeOnTheScreen();
+
+    // A manager prints it: the waiter sees that it is printed, and nothing to tap.
+    restaurant.table('T2').state = 'BILL_PRINTED';
+    await fireEvent.press(screen.getByRole('button', { name: 'Back to tables' }));
+    await fireEvent.press(await tile(/^T2, Bill printed/));
+    expect(await screen.findByText('Bill printed')).toBeOnTheScreen();
+    expect(screen.queryByRole('button', { name: 'Request bill for this table' })).toBeNull();
+    expect(screen.queryByTestId('print-bill')).toBeNull();
   });
 
   it('offers Move on any table to any waiter (ADR-0023), never to the kitchen', async () => {
@@ -245,7 +258,9 @@ describe('[TBL-005] [WTR-008] moving a table and asking for the bill', () => {
     const back = jest.spyOn(BackHandler, 'addEventListener');
     await signedInApp(restaurant, server);
     await fireEvent.press(await tile(/^T2, Occupied/));
-    await fireEvent.press(await screen.findByRole('button', { name: 'Request bill' }));
+    await fireEvent.press(
+      await screen.findByRole('button', { name: 'Request bill for this table' }),
+    );
     expect(await screen.findByText('Nothing to bill yet.')).toBeOnTheScreen();
 
     const handler = back.mock.calls.at(-1)?.[1];

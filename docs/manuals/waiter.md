@@ -28,6 +28,12 @@ Tap the table, add items with their variants and modifiers, add notes, and send.
 loses Wi-Fi your order waits on the phone and is sent when it reconnects; it is never sent
 twice. The prices shown are the system's; you cannot change them.
 
+## Asking for the bill
+
+When the guests want to pay, open the table and press **Request bill for this table**. The
+managers see it in their pending bills and print it. The table then says "Bill requested at 21:42";
+there is no need to ask twice. When the bill is printed the table says **Bill printed**.
+
 ## Customers ordering themselves
 
 A guest may order from the QR code or the table tablet. Orders that need your approval appear

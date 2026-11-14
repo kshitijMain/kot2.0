@@ -68,6 +68,11 @@ export const KdsSettings = z.object({
   readyNotCollectedMinutes: z.int().positive(),
   soundVolumePercent: z.int().min(0).max(100),
   theme: KdsTheme,
+  /**
+   * Whether this screen may mark dishes out of stock (OI-11, `stock.kitchenMayManage`); the
+   * Menu availability button is hidden when not, rather than refused (ADR-0030).
+   */
+  mayManageStock: z.boolean().default(true),
 });
 export type KdsSettings = z.infer<typeof KdsSettings>;
 

@@ -161,6 +161,8 @@ describe('[KDS-001] [KDS-002] [KDS-003] [KDS-011] a station screen in station mo
       soundVolumePercent: 70,
       // Light by default; a manager may choose the dark kitchen theme (ADR-0022).
       theme: 'LIGHT',
+      // The kitchen may mark dishes out of stock unless the restaurant turns it off (OI-11).
+      mayManageStock: true,
     });
     expect(kitchen.tickets).toHaveLength(1);
     expect(kitchen.tickets[0]).toMatchObject({
@@ -190,6 +192,19 @@ describe('[KDS-001] [KDS-002] [KDS-003] [KDS-011] a station screen in station mo
       .query({ stationId: id('Bar') })
       .set(screen('kitchenScreen'));
     expect(other.status).toBe(403);
+  });
+
+  it('[OI-11] tells the kitchen when it may not mark dishes out of stock (ADR-0030)', async () => {
+    const key = 'stock.kitchenMayManage';
+    await prisma.setting.create({ data: { restaurantId: kit.restaurantId, key, value: false } });
+    app.get(SettingsService).invalidate();
+    try {
+      expect((await tickets(screen('kitchenScreen'))).settings.mayManageStock).toBe(false);
+    } finally {
+      await prisma.setting.deleteMany({ where: { restaurantId: kit.restaurantId, key } });
+      app.get(SettingsService).invalidate();
+    }
+    expect((await tickets(screen('kitchenScreen'))).settings.mayManageStock).toBe(true);
   });
 
   it('[KDS-002] shows every station a screen is given, and lets it narrow to one', async () => {

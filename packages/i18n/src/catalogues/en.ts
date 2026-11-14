@@ -368,7 +368,10 @@ export const en = {
       mine: 'My tables',
       all: 'All tables',
       noneMine: 'No tables of yours today.',
-      requestBill: 'Request bill',
+      requestBill: 'Request bill for this table',
+      /** ADR-0030: once asked, the table says when; then that the bill is printed. */
+      billRequestedAt: 'Bill requested at {time}',
+      billIsPrinted: 'Bill printed',
       printBill: 'Print bill',
       billPrinted: 'Bill {number} printed: {total}',
       billNotPrinted: 'Bill {number} issued but not printed: {error}',

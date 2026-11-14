@@ -1,7 +1,7 @@
 import { newIdempotencyKey, uuidV4 } from '@rp/api-client';
 import type { MenuItem, OrderView, RecommendationSource, TableOverviewEntry } from '@rp/contracts';
 import { fontSize, fontWeight, spacing } from '@rp/design-tokens';
-import { formatRupees } from '@rp/domain';
+import { formatRupees, timeOfDayOf } from '@rp/domain';
 import { type OrderDraft, SuggestionTracker } from '@rp/mobile-core';
 import {
   AlertBell,
@@ -470,6 +470,7 @@ export function TableScreen({
               </Button>
             ) : null}
             {/* Who may print the bill prints it; asking the managers is for the others (P9-21). */}
+            {/* Asked once: the table then says when, and nothing asks twice (ADR-0030). */}
             {table.state === 'OCCUPIED' && !mayPrint ? (
               <Button
                 variant="secondary"
@@ -504,6 +505,17 @@ export function TableScreen({
               </Button>
             ) : null}
           </View>
+          {table.state === 'BILL_REQUESTED' &&
+          typeof table.session?.billRequestedAt === 'string' ? (
+            <Note tone="text">
+              {t('mobile.tables.billRequestedAt', {
+                time: timeOfDayOf(new Date(table.session.billRequestedAt)),
+              })}
+            </Note>
+          ) : null}
+          {table.state === 'BILL_PRINTED' && !mayTakePayment(person) ? (
+            <Note tone="text">{t('mobile.tables.billIsPrinted')}</Note>
+          ) : null}
         </>
       )}
       {notice === undefined ? null : <Note tone="danger">{notice}</Note>}

@@ -18317,7 +18317,40 @@
             "maximum": 9007199254740991
           },
           "soundVolumePercent": { "type": "integer", "minimum": 0, "maximum": 100 },
-          "theme": { "$ref": "#/components/schemas/KdsTheme" }
+          "theme": { "$ref": "#/components/schemas/KdsTheme" },
+          "mayManageStock": { "default": true, "type": "boolean" }
+        },
+        "required": [
+          "ageAmberMinutes",
+          "ageRedMinutes",
+          "readyNotCollectedMinutes",
+          "soundVolumePercent",
+          "theme",
+          "mayManageStock"
+        ],
+        "additionalProperties": false
+      },
+      "KdsSettingsInput": {
+        "type": "object",
+        "properties": {
+          "ageAmberMinutes": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "ageRedMinutes": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "readyNotCollectedMinutes": {
+            "type": "integer",
+            "exclusiveMinimum": 0,
+            "maximum": 9007199254740991
+          },
+          "soundVolumePercent": { "type": "integer", "minimum": 0, "maximum": 100 },
+          "theme": { "$ref": "#/components/schemas/KdsTheme" },
+          "mayManageStock": { "default": true, "type": "boolean" }
         },
         "required": [
           "ageAmberMinutes",
@@ -18325,8 +18358,7 @@
           "readyNotCollectedMinutes",
           "soundVolumePercent",
           "theme"
-        ],
-        "additionalProperties": false
+        ]
       },
       "KdsTheme": { "type": "string", "enum": ["LIGHT", "DARK"] },
       "KdsTicket": {
@@ -18579,7 +18611,7 @@
             "type": "array",
             "items": { "$ref": "#/components/schemas/KdsTicketInput" }
           },
-          "settings": { "$ref": "#/components/schemas/KdsSettings" },
+          "settings": { "$ref": "#/components/schemas/KdsSettingsInput" },
           "serverTime": { "$ref": "#/components/schemas/Timestamp" }
         },
         "required": ["station", "tickets", "recentlyBumped", "settings", "serverTime"]
@@ -24679,7 +24711,11 @@
                     "minimum": 0,
                     "maximum": 9007199254740991
                   },
-                  "readyItems": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+                  "readyItems": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+                  "billRequestedAt": {
+                    "default": null,
+                    "anyOf": [{ "$ref": "#/components/schemas/Timestamp" }, { "type": "null" }]
+                  }
                 },
                 "required": [
                   "id",
@@ -24689,7 +24725,8 @@
                   "waiterName",
                   "amountSoFar",
                   "pendingApprovals",
-                  "readyItems"
+                  "readyItems",
+                  "billRequestedAt"
                 ],
                 "additionalProperties": false
               },
@@ -24709,6 +24746,66 @@
         ],
         "additionalProperties": false
       },
+      "TableOverviewEntryInput": {
+        "type": "object",
+        "properties": {
+          "tableId": { "$ref": "#/components/schemas/Id" },
+          "label": { "type": "string" },
+          "sectionId": { "$ref": "#/components/schemas/Id" },
+          "capacity": { "type": "integer", "exclusiveMinimum": 0, "maximum": 9007199254740991 },
+          "state": { "$ref": "#/components/schemas/TableState" },
+          "session": {
+            "anyOf": [
+              {
+                "type": "object",
+                "properties": {
+                  "id": { "$ref": "#/components/schemas/Id" },
+                  "openedAt": { "$ref": "#/components/schemas/Timestamp" },
+                  "covers": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "waiterId": { "$ref": "#/components/schemas/Id" },
+                  "waiterName": { "type": "string" },
+                  "amountSoFar": { "$ref": "#/components/schemas/Paise" },
+                  "pendingApprovals": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  },
+                  "readyItems": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+                  "billRequestedAt": {
+                    "default": null,
+                    "anyOf": [{ "$ref": "#/components/schemas/Timestamp" }, { "type": "null" }]
+                  }
+                },
+                "required": [
+                  "id",
+                  "openedAt",
+                  "covers",
+                  "waiterId",
+                  "waiterName",
+                  "amountSoFar",
+                  "pendingApprovals",
+                  "readyItems"
+                ]
+              },
+              { "type": "null" }
+            ]
+          },
+          "activeServiceRequests": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+        },
+        "required": [
+          "tableId",
+          "label",
+          "sectionId",
+          "capacity",
+          "state",
+          "session",
+          "activeServiceRequests"
+        ]
+      },
       "TableOverviewResponse": {
         "type": "object",
         "properties": {
@@ -24726,7 +24823,7 @@
         "properties": {
           "tables": {
             "type": "array",
-            "items": { "$ref": "#/components/schemas/TableOverviewEntry" }
+            "items": { "$ref": "#/components/schemas/TableOverviewEntryInput" }
           },
           "mayPrintBill": { "default": false, "type": "boolean" }
         },

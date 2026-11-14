@@ -100,6 +100,7 @@ describe('[TBL-007] floor view', () => {
       amountSoFar: 0,
       pendingApprovals: 0,
       readyItems: 0,
+      billRequestedAt: null,
     };
     expect(tileDetails(live(1), NOW, t)).toEqual([]);
     expect(tileDetails(live(1, { session }), NOW, t)).toEqual(['1 guest', '10 min', 'Ravi']);
@@ -148,6 +149,7 @@ describe('[WTR-002] tables I sent KOTs to today', () => {
     amountSoFar: 0,
     pendingApprovals: 0,
     readyItems: 0,
+    billRequestedAt: null,
   });
   const overview = {
     tables: [

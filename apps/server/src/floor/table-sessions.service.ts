@@ -126,6 +126,11 @@ export class TableSessionsService {
                 amountSoFar: amounts.get(session.id) ?? 0,
                 pendingApprovals: pending.get(session.id) ?? 0,
                 readyItems: ready.get(session.id) ?? 0,
+                // Only while the request stands: ordering more puts the table back to Occupied.
+                billRequestedAt:
+                  table.state === 'BILL_REQUESTED' && session.billRequestedAt !== null
+                    ? session.billRequestedAt.toISOString()
+                    : null,
               },
         activeServiceRequests: session === undefined ? 0 : (openRequests.get(session.id) ?? 0),
       };
@@ -193,8 +198,14 @@ export class TableSessionsService {
   ): Promise<TableSessionView> {
     return this.prisma.transaction(async (tx) => {
       const session = await this.lockSession(tx, principal.restaurantId, sessionId);
+      // Asked already (a second phone, a slow tap): the same request, not a second alert.
+      if (session.table.state === 'BILL_REQUESTED') return this.view(tx, session);
       const to = transition(tableMachine, session.table.state, 'REQUEST_BILL').to;
       await tx.diningTable.update({ where: { id: session.tableId }, data: { state: to } });
+      await tx.tableSession.update({
+        where: { id: sessionId },
+        data: { billRequestedAt: new Date() },
+      });
       await this.emit(tx, principal.restaurantId, isoDateOf(session.businessDate), sessionId, [
         {
           type: 'BillRequested',

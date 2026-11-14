@@ -76,6 +76,7 @@ function entry(
             amountSoFar: 56_000,
             pendingApprovals: 0,
             readyItems: 0,
+            billRequestedAt: null,
             ...session,
           },
     activeServiceRequests: 0,

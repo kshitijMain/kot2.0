@@ -111,6 +111,8 @@ export const TableOverviewEntry = z.object({
       pendingApprovals: z.int().nonnegative(),
       /** Dishes ready at the pass for this table; a combo counts once all its parts are (WTR-007). */
       readyItems: z.int().nonnegative(),
+      /** When the bill was asked for, while the table waits for it (ADR-0030); else null. */
+      billRequestedAt: Timestamp.nullable().default(null),
     })
     .nullable(),
   /** Water, waiter and bill requests not yet resolved (service requests arrive in P2/P3). */

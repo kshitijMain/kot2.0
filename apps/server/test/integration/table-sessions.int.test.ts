@@ -205,12 +205,28 @@ describe('[TBL-003] [TBL-004] table sessions', () => {
       }),
     ).toBe(1);
 
-    // The bill cannot be requested twice. (A table that asked for the bill with nothing to bill
-    // may now be closed without one, so it is not stuck for good: QA-024, `qa-flows.int.test.ts`.)
+    // The overview says when it was asked for (ADR-0030: "Bill requested at 21:42").
+    const asked = TableOverviewResponse.parse(
+      (await server().get('/api/v1/tables/overview').set(as(waiter))).body,
+    ).tables.find((table) => table.label === 'T1')?.session?.billRequestedAt;
+    expect(Date.now() - Date.parse(asked ?? '')).toBeLessThan(60_000);
+
+    // Asked again (a second phone, or a slow tap): the same request, not a second one. (A table
+    // that asked for the bill with nothing to bill may be closed without one: QA-024.)
     const twice = await server()
       .post(`/api/v1/table-sessions/${session.id}/request-bill`)
-      .set(as(waiter));
-    expect([twice.status, codeOf(twice)]).toEqual([409, 'INVALID_TRANSITION']);
+      .set(as(manager));
+    expect(twice.status, JSON.stringify(twice.body)).toBe(200);
+    expect(TableSessionView.parse(twice.body).state).toBe('BILL_REQUESTED');
+    expect(
+      await prisma.outboxEvent.count({
+        where: { eventType: 'BillRequested', aggregateId: session.id },
+      }),
+    ).toBe(1);
+    const again = TableOverviewResponse.parse(
+      (await server().get('/api/v1/tables/overview').set(as(waiter))).body,
+    ).tables.find((table) => table.label === 'T1')?.session?.billRequestedAt;
+    expect(again).toBe(asked);
     await prisma.diningTable.update({ where: { id: tables.T1 }, data: { state: 'OCCUPIED' } });
   });
 

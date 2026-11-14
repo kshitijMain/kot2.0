@@ -68,6 +68,7 @@ function session(n: number, waiterId: string, covers: number): TableOverviewEntr
     amountSoFar: 64_000,
     pendingApprovals: 0,
     readyItems: 0,
+    billRequestedAt: null,
   };
 }
 
@@ -800,7 +801,10 @@ export class Restaurant {
             (candidate) => candidate.session !== null && call.path.includes(candidate.session.id),
           );
           if (table === undefined) return { status: 404, body: {} };
-          table.state = 'BILL_REQUESTED';
+          if (table.state !== 'BILL_REQUESTED' && table.session !== null) {
+            table.state = 'BILL_REQUESTED';
+            table.session = { ...table.session, billRequestedAt: new Date().toISOString() };
+          }
           return { status: 200, body: this.sessionView(table) };
         })
     );

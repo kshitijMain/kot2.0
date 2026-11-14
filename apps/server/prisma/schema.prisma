@@ -589,6 +589,8 @@ model TableSession {
   openedAt            DateTime           @default(now()) @map("opened_at") @db.Timestamptz(3)
   closedAt            DateTime?          @map("closed_at") @db.Timestamptz(3)
   closeReason         String?            @map("close_reason")
+  /// When the table last asked for its bill (ADR-0030); null until asked.
+  billRequestedAt     DateTime?          @map("bill_requested_at") @db.Timestamptz(3)
   /// Set when guests moved here from another table (TBL-006).
   movedFromSessionId  String?            @map("moved_from_session_id") @db.Uuid
   /// Set when this table's guests joined another table's session, for one bill (TBL-006).

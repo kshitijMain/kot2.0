@@ -313,9 +313,12 @@ function Board(props: BoardProps) {
             {t('kds.enableSound')}
           </Button>
         )}
-        <Button variant="secondary" onClick={props.onOpenStock}>
-          {t('stock.open')}
-        </Button>
+        {/* Hidden, not refused, when the restaurant keeps stock to the managers (OI-11). */}
+        {props.view.settings.mayManageStock ? (
+          <Button variant="secondary" onClick={props.onOpenStock}>
+            {t('stock.open')}
+          </Button>
+        ) : null}
         <Button variant="secondary" startIcon={<Icon name="sync" />} onClick={props.onOpenRecall}>
           {t('kds.recall')}
         </Button>

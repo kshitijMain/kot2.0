@@ -32,6 +32,7 @@ import { useOpenBill } from '../billing/use-open-bill.js';
 import { OverrideCancelled, useOverride } from '../billing/override.js';
 import { ReasonDialog } from '../billing/ReasonDialog.js';
 import { useConsoleState } from '../app/console-context.js';
+import { grantOf } from '../app/modes.js';
 import { ItemDialog } from './ItemDialog.js';
 import { displayState, lineActions } from '@rp/ordering';
 import {
@@ -142,7 +143,9 @@ export function OrderEntry({ target, onBack }: { target: OrderTarget; onBack: ()
         <h2 id="pos-order-title" className="pos-floor__heading">
           {title}
         </h2>
-        {target.kind === 'table' ? <BillButton sessionId={target.sessionId} /> : null}
+        {target.kind === 'table' ? (
+          <BillButton sessionId={target.sessionId} label={target.label} />
+        ) : null}
       </header>
       <div className="pos-order__body">
         <div className="pos-order__menu">
@@ -385,18 +388,57 @@ function Cart({
   );
 }
 
-function BillButton({ sessionId }: { sessionId: string }) {
+/**
+ * The table's bill: opened by whoever prints bills and takes payment; asked for by the others
+ * (a waiter), who were refused the bill itself (BRD §4.2, ADR-0030).
+ */
+function BillButton({ sessionId, label }: { sessionId: string; label: string }) {
   const t = useT();
+  const controller = useConsole();
+  const toast = useToast();
+  const { person } = useConsoleState();
   const { openBill, opening } = useOpenBill();
+  const [asking, setAsking] = useState(false);
+  if (person === undefined) return null;
+  if (grantOf(person, 'BILL_PRINT_AND_PAYMENT') !== 'DENY') {
+    return (
+      <Button
+        variant="secondary"
+        loading={opening}
+        onClick={() => {
+          openBill({ tableSessionId: sessionId });
+        }}
+      >
+        {t('pos.billTable')}
+      </Button>
+    );
+  }
+  if (grantOf(person, 'BILL_REQUEST') === 'DENY') return null;
   return (
     <Button
       variant="secondary"
-      loading={opening}
+      loading={asking}
       onClick={() => {
-        openBill({ tableSessionId: sessionId });
+        setAsking(true);
+        controller.api
+          .requestBill({ params: { sessionId } })
+          .then(
+            () => {
+              toast.show({
+                title: t('mobile.tables.billRequested', { table: label }),
+                tone: 'success',
+              });
+            },
+            (failure: unknown) => {
+              toast.show({ title: messageOf(failure, t), tone: 'danger' });
+            },
+          )
+          .finally(() => {
+            setAsking(false);
+          });
       }}
     >
-      {t('pos.billTable')}
+      {t('mobile.tables.requestBill')}
     </Button>
   );
 }

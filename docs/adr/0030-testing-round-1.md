@@ -47,3 +47,33 @@ This is decision D-34.
   seats itself: the person confirmed on their screen. This is decision D-35.
 - No screen changes the guests of a table already open, so there is nothing to warn about there.
   Merging two tables adds their guests together without asking, as before.
+
+## F. The waiter asks for the bill
+
+**Decision.**
+
+- A waiter's table shows **Request bill for this table** while it is occupied, on the waiter app
+  and on the POS order screen. On the POS order screen it replaces the **Bill** button, which only
+  people who print bills and take payment may open: a waiter used to tap it and be refused.
+- Once asked, the table shows "Bill requested at 21:42" and offers nothing more. A second request
+  (another phone, a slow tap) is answered with the same request, without a second alert. Before,
+  the server refused it as an invalid move (`INVALID_TRANSITION`).
+- The time is kept on the table session (`table_sessions.bill_requested_at`, migration
+  `20261114100000_bill_requested_at`) and shown in the overview as `session.billRequestedAt` while
+  the table waits for its bill. Ordering more puts the table back to Occupied, which hides it.
+- When the bill is printed the waiter's table says **Bill printed** (a manager signed in on a
+  phone sees **Take payment** instead).
+
+**The sweep for other refused buttons.** Every call the waiter app, the kitchen display and the
+manager dashboard make was checked against what each role may do (BRD §4.2 with ADR-0023 and this
+ADR). What was found and changed:
+
+| Screen           | Button            | Was                                          | Now                                        |
+| ---------------- | ----------------- | -------------------------------------------- | ------------------------------------------ |
+| POS order screen | Bill (waiter)     | Refused: waiters may not open bills          | Request bill for this table                |
+| Kitchen display  | Menu availability | Refused when `stock.kitchenMayManage` is off | Hidden then (`KdsSettings.mayManageStock`) |
+
+Everything else was already shown only to people allowed to use it: the waiter app's Take payment
+and Print bill, the alert centre's Approve, Reject and Nudge, and the Owner-only parts of the
+dashboard (tax groups, invoice series, backups and restore, data export, the licence). A manager's
+approval on a waiter's phone (voiding a dish) is asked for on the phone, as designed.

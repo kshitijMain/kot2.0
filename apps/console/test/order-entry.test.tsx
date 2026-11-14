@@ -78,6 +78,43 @@ describe('[ORD-001] [MENU-012] taking an order at a table', () => {
     await expectNoAxeViolations(container);
   });
 
+  it('[WTR-008] offers a waiter "Request bill for this table", never a Bill they may not open (ADR-0030)', async () => {
+    const fake = signsInAs(server(), 'WAITER')
+      .on('GET', '/api/v1/menu', () => ({ status: 200, body: MENU }))
+      .on('GET', `/api/v1/table-sessions/${IDS.session}/orders`, () => ({
+        status: 200,
+        body: { orders: [sentOrder('SENT')] },
+      }))
+      .on('POST', `/api/v1/table-sessions/${IDS.session}/request-bill`, () => ({
+        status: 200,
+        body: {
+          id: IDS.session,
+          tableId: IDS.session,
+          tableLabel: 'T1',
+          state: 'BILL_REQUESTED',
+          status: 'OPEN',
+          covers: 2,
+          waiterId: IDS.session,
+          waiterName: 'Ravi',
+          businessDate: '2026-09-26',
+          openedAt: '2026-09-26T10:00:00.000Z',
+          closedAt: null,
+          closeReason: null,
+        },
+      }));
+    const { user } = await renderConsole({ fake, signedIn: 'WAITER', path: TABLE_PATH });
+    await card(/^Paneer Tikka/);
+    expect(screen.queryByRole('button', { name: t('pos.billTable') })).toBeNull();
+    await user.click(screen.getByRole('button', { name: t('mobile.tables.requestBill') }));
+    expect(
+      await screen.findByText(t('mobile.tables.billRequested', { table: 'T1' })),
+    ).toBeInTheDocument();
+    expect(fake.callsTo('POST', '/api/v1/bills')).toHaveLength(0);
+    expect(fake.callsTo('POST', `/api/v1/table-sessions/${IDS.session}/request-bill`)).toHaveLength(
+      1,
+    );
+  });
+
   it('[MENU-008] shows each dish’s photo, or the placeholder, beside its name', async () => {
     const photoId = '0199a0e0-0000-7000-8000-00000000f101';
     const withPhoto = {
