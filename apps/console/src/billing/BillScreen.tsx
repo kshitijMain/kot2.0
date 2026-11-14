@@ -155,6 +155,12 @@ export function BillScreen({
           {bill.unbilledOrderItemIds.length > 0 ? (
             <p>{t('billing.unbilledNotice', { count: bill.unbilledOrderItemIds.length })}</p>
           ) : null}
+          {(() => {
+            const outdated = invoices.find((invoice) => invoice.id === bill.outdatedInvoiceId);
+            return outdated === undefined ? null : (
+              <p>{t('billing.outdatedNotice', { number: outdated.invoiceNumber })}</p>
+            );
+          })()}
           <Button
             loading={busy}
             onClick={() => {
@@ -192,7 +198,10 @@ export function BillScreen({
                         {t('billing.settled')}
                       </Badge>
                     ) : null}
-                    {invoice.status === 'ISSUED' ? (
+                    {invoice.id === bill.outdatedInvoiceId ? (
+                      // ADR-0031: dishes were added since; neither paid nor printed again.
+                      <Badge tone="warning">{t('billing.outdated')}</Badge>
+                    ) : invoice.status === 'ISSUED' ? (
                       <Button
                         onClick={() => {
                           onPay(invoice.id);
@@ -201,7 +210,7 @@ export function BillScreen({
                         {t('billing.pay')}
                       </Button>
                     ) : null}
-                    {invoice.status === 'VOIDED' ? (
+                    {invoice.id === bill.outdatedInvoiceId ? null : invoice.status === 'VOIDED' ? (
                       <Badge tone="danger">
                         {t('billing.voided', { reason: invoice.voidReason ?? '' })}
                       </Badge>

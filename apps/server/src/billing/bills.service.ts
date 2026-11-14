@@ -20,6 +20,7 @@ import { PrismaService, type TransactionClient } from '../database/prisma.servic
 import { AppError } from '../errors/app-error.js';
 import type { Bill } from '../generated/prisma/client.js';
 import { SettingsService } from '../settings/settings.service.js';
+import { outdatedInvoiceId } from './outdated.js';
 import {
   type ActiveDiscount,
   type BillableItem,
@@ -145,7 +146,7 @@ export class BillsService {
         orderBy: { issuedAt: 'asc' },
       }),
     ]);
-    return this.toView(
+    const view = this.toView(
       context,
       invoices.map((invoice) => invoice.id),
       context.bill.status === 'INVOICED'
@@ -153,6 +154,13 @@ export class BillsService {
         : [],
       await this.voidedPartIds(this.prisma, restaurantId, billId),
     );
+    return {
+      ...view,
+      outdatedInvoiceId:
+        context.bill.status === 'INVOICED'
+          ? await outdatedInvoiceId(this.prisma, restaurantId, billId)
+          : null,
+    };
   }
 
   /**

@@ -19,6 +19,7 @@ import { PrintFailure, PrinterTransport } from '../printing/printer-transport.js
 import { SettingsService } from '../settings/settings.service.js';
 import { BillsService } from './bills.service.js';
 import { InvoicesService } from './invoices.service.js';
+import { assertNotOutdated } from './outdated.js';
 import { mayPrintBill } from './who-prints-bills.js';
 
 function invoiceNotFound(): AppError {
@@ -104,6 +105,8 @@ export class InvoiceActionsService {
     if (view.status === 'VOIDED') {
       throw new AppError(409, 'INVOICE_VOIDED', 'This invoice is voided. Print its replacement.');
     }
+    // ADR-0031: a copy of a bill that dishes were added to would print it without them.
+    await assertNotOutdated(this.prisma, principal.restaurantId, invoiceId);
     const snapshot = await this.settings.snapshot(principal.restaurantId);
     const chosen = printerId ?? snapshot.get('bills.printerId');
     if (chosen === null) {

@@ -105,7 +105,10 @@ You can take cash straight away: you do not need a shift.
   table or takeaway number, the amount, how long it has waited and where it stands:
   - **Bill requested:** a waiter, a guest (QR menu or tablet) or you asked for it; not printed yet.
   - **Printed, not paid.**
-  - **Needs a new bill:** more was ordered after the bill was printed; print it again.
+  - **Needs a new bill:** more was ordered after the bill was printed. The old bill cannot be
+    paid or printed again. **Print the new bill** cancels the old one (it stays in the GST
+    register as cancelled, with the reason) and prints a new one with the next number, every dish
+    and the new total.
 - **Open bill** opens it: print it, give a discount (always with a reason), split it by item or by
   amount, reprint it, or cancel it with a reason. **Take payment** (on a printed bill) takes cash,
   card, UPI or a split across them. The invoice number is given when the bill is printed and is

@@ -28,6 +28,7 @@ import { appendEvent, type EventAudience } from '../events/outbox.js';
 import type { DiningTable, TableSession } from '../generated/prisma/client.js';
 import { LicenceAgentService } from '../licensing/licence-agent.service.js';
 import { SettingsService } from '../settings/settings.service.js';
+import { outdatedInvoiceId } from '../billing/outdated.js';
 
 export type SessionRow = TableSession & { table: DiningTable };
 
@@ -65,7 +66,13 @@ export class TableSessionsService {
         { displayOrder: 'asc' },
         { createdAt: 'asc' },
       ],
-      include: { sessions: { where: { status: 'OPEN' }, take: 1 } },
+      include: {
+        sessions: {
+          where: { status: 'OPEN' },
+          take: 1,
+          include: { bill: { select: { id: true, status: true } } },
+        },
+      },
     });
     const sessions = tables.flatMap((table) => table.sessions);
     const sessionIds = sessions.map((session) => session.id);
@@ -89,6 +96,14 @@ export class TableSessionsService {
         _count: { _all: true },
       }),
     ]);
+    // ADR-0031: tables whose printed bill dishes were added to since.
+    const outdated = new Set<string>();
+    for (const session of sessions) {
+      if (session.bill?.status !== 'INVOICED') continue;
+      if ((await outdatedInvoiceId(this.prisma, restaurantId, session.bill.id)) !== null) {
+        outdated.add(session.id);
+      }
+    }
     const openRequests = new Map(
       requests.map((group) => [group.tableSessionId, group._count._all]),
     );
@@ -131,6 +146,7 @@ export class TableSessionsService {
                   table.state === 'BILL_REQUESTED' && session.billRequestedAt !== null
                     ? session.billRequestedAt.toISOString()
                     : null,
+                billOutdated: outdated.has(session.id),
               },
         activeServiceRequests: session === undefined ? 0 : (openRequests.get(session.id) ?? 0),
       };

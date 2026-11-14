@@ -12,6 +12,7 @@ import { AuditService } from '../audit/audit.service.js';
 import type { Principal } from '../auth/principal.js';
 import { currentBusinessDate, dbDate } from '../common/business-dates.js';
 import { newId } from '../common/ids.js';
+import { assertNotOutdated } from '../billing/outdated.js';
 import { PrismaService, type TransactionClient } from '../database/prisma.service.js';
 import { AppError } from '../errors/app-error.js';
 import { appendEvent } from '../events/outbox.js';
@@ -121,6 +122,8 @@ export class PaymentsService {
           'This bill is open for changes. Print it again before taking payment.',
         );
       }
+      // ADR-0031: dishes were added since it printed; the new bill is the one to pay.
+      await assertNotOutdated(tx, principal.restaurantId, invoiceId);
       if (invoice.status === 'VOIDED') {
         throw new AppError(
           409,

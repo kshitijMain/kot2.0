@@ -162,6 +162,7 @@ describe('[BILL-001] [BILL-005] [AUTH-011] the bill', () => {
           status: 'INVOICED',
           invoiceIds: [B.invoice],
           unbilledOrderItemIds: issued === 0 ? [B.item2] : [],
+          outdatedInvoiceId: issued === 0 ? B.invoice : null,
         }),
       }))
       .on('GET', `/api/v1/invoices/${B.invoice}`, () => ({ status: 200, body: invoiceView() }))
@@ -180,6 +181,13 @@ describe('[BILL-001] [BILL-005] [AUTH-011] the bill', () => {
     });
     expect(await screen.findByText(t('billing.unbilledNotice', { count: 1 }))).toBeInTheDocument();
     expect(screen.getByText(t('billing.notYetBilled'))).toBeInTheDocument();
+    // ADR-0031: the outdated bill is neither paid nor printed again; the new one cancels it.
+    expect(await screen.findByText(t('billing.outdated'))).toBeInTheDocument();
+    expect(
+      screen.getByText(t('billing.outdatedNotice', { number: 'INV/26-27/000012' })),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: t('billing.pay') })).toBeNull();
+    expect(screen.queryByRole('button', { name: t('billing.reprint') })).toBeNull();
     await expectNoAxeViolations(container);
     await user.click(screen.getByRole('button', { name: t('billing.printUpdated') }));
     await waitFor(() => {

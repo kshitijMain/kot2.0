@@ -226,6 +226,16 @@ describe('[TBL-005] [WTR-008] moving a table and asking for the bill', () => {
     expect(await screen.findByText('Bill printed')).toBeOnTheScreen();
     expect(screen.queryByRole('button', { name: 'Request bill for this table' })).toBeNull();
     expect(screen.queryByTestId('print-bill')).toBeNull();
+    // ADR-0031: before adding a dish, the waiter knows it needs a new bill.
+    expect(screen.getByText(en.mobile.tables.addingNeedsNewBill)).toBeOnTheScreen();
+
+    // A dish added after printing: the table needs a new bill, and says so.
+    restaurant.table('T2').state = 'OCCUPIED';
+    const session = restaurant.table('T2').session;
+    if (session !== null) restaurant.table('T2').session = { ...session, billOutdated: true };
+    await fireEvent.press(screen.getByRole('button', { name: 'Back to tables' }));
+    await fireEvent.press(await tile(/^T2, Occupied/));
+    expect(await screen.findByText(en.mobile.tables.needsNewBill)).toBeOnTheScreen();
   });
 
   it('offers Move on any table to any waiter (ADR-0023), never to the kitchen', async () => {

@@ -66,7 +66,8 @@
                         },
                         { "type": "null" }
                       ]
-                    }
+                    },
+                    "billOutdated": { "type": "boolean" }
                   },
                   "required": [
                     "id",
@@ -170,7 +171,8 @@
                         },
                         { "type": "null" }
                       ]
-                    }
+                    },
+                    "billOutdated": { "type": "boolean" }
                   },
                   "required": [
                     "id",

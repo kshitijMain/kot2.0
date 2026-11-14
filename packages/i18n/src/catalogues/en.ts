@@ -375,6 +375,9 @@ export const en = {
       /** ADR-0030: once asked, the table says when; then that the bill is printed. */
       billRequestedAt: 'Bill requested at {time}',
       billIsPrinted: 'Bill printed',
+      /** ADR-0031: dishes added to a printed bill need a new one. */
+      addingNeedsNewBill: 'Dishes you add now need a new bill: the manager prints it.',
+      needsNewBill: 'Dishes were added after the bill was printed: it needs a new bill.',
       printBill: 'Print bill',
       billPrinted: 'Bill {number} printed: {total}',
       billNotPrinted: 'Bill {number} issued but not printed: {error}',
@@ -4491,12 +4494,16 @@ until you press Publish.
     confirm: 'Confirm',
     cancel: 'Cancel',
     printBill: 'Print bill',
-    printUpdated: 'Print updated bill',
+    printUpdated: 'Print the new bill',
     notYetBilled: 'Not on the printed bill',
     voidedPartNotice:
       '{count, plural, one {A part} other {# parts}} of this split bill {count, plural, one {was} other {were}} voided. Print the updated bill to print {count, plural, one {it} other {them}} again.',
     unbilledNotice:
-      '{count, plural, one {# dish was} other {# dishes were}} ordered after this bill was printed. Print the updated bill to add {count, plural, one {it} other {them}}.',
+      '{count, plural, one {# dish was} other {# dishes were}} ordered after this bill was printed. Print the new bill to add {count, plural, one {it} other {them}}.',
+    /** ADR-0031: the printed bill that dishes were added to. */
+    outdated: 'Outdated: print the new bill',
+    outdatedNotice:
+      'Printing the new bill cancels {number}, which stays in the GST register as cancelled, and gives the new bill the next number with every dish.',
     printed: 'Invoice {number} printed',
     notPrinted: 'Invoice {number} issued, but it did not print: {error}',
     invoices: 'Invoices',

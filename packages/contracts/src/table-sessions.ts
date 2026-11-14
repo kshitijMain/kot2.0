@@ -113,6 +113,8 @@ export const TableOverviewEntry = z.object({
       readyItems: z.int().nonnegative(),
       /** When the bill was asked for, while the table waits for it (ADR-0030); else null. */
       billRequestedAt: Timestamp.nullable().default(null),
+      /** The bill was printed and dishes were added since: it needs a new bill (ADR-0031). */
+      billOutdated: z.boolean().optional(),
     })
     .nullable(),
   /** Water, waiter and bill requests not yet resolved (service requests arrive in P2/P3). */

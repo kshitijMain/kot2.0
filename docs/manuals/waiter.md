@@ -34,6 +34,10 @@ When the guests want to pay, open the table and press **Request bill for this ta
 managers see it in their pending bills and print it. The table then says "Bill requested at 21:42";
 there is no need to ask twice. When the bill is printed the table says **Bill printed**.
 
+If the guests order more after the bill is printed, add the dishes as usual: the table says the
+bill needs a new one, and the manager prints it (the old bill is cancelled). Ask for the bill again
+if the guests are waiting.
+
 ## Takeaway
 
 Takeaway orders are yours to take: the manager's screen has none.

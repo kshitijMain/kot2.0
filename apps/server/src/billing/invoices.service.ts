@@ -22,6 +22,7 @@ import { SettingsService, type SettingsSnapshot } from '../settings/settings.ser
 import { describeItem } from './bill-calculation.js';
 import { type BillContext, BillsService } from './bills.service.js';
 import { withLineShares } from './line-shares.js';
+import { OUTDATED_REASON } from './outdated.js';
 
 /** Sequence key of a series that runs on across financial years (PROGRESS decision 17). */
 export const CONTINUOUS_SEQUENCE = '0000-00';
@@ -181,6 +182,37 @@ export class InvoicesService {
     private readonly bills: BillsService,
   ) {}
 
+  /**
+   * Cancels a printed bill that dishes were added to (ADR-0031), as the new one is issued: voided
+   * with the reason, audited in the name of whoever prints the new one, kept in the GST register.
+   */
+  private async cancelOutdated(
+    tx: TransactionClient,
+    principal: Principal,
+    invoiceId: string,
+  ): Promise<void> {
+    const invoice = await tx.invoice.findUniqueOrThrow({ where: { id: invoiceId } });
+    await tx.invoice.update({
+      where: { id: invoiceId },
+      data: { status: 'VOIDED', voidedAt: new Date(), voidReason: OUTDATED_REASON },
+    });
+    await this.audit.record(tx, {
+      action: 'INVOICE_VOIDED',
+      entityType: 'invoice',
+      entityId: invoiceId,
+      actorId: principal.staffId,
+      deviceId: principal.deviceId,
+      restaurantId: principal.restaurantId,
+      before: {
+        status: invoice.status,
+        invoiceNumber: invoice.invoiceNumber,
+        grandTotal: invoice.grandTotal,
+      },
+      after: { status: 'VOIDED' },
+      reason: OUTDATED_REASON,
+    });
+  }
+
   async issue(principal: Principal, billId: string, seriesId: string | null): Promise<InvoiceView> {
     const invoiceId = await this.prisma.transaction(async (tx) => {
       const printing = await this.bills.lockedBillToPrint(tx, principal.restaurantId, billId);
@@ -190,9 +222,15 @@ export class InvoicesService {
       const { context } = printing;
       const { bill, calculated } = context;
       const { result } = calculated;
+      // ADR-0031: an unpaid printed bill that dishes were added to is cancelled, kept in the GST
+      // register with the reason, and the new invoice takes the next number with every dish.
+      // (QA-022 had revised it in place under the same number.)
+      if (printing.mode === 'REVISE') {
+        await this.cancelOutdated(tx, principal, printing.invoiceId);
+      }
       // A voided invoice of this bill not yet replaced: the new one replaces it (BILL-010).
       const replaces =
-        printing.mode === 'OPEN'
+        printing.mode === 'OPEN' || printing.mode === 'REVISE'
           ? await tx.invoice.findFirst({
               where: { billId, status: 'VOIDED', replacedBy: { none: {} } },
               orderBy: [{ voidedAt: 'desc' }, { sequence: 'desc' }],
@@ -201,9 +239,8 @@ export class InvoicesService {
           : null;
       await this.assertBillable(tx, context, replaces !== null);
 
-      // A printed invoice reopened for editing is updated in place, keeping its number (BILL-010),
-      // and so is an unpaid printed bill when dishes were ordered after it (QA-022).
-      const editingId = printing.mode === 'REVISE' ? printing.invoiceId : bill.editingInvoiceId;
+      // A printed invoice reopened for editing is updated in place, keeping its number (BILL-010).
+      const editingId = printing.mode === 'REVISE' ? null : bill.editingInvoiceId;
       const editing =
         editingId === null
           ? null
@@ -422,7 +459,7 @@ export class InvoicesService {
           entityType: 'invoice',
           entityId: invoice.id,
           actorId: principal.staffId,
-          approverId: printing.mode === 'REVISE' ? null : bill.editApprovedById,
+          approverId: bill.editApprovedById,
           deviceId: principal.deviceId,
           restaurantId: principal.restaurantId,
           before: {
@@ -435,10 +472,7 @@ export class InvoicesService {
             grandTotal: editing.grandTotal,
           },
           after: { version, ...totals, lines: lines.length },
-          reason:
-            printing.mode === 'REVISE'
-              ? 'Dishes ordered after the bill was printed'
-              : bill.editReason,
+          reason: bill.editReason,
         });
         return invoice.id;
       }

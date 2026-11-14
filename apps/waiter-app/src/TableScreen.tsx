@@ -516,6 +516,13 @@ export function TableScreen({
           {table.state === 'BILL_PRINTED' && !mayTakePayment(person) ? (
             <Note tone="text">{t('mobile.tables.billIsPrinted')}</Note>
           ) : null}
+          {/* ADR-0031: what adding dishes to a printed bill means, before and after. */}
+          {table.state === 'BILL_PRINTED' ? (
+            <Note tone="text">{t('mobile.tables.addingNeedsNewBill')}</Note>
+          ) : null}
+          {table.session?.billOutdated === true ? (
+            <Note tone="text">{t('mobile.tables.needsNewBill')}</Note>
+          ) : null}
         </>
       )}
       {notice === undefined ? null : <Note tone="danger">{notice}</Note>}

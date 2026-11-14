@@ -138,3 +138,31 @@ bill until it is updated.
 
 **Changed tests.** The invoice's particulars in the billing test now have the place of supply
 written out and the thank-you footer (the brief changes both).
+
+## G. A bill after more dishes
+
+**Cause.** When dishes were added to a table whose bill was printed and unpaid, the server revised
+that invoice in place under the same number on the next print (QA-022). But the old invoice kept
+its **Take payment** and **Print again** until then: printing it again printed the version without
+the new dishes, and paying it settled the table at the old total. Nothing sent anyone to the new
+bill.
+
+**Now.**
+
+- That invoice is _outdated_ (`outdatedInvoiceId` in `billing/outdated.ts`: the bill's only live
+  invoice, unpaid, with dishes ordered since). The server refuses to take payment for it or print it
+  again (`409 BILL_OUTDATED`: "Print the new bill, then take payment").
+- The next Print cancels it, with the reason "Items added after the bill was printed", audited in the
+  name of whoever prints (`INVOICE_VOIDED`) and kept in the GST register as cancelled, and issues a
+  new invoice with the next number, every dish and the new total, naming the one it replaces.
+- The bill view names the outdated invoice; the bill screen shows "Outdated: print the new bill"
+  instead of its payment and reprint buttons, and says what printing the new bill does. The
+  manager's Pending bills shows "Needs a new bill". The table overview flags the session
+  (`billOutdated`); the waiter app says "Dishes you add now need a new bill" on a table whose bill is
+  printed, and "it needs a new bill" once a dish was added.
+- A bill already part paid or split keeps its invoices: the new dishes get an invoice of their own
+  (QA-022 unchanged there).
+
+**Changed tests.** The two QA-022 tests that expected the revision in place, and paying the old
+amount, now expect the cancellation and the new number, and the refusal (the brief changes the
+rule).

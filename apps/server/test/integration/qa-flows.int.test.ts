@@ -109,7 +109,9 @@ const tableState = async (tableId: string) =>
   (await prisma.diningTable.findUniqueOrThrow({ where: { id: tableId } })).state;
 
 describe('[BILL-001] [BILL-010] [BILL-015] dishes ordered after the bill is printed (QA-022)', () => {
-  it('shows them as not yet billed, and printing again gives the revised bill, same number', async () => {
+  // ADR-0031 changed QA-022: the outdated bill is cancelled and a new one numbered next takes every
+  // dish, where QA-022 revised it in place under the same number.
+  it('shows them as not yet billed, and printing again cancels the old bill for a new number', async () => {
     const { sessionId } = await seated();
     const bill = await openBill(sessionId);
     const first = await printBill(bill.id);
@@ -118,37 +120,35 @@ describe('[BILL-001] [BILL-010] [BILL-015] dishes ordered after the bill is prin
     const again = await openBill(sessionId);
     expect(again.id).toBe(bill.id);
     expect(again.unbilledOrderItemIds).toHaveLength(1);
-    const revised = await printBill(bill.id);
-    expect(revised.id).toBe(first.id);
-    expect(revised.invoiceNumber).toBe(first.invoiceNumber);
-    expect(revised.subtotal).toBe(DISHES.Dal + 2 * DISHES.Naan);
-    expect(revised.grandTotal).toBeGreaterThan(first.grandTotal);
+    expect(again.outdatedInvoiceId).toBe(first.id);
+    const reissued = await printBill(bill.id);
+    expect(reissued.id).not.toBe(first.id);
+    expect(reissued.invoiceNumber).not.toBe(first.invoiceNumber);
+    expect(reissued.replacesInvoiceId).toBe(first.id);
+    expect(reissued.subtotal).toBe(DISHES.Dal + 2 * DISHES.Naan);
+    expect(reissued.grandTotal).toBeGreaterThan(first.grandTotal);
     expect((await openBill(sessionId)).unbilledOrderItemIds).toEqual([]);
     const audit = await prisma.auditLog.findFirst({
-      where: { entityId: first.id, action: 'INVOICE_EDITED' },
+      where: { entityId: first.id, action: 'INVOICE_VOIDED' },
     });
-    expect(audit?.reason).toMatch(/ordered after the bill was printed/);
-    expect((await pay(revised.id, revised.grandTotal)).status).toBeLessThan(300);
+    expect(audit?.reason).toBe('Items added after the bill was printed');
+    expect((await pay(reissued.id, reissued.grandTotal)).status).toBeLessThan(300);
   });
 
-  it('when the printed amount is paid after more dishes, prints a new bill for just those, then closes', async () => {
-    const { sessionId, tableId } = await seated();
+  it('refuses the outdated amount and its copy; the new bill, with every dish, is paid and closes', async () => {
+    const { sessionId } = await seated();
     const bill = await openBill(sessionId);
     const first = await printBill(bill.id);
     await orderMore(sessionId);
-    // The guest pays what was printed; the table stays open for the dishes ordered since.
-    expect((await pay(first.id, first.grandTotal)).status).toBeLessThan(300);
-    expect(await tableState(tableId)).toBe('OCCUPIED');
-    const view = await openBill(sessionId);
-    expect(view.unbilledOrderItemIds).toHaveLength(1);
+    // ADR-0031: paying what was printed would leave the new dishes unbilled.
+    const refused = await pay(first.id, first.grandTotal);
+    expect(refused.status).toBe(409);
+    expect(refused.body).toMatchObject({ code: 'BILL_OUTDATED' });
+    const copy = await api(app).post(`/api/v1/invoices/${first.id}/print`).set(as(biller)).send({});
+    expect(copy.status).toBe(409);
+    expect(copy.body).toMatchObject({ code: 'BILL_OUTDATED' });
     const second = await printBill(bill.id);
-    expect(second.id).not.toBe(first.id);
-    expect(second.invoiceNumber).not.toBe(first.invoiceNumber);
-    expect(second.subtotal).toBe(2 * DISHES.Naan);
-    const firstNow = InvoiceView.parse(
-      (await api(app).get(`/api/v1/invoices/${first.id}`).set(as(biller))).body,
-    );
-    expect(firstNow).toMatchObject({ status: 'SETTLED', grandTotal: first.grandTotal });
+    expect(second.subtotal).toBe(DISHES.Dal + 2 * DISHES.Naan);
     expect((await pay(second.id, second.grandTotal)).status).toBeLessThan(300);
     const session = await prisma.tableSession.findUniqueOrThrow({ where: { id: sessionId } });
     expect(session.status).toBe('CLOSED');

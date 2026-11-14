@@ -15525,6 +15525,9 @@
             "type": "array",
             "items": { "$ref": "#/components/schemas/Id" }
           },
+          "outdatedInvoiceId": {
+            "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }]
+          },
           "editingInvoiceId": {
             "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }]
           },
@@ -15603,6 +15606,9 @@
             "default": [],
             "type": "array",
             "items": { "$ref": "#/components/schemas/Id" }
+          },
+          "outdatedInvoiceId": {
+            "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }]
           },
           "editingInvoiceId": {
             "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }]
@@ -25073,7 +25079,8 @@
                   "billRequestedAt": {
                     "default": null,
                     "anyOf": [{ "$ref": "#/components/schemas/Timestamp" }, { "type": "null" }]
-                  }
+                  },
+                  "billOutdated": { "type": "boolean" }
                 },
                 "required": [
                   "id",
@@ -25136,7 +25143,8 @@
                   "billRequestedAt": {
                     "default": null,
                     "anyOf": [{ "$ref": "#/components/schemas/Timestamp" }, { "type": "null" }]
-                  }
+                  },
+                  "billOutdated": { "type": "boolean" }
                 },
                 "required": [
                   "id",

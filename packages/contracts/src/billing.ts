@@ -155,6 +155,11 @@ export const BillView = z.object({
   unbilledOrderItemIds: z.array(Id).default([]),
   /** Voided parts of a split bill not printed again (QA-026): printing again re-issues them. */
   voidedPartIds: z.array(Id).default([]),
+  /**
+   * The printed invoice dishes were added to since (ADR-0031): it cannot be paid or printed again,
+   * and the next print cancels it and issues a new one.
+   */
+  outdatedInvoiceId: Id.nullable().optional(),
   /** The printed invoice this bill was reopened to edit; printing it again keeps its number. */
   editingInvoiceId: Id.nullable(),
   /** Show the total in words under it (`bills.amountInWords`, BILL-001). */
