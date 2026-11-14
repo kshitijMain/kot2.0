@@ -1,7 +1,7 @@
 import type { DayEndPreview } from '@rp/contracts';
 import { screen, waitFor, within } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { B, billView, invoiceView, paymentsView, shiftView } from './billing-fixture.js';
+import { B, billView, invoiceView, paymentsView } from './billing-fixture.js';
 import { STAFF } from './fakes.js';
 import { expectNoAxeViolations, renderConsole, server, signsInAs, t } from './harness.js';
 
@@ -218,7 +218,8 @@ function dayEnd(overrides: Partial<DayEndPreview> = {}): DayEndPreview {
   return {
     businessDate: '2026-09-26',
     status: 'OPEN',
-    blockers: { openShifts: [], openTables: [], unsettledInvoices: [] },
+    blockers: { openTables: [], unsettledInvoices: [] },
+    openShifts: [],
     report: {
       businessDate: '2026-09-26',
       orders: 14,
@@ -239,7 +240,7 @@ function dayEnd(overrides: Partial<DayEndPreview> = {}): DayEndPreview {
       taxes: [],
       payments: [{ mode: 'CASH', label: null, count: 5, amount: 428_250 }],
       paymentsTotal: 1_328_250,
-      cash: { cashIn: 0, cashOut: 0 },
+      cash: { cashIn: 0, cashOut: 0, outsideShift: 12_500 },
       shifts: [],
       totalVariance: -400,
     },
@@ -251,7 +252,6 @@ describe('[BILL-013] [RPT-005] closing the day', () => {
   it('shows the Z-report and carries open tables forward when closing', async () => {
     const blocked = dayEnd({
       blockers: {
-        openShifts: [],
         openTables: [{ tableSessionId: B.session, tableLabel: 'T4' }],
         unsettledInvoices: [],
       },
@@ -301,26 +301,95 @@ describe('[BILL-013] [RPT-005] closing the day', () => {
     });
   });
 
-  it('names whose shift is open and does not offer closing until it is (P9-24)', async () => {
+  const openShift = {
+    shiftId: B.session,
+    staffId: STAFF.WAITER.staffId,
+    staffName: 'Asha',
+    expectedCash: 150_000,
+  };
+  const CLOSE = `/api/v1/shifts/${B.session}/close`;
+  const closedView = {
+    id: B.session,
+    staffId: STAFF.WAITER.staffId,
+    status: 'CLOSED',
+    businessDate: '2026-09-26',
+    openedAt: '2026-09-26T08:00:00.000Z',
+    closedAt: '2026-09-26T20:00:00.000Z',
+    openingFloat: 100_000,
+    cashPayments: 50_000,
+    cashIn: 0,
+    cashOut: 0,
+    expectedCash: 150_000,
+    denominations: null,
+    movements: [],
+  };
+
+  it('[RPT-005] shows the cash taken outside a shift', async () => {
     const fake = signsInAs(server(), 'MANAGER').on('GET', '/api/v1/day-end', () => ({
       status: 200,
-      body: dayEnd({
-        blockers: {
-          openShifts: [{ shiftId: B.session, staffId: STAFF.MANAGER.staffId }],
-          openTables: [{ tableSessionId: B.session, tableLabel: 'T4' }],
-          unsettledInvoices: [],
-        },
-      }),
+      body: dayEnd(),
     }));
+    await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/day-end' });
+    const label = await screen.findByText(t('dayEnd.outsideShift'));
+    expect(label.nextElementSibling).toHaveTextContent('₹125.00');
+  });
+
+  it('names whose shift is open and still lets the day close (ADR-0029)', async () => {
+    const fake = signsInAs(server(), 'MANAGER').on('GET', '/api/v1/day-end', () => ({
+      status: 200,
+      body: dayEnd({ openShifts: [openShift] }),
+    }));
+    const { container } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/day-end' });
+    expect(await screen.findByText(t('dayEnd.shiftOpen', { name: 'Asha' }))).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: t('dayEnd.close') })).toBeEnabled();
+    await expectNoAxeViolations(container);
+  });
+
+  it('counts and closes a shift at day end, showing the difference (ADR-0029)', async () => {
+    const fake = signsInAs(server(), 'MANAGER')
+      .on(
+        'GET',
+        '/api/v1/day-end',
+        () => ({ status: 200, body: dayEnd({ openShifts: [openShift] }) }),
+        () => ({ status: 200, body: dayEnd() }),
+      )
+      .on('POST', CLOSE, () => ({
+        status: 200,
+        body: { ...closedView, countedCash: 149_000, variance: -1_000, notCounted: false },
+      }));
     const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/day-end' });
+    await user.click(
+      await screen.findByRole('button', { name: t('dayEnd.countOf', { name: 'Asha' }) }),
+    );
+    await user.type(screen.getByLabelText(t('shift.counted')), '1490');
+    expect(screen.getByText(t('dayEnd.difference', { variance: '-₹10.00' }))).toBeVisible();
+    await user.click(screen.getByRole('button', { name: t('dayEnd.countAndClose') }));
+    expect(await screen.findByText(t('shift.closed', { variance: '-₹10.00' }))).toBeInTheDocument();
+    expect(fake.callsTo('POST', CLOSE)[0]?.body).toMatchObject({ countedCash: 149_000 });
+  });
+
+  it('closes a shift as not counted, after asking (ADR-0029)', async () => {
+    const fake = signsInAs(server(), 'MANAGER')
+      .on(
+        'GET',
+        '/api/v1/day-end',
+        () => ({ status: 200, body: dayEnd({ openShifts: [openShift] }) }),
+        () => ({ status: 200, body: dayEnd() }),
+      )
+      .on('POST', `${CLOSE}-not-counted`, () => ({
+        status: 200,
+        body: { ...closedView, countedCash: null, variance: null, notCounted: true },
+      }));
+    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/day-end' });
+    await user.click(
+      await screen.findByRole('button', { name: t('dayEnd.notCountedOf', { name: 'Asha' }) }),
+    );
+    expect(fake.callsTo('POST', `${CLOSE}-not-counted`)).toHaveLength(0);
+    await user.click(screen.getByRole('button', { name: t('dayEnd.notCountedConfirm') }));
     expect(
-      await screen.findByText(
-        t('dayEnd.openShifts', { count: 1, names: STAFF.MANAGER.displayName }),
-      ),
+      await screen.findByText(t('dayEnd.notCountedDone', { name: 'Asha' })),
     ).toBeInTheDocument();
-    // Carrying the tables forward is not enough while a shift is open.
-    await user.click(screen.getByLabelText(t('dayEnd.carryForward')));
-    expect(screen.getByRole('button', { name: t('dayEnd.close') })).toBeDisabled();
+    expect(fake.callsTo('POST', `${CLOSE}-not-counted`)).toHaveLength(1);
   });
 
   it('shows why the day cannot close', async () => {
@@ -328,12 +397,12 @@ describe('[BILL-013] [RPT-005] closing the day', () => {
       .on('GET', '/api/v1/day-end', () => ({
         status: 200,
         body: dayEnd({
-          blockers: { openShifts: [], openTables: [], unsettledInvoices: [] },
+          blockers: { openTables: [], unsettledInvoices: [] },
         }),
       }))
       .on('POST', '/api/v1/day-end', () => ({
         status: 409,
-        body: { code: 'SHIFTS_OPEN', message: 'Close the open shifts first.' },
+        body: { code: 'DAY_END_BLOCKED', message: 'Settle the unpaid bills first.' },
       }));
     const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/day-end' });
     expect(await screen.findByText(t('dayEnd.noBlockers'))).toBeInTheDocument();
@@ -344,35 +413,10 @@ describe('[BILL-013] [RPT-005] closing the day', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument();
   });
 
-  it('opens another manager’s open shift from day-end, to close it for them (QA-034)', async () => {
-    const fake = signsInAs(server(), 'MANAGER')
-      .on('GET', '/api/v1/day-end', () => ({
-        status: 200,
-        body: dayEnd({
-          blockers: {
-            openShifts: [{ shiftId: B.shift, staffId: STAFF.MANAGER.staffId }],
-            openTables: [],
-            unsettledInvoices: [],
-          },
-        }),
-      }))
-      .on('GET', `/api/v1/shifts/${B.shift}`, () => ({ status: 200, body: shiftView() }));
-    const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/day-end' });
-    await user.click(
-      await screen.findByRole('button', {
-        name: t('dayEnd.closeShiftOf', { name: STAFF.MANAGER.displayName }),
-      }),
-    );
-    await waitFor(() => {
-      expect(fake.callsTo('GET', `/api/v1/shifts/${B.shift}`)).toHaveLength(1);
-    });
-    expect(await screen.findByRole('heading', { name: t('shift.title') })).toBeInTheDocument();
-  });
-
   it('asks before closing the day, and closes nothing when kept open (QA-030)', async () => {
     const fake = signsInAs(server(), 'MANAGER').on('GET', '/api/v1/day-end', () => ({
       status: 200,
-      body: dayEnd({ blockers: { openShifts: [], openTables: [], unsettledInvoices: [] } }),
+      body: dayEnd({ blockers: { openTables: [], unsettledInvoices: [] } }),
     }));
     const { user } = await renderConsole({ fake, signedIn: 'MANAGER', path: '/pos/day-end' });
     await user.click(await screen.findByRole('button', { name: t('dayEnd.close') }));
@@ -389,7 +433,6 @@ describe('[BILL-013] [RPT-005] closing the day', () => {
         status: 200,
         body: dayEnd({
           blockers: {
-            openShifts: [],
             openTables: [],
             unsettledInvoices: [
               { invoiceId: B.invoice, invoiceNumber: 'INV/26-27/000012', grandTotal: 61_200 },

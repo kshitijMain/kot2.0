@@ -315,15 +315,15 @@ describe('[BILL-008] taking payment', () => {
     ).toBeInTheDocument();
   });
 
-  it('points to the shift when cash needs one', async () => {
+  it('[BILL-008] takes cash with no shift open, and never asks for one (ADR-0029)', async () => {
     const fake = manager()
       .on('GET', `/api/v1/invoices/${B.invoice}/payments`, () => ({
         status: 200,
         body: paymentsView(),
       }))
       .on('POST', `/api/v1/invoices/${B.invoice}/payments`, () => ({
-        status: 409,
-        body: { code: 'NO_OPEN_SHIFT', message: 'Open a shift before taking cash.' },
+        status: 200,
+        body: paymentsView({ status: 'SETTLED', paid: 70_400, remaining: 0 }),
       }))
       .on('GET', '/api/v1/shifts/current', () => ({ status: 200, body: { shift: null } }));
     const { user } = await renderConsole({
@@ -332,41 +332,11 @@ describe('[BILL-008] taking payment', () => {
       path: `/pos/pay/${B.invoice}`,
     });
     await user.click(await screen.findByRole('button', { name: t('payment.record') }));
-    // Refused, nothing recorded: still all owed, the lined-up cash on its own line (P9-20).
-    await screen.findByRole('button', { name: t('payment.openShift') });
-    expect(screen.getByText(t('payment.remaining')).nextElementSibling).toHaveTextContent(
-      '₹704.00',
-    );
-    expect(screen.getByText(t('payment.leftAfter'))).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: t('payment.openShift') }));
-    expect(await screen.findByText(t('shift.none'))).toBeInTheDocument();
-  });
-
-  it('comes back to the payment from the shift it opened for cash (QA-030)', async () => {
-    const fake = manager()
-      .on('GET', `/api/v1/invoices/${B.invoice}/payments`, () => ({
-        status: 200,
-        body: paymentsView(),
-      }))
-      .on('POST', `/api/v1/invoices/${B.invoice}/payments`, () => ({
-        status: 409,
-        body: { code: 'NO_OPEN_SHIFT', message: 'Open a shift before taking cash.' },
-      }))
-      .on('GET', '/api/v1/shifts/current', () => ({ status: 200, body: { shift: null } }));
-    const { user } = await renderConsole({
-      fake,
-      signedIn: 'MANAGER',
-      path: `/pos/pay/${B.invoice}?bill=${B.bill}`,
+    await waitFor(() => {
+      expect(fake.callsTo('POST', `/api/v1/invoices/${B.invoice}/payments`)).toHaveLength(1);
     });
-    await user.click(await screen.findByRole('button', { name: t('payment.record') }));
-    await user.click(await screen.findByRole('button', { name: t('payment.openShift') }));
-    expect(await screen.findByText(t('shift.none'))).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: t('pos.backToTables') }));
-    expect(
-      await screen.findByRole('heading', {
-        name: t('payment.title', { number: 'INV/26-27/000012' }),
-      }),
-    ).toBeInTheDocument();
+    expect(screen.queryByText(/open shift/i)).toBeNull();
+    expect(screen.queryByRole('button', { name: /open a shift/i })).toBeNull();
   });
 
   it('refuses an amount above what is still to pay', async () => {
@@ -389,6 +359,29 @@ describe('[BILL-008] taking payment', () => {
 });
 
 describe('[BILL-013] the manager’s cash shift', () => {
+  it('says it is optional, and explains cash in or out and no sale without one (ADR-0029)', async () => {
+    const fake = manager().on('GET', '/api/v1/shifts/current', () => ({
+      status: 200,
+      body: { shift: null },
+    }));
+    const { user, container } = await renderConsole({
+      fake,
+      signedIn: 'MANAGER',
+      path: '/pos/shift',
+    });
+    expect(await screen.findByText(t('shift.addOn'))).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).toBeNull();
+    for (const name of [t('shift.movement'), t('shift.noSale')]) {
+      await user.click(screen.getByRole('button', { name }));
+      expect(screen.getByText(t('shift.needsShift'))).toBeInTheDocument();
+    }
+    await expectNoAxeViolations(container);
+    await user.click(screen.getByRole('button', { name: t('shift.offerOpen') }));
+    expect(screen.getByLabelText(t('shift.openingFloat'))).toHaveFocus();
+    expect(fake.callsTo('POST', '/api/v1/shifts')).toHaveLength(0);
+    expect(fake.callsTo('POST', '/api/v1/cash-drawer/open')).toHaveLength(0);
+  });
+
   it('opens a shift with the float', async () => {
     const fake = manager()
       .on(

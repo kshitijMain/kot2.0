@@ -59,6 +59,7 @@
                   { "type": "null" }
                 ]
               },
+              "notCounted": { "type": "boolean" },
               "denominations": {
                 "anyOf": [
                   {
@@ -111,6 +112,7 @@
               "expectedCash",
               "countedCash",
               "variance",
+              "notCounted",
               "denominations",
               "movements"
             ]
@@ -181,6 +183,7 @@
                   { "type": "null" }
                 ]
               },
+              "notCounted": { "type": "boolean" },
               "denominations": {
                 "anyOf": [
                   {
@@ -234,6 +237,7 @@
               "expectedCash",
               "countedCash",
               "variance",
+              "notCounted",
               "denominations",
               "movements"
             ],

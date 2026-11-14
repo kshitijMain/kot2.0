@@ -397,7 +397,6 @@ export const en = {
     payment: {
       title: 'Payment for table {table}',
       nothingDue: 'Nothing is left to pay on this table’s bill.',
-      needShift: 'Cash needs an open shift. Open one on the POS, or take UPI or card here.',
     },
     requests: {
       title: '{count, plural, one {# request from a table} other {# requests from tables}}',
@@ -2113,7 +2112,12 @@ until you press Publish.
       chart: 'Taxable value by source',
       table: 'By source and type',
     },
-    payments: { total: 'Payments taken', chart: 'Payments by mode', table: 'By mode' },
+    payments: {
+      total: 'Payments taken',
+      chart: 'Payments by mode',
+      table: 'By mode',
+      outsideShift: 'Cash taken outside a shift',
+    },
     gst: {
       taxable: 'Taxable value',
       taxTotal: 'Tax',
@@ -2150,6 +2154,7 @@ until you press Publish.
       expected: 'Expected',
       counted: 'Counted',
       difference: 'Difference',
+      notCounted: 'Not counted',
     },
     discounts: {
       count: 'Discounts',
@@ -2209,6 +2214,7 @@ until you press Publish.
         DISCOUNT_OVER_LIMIT: 'Discount above the limit',
         REPEATED_REPRINT: 'Printed again repeatedly',
         CASH_VARIANCE: 'Cash difference at shift close',
+        SHIFT_NOT_COUNTED: 'Shift closed without counting the drawer',
         CANCELLED_AFTER_PREP: 'Voided after cooking started',
         SENT_NOT_BILLED: 'Sent to the kitchen, never billed',
         NO_SALE_DRAWER: 'Drawer opened without a sale',
@@ -4343,13 +4349,28 @@ until you press Publish.
     closed: 'This day is closed.',
     blockers: 'Before closing',
     noBlockers: 'Ready to close.',
-    openShifts:
-      '{count, plural, one {A shift is} other {# shifts are}} still open: {names}. Close {count, plural, one {it} other {them}} with the counted cash.',
-    closeShiftOf: 'Close {name}’s shift',
-    someone: 'someone',
     openTables: 'Tables still open: {tables}',
     unsettled: 'Unpaid bills: {invoices}',
     payInvoice: 'Take payment for {number}',
+    someone: 'someone',
+    shiftsTitle: 'Cash drawers still open',
+    shiftOpen: '{name}’s shift is still open',
+    shiftExpected: 'Should hold {amount}',
+    shiftsRunOn:
+      'You can close the day without doing this: a shift left open carries on into the next day.',
+    countOf: 'Count and close {name}’s shift',
+    count: 'Count and close',
+    countAndClose: 'Close with this count',
+    difference: 'Difference: {variance}',
+    notCountedOf: 'Close {name}’s shift as not counted',
+    notCounted: 'Close as not counted',
+    notCountedTitle: 'Close {name}’s shift without counting?',
+    notCountedDescription:
+      'Nobody counts this drawer. The Owner sees it in the suspicious-activity report.',
+    notCountedConfirm: 'Close without counting',
+    notCountedCancel: 'Go back',
+    notCountedDone: '{name}’s shift is closed as not counted',
+    outsideShift: 'Cash taken outside a shift',
     carryForward: 'Move open tables to the next business day',
     close: 'Close the day',
     confirmTitle: 'Close {date}?',
@@ -4405,8 +4426,6 @@ until you press Publish.
     settled: 'Invoice {number} is paid',
     recorded: 'Payment recorded. {amount} still to pay.',
     notRecorded: 'Not recorded: {message} Try again; nothing is recorded twice.',
-    needShift: 'Cash needs an open shift.',
-    openShift: 'Open a shift',
   },
   /** Diners' orders waiting for approval (P3-03b, WTR-004, ORD-003): waiter app and POS. */
   approvals: {
@@ -4438,6 +4457,11 @@ until you press Publish.
   shift: {
     title: 'Shift',
     none: 'You have no open shift.',
+    addOn:
+      'Optional. Open a shift only if you want to track your own cash drawer: the cash you take is added to it, and you count it when you close. Cash can be taken without one.',
+    drawerActions: 'With a cash drawer',
+    needsShift: 'This belongs to the cash drawer add-on and needs your own open shift.',
+    offerOpen: 'Open a shift',
     openingFloat: 'Opening cash in the drawer (₹)',
     open: 'Open shift',
     opened: 'Shift opened',

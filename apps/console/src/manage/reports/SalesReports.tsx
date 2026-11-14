@@ -266,7 +266,13 @@ function Payments({ range }: { range: ReportRange }) {
           action={<ExportButtons report="PAYMENTS" range={range} />}
         >
           <StatTiles
-            stats={[{ label: t('reportsPage.payments.total'), value: rupees(payments.total) }]}
+            stats={[
+              { label: t('reportsPage.payments.total'), value: rupees(payments.total) },
+              {
+                label: t('reportsPage.payments.outsideShift'),
+                value: rupees(payments.cashOutsideShift),
+              },
+            ]}
           />
           {payments.modes.length === 0 ? null : (
             <BarChartFigure

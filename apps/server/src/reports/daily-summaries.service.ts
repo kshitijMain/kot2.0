@@ -85,6 +85,7 @@ export class DailySummariesService {
         modeLabel: row.mode_label,
         payments: Number(row.payments),
         amount: row.amount,
+        outsideShift: row.outside_shift,
       })),
     });
     await tx.dailyStaffSales.createMany({

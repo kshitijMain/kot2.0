@@ -112,6 +112,7 @@ describe('[RPT-014] what a suspicious-activity flag is about', () => {
       'Whole bill INV/3',
     );
     expect(flagSubject({ ...flag, kind: 'CASH_VARIANCE' }, t)).toBe('Shift close');
+    expect(flagSubject({ ...flag, kind: 'SHIFT_NOT_COUNTED' }, t)).toBe('Shift close');
     expect(flagSubject({ ...flag, kind: 'NO_SALE_DRAWER' }, t)).toBe('Cash drawer');
   });
 

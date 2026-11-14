@@ -93,6 +93,8 @@ export const PaymentModesResponse = z.object({
       amount: Paise,
     }),
   ),
+  /** Part of the cash above that went into nobody's shift, so no drawer count covers it (ADR-0029). */
+  cashOutsideShift: Paise,
   total: Paise,
 });
 export type PaymentModesResponse = z.infer<typeof PaymentModesResponse>;
@@ -655,6 +657,8 @@ export const SUSPICIOUS_KINDS = [
   'DISCOUNT_OVER_LIMIT',
   'REPEATED_REPRINT',
   'CASH_VARIANCE',
+  /** A shift closed at day end without counting the drawer (ADR-0029). */
+  'SHIFT_NOT_COUNTED',
   'CANCELLED_AFTER_PREP',
   'SENT_NOT_BILLED',
   'NO_SALE_DRAWER',

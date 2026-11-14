@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { CashMovementRequest, ShiftView } from '@rp/contracts';
-import { cashVariance, countDenominations, expectedCash } from '@rp/domain';
+import { cashVariance, countDenominations, expectedCash, shiftNotCounted } from '@rp/domain';
 import { AuditService } from '../audit/audit.service.js';
 import { authErrors } from '../auth/auth-errors.js';
 import type { Principal } from '../auth/principal.js';
@@ -20,14 +20,25 @@ function shiftClosed(): AppError {
   return new AppError(409, 'SHIFT_CLOSED', 'This shift is closed.');
 }
 
+/** Cash in, cash out and the no-sale opening belong to a drawer the person counts (ADR-0029). */
+export function ownShiftRequired(what: string): AppError {
+  return new AppError(
+    409,
+    'OWN_SHIFT_REQUIRED',
+    `${what} the cash drawer add-on: open your own shift first.`,
+  );
+}
+
 /** Shift money is stored as BIGINT; amounts in one shift stay far below 2^53 paise. */
 const paise = (value: bigint | null): number | null => (value === null ? null : Number(value));
 
 /**
- * Cash shifts (P1-11a, BILL-013): a manager opens a shift with a float, records cash taken in or
- * out with a reason, and closes it by counting the drawer; the expected cash and the variance are
- * kept (AUD-006). Managers and the Owner act on any shift; a grant limited to one's own shift
- * (OWN) acts on that one only. There is no cashier (ADR-0023).
+ * Cash shifts (P1-11a, BILL-013), an optional add-on per person (ADR-0029): someone who wants to
+ * track their drawer opens their own shift with a float, the cash they take goes into it, they
+ * record cash in or out on it with a reason, and close it by counting the drawer; the expected cash
+ * and the variance are kept (AUD-006). Closing is open to managers and the Owner for any shift (at
+ * day end it may also be closed as not counted); a grant limited to one's own shift (OWN) closes
+ * that one only. There is no cashier (ADR-0023).
  */
 @Injectable()
 export class ShiftsService {
@@ -83,7 +94,7 @@ export class ShiftsService {
     return this.view(this.prisma, principal.restaurantId, shift.id);
   }
 
-  /** The person's open shift, if any (cash payments go into it). */
+  /** The person's open shift, if any (the cash they take goes into it). */
   openShiftOf(client: Client, principal: Principal): Promise<Shift | null> {
     return client.shift.findFirst({
       where: { restaurantId: principal.restaurantId, staffId: principal.staffId, status: 'OPEN' },
@@ -106,10 +117,11 @@ export class ShiftsService {
     principal: Principal,
     shiftId: string,
     request: CashMovementRequest,
-    ownOnly: boolean,
   ): Promise<ShiftView> {
     await this.prisma.transaction(async (tx) => {
-      const shift = await this.lockedOpenShift(tx, principal, shiftId, ownOnly);
+      const shift = await this.lockedShift(tx, principal, shiftId);
+      if (shift.staffId !== principal.staffId) throw ownShiftRequired('Cash in and out belong to');
+      if (shift.status !== 'OPEN') throw shiftClosed();
       const businessDate = await currentBusinessDate(tx, principal.restaurantId);
       const movement = await tx.cashMovement.create({
         data: {
@@ -174,6 +186,36 @@ export class ShiftsService {
     return this.view(this.prisma, principal.restaurantId, shiftId);
   }
 
+  /**
+   * Closes a shift at day end without counting the drawer (ADR-0029): what it should have held is
+   * kept, nothing is counted and no difference is recorded. Audited, and listed in the
+   * suspicious-activity report (AUD-006).
+   */
+  async closeNotCounted(
+    principal: Principal,
+    shiftId: string,
+    ownOnly: boolean,
+  ): Promise<ShiftView> {
+    await this.prisma.transaction(async (tx) => {
+      const shift = await this.lockedOpenShift(tx, principal, shiftId, ownOnly);
+      const expected = expectedCash(await this.totals(tx, shift));
+      await tx.shift.update({
+        where: { id: shift.id },
+        data: { status: 'CLOSED', closedAt: new Date(), expectedCash: BigInt(expected) },
+      });
+      await this.record(
+        tx,
+        principal,
+        'SHIFT_CLOSED_NOT_COUNTED',
+        shift.id,
+        { status: 'OPEN' },
+        { status: 'CLOSED', expectedCash: expected },
+        'Not counted',
+      );
+    });
+    return this.view(this.prisma, principal.restaurantId, shiftId);
+  }
+
   async view(client: Client, restaurantId: string, shiftId: string): Promise<ShiftView> {
     const shift = await client.shift.findFirst({
       where: { id: shiftId, restaurantId },
@@ -195,6 +237,7 @@ export class ShiftsService {
       expectedCash: paise(shift.expectedCash) ?? expectedCash(totals),
       countedCash: paise(shift.countedCash),
       variance: paise(shift.variance),
+      notCounted: shiftNotCounted(shift),
       denominations: (shift.denominations ?? null) as Record<string, number> | null,
       movements: shift.cashMovements.map((movement) => ({
         id: movement.id,
@@ -227,17 +270,26 @@ export class ShiftsService {
     };
   }
 
-  private async lockedOpenShift(
+  private async lockedShift(
     tx: TransactionClient,
     principal: Principal,
     shiftId: string,
-    ownOnly: boolean,
   ): Promise<Shift> {
     await tx.$queryRaw`SELECT 1 AS locked FROM shifts WHERE id = ${shiftId}::uuid FOR UPDATE`;
     const shift = await tx.shift.findFirst({
       where: { id: shiftId, restaurantId: principal.restaurantId },
     });
     if (shift === null) throw shiftNotFound();
+    return shift;
+  }
+
+  private async lockedOpenShift(
+    tx: TransactionClient,
+    principal: Principal,
+    shiftId: string,
+    ownOnly: boolean,
+  ): Promise<Shift> {
+    const shift = await this.lockedShift(tx, principal, shiftId);
     // §4.2 OWN: someone limited to their own shift handles cash for that shift only.
     if (ownOnly && shift.staffId !== principal.staffId) throw authErrors.forbidden();
     if (shift.status !== 'OPEN') throw shiftClosed();

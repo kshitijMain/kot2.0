@@ -1,4 +1,4 @@
-import { ApiRequestError, newIdempotencyKey } from '@rp/api-client';
+import { newIdempotencyKey } from '@rp/api-client';
 import type { InvoicePaymentsView } from '@rp/contracts';
 import { spacing } from '@rp/design-tokens';
 import { formatRupees, grantFor, type Role } from '@rp/domain';
@@ -111,11 +111,7 @@ export function PaymentSheet({
         },
         (failure: unknown) => {
           setBusy(false);
-          setError(
-            failure instanceof ApiRequestError && failure.code === 'NO_OPEN_SHIFT'
-              ? t('mobile.payment.needShift')
-              : t('payment.notRecorded', { message: messageOf(failure, t) }),
-          );
+          setError(t('payment.notRecorded', { message: messageOf(failure, t) }));
         },
       );
   };

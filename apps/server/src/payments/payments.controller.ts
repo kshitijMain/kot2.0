@@ -78,12 +78,7 @@ export class ShiftsController {
     @Param(new ZodValidationPipe(ShiftParams)) params: ShiftParams,
     @Body(new ZodValidationPipe(CashMovementRequest)) body: CashMovementRequest,
   ): Promise<ShiftView> {
-    return this.shifts.moveCash(
-      principalOf(request),
-      params.id,
-      body,
-      request.ownershipRequired === true,
-    );
+    return this.shifts.moveCash(principalOf(request), params.id, body);
   }
 
   @Post(':id/close')
@@ -99,6 +94,21 @@ export class ShiftsController {
       principalOf(request),
       params.id,
       body,
+      request.ownershipRequired === true,
+    );
+  }
+
+  /** ADR-0029: at day end, closed without counting the drawer. */
+  @Post(':id/close-not-counted')
+  @HttpCode(200)
+  @RequireCapability('CASH_MOVEMENT_AND_SHIFT_CLOSE')
+  closeNotCounted(
+    @Req() request: AuthenticatedRequest,
+    @Param(new ZodValidationPipe(ShiftParams)) params: ShiftParams,
+  ): Promise<ShiftView> {
+    return this.shifts.closeNotCounted(
+      principalOf(request),
+      params.id,
       request.ownershipRequired === true,
     );
   }

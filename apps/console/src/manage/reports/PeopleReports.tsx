@@ -1,5 +1,5 @@
 import type { ShiftReportResponse, StaffPerformanceResponse } from '@rp/contracts';
-import { displayDateTime, formatDisplayDate } from '@rp/domain';
+import { displayDateTime, formatDisplayDate, shiftNotCounted } from '@rp/domain';
 import { Table } from '@rp/ui-web';
 import { useConsole } from '../../app/console-context.js';
 import { useT } from '../../app/i18n.js';
@@ -118,7 +118,7 @@ function Shifts({ range }: { range: ReportRange }) {
                 signed(row.expectedCash),
               ),
               textColumn('counted', t('reportsPage.shifts.counted'), (row) =>
-                signed(row.countedCash),
+                shiftNotCounted(row) ? t('reportsPage.shifts.notCounted') : signed(row.countedCash),
               ),
               textColumn('difference', t('reportsPage.shifts.difference'), (row) =>
                 signed(row.variance),

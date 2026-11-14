@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   type DayEndBlockers,
+  type DayEndOpenShift,
   type DayEndPreview,
   type DayEndView,
   ZReportView,
@@ -16,12 +17,22 @@ import { DailySummariesService } from '../reports/daily-summaries.service.js';
 
 type Client = PrismaService | TransactionClient;
 
+/** A Z-report as `day_ends` keeps it; one kept before ADR-0029 lacks that change's figures. */
+type KeptZReport = Omit<ZReportView, 'cash' | 'shifts'> & {
+  readonly cash: Omit<ZReportView['cash'], 'outsideShift'> & { readonly outsideShift?: number };
+  readonly shifts: readonly (Omit<ZReportView['shifts'][number], 'notCounted'> & {
+    readonly notCounted?: boolean;
+  })[];
+  readonly carriedForward: string[];
+};
+
 /**
  * Day-end (P1-11b, BILL-013, RPT-005). The Z-report of a business date is built from its
  * invoices (at their current version), payments, cash movements and shifts with `@rp/domain`
  * `buildZReport`. Closing the date keeps the report (`day_ends`) and marks the date CLOSED
- * (`business_days`), after which everything recorded belongs to the next business date. Open
- * shifts and unpaid takeaway bills block the close; open tables block it unless carried forward.
+ * (`business_days`), after which everything recorded belongs to the next business date. Unpaid
+ * takeaway bills block the close; open tables block it unless carried forward. Shifts are an
+ * optional add-on (ADR-0029): one still open is named but does not block, and runs on if left.
  * The close also sums the date into the daily summaries the reports read (P9-27).
  */
 @Injectable()
@@ -35,11 +46,12 @@ export class DayEndService {
 
   async preview(restaurantId: string): Promise<DayEndPreview> {
     const businessDate = await currentBusinessDate(this.prisma, restaurantId);
-    const [blockers, report] = await Promise.all([
+    const [blockers, openShifts, report] = await Promise.all([
       this.blockers(this.prisma, restaurantId, businessDate),
+      this.openShifts(restaurantId),
       this.report(this.prisma, restaurantId, businessDate),
     ]);
-    return { businessDate, status: 'OPEN', blockers, report };
+    return { businessDate, status: 'OPEN', blockers, openShifts, report };
   }
 
   async close(
@@ -67,15 +79,11 @@ export class DayEndService {
 
         const blockers = await this.blockers(tx, restaurantId, businessDate);
         const tablesBlock = blockers.openTables.length > 0 && !carryForwardTables;
-        if (
-          blockers.openShifts.length > 0 ||
-          blockers.unsettledInvoices.length > 0 ||
-          tablesBlock
-        ) {
+        if (blockers.unsettledInvoices.length > 0 || tablesBlock) {
           throw new AppError(
             409,
             'DAY_END_BLOCKED',
-            'Close the open shifts, settle or void the unpaid bills, and settle or carry forward the open tables first.',
+            'Settle or void the unpaid bills, and settle or carry forward the open tables first.',
             { blockers },
           );
         }
@@ -161,14 +169,39 @@ export class DayEndService {
     if (row === null) {
       throw new AppError(404, 'DAY_NOT_CLOSED', `${businessDate} has not been closed.`);
     }
-    const { carriedForward, ...report } = row.report as ZReportView & { carriedForward: string[] };
+    const { carriedForward, ...report } = row.report as unknown as KeptZReport;
     return {
       businessDate,
       closedAt: row.closedAt.toISOString(),
       closedById: row.closedById,
       carriedForward,
-      report,
+      // A report kept before ADR-0029 has no such figures: all its cash was in shifts.
+      report: {
+        ...report,
+        cash: { ...report.cash, outsideShift: report.cash.outsideShift ?? 0 },
+        shifts: report.shifts.map((shift) => ({
+          ...shift,
+          notCounted: shift.notCounted ?? false,
+        })),
+      },
     };
+  }
+
+  /** Every shift still open, whichever date it was opened on, with what its drawer should hold. */
+  private async openShifts(restaurantId: string): Promise<DayEndOpenShift[]> {
+    const shifts = await this.prisma.shift.findMany({
+      where: { restaurantId, status: 'OPEN' },
+      select: { id: true, staffId: true, staff: { select: { displayName: true } } },
+      orderBy: { openedAt: 'asc' },
+    });
+    return Promise.all(
+      shifts.map(async (shift) => ({
+        shiftId: shift.id,
+        staffId: shift.staffId,
+        staffName: shift.staff.displayName,
+        expectedCash: (await this.shifts.view(this.prisma, restaurantId, shift.id)).expectedCash,
+      })),
+    );
   }
 
   private async blockers(
@@ -177,12 +210,7 @@ export class DayEndService {
     businessDate: string,
   ): Promise<DayEndBlockers> {
     const through = dbDate(businessDate);
-    const [shifts, sessions, invoices] = await Promise.all([
-      client.shift.findMany({
-        where: { restaurantId, status: 'OPEN' },
-        select: { id: true, staffId: true },
-        orderBy: { openedAt: 'asc' },
-      }),
+    const [sessions, invoices] = await Promise.all([
       client.tableSession.findMany({
         where: { restaurantId, status: 'OPEN', businessDate: { lte: through } },
         select: { id: true, table: { select: { label: true } } },
@@ -200,7 +228,6 @@ export class DayEndService {
       }),
     ]);
     return {
-      openShifts: shifts.map((shift) => ({ shiftId: shift.id, staffId: shift.staffId })),
       openTables: sessions.map((session) => ({
         tableSessionId: session.id,
         tableLabel: session.table.label,
@@ -223,7 +250,7 @@ export class DayEndService {
       }),
       client.payment.findMany({
         where: { restaurantId, businessDate: date, status: 'CAPTURED' },
-        select: { mode: true, modeLabel: true, amount: true },
+        select: { mode: true, modeLabel: true, amount: true, shiftId: true },
         orderBy: { createdAt: 'asc' },
       }),
       client.shift.findMany({
@@ -276,6 +303,7 @@ export class DayEndService {
           mode: payment.mode,
           label: payment.modeLabel,
           amount: payment.amount,
+          shiftId: payment.shiftId,
         })),
         shifts: shiftViews.map((shift) => ({
           shiftId: shift.id,
@@ -284,6 +312,7 @@ export class DayEndService {
           expectedCash: shift.expectedCash,
           countedCash: shift.countedCash,
           variance: shift.variance,
+          notCounted: shift.notCounted,
         })),
         cashIn: moved('IN'),
         cashOut: moved('OUT'),

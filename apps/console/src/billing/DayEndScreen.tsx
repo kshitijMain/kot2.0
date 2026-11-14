@@ -1,5 +1,6 @@
-import type { DayEndPreview } from '@rp/contracts';
-import { formatDisplayDate } from '@rp/domain';
+import type { DayEndOpenShift, DayEndPreview } from '@rp/contracts';
+import { cashVariance, formatDisplayDate, formatRupees } from '@rp/domain';
+import { paiseFromInput } from '@rp/ordering';
 import {
   Button,
   Card,
@@ -8,31 +9,30 @@ import {
   Icon,
   LoadingState,
   Money,
+  TextField,
   useToast,
 } from '@rp/ui-web';
 import { useState } from 'react';
-import { useConsole } from '../app/console-context.js';
-import { useAlerts } from '../alerts/alerts-context.js';
+import { useConsole, useConsoleState } from '../app/console-context.js';
 import { useT } from '../app/i18n.js';
 import { messageOf } from '../app/messages.js';
+import { grantOf } from '../app/modes.js';
 import { useLive } from '../app/use-live.js';
 
 const affectsDay = (type: string) => /^(Bill|Order|Table|ItemStatusChanged$)/.test(type);
 
 /**
- * Closing the business day (BILL-013): the Z-report of the day so far, what blocks closing (open
- * shifts, unpaid takeaway bills, open tables, which the manager may carry forward), and the close.
+ * Closing the business day (BILL-013): the Z-report of the day so far, what blocks closing (unpaid
+ * takeaway bills, open tables, which the manager may carry forward), and the close. Shifts still
+ * open are named, each to count and close or close as not counted, but do not block (ADR-0029).
  */
 export function DayEndScreen({
   onBack,
   onPay,
-  onCloseShift,
 }: {
   onBack: () => void;
   /** Opens an unpaid bill that holds the day up, to take its payment (QA-031). */
   onPay: (invoiceId: string) => void;
-  /** Opens a shift left open, to close it for its owner (QA-034). */
-  onCloseShift: (shiftId: string) => void;
 }) {
   const t = useT();
   const controller = useConsole();
@@ -91,7 +91,10 @@ export function DayEndScreen({
                 {error}
               </p>
             )}
-            <Blockers preview={data.value} onPay={onPay} onCloseShift={onCloseShift} />
+            <Blockers preview={data.value} onPay={onPay} />
+            {data.value.openShifts.length > 0 && data.value.status === 'OPEN' ? (
+              <OpenShifts shifts={data.value.openShifts} onChanged={reload} />
+            ) : null}
             {data.value.status === 'CLOSED' ? (
               <p className="console-notice">{t('dayEnd.closed')}</p>
             ) : (
@@ -112,8 +115,7 @@ export function DayEndScreen({
                   variant="danger"
                   size="lg"
                   loading={busy}
-                  // Closed only once nothing stands in the way (P9-24): it had stayed pressable with
-                  // a shift open, only to be refused.
+                  // Closed only once nothing stands in the way (P9-24).
                   disabled={!canClose(data.value, carryForward)}
                   onClick={() => {
                     setConfirming(true);
@@ -148,58 +150,26 @@ export function DayEndScreen({
   );
 }
 
-/** Whether the day can be closed: no shift open, no bill unpaid, open tables carried forward. */
+/** Whether the day can be closed: no bill unpaid, open tables carried forward. */
 function canClose(preview: DayEndPreview, carryForward: boolean): boolean {
-  const { openShifts, openTables, unsettledInvoices } = preview.blockers;
-  return (
-    openShifts.length === 0 &&
-    unsettledInvoices.length === 0 &&
-    (openTables.length === 0 || carryForward)
-  );
+  const { openTables, unsettledInvoices } = preview.blockers;
+  return unsettledInvoices.length === 0 && (openTables.length === 0 || carryForward);
 }
 
 function Blockers({
   preview,
   onPay,
-  onCloseShift,
 }: {
   preview: DayEndPreview;
   onPay: (invoiceId: string) => void;
-  onCloseShift: (shiftId: string) => void;
 }) {
   const t = useT();
-  // Whose shift is open, by name (P9-24): "1 shift is still open" did not say whose.
-  const names = useAlerts()?.names;
-  const { openShifts, openTables, unsettledInvoices } = preview.blockers;
-  const none = openShifts.length + openTables.length + unsettledInvoices.length === 0;
+  const { openTables, unsettledInvoices } = preview.blockers;
+  const none = openTables.length + unsettledInvoices.length === 0;
   return (
     <Card title={t('dayEnd.blockers')} headingLevel={3}>
       {none ? <p>{t('dayEnd.noBlockers')}</p> : null}
       <ul className="bill__discounts">
-        {openShifts.length > 0 ? (
-          <li>
-            {t('dayEnd.openShifts', {
-              count: openShifts.length,
-              names: openShifts
-                .map((shift) => names?.get(shift.staffId) ?? t('dayEnd.someone'))
-                .join(', '),
-            })}
-          </li>
-        ) : null}
-        {openShifts.map((shift) => (
-          <li key={shift.shiftId}>
-            <Button
-              variant="secondary"
-              onClick={() => {
-                onCloseShift(shift.shiftId);
-              }}
-            >
-              {t('dayEnd.closeShiftOf', {
-                name: names?.get(shift.staffId) ?? t('dayEnd.someone'),
-              })}
-            </Button>
-          </li>
-        ))}
         {openTables.length > 0 ? (
           <li>
             {t('dayEnd.openTables', {
@@ -228,6 +198,153 @@ function Blockers({
         ))}
       </ul>
     </Card>
+  );
+}
+
+/** The shifts still open at day end (ADR-0029): none of them holds up closing the day. */
+function OpenShifts({
+  shifts,
+  onChanged,
+}: {
+  shifts: readonly DayEndOpenShift[];
+  onChanged: () => void;
+}) {
+  const t = useT();
+  return (
+    <Card title={t('dayEnd.shiftsTitle')} headingLevel={3}>
+      <p className="dashboard-section__hint">{t('dayEnd.shiftsRunOn')}</p>
+      {shifts.map((shift) => (
+        <OpenShiftRow key={shift.shiftId} shift={shift} onChanged={onChanged} />
+      ))}
+    </Card>
+  );
+}
+
+function OpenShiftRow({ shift, onChanged }: { shift: DayEndOpenShift; onChanged: () => void }) {
+  const t = useT();
+  const controller = useConsole();
+  const { person } = useConsoleState();
+  const toast = useToast();
+  const [counting, setCounting] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [counted, setCounted] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | undefined>();
+  const name = shift.staffName;
+  // The server decides again; this only leaves out what would be refused.
+  const grant = person === undefined ? 'DENY' : grantOf(person, 'CASH_MOVEMENT_AND_SHIFT_CLOSE');
+  const mayClose = grant === 'ALLOW' || (grant === 'OWN' && person?.id === shift.staffId);
+  const paise = counted.trim() === '0' ? 0 : paiseFromInput(counted);
+
+  const act = async (action: () => Promise<string>) => {
+    setBusy(true);
+    setError(undefined);
+    try {
+      toast.show({ title: await action(), tone: 'success' });
+      onChanged();
+    } catch (failure) {
+      setError(messageOf(failure, t));
+    } finally {
+      setBusy(false);
+      setConfirming(false);
+    }
+  };
+
+  const countAndClose = () => {
+    if (paise === undefined) {
+      setError(t('shift.invalidAmount'));
+      return;
+    }
+    void act(async () => {
+      const closed = await controller.api.closeShift({
+        params: { id: shift.shiftId },
+        body: { countedCash: paise },
+      });
+      return t('shift.closed', { variance: formatRupees(closed.variance ?? 0) });
+    });
+  };
+
+  return (
+    <div className="console-form">
+      <p>
+        <strong>{t('dayEnd.shiftOpen', { name })}</strong>
+        <br />
+        {t('dayEnd.shiftExpected', { amount: formatRupees(shift.expectedCash) })}
+      </p>
+      {error === undefined ? null : (
+        <p role="alert" className="console-notice console-notice--danger">
+          {error}
+        </p>
+      )}
+      {mayClose && counting ? (
+        <form
+          className="console-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            countAndClose();
+          }}
+        >
+          <TextField
+            label={t('shift.counted')}
+            inputMode="decimal"
+            value={counted}
+            onChange={(event) => {
+              setCounted(event.target.value);
+            }}
+          />
+          {paise === undefined ? null : (
+            <p role="status">
+              {t('dayEnd.difference', {
+                variance: formatRupees(cashVariance(paise, shift.expectedCash)),
+              })}
+            </p>
+          )}
+          <Button type="submit" loading={busy}>
+            {t('dayEnd.countAndClose')}
+          </Button>
+        </form>
+      ) : null}
+      {mayClose && !counting ? (
+        <Button
+          variant="secondary"
+          aria-label={t('dayEnd.countOf', { name })}
+          onClick={() => {
+            setCounting(true);
+          }}
+        >
+          {t('dayEnd.count')}
+        </Button>
+      ) : null}
+      {mayClose ? (
+        <Button
+          variant="ghost"
+          aria-label={t('dayEnd.notCountedOf', { name })}
+          onClick={() => {
+            setConfirming(true);
+          }}
+        >
+          {t('dayEnd.notCounted')}
+        </Button>
+      ) : null}
+      <ConfirmDialog
+        open={confirming}
+        tone="danger"
+        title={t('dayEnd.notCountedTitle', { name })}
+        description={t('dayEnd.notCountedDescription')}
+        confirmLabel={t('dayEnd.notCountedConfirm')}
+        cancelLabel={t('dayEnd.notCountedCancel')}
+        busy={busy}
+        onCancel={() => {
+          setConfirming(false);
+        }}
+        onConfirm={() => {
+          void act(async () => {
+            await controller.api.closeShiftNotCounted({ params: { id: shift.shiftId } });
+            return t('dayEnd.notCountedDone', { name });
+          });
+        }}
+      />
+    </div>
   );
 }
 
@@ -266,6 +383,7 @@ function ZReport({ preview }: { preview: DayEndPreview }) {
             paise={payment.amount}
           />
         ))}
+        <Row label={t('dayEnd.outsideShift')} paise={report.cash.outsideShift} />
         <Row label={t('dayEnd.variance')} paise={report.totalVariance} />
       </dl>
     </Card>

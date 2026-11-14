@@ -4500,7 +4500,9 @@ export const ROUTES = [
     method: 'POST',
     path: '/api/v1/shifts/:id/cash-movements',
     summary: 'Record cash taken into or out of the drawer, with a reason',
-    description: 'BILL-013. Managers and the Owner, for any shift. Audited.',
+    description:
+      'BILL-013, ADR-0029. Only on the person’s own open shift: cash in and out make sense only ' +
+      'against a drawer they count. Audited.',
     tags: ['payments'],
     requirements: ['BILL-013', 'AUD-001'],
     capability: 'CASH_MOVEMENT_AND_SHIFT_CLOSE',
@@ -4509,7 +4511,10 @@ export const ROUTES = [
       200: { description: 'The shift.', schema: ShiftView },
       ...standardErrors,
       404: { description: 'No such shift.', schema: ApiError },
-      409: { description: 'The shift is closed.', schema: ApiError },
+      409: {
+        description: 'The shift is closed, or is not the person’s own (`OWN_SHIFT_REQUIRED`).',
+        schema: ApiError,
+      },
     },
   },
   {
@@ -4532,13 +4537,33 @@ export const ROUTES = [
     },
   },
   {
+    operationId: 'closeShiftNotCounted',
+    method: 'POST',
+    path: '/api/v1/shifts/:id/close-not-counted',
+    summary: 'Close a shift at day end without counting the drawer',
+    description:
+      'ADR-0029, AUD-006. No counted cash and no difference are recorded. Audited, and flagged in ' +
+      'the suspicious-activity report. Managers and the Owner, for any shift.',
+    tags: ['payments'],
+    requirements: ['BILL-013', 'AUD-006', 'AUD-001'],
+    capability: 'CASH_MOVEMENT_AND_SHIFT_CLOSE',
+    request: { params: ShiftParams },
+    responses: {
+      200: { description: 'The closed shift.', schema: ShiftView },
+      ...standardErrors,
+      404: { description: 'No such shift.', schema: ApiError },
+      409: { description: 'Already closed.', schema: ApiError },
+    },
+  },
+  {
     operationId: 'openCashDrawer',
     method: 'POST',
     path: '/api/v1/cash-drawer/open',
     summary: 'Open the cash drawer without a sale, with a reason',
     description:
-      'BILL-016, AUD-006. The receipt printer kicks the drawer; an opening is audited ' +
-      '(CASH_DRAWER_OPENED) and appears in the suspicious-activity report.',
+      'BILL-016, AUD-006, ADR-0029. Needs the person’s own open shift. The receipt printer kicks ' +
+      'the drawer; an opening is audited (CASH_DRAWER_OPENED) and appears in the ' +
+      'suspicious-activity report.',
     tags: ['payments'],
     requirements: ['BILL-016', 'AUD-006', 'AUD-001'],
     capability: 'BILL_PRINT_AND_PAYMENT',
@@ -4549,6 +4574,10 @@ export const ROUTES = [
         schema: OpenCashDrawerResponse,
       },
       ...standardErrors,
+      409: {
+        description: 'The person has no open shift (`OWN_SHIFT_REQUIRED`).',
+        schema: ApiError,
+      },
       422: { description: 'No bill printer is set, or no such printer.', schema: ApiError },
     },
   },
@@ -4597,8 +4626,9 @@ export const ROUTES = [
     path: '/api/v1/invoices/:id/payments',
     summary: 'Record payments against an invoice; settled when they equal the total',
     description:
-      'BILL-008. Split across modes and paid in steps, never more than the total. Cash needs ' +
-      'an open shift. When a table’s last bill is paid, the table is freed. Idempotent. Audited.',
+      'BILL-008. Split across modes and paid in steps, never more than the total. Cash goes into ' +
+      'the shift of the person taking it when they have one open, and into none otherwise ' +
+      '(ADR-0029). When a table’s last bill is paid, the table is freed. Idempotent. Audited.',
     tags: ['payments'],
     requirements: ['BILL-008', 'BILL-013', 'TBL-004', 'AUD-001'],
     capability: 'BILL_PRINT_AND_PAYMENT',
@@ -4607,10 +4637,7 @@ export const ROUTES = [
       200: { description: 'The invoice’s payments.', schema: InvoicePaymentsView },
       ...standardErrors,
       404: { description: 'No such invoice.', schema: ApiError },
-      409: {
-        description: 'Voided or already settled, or cash without an open shift.',
-        schema: ApiError,
-      },
+      409: { description: 'Voided or already settled.', schema: ApiError },
       422: { description: 'More than the bill, or cash tendered short.', schema: ApiError },
     },
   },
@@ -4648,9 +4675,9 @@ export const ROUTES = [
     path: '/api/v1/day-end',
     summary: 'Close the business date and keep its Z-report',
     description:
-      'BILL-013. Refused while shifts are open or takeaway bills are unpaid; open tables block ' +
-      'unless carried forward to the next business date. Afterwards everything recorded belongs ' +
-      'to the next business date. Audited.',
+      'BILL-013, ADR-0029. Refused while takeaway bills are unpaid; open tables block unless ' +
+      'carried forward to the next business date. An open shift does not block: it runs on into ' +
+      'the next date. Afterwards everything recorded belongs to the next business date. Audited.',
     tags: ['day-end'],
     requirements: ['BILL-013', 'RPT-005', 'AUD-001'],
     capability: 'DAY_END_CLOSE',

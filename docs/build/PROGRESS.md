@@ -1018,6 +1018,21 @@ anyone"; ADR-0025 amended):
 838. Unchanged without the flag: AUTH-007 pairing, and the table tablet, which still pairs with a
      code (no tablets in the pilot).
 
+Decided 2026-11-09 (the optional cash drawer, at the Business Owner's request, ADR-0029; open
+business choices are D-30 to D-33 in `docs/testing/DECISIONS_NEEDED.md`):
+
+850. Cash never needs a shift (BILL-013 changed): `NO_OPEN_SHIFT` is gone. Cash goes into the open
+     shift of whoever takes it, and otherwise into none; never into someone else's.
+851. Cash in, cash out and the no-sale opening need the person's own open shift
+     (`OWN_SHIFT_REQUIRED`); the POS explains them in one line and offers to open a shift.
+852. Day-end does not wait for shifts: `openShifts` names each, to count and close or close as not
+     counted (`close-not-counted`, `SHIFT_CLOSED_NOT_COUNTED`, needs
+     `CASH_MOVEMENT_AND_SHIFT_CLOSE`). A shift left open runs on into the next date (D-30).
+853. "Not counted" is a closed shift with no counted cash (`shiftNotCounted`), not a new status.
+854. "Cash taken outside a shift" on the day-end and payments reports
+     (`daily_payment_modes.outside_shift`); suspicious activity adds `SHIFT_NOT_COUNTED` and does
+     not flag cash without a shift. Nothing already recorded is rewritten.
+
 Decided 2026-10-25 (the menu, at the Business Owner's request: a guided editor, by hand or Excel):
 
 808. The AI menu reading (ONB-006, P6-04a/b) is switched off for good: menus are entered by hand
@@ -4674,6 +4689,20 @@ off-white redesign of ADR-0022.
   packages first.
 - Gotcha: on a machine with 5 GB for WSL the full test run times out under load (console and server).
   `pnpm turbo run test --concurrency=1 --continue`, then the failing server files alone, all pass.
+
+### 2026-11-09: the optional cash drawer (ADR-0029)
+
+Branch `feature/optional-shifts`, from `main`, in a separate worktree. Decisions 850 to 854, D-30 to
+D-33. Domain: `cashOutsideShift`, `shiftNotCounted`, the Z-report's `cash.outsideShift` and
+`notCounted`. Server: `NO_OPEN_SHIFT` removed, `OWN_SHIFT_REQUIRED`, `closeNotCounted`, day-end's
+`openShifts` (no longer a blocker), `SHIFT_NOT_COUNTED`, the `outside_shift` summary column. Console:
+the shift screen says it is optional and explains its buttons, day-end counts or closes each open
+shift, and the reports show the new line. Tests: `optional-shifts.int`, `shift-cutoff.int`, console
+unit tests and a Playwright flow.
+
+Gotchas: `day_ends.report` of older dates lacks the new fields, so `DayEndService.dayEnd` fills them
+in on reading. `qa/functional-gaps` also touches `ShiftScreen` and `shifts.service` (another
+manager's shift); expect a small merge there.
 
 ### 2026-11-01: P9-27 The network and the data, as the Business Owner approved
 

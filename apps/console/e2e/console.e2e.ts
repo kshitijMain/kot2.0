@@ -1008,6 +1008,68 @@ test.describe.serial('the web console', () => {
     await expect(page.getByText(t('auditPage.verify.intact'))).toBeVisible();
   });
 
+  test('[BILL-008] [BILL-013] takes cash with no shift; the cash drawer is an add-on; day end names open shifts (ADR-0029)', async () => {
+    await page.getByRole('button', { name: t('login.signOut') }).click();
+    await page.getByRole('button', { name: /^Vikram \(Manager\)/ }).click();
+    await page.keyboard.type('2222');
+    await expect(page).toHaveURL(/\/manage$/);
+    await page.getByRole('link', { name: t('modes.pos') }).click();
+
+    // Cash from someone with no shift open: nothing asks for one.
+    await page.getByRole('button', { name: t('pos.takeaway') }).click();
+    await page.getByRole('button', { name: 'Breads', exact: true }).click();
+    await page.getByRole('button', { name: /^Butter Naan, / }).click();
+    await page.getByLabel(t('pos.cart.customer')).fill('Cash guest');
+    await page
+      .getByRole('complementary', { name: t('pos.cart.title') })
+      .getByRole('button', { name: t('pos.cart.send') })
+      .click();
+    const open = page.getByRole('region', { name: t('pos.sent.openTakeaway') });
+    const guest = open.getByRole('article').filter({ hasText: 'Cash guest' });
+    await guest.getByRole('button', { name: /^Bill order \d+$/ }).click();
+    await page.getByRole('button', { name: t('billing.printBill') }).click();
+    await page.getByRole('button', { name: t('billing.pay') }).click();
+    await expect(page.getByRole('heading', { name: /^Payment for invoice / })).toBeVisible();
+    await page.getByRole('button', { name: t('payment.record') }).click();
+    await expect(page.getByText(/^Invoice .* is paid$/)).toBeVisible();
+    await page.getByRole('button', { name: t('pos.backToTables') }).click();
+
+    // The add-on is always there, and says what it needs.
+    await page.getByRole('button', { name: t('pos.shift') }).click();
+    await expect(page.getByText(t('shift.addOn'))).toBeVisible();
+    await page.getByRole('button', { name: t('shift.noSale') }).click();
+    await expect(page.getByText(t('shift.needsShift'))).toBeVisible();
+    await expectAccessible(page);
+    await page.getByRole('button', { name: t('shift.offerOpen') }).click();
+    await expect(page.getByLabel(t('shift.openingFloat'))).toBeFocused();
+    await page.getByLabel(t('shift.openingFloat')).fill('500');
+    await page.getByRole('button', { name: t('shift.open') }).click();
+    await expect(page.getByText(t('shift.expected'))).toBeVisible();
+    await page.getByRole('button', { name: t('pos.backToTables') }).click();
+
+    // Day end names both open shifts: one counted and closed, one closed as not counted.
+    await page.getByRole('button', { name: t('dayEnd.open') }).click();
+    await expect(page.getByText(t('dayEnd.outsideShift'))).toBeVisible();
+    const vikram = 'Vikram (Manager)';
+    const neha = 'Neha (Manager)';
+    await expect(page.getByText(t('dayEnd.shiftOpen', { name: vikram }))).toBeVisible();
+    await expect(page.getByText(t('dayEnd.shiftOpen', { name: neha }))).toBeVisible();
+    await expectAccessible(page);
+
+    await page.getByRole('button', { name: t('dayEnd.countOf', { name: vikram }) }).click();
+    await page.getByLabel(t('shift.counted')).fill('499');
+    await expect(page.getByText(t('dayEnd.difference', { variance: '-₹1.00' }))).toBeVisible();
+    await page.getByRole('button', { name: t('dayEnd.countAndClose') }).click();
+    await expect(page.getByText(t('shift.closed', { variance: '-₹1.00' }))).toBeVisible();
+    await expect(page.getByText(t('dayEnd.shiftOpen', { name: vikram }))).toHaveCount(0);
+
+    await page.getByRole('button', { name: t('dayEnd.notCountedOf', { name: neha }) }).click();
+    await page.getByRole('button', { name: t('dayEnd.notCountedConfirm') }).click();
+    await expect(page.getByText(t('dayEnd.notCountedDone', { name: neha }))).toBeVisible();
+    await expect(page.getByText(t('dayEnd.shiftsTitle'))).toHaveCount(0);
+    await page.getByRole('button', { name: t('pos.backToTables') }).click();
+  });
+
   test('[SEC-003] a waiter cannot open the Staff page', async () => {
     await page.getByRole('button', { name: t('login.signOut') }).click();
     await page.getByRole('button', { name: /^Ravi/ }).click();

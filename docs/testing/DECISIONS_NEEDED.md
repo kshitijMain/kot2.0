@@ -378,3 +378,57 @@ started: it can only be voided, with a manager's PIN. C: ask the kitchen to bump
 a small screen.
 
 **Recommendation:** B (safest for money).
+
+---
+
+# The optional cash drawer of 2026-11-09 (ADR-0029)
+
+## D-30: closing the day with a shift nobody dealt with
+
+**Situation.** Day-end names every open shift and offers to count it or close it as not counted.
+The manager may do neither and still close the day.
+
+**Today.** The day closes. The shift stays open, keeps taking that person's cash on the next
+business date, and is named again at the next day-end. No limit on how long it can stay open. The
+closed day's report shows it with no count.
+
+**Options.** A: keep it. B: ask "Close the day with X's shift still open?" before closing. C: close
+it as not counted automatically when the day closes.
+
+**Recommendation:** B. It keeps the freedom but stops a shift being forgotten by accident.
+
+## D-31: a manager recording cash in or out on someone else's shift
+
+**Situation.** Managers could do this before. The new rule says cash in and out need the person's
+own open shift.
+
+**Today (safest).** Refused, for everyone, Owner included: a drawer's cash is entered only by the
+person who counts it. Closing someone else's shift is still allowed.
+
+**Options.** A: keep it. B: let the Owner, or managers, do it, with the entry naming both people.
+
+**Recommendation:** A.
+
+## D-32: opening the drawer for change, with no shift open
+
+**Situation.** "Open the drawer (no sale)" now needs the person's own open shift, so a manager who
+only wants change for a note has to open a shift first. A drawer on the printer still opens by
+itself on every cash payment.
+
+**Today.** As asked: refused without a shift, with a one-line explanation and an offer to open one.
+
+**Options.** A: keep it. B: allow it without a shift, still needing a reason and still in the
+suspicious-activity report.
+
+**Recommendation:** A for now; B if managers find it awkward during the pilot.
+
+## D-33: a shift that was closed as not counted
+
+**Situation.** Nobody counted the drawer, so any shortage is unknown.
+
+**Today.** Audited (`SHIFT_CLOSED_NOT_COUNTED`, who closed it) and flagged to the Owner with what the
+drawer should have held. It adds nothing to the day's cash difference, and no reason is asked for.
+
+**Options.** A: keep it. B: require a typed reason. C: only the Owner may close as not counted.
+
+**Recommendation:** B, because the Owner will want to know why.

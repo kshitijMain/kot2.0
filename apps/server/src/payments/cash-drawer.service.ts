@@ -9,12 +9,13 @@ import { renderDrawerKick } from '../printing/escpos.js';
 import { PrinterStatusService } from '../printing/printer-status.service.js';
 import { PrintFailure, PrinterTransport } from '../printing/printer-transport.js';
 import { SettingsService } from '../settings/settings.service.js';
-import { ShiftsService } from './shifts.service.js';
+import { ownShiftRequired, ShiftsService } from './shifts.service.js';
 
 /**
  * The cash drawer on the receipt printer (P4-07b, BILL-016). Cash payments open it on their own
- * when `bills.cashDrawerKick` is on; opening it without a sale takes a reason and is audited
- * (`CASH_DRAWER_OPENED`), so the suspicious-activity report lists every such opening (AUD-006).
+ * when `bills.cashDrawerKick` is on, shift or no shift; opening it without a sale needs the
+ * person's own open shift (ADR-0029), takes a reason and is audited (`CASH_DRAWER_OPENED`), so the
+ * suspicious-activity report lists every such opening (AUD-006).
  */
 @Injectable()
 export class CashDrawerService {
@@ -35,6 +36,8 @@ export class CashDrawerService {
     reason: string,
     printerId: string | undefined,
   ): Promise<OpenCashDrawerResponse> {
+    const shift = await this.shifts.openShiftOf(this.prisma, principal);
+    if (shift === null) throw ownShiftRequired('Opening the drawer without a sale belongs to');
     const chosen =
       printerId ?? (await this.settings.snapshot(principal.restaurantId)).get('bills.printerId');
     if (chosen === null) {
@@ -49,23 +52,22 @@ export class CashDrawerService {
       throw new AppError(422, 'PRINTER_NOT_FOUND', 'There is no such active printer.');
     }
     const error = await this.kick(printer);
-    const shift = await this.shifts.openShiftOf(this.prisma, principal);
     if (error === null) {
       await this.prisma.transaction(async (tx) => {
         await this.audit.record(tx, {
           action: 'CASH_DRAWER_OPENED',
           entityType: 'cash_drawer',
-          entityId: shift?.id ?? null,
+          entityId: shift.id,
           actorId: principal.staffId,
           deviceId: principal.deviceId,
           restaurantId: principal.restaurantId,
           before: null,
-          after: { printerId: printer.id, shiftId: shift?.id ?? null, noSale: true },
+          after: { printerId: printer.id, shiftId: shift.id, noSale: true },
           reason,
         });
       });
     }
-    return { opened: error === null, error, printerId: printer.id, shiftId: shift?.id ?? null };
+    return { opened: error === null, error, printerId: printer.id, shiftId: shift.id };
   }
 
   /**

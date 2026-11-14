@@ -95,22 +95,10 @@ function Pay() {
   const [search] = useSearchParams();
   const navigate = useNavigate();
   const bill = search.get('bill');
-  const here = `/pos/pay/${invoiceId}${search.size === 0 ? '' : `?${search.toString()}`}`;
   const back = () => {
     void navigate(backTo(search, bill === null ? '/pos' : `/pos/bill/${bill}`));
   };
-  return (
-    <PaymentScreen
-      key={invoiceId}
-      invoiceId={invoiceId}
-      onBack={back}
-      onDone={back}
-      onOpenShift={() => {
-        // Back to this payment once the shift is open, not to the floor (QA-030).
-        void navigate(`/pos/shift?back=${encodeURIComponent(here)}`);
-      }}
-    />
-  );
+  return <PaymentScreen key={invoiceId} invoiceId={invoiceId} onBack={back} onDone={back} />;
 }
 
 function DayEnd() {
@@ -122,9 +110,6 @@ function DayEnd() {
       }}
       onPay={(invoiceId) => {
         void navigate(`/pos/pay/${invoiceId}?back=${encodeURIComponent('/pos/day-end')}`);
-      }}
-      onCloseShift={(shiftId) => {
-        void navigate(`/pos/shift?id=${shiftId}&back=${encodeURIComponent('/pos/day-end')}`);
       }}
     />
   );

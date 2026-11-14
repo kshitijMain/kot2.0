@@ -34,7 +34,8 @@ function invoiceNotFound(): AppError {
 /**
  * Payments (P1-11a, BILL-008). Payments are recorded by hand against an issued invoice, split
  * across modes and in as many steps as needed, never beyond the total (`@rp/domain`
- * `applyPayments`). Cash goes into the open shift of the person taking it. When the payments equal the total the
+ * `applyPayments`). Cash goes into the open shift of the person taking it, and into none when they
+ * have none open: shifts are an optional add-on (ADR-0029). When the payments equal the total the
  * invoice is SETTLED (`BillSettled`), and when the last bill of a table is settled the session
  * closes and the table is free again (TBL-004). A retried request with the same key records
  * nothing twice (ORD-013's rule, applied to money).
@@ -136,13 +137,6 @@ export class PaymentsService {
         throw new AppError(422, 'NO_PAYMENTS', 'Record at least one payment.');
       }
       const shift = await this.shifts.lockedOpenShiftOf(tx, principal);
-      if (shift === null && request.payments.some((payment) => payment.mode === 'CASH')) {
-        throw new AppError(
-          409,
-          'NO_OPEN_SHIFT',
-          'Open a shift before taking cash, so the drawer can be counted.',
-        );
-      }
 
       const now = new Date();
       const businessDate = await currentBusinessDate(tx, principal.restaurantId, now);

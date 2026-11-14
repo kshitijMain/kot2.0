@@ -178,8 +178,16 @@ describe('[BILL-013] [RPT-005] day-end', () => {
     );
     today = preview.businessDate;
     expect(preview.status).toBe('OPEN');
+    // A shift still open is named but blocks nothing (ADR-0029).
+    expect(preview.openShifts).toEqual([
+      {
+        shiftId: shift.id,
+        staffId: kit.staff.BILLER,
+        staffName: 'Test biller',
+        expectedCash: 129_400,
+      },
+    ]);
     expect(preview.blockers).toEqual({
-      openShifts: [{ shiftId: shift.id, staffId: kit.staff.BILLER }],
       openTables: [{ tableSessionId: id('session:T2'), tableLabel: 'T2' }],
       unsettledInvoices: [
         {
@@ -205,12 +213,12 @@ describe('[BILL-013] [RPT-005] day-end', () => {
     ]);
   });
 
-  it('refuses to close while shifts are open, bills unpaid or tables open', async () => {
+  it('refuses to close while bills are unpaid or tables open', async () => {
     const close = (body: object) => server().post('/api/v1/day-end').set(as(manager)).send(body);
     const blocked = await close({ businessDate: today });
     expect([blocked.status, codeOf(blocked)]).toEqual([409, 'DAY_END_BLOCKED']);
     expect(ApiError.parse(blocked.body).details).toMatchObject({
-      blockers: { openShifts: [{ shiftId: shift.id }] },
+      blockers: { unsettledInvoices: [{ invoiceId: takeaway.id }] },
     });
 
     expect((await pay(takeaway, { mode: 'UPI' })).status).toBe(200);

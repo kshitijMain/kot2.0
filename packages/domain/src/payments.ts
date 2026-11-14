@@ -91,6 +91,33 @@ export function cashVariance(counted: Paise, expected: number): number {
   return counted - expected;
 }
 
+/**
+ * The cash drawer is an optional add-on (ADR-0029): cash taken by someone with no open shift is
+ * recorded with no shift. This is how much of `payments` was: only cash, since nothing else goes
+ * in a drawer.
+ */
+export function cashOutsideShift(
+  payments: readonly {
+    readonly mode: PaymentMode;
+    readonly amount: Paise;
+    readonly shiftId: string | null;
+  }[],
+): Paise {
+  return sum(
+    payments
+      .filter((payment) => payment.mode === 'CASH' && payment.shiftId === null)
+      .map((payment) => payment.amount),
+  );
+}
+
+/** A shift closed at day end without a count (ADR-0029); an open one has not been counted *yet*. */
+export function shiftNotCounted(shift: {
+  readonly status: string;
+  readonly countedCash: number | bigint | null;
+}): boolean {
+  return shift.status === 'CLOSED' && shift.countedCash === null;
+}
+
 /** Totals a denomination count, e.g. { "500": 4, "100": 12 } in rupees (BILL-013 S). */
 export function countDenominations(denominations: Readonly<Record<string, number>>): Paise {
   let total = 0;

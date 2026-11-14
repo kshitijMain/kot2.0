@@ -201,7 +201,7 @@ export class ReportsService {
         ? []
         : this.prisma.$queryRaw<Omit<PaymentDayRow, 'business_date'>[]>`
             SELECT mode::text AS mode, mode_label, sum(payments)::bigint AS payments,
-                   sum(amount)::bigint AS amount
+                   sum(amount)::bigint AS amount, sum(outside_shift)::bigint AS outside_shift
             FROM daily_payment_modes
             WHERE restaurant_id = ${restaurantId}::uuid
               AND business_date = ANY(${split.summed}::date[])
@@ -209,7 +209,9 @@ export class ReportsService {
       paymentsByDay(this.prisma, restaurantId, split.live),
     ]);
     const modes = new Map<string, PaymentModesResponse['modes'][number]>();
+    let cashOutsideShift = 0;
     for (const row of [...summed, ...live]) {
+      cashOutsideShift += Number(row.outside_shift);
       const key = `${row.mode}|${row.mode_label ?? ''}|${String(row.mode_label === null)}`;
       const entry = modes.get(key) ?? {
         mode: row.mode,
@@ -232,6 +234,7 @@ export class ReportsService {
     return {
       ...range,
       modes: sorted,
+      cashOutsideShift,
       total: sorted.reduce((total, mode) => total + mode.amount, 0),
     };
   }

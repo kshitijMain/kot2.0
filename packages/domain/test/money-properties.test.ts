@@ -386,6 +386,7 @@ describe('[BILL-013] [RPT-001] property: the day’s report equals its invoices 
               mode: index % 2 === 0 ? ('CASH' as const) : ('UPI' as const),
               label: null,
               amount,
+              shiftId: index % 4 === 0 ? 'shift' : null,
             })),
             shifts: [],
             cashIn: 0,

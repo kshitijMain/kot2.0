@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { applyPayments, cashVariance, countDenominations, expectedCash } from '../src/payments.js';
+import {
+  applyPayments,
+  cashOutsideShift,
+  cashVariance,
+  countDenominations,
+  expectedCash,
+  shiftNotCounted,
+} from '../src/payments.js';
 
 describe('[BILL-008] recording payments', () => {
   it('splits across modes and settles when the payments equal the total', () => {
@@ -59,5 +66,24 @@ describe('[BILL-013] [AUD-006] shift cash', () => {
   it('counts denominations in rupees', () => {
     expect(countDenominations({ '500': 4, '100': 12, '10': 3, '0.5': 2 })).toBe(323_100);
     expect(() => countDenominations({ '-5': 1 })).toThrow();
+  });
+});
+
+describe('[BILL-013] the optional cash drawer (ADR-0029)', () => {
+  it('counts as outside a shift only cash linked to none', () => {
+    expect(
+      cashOutsideShift([
+        { mode: 'CASH', amount: 100, shiftId: null },
+        { mode: 'CASH', amount: 50, shiftId: 'mine' },
+        { mode: 'CARD', amount: 70, shiftId: null },
+      ]),
+    ).toBe(100);
+    expect(cashOutsideShift([])).toBe(0);
+  });
+
+  it('calls a shift "not counted" only once it is closed with no count', () => {
+    expect(shiftNotCounted({ status: 'CLOSED', countedCash: null })).toBe(true);
+    expect(shiftNotCounted({ status: 'CLOSED', countedCash: 0 })).toBe(false);
+    expect(shiftNotCounted({ status: 'OPEN', countedCash: null })).toBe(false);
   });
 });

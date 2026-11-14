@@ -1,5 +1,5 @@
 import { sum, type Paise } from './money.js';
-import type { PaymentMode } from './payments.js';
+import { cashOutsideShift, type PaymentMode } from './payments.js';
 
 /** An invoice of the business date, as issued (voided ones included, for the register). */
 export interface ZInvoice {
@@ -26,6 +26,8 @@ export interface ZPayment {
   /** The restaurant's name for an OTHER mode. */
   readonly label: string | null;
   readonly amount: Paise;
+  /** The shift it went into; null when whoever took it had none open (ADR-0029). */
+  readonly shiftId: string | null;
 }
 
 export interface ZShift {
@@ -35,6 +37,8 @@ export interface ZShift {
   readonly expectedCash: number;
   readonly countedCash: Paise | null;
   readonly variance: number | null;
+  /** Closed at day end without counting the drawer (ADR-0029). */
+  readonly notCounted: boolean;
 }
 
 export interface ZReportInput {
@@ -75,7 +79,12 @@ export interface ZReport {
     amount: Paise;
   }[];
   readonly paymentsTotal: Paise;
-  readonly cash: { readonly cashIn: Paise; readonly cashOut: Paise };
+  readonly cash: {
+    readonly cashIn: Paise;
+    readonly cashOut: Paise;
+    /** Cash taken that went into nobody's shift, so no drawer count covers it (ADR-0029). */
+    readonly outsideShift: Paise;
+  };
   readonly shifts: readonly ZShift[];
   readonly totalVariance: number;
 }
@@ -148,7 +157,11 @@ export function buildZReport(input: ZReportInput): ZReport {
     taxes: [...taxes.values()].sort((a, b) => a.rateBp - b.rateBp || a.code.localeCompare(b.code)),
     payments: [...payments.values()],
     paymentsTotal: sum(input.payments.map((payment) => payment.amount)),
-    cash: { cashIn: input.cashIn, cashOut: input.cashOut },
+    cash: {
+      cashIn: input.cashIn,
+      cashOut: input.cashOut,
+      outsideShift: cashOutsideShift(input.payments),
+    },
     shifts: input.shifts,
     totalVariance: input.shifts.reduce((variance, shift) => variance + (shift.variance ?? 0), 0),
   };

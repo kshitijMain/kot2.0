@@ -1857,6 +1857,8 @@ model DailyPaymentMode {
   modeLabel    String?     @map("mode_label")
   payments     Int
   amount       BigInt
+  /// Of `amount`, the cash that went into nobody's shift (ADR-0029).
+  outsideShift BigInt      @default(0) @map("outside_shift")
   createdAt    DateTime    @default(now()) @map("created_at") @db.Timestamptz(3)
   updatedAt    DateTime    @default(now()) @updatedAt @map("updated_at") @db.Timestamptz(3)
 

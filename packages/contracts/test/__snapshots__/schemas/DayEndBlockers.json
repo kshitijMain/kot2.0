@@ -2,25 +2,6 @@
   "input": {
     "type": "object",
     "properties": {
-      "openShifts": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "shiftId": {
-              "type": "string",
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-            },
-            "staffId": {
-              "type": "string",
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-            }
-          },
-          "required": ["shiftId", "staffId"]
-        }
-      },
       "openTables": {
         "type": "array",
         "items": {
@@ -53,31 +34,11 @@
         }
       }
     },
-    "required": ["openShifts", "openTables", "unsettledInvoices"]
+    "required": ["openTables", "unsettledInvoices"]
   },
   "output": {
     "type": "object",
     "properties": {
-      "openShifts": {
-        "type": "array",
-        "items": {
-          "type": "object",
-          "properties": {
-            "shiftId": {
-              "type": "string",
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-            },
-            "staffId": {
-              "type": "string",
-              "format": "uuid",
-              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-            }
-          },
-          "required": ["shiftId", "staffId"],
-          "additionalProperties": false
-        }
-      },
       "openTables": {
         "type": "array",
         "items": {
@@ -112,7 +73,7 @@
         }
       }
     },
-    "required": ["openShifts", "openTables", "unsettledInvoices"],
+    "required": ["openTables", "unsettledInvoices"],
     "additionalProperties": false
   }
 }

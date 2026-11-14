@@ -36,6 +36,7 @@ export const SUSPICIOUS_LABELS: Record<SuspiciousKind, string> = {
   DISCOUNT_OVER_LIMIT: 'Discount above the threshold',
   REPEATED_REPRINT: 'Printed again repeatedly',
   CASH_VARIANCE: 'Cash variance above the threshold',
+  SHIFT_NOT_COUNTED: 'Shift closed without counting the drawer',
   CANCELLED_AFTER_PREP: 'Voided after cooking started',
   SENT_NOT_BILLED: 'Sent to the kitchen, never billed',
   NO_SALE_DRAWER: 'Drawer opened without a sale',
@@ -168,6 +169,10 @@ export class ReportDocumentsService {
               ['Total', null, null, payments.total],
             ],
             totalRow: true,
+          },
+          {
+            columns: columns(['Of the cash', 'text'], ['Amount', 'money']),
+            rows: [['Cash taken outside a shift', payments.cashOutsideShift]],
           },
         ];
       }

@@ -99,6 +99,8 @@ export interface PaymentDayRow {
   readonly mode_label: string | null;
   readonly payments: bigint;
   readonly amount: bigint;
+  /** Of `amount`, the cash that went into nobody's shift (ADR-0029). */
+  readonly outside_shift: bigint;
 }
 
 /** RPT-005: payments taken, by the business date they were taken and their mode. */
@@ -110,7 +112,9 @@ export function paymentsByDay(
   if (dates.length === 0) return Promise.resolve([]);
   return client.$queryRaw<PaymentDayRow[]>`
     SELECT business_date, mode::text AS mode, mode_label, count(*) AS payments,
-           coalesce(sum(amount), 0) AS amount
+           coalesce(sum(amount), 0) AS amount,
+           coalesce(sum(amount) FILTER (WHERE mode = 'CASH' AND shift_id IS NULL), 0)
+             AS outside_shift
     FROM payments
     WHERE restaurant_id = ${restaurantId}::uuid AND status = 'CAPTURED'
       AND business_date = ANY(${dates}::date[])

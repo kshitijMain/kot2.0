@@ -99,6 +99,7 @@ export class SuspiciousActivityService {
       () => this.bigDiscounts(restaurantId, range, thresholds.discountFlagBp),
       () => this.repeatedReprints(restaurantId, range, thresholds.reprintFlagCount),
       () => this.cashVariances(restaurantId, range, thresholds.cashVarianceFlagPaise),
+      () => this.shiftsNotCounted(restaurantId, range),
       () => this.cookedVoids(restaurantId, range),
       () => this.sentNotBilled(restaurantId, range, today),
       () => this.noSaleOpenings(restaurantId, range),
@@ -475,6 +476,40 @@ export class SuspiciousActivityService {
       byId: row.staff_id,
       alsoByIds: row.closer_id !== null && row.closer_id !== row.staff_id ? [row.closer_id] : [],
       amount: num(row.variance),
+    }));
+  }
+
+  /** Shifts closed at day end without counting the drawer: what it should have held (ADR-0029). */
+  private async shiftsNotCounted(restaurantId: string, range: ReportRangeQuery): Promise<Draft[]> {
+    const rows = await this.prisma.$queryRaw<
+      {
+        id: string;
+        business_date: Date;
+        closed_at: Date;
+        staff_id: string;
+        expected_cash: bigint | null;
+        closer_id: string | null;
+      }[]
+    >`
+      SELECT s.id, s.business_date, s.closed_at, s.staff_id, s.expected_cash,
+             (SELECT a.actor_id FROM audit_log a
+              WHERE a.entity_type = 'shift' AND a.entity_id = s.id
+                AND a.action = 'SHIFT_CLOSED_NOT_COUNTED'
+              ORDER BY a.occurred_at DESC LIMIT 1) AS closer_id
+      FROM shifts s
+      WHERE s.restaurant_id = ${restaurantId}::uuid AND s.status = 'CLOSED'
+        AND s.business_date BETWEEN ${range.from}::date AND ${range.to}::date
+        AND s.closed_at IS NOT NULL AND s.counted_cash IS NULL`;
+    return rows.map((row) => ({
+      ...EMPTY,
+      flagId: `SHIFT_NOT_COUNTED:${row.id}`,
+      kind: 'SHIFT_NOT_COUNTED',
+      at: row.closed_at.toISOString(),
+      businessDate: isoDateOf(row.business_date),
+      // The drawer is the shift holder's; a manager who closed it for them is listed too.
+      byId: row.staff_id,
+      alsoByIds: row.closer_id !== null && row.closer_id !== row.staff_id ? [row.closer_id] : [],
+      amount: row.expected_cash === null ? null : num(row.expected_cash),
     }));
   }
 

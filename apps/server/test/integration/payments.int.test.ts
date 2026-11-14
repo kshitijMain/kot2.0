@@ -250,7 +250,7 @@ describe('[BILL-008] recording payments', () => {
     expect([again.status, codeOf(again)]).toEqual([409, 'INVOICE_SETTLED']);
   });
 
-  it('takes a bill in steps; cash needs an open shift; [TBL-004] then the table needs cleaning', async () => {
+  it('takes a bill in steps; cash needs no shift (ADR-0029); [TBL-004] then the table needs cleaning', async () => {
     const cleaning = (value: boolean) =>
       server()
         .put('/api/v1/settings/tables.needsCleaning')
@@ -270,13 +270,15 @@ describe('[BILL-008] recording payments', () => {
     });
     expect(part.payments[0]?.shiftId).toBeNull();
 
-    const cashWithoutShift = await pay(second.id, [{ mode: 'CASH', amount: 10_000 }], manager);
-    expect([cashWithoutShift.status, codeOf(cashWithoutShift)]).toEqual([409, 'NO_OPEN_SHIFT']);
+    const cashPart = InvoicePaymentsView.parse(
+      (await pay(second.id, [{ mode: 'CASH', amount: 4_000 }], manager)).body,
+    );
+    expect(cashPart.payments[1]).toMatchObject({ mode: 'CASH', amount: 4_000, shiftId: null });
     const rest = InvoicePaymentsView.parse(
-      (await pay(second.id, [{ mode: 'OTHER', amount: 10_000, otherModeName: 'Other' }])).body,
+      (await pay(second.id, [{ mode: 'OTHER', amount: 6_000, otherModeName: 'Other' }])).body,
     );
     expect(rest).toMatchObject({ status: 'SETTLED', remaining: 0, tableClosed: true });
-    expect(rest.payments[1]).toMatchObject({ mode: 'OTHER', modeLabel: 'Other' });
+    expect(rest.payments[2]).toMatchObject({ mode: 'OTHER', modeLabel: 'Other' });
     const table = await prisma.diningTable.findUniqueOrThrow({ where: { id: id('T2') } });
     expect(table.state).toBe('NEEDS_CLEANING');
     expect((await cleaning(false)).status).toBe(200);
@@ -284,21 +286,19 @@ describe('[BILL-008] recording payments', () => {
     const fetched = InvoicePaymentsView.parse(
       (await server().get(`/api/v1/invoices/${second.id}/payments`).set(as(cashier))).body,
     );
-    expect(fetched.payments).toHaveLength(2);
+    expect(fetched.payments).toHaveLength(3);
   });
 });
 
 describe('[BILL-013] [AUD-006] cash in the drawer and closing the shift', () => {
-  it('records cash in and out with a reason, by any manager on any shift', async () => {
+  it('records cash in and out with a reason, only on the person’s own shift (ADR-0029)', async () => {
     const move = (login: LoginResponse, body: object) =>
       server().post(`/api/v1/shifts/${shift.id}/cash-movements`).set(as(login)).send(body);
     expect((await move(waiter, { direction: 'IN', amount: 100, reason: 'Change' })).status).toBe(
       403,
     );
-    // Another manager may record cash on this shift (no cashier's own shift, ADR-0023).
-    expect(
-      (await move(otherCashier, { direction: 'IN', amount: 100, reason: 'Change' })).status,
-    ).toBe(200);
+    const other = await move(otherCashier, { direction: 'IN', amount: 100, reason: 'Change' });
+    expect([other.status, codeOf(other)]).toEqual([409, 'OWN_SHIFT_REQUIRED']);
     expect((await move(cashier, { direction: 'IN', amount: 10_000 })).status).toBe(400);
 
     const cashIn = await move(cashier, {
@@ -307,23 +307,22 @@ describe('[BILL-013] [AUD-006] cash in the drawer and closing the shift', () => 
       reason: 'Change from the bank',
     });
     expect(cashIn.status, JSON.stringify(cashIn.body)).toBe(200);
-    const byManager = ShiftView.parse(
-      (await move(manager, { direction: 'OUT', amount: 5_000, reason: 'Milk delivery' })).body,
+    const cashOut = ShiftView.parse(
+      (await move(cashier, { direction: 'OUT', amount: 5_000, reason: 'Milk delivery' })).body,
     );
-    expect(byManager).toMatchObject({
+    expect(cashOut).toMatchObject({
       cashPayments: 27_200,
-      cashIn: 10_100,
+      cashIn: 10_000,
       cashOut: 5_000,
-      expectedCash: 232_300,
+      expectedCash: 232_200,
     });
-    expect(byManager.movements.map((movement) => movement.reason)).toEqual([
-      'Change',
+    expect(cashOut.movements.map((movement) => movement.reason)).toEqual([
       'Change from the bank',
       'Milk delivery',
     ]);
     expect(
       await prisma.auditLog.count({ where: { action: { in: ['CASH_IN', 'CASH_OUT'] } } }),
-    ).toBe(3);
+    ).toBe(2);
   });
 
   it('closes against a denomination count and records the variance', async () => {
@@ -334,16 +333,16 @@ describe('[BILL-013] [AUD-006] cash in the drawer and closing the shift', () => 
     expect(closed.status, JSON.stringify(closed.body)).toBe(200);
     expect(ShiftView.parse(closed.body)).toMatchObject({
       status: 'CLOSED',
-      expectedCash: 232_300,
+      expectedCash: 232_200,
       countedCash: 232_000,
-      variance: -300,
+      variance: -200,
       denominations: { '500': 4, '100': 3, '10': 2 },
     });
     const audit = await prisma.auditLog.findFirstOrThrow({ where: { action: 'SHIFT_CLOSED' } });
     expect(audit.after).toMatchObject({
-      expectedCash: 232_300,
+      expectedCash: 232_200,
       countedCash: 232_000,
-      variance: -300,
+      variance: -200,
     });
 
     const late = await server()

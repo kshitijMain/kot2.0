@@ -1,4 +1,3 @@
-import { ApiRequestError } from '@rp/api-client';
 import type { InvoicePaymentsView } from '@rp/contracts';
 import { formatRupees } from '@rp/domain';
 import {
@@ -39,12 +38,10 @@ export function PaymentScreen({
   invoiceId,
   onBack,
   onDone,
-  onOpenShift,
 }: {
   invoiceId: string;
   onBack: () => void;
   onDone: () => void;
-  onOpenShift: () => void;
 }) {
   const t = useT();
   const controller = useConsole();
@@ -79,7 +76,6 @@ export function PaymentScreen({
             if (settled) onDone();
             else reload();
           }}
-          onOpenShift={onOpenShift}
         />
       ) : null}
     </section>
@@ -89,11 +85,9 @@ export function PaymentScreen({
 function PaymentForm({
   view,
   onRecorded,
-  onOpenShift,
 }: {
   view: InvoicePaymentsView;
   onRecorded: (settled: boolean) => void;
-  onOpenShift: () => void;
 }) {
   const t = useT();
   const controller = useConsole();
@@ -106,7 +100,6 @@ function PaymentForm({
   const [reference, setReference] = useState('');
   const [invalid, setInvalid] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
-  const [needShift, setNeedShift] = useState(false);
   const [busy, setBusy] = useState(false);
   // One key per set of payments: sending the same set again is recognised (ORD-013 style).
   const [key, setKey] = useState(newKey);
@@ -148,7 +141,6 @@ function PaymentForm({
   const record = async (payments: readonly PlannedPayment[], idempotencyKey: string) => {
     setBusy(true);
     setError(undefined);
-    setNeedShift(false);
     try {
       const result = await controller.api.recordPayments({
         params: { id: view.invoiceId },
@@ -191,7 +183,6 @@ function PaymentForm({
       // The key is kept: sending again cannot record the payments twice.
       const message = messageOf(failure, t);
       setError(t('payment.notRecorded', { message }));
-      setNeedShift(failure instanceof ApiRequestError && failure.code === 'NO_OPEN_SHIFT');
     } finally {
       setBusy(false);
     }
@@ -279,11 +270,6 @@ function PaymentForm({
             {error}
           </p>
         )}
-        {needShift ? (
-          <Button variant="secondary" onClick={onOpenShift}>
-            {t('payment.openShift')}
-          </Button>
-        ) : null}
         <Select
           label={t('payment.mode')}
           value={mode}

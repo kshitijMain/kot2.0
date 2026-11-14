@@ -3,9 +3,10 @@ import { Id, IdempotencyKey, IsoDate, Paise, PaymentMode, Timestamp } from './co
 
 /**
  * Shifts, cash and payments (P1-11a, BILL-008, BILL-013). Payments are recorded by hand: no card
- * terminal or UPI integration. A manager works in a shift that starts with a cash float; cash in
- * and out need a reason; closing the shift compares the counted cash with what the drawer should
- * hold.
+ * terminal or UPI integration. A shift is an optional add-on (ADR-0029): someone who wants to track
+ * their cash drawer opens their own with a float, and the cash they take goes into it; cash in and
+ * out need a reason and that person's own open shift; closing compares the counted cash with what
+ * the drawer should hold.
  */
 
 const Reason = z.string().trim().min(3).max(200);
@@ -65,6 +66,8 @@ export const ShiftView = z.object({
   countedCash: Paise.nullable(),
   /** Counted − expected: negative is short. */
   variance: z.int().nullable(),
+  /** Closed at day end without counting the drawer (ADR-0029). */
+  notCounted: z.boolean(),
   denominations: Denominations.nullable(),
   movements: z.array(CashMovementView),
 });

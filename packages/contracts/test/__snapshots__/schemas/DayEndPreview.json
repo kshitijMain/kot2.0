@@ -11,25 +11,6 @@
       "blockers": {
         "type": "object",
         "properties": {
-          "openShifts": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "shiftId": {
-                  "type": "string",
-                  "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                },
-                "staffId": {
-                  "type": "string",
-                  "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                }
-              },
-              "required": ["shiftId", "staffId"]
-            }
-          },
           "openTables": {
             "type": "array",
             "items": {
@@ -62,7 +43,32 @@
             }
           }
         },
-        "required": ["openShifts", "openTables", "unsettledInvoices"]
+        "required": ["openTables", "unsettledInvoices"]
+      },
+      "openShifts": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "shiftId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "staffId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "staffName": { "type": "string" },
+            "expectedCash": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": ["shiftId", "staffId", "staffName", "expectedCash"]
+        }
       },
       "report": {
         "type": "object",
@@ -126,9 +132,10 @@
             "type": "object",
             "properties": {
               "cashIn": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
-              "cashOut": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+              "cashOut": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+              "outsideShift": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
             },
-            "required": ["cashIn", "cashOut"]
+            "required": ["cashIn", "cashOut", "outsideShift"]
           },
           "shifts": {
             "type": "array",
@@ -166,7 +173,8 @@
                     },
                     { "type": "null" }
                   ]
-                }
+                },
+                "notCounted": { "type": "boolean" }
               },
               "required": [
                 "shiftId",
@@ -174,7 +182,8 @@
                 "openingFloat",
                 "expectedCash",
                 "countedCash",
-                "variance"
+                "variance",
+                "notCounted"
               ]
             }
           },
@@ -204,7 +213,7 @@
         ]
       }
     },
-    "required": ["businessDate", "status", "blockers", "report"]
+    "required": ["businessDate", "status", "blockers", "openShifts", "report"]
   },
   "output": {
     "type": "object",
@@ -218,26 +227,6 @@
       "blockers": {
         "type": "object",
         "properties": {
-          "openShifts": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "shiftId": {
-                  "type": "string",
-                  "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                },
-                "staffId": {
-                  "type": "string",
-                  "format": "uuid",
-                  "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
-                }
-              },
-              "required": ["shiftId", "staffId"],
-              "additionalProperties": false
-            }
-          },
           "openTables": {
             "type": "array",
             "items": {
@@ -272,8 +261,34 @@
             }
           }
         },
-        "required": ["openShifts", "openTables", "unsettledInvoices"],
+        "required": ["openTables", "unsettledInvoices"],
         "additionalProperties": false
+      },
+      "openShifts": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "shiftId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "staffId": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            },
+            "staffName": { "type": "string" },
+            "expectedCash": {
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": ["shiftId", "staffId", "staffName", "expectedCash"],
+          "additionalProperties": false
+        }
       },
       "report": {
         "type": "object",
@@ -340,9 +355,10 @@
             "type": "object",
             "properties": {
               "cashIn": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
-              "cashOut": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+              "cashOut": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+              "outsideShift": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
             },
-            "required": ["cashIn", "cashOut"],
+            "required": ["cashIn", "cashOut", "outsideShift"],
             "additionalProperties": false
           },
           "shifts": {
@@ -381,7 +397,8 @@
                     },
                     { "type": "null" }
                   ]
-                }
+                },
+                "notCounted": { "type": "boolean" }
               },
               "required": [
                 "shiftId",
@@ -389,7 +406,8 @@
                 "openingFloat",
                 "expectedCash",
                 "countedCash",
-                "variance"
+                "variance",
+                "notCounted"
               ],
               "additionalProperties": false
             }
@@ -421,7 +439,7 @@
         "additionalProperties": false
       }
     },
-    "required": ["businessDate", "status", "blockers", "report"],
+    "required": ["businessDate", "status", "blockers", "openShifts", "report"],
     "additionalProperties": false
   }
 }

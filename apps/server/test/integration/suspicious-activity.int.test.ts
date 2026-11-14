@@ -563,6 +563,7 @@ describe('[RPT-014] [AUD-006] the suspicious-activity report (S12)', () => {
       DISCOUNT_OVER_LIMIT: 1,
       REPEATED_REPRINT: 2,
       CASH_VARIANCE: 1,
+      SHIFT_NOT_COUNTED: 0,
       CANCELLED_AFTER_PREP: 1,
       SENT_NOT_BILLED: 1,
       NO_SALE_DRAWER: 1,

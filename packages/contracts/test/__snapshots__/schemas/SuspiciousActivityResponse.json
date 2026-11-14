@@ -39,6 +39,7 @@
                 "DISCOUNT_OVER_LIMIT",
                 "REPEATED_REPRINT",
                 "CASH_VARIANCE",
+                "SHIFT_NOT_COUNTED",
                 "CANCELLED_AFTER_PREP",
                 "SENT_NOT_BILLED",
                 "NO_SALE_DRAWER"
@@ -191,6 +192,7 @@
                 "DISCOUNT_OVER_LIMIT",
                 "REPEATED_REPRINT",
                 "CASH_VARIANCE",
+                "SHIFT_NOT_COUNTED",
                 "CANCELLED_AFTER_PREP",
                 "SENT_NOT_BILLED",
                 "NO_SALE_DRAWER"
@@ -261,6 +263,7 @@
                 "DISCOUNT_OVER_LIMIT",
                 "REPEATED_REPRINT",
                 "CASH_VARIANCE",
+                "SHIFT_NOT_COUNTED",
                 "CANCELLED_AFTER_PREP",
                 "SENT_NOT_BILLED",
                 "NO_SALE_DRAWER"
@@ -417,6 +420,7 @@
                 "DISCOUNT_OVER_LIMIT",
                 "REPEATED_REPRINT",
                 "CASH_VARIANCE",
+                "SHIFT_NOT_COUNTED",
                 "CANCELLED_AFTER_PREP",
                 "SENT_NOT_BILLED",
                 "NO_SALE_DRAWER"

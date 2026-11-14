@@ -37,7 +37,12 @@ export const ZReportView = z.object({
     }),
   ),
   paymentsTotal: Paise,
-  cash: z.object({ cashIn: Paise, cashOut: Paise }),
+  cash: z.object({
+    cashIn: Paise,
+    cashOut: Paise,
+    /** Cash taken that went into nobody's shift (ADR-0029). */
+    outsideShift: Paise,
+  }),
   shifts: z.array(
     z.object({
       shiftId: Id,
@@ -46,6 +51,8 @@ export const ZReportView = z.object({
       expectedCash: z.int(),
       countedCash: Paise.nullable(),
       variance: z.int().nullable(),
+      /** Closed at day end without counting the drawer (ADR-0029). */
+      notCounted: z.boolean(),
     }),
   ),
   totalVariance: z.int(),
@@ -54,8 +61,6 @@ export type ZReportView = z.infer<typeof ZReportView>;
 
 /** What stands in the way of closing the day. */
 export const DayEndBlockers = z.object({
-  /** Close these shifts first. */
-  openShifts: z.array(z.object({ shiftId: Id, staffId: Id })),
   /** Settle these tables, or carry them forward with `carryForwardTables`. */
   openTables: z.array(z.object({ tableSessionId: Id, tableLabel: z.string() })),
   /** Unpaid bills with no open table: take payment or void them. */
@@ -65,10 +70,24 @@ export const DayEndBlockers = z.object({
 });
 export type DayEndBlockers = z.infer<typeof DayEndBlockers>;
 
+/**
+ * A shift still open at day end (ADR-0029). It does not stop the day closing: the manager may count
+ * and close it now, close it as not counted, or leave it running into the next business date.
+ */
+export const DayEndOpenShift = z.object({
+  shiftId: Id,
+  staffId: Id,
+  staffName: z.string(),
+  /** What the drawer should hold now. */
+  expectedCash: z.int(),
+});
+export type DayEndOpenShift = z.infer<typeof DayEndOpenShift>;
+
 export const DayEndPreview = z.object({
   businessDate: IsoDate,
   status: z.enum(['OPEN', 'CLOSED']),
   blockers: DayEndBlockers,
+  openShifts: z.array(DayEndOpenShift),
   report: ZReportView,
 });
 export type DayEndPreview = z.infer<typeof DayEndPreview>;

@@ -11,7 +11,7 @@ import {
   TextField,
   useToast,
 } from '@rp/ui-web';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useConsole } from '../app/console-context.js';
 import { useT } from '../app/i18n.js';
 import { messageOf } from '../app/messages.js';
@@ -50,9 +50,9 @@ export function denominationCounts(
 const never = () => false;
 
 /**
- * The manager's cash shift (BILL-013, BILL-008): open it with the float counted into the drawer, record
- * cash taken in or out with a reason, and close it with the counted cash; the server says what the
- * drawer should hold and the difference.
+ * The manager's own cash shift (BILL-013, BILL-008), an optional add-on (ADR-0029): open it with the
+ * float counted into the drawer, record cash taken in or out with a reason, and close it with the
+ * counted cash; the server says what the drawer should hold and the difference.
  */
 export function ShiftScreen({
   onBack,
@@ -106,6 +106,9 @@ function OpenShift({ onOpened }: { onOpened: () => void }) {
   const [float, setFloat] = useState('');
   const [error, setError] = useState<string | undefined>();
   const [busy, setBusy] = useState(false);
+  // Cash in or out and no sale need a counted drawer: pressed without one, they say so (ADR-0029).
+  const [explained, setExplained] = useState(false);
+  const floatField = useRef<HTMLInputElement>(null);
 
   const open = async () => {
     const openingFloat = float.trim() === '0' ? 0 : paiseFromInput(float);
@@ -125,29 +128,59 @@ function OpenShift({ onOpened }: { onOpened: () => void }) {
     }
   };
 
+  const explain = () => {
+    setExplained(true);
+  };
+
   return (
-    <Card title={t('shift.none')} headingLevel={3}>
-      <form
-        className="console-form"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void open();
-        }}
-      >
-        <TextField
-          label={t('shift.openingFloat')}
-          inputMode="decimal"
-          value={float}
-          error={error}
-          onChange={(event) => {
-            setFloat(event.target.value);
+    <div className="bill__panel">
+      <Card title={t('shift.none')} headingLevel={3}>
+        <p className="dashboard-section__hint">{t('shift.addOn')}</p>
+        <form
+          className="console-form"
+          onSubmit={(event) => {
+            event.preventDefault();
+            void open();
           }}
-        />
-        <Button type="submit" loading={busy}>
-          {t('shift.open')}
-        </Button>
-      </form>
-    </Card>
+        >
+          <TextField
+            ref={floatField}
+            label={t('shift.openingFloat')}
+            inputMode="decimal"
+            value={float}
+            error={error}
+            onChange={(event) => {
+              setFloat(event.target.value);
+            }}
+          />
+          <Button type="submit" loading={busy}>
+            {t('shift.open')}
+          </Button>
+        </form>
+      </Card>
+      <Card title={t('shift.drawerActions')} headingLevel={3}>
+        <div className="console-form">
+          <Button variant="secondary" onClick={explain}>
+            {t('shift.movement')}
+          </Button>
+          <Button variant="secondary" onClick={explain}>
+            {t('shift.noSale')}
+          </Button>
+          {explained ? (
+            <>
+              <p className="console-notice">{t('shift.needsShift')}</p>
+              <Button
+                onClick={() => {
+                  floatField.current?.focus();
+                }}
+              >
+                {t('shift.offerOpen')}
+              </Button>
+            </>
+          ) : null}
+        </div>
+      </Card>
+    </div>
   );
 }
 

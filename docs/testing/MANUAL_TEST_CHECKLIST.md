@@ -83,15 +83,15 @@ Detailed procedure: `manual-tasks/12-tablet-kiosk.md`.
 
 ## 6. POS and billing (managers)
 
-| #   | Steps                                                                                             | Expected                                                                                              | Pass/Fail | Notes |
-| --- | ------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- | --------- | ----- |
-| 6.1 | Give a flat ₹50 discount on a bill (with reason).                                                 | The bill total goes down by ₹50 plus its tax (QA-001).                                                | ☐         |       |
-| 6.2 | Reopen a printed, unpaid bill with Edit bill; try to take payment before printing it again.       | Payment refused: "This bill is open for changes. Print it again before taking payment." (QA-005).     | ☐         |       |
-| 6.3 | Take part payment on a bill, then try Edit bill.                                                  | Refused: "Part of this bill is paid…" (QA-005, decision 84).                                          | ☐         |       |
-| 6.4 | Two managers on two tills open the same table's bill at the same moment.                          | Both see the same bill; no error (QA-012).                                                            | ☐         |       |
-| 6.5 | Manager starts closing their shift on one till while the same manager takes cash on another till. | The cash is refused ("Open a shift…") or lands before the close; the shift's count is right (QA-013). | ☐         |       |
-| 6.6 | Run day-end while a payment is being taken on another till.                                       | The payment shows on one day's report only; no money missing from both (QA-010).                      | ☐         |       |
-| 6.7 | Unplug the POS PC's network cable (if the POS is a separate PC) and take an order.                | A clear "cannot reach the server" message; no white screen; it recovers when plugged back.            | ☐         |       |
+| #   | Steps                                                                                             | Expected                                                                                            | Pass/Fail | Notes |
+| --- | ------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | --------- | ----- |
+| 6.1 | Give a flat ₹50 discount on a bill (with reason).                                                 | The bill total goes down by ₹50 plus its tax (QA-001).                                              | ☐         |       |
+| 6.2 | Reopen a printed, unpaid bill with Edit bill; try to take payment before printing it again.       | Payment refused: "This bill is open for changes. Print it again before taking payment." (QA-005).   | ☐         |       |
+| 6.3 | Take part payment on a bill, then try Edit bill.                                                  | Refused: "Part of this bill is paid…" (QA-005, decision 84).                                        | ☐         |       |
+| 6.4 | Two managers on two tills open the same table's bill at the same moment.                          | Both see the same bill; no error (QA-012).                                                          | ☐         |       |
+| 6.5 | Manager starts closing their shift on one till while the same manager takes cash on another till. | The cash lands before the close, or is recorded with no shift; the shift's count is right (QA-013). | ☐         |       |
+| 6.6 | Run day-end while a payment is being taken on another till.                                       | The payment shows on one day's report only; no money missing from both (QA-010).                    | ☐         |       |
+| 6.7 | Unplug the POS PC's network cable (if the POS is a separate PC) and take an order.                | A clear "cannot reach the server" message; no white screen; it recovers when plugged back.          | ☐         |       |
 
 ## 7. Manager dashboard
 

@@ -29,10 +29,10 @@ describe('[BILL-013] [RPT-005] the Z-report', () => {
       { code: 'CGST', rateBp: 900, taxableValue: 2_000, amount: 180 },
     ],
     payments: [
-      { mode: 'CASH', label: null, amount: 10_500 },
-      { mode: 'CARD', label: null, amount: 15_000 },
-      { mode: 'OTHER', label: 'Dineout', amount: 6_000 },
-      { mode: 'CARD', label: null, amount: 0 },
+      { mode: 'CASH', label: null, amount: 10_500, shiftId: 's1' },
+      { mode: 'CARD', label: null, amount: 15_000, shiftId: 's1' },
+      { mode: 'OTHER', label: 'Dineout', amount: 6_000, shiftId: null },
+      { mode: 'CARD', label: null, amount: 0, shiftId: null },
     ],
     shifts: [
       {
@@ -42,6 +42,7 @@ describe('[BILL-013] [RPT-005] the Z-report', () => {
         expectedCash: 210_500,
         countedCash: 210_000,
         variance: -500,
+        notCounted: false,
       },
       {
         shiftId: 's2',
@@ -50,6 +51,7 @@ describe('[BILL-013] [RPT-005] the Z-report', () => {
         expectedCash: 0,
         countedCash: 100,
         variance: 100,
+        notCounted: false,
       },
     ],
     cashIn: 1_000,
@@ -87,6 +89,64 @@ describe('[BILL-013] [RPT-005] the Z-report', () => {
 
   it('[AUD-006] adds up the shift variances', () => {
     expect(report.totalVariance).toBe(-400);
-    expect(report.cash).toEqual({ cashIn: 1_000, cashOut: 2_000 });
+    expect(report.cash).toEqual({ cashIn: 1_000, cashOut: 2_000, outsideShift: 0 });
+  });
+});
+
+describe('[BILL-013] cash outside a shift (ADR-0029)', () => {
+  const outside = (payments: Parameters<typeof buildZReport>[0]['payments']) =>
+    buildZReport({
+      businessDate: '2026-09-26',
+      orders: 1,
+      invoices: [],
+      taxLines: [],
+      payments,
+      shifts: [],
+      cashIn: 0,
+      cashOut: 0,
+    });
+
+  it('adds up only the cash linked to no shift, and leaves the total cash as it was', () => {
+    const report = outside([
+      { mode: 'CASH', label: null, amount: 30_000, shiftId: null },
+      { mode: 'CASH', label: null, amount: 10_000, shiftId: 's1' },
+      // Only cash is ever "in a drawer": a UPI payment with no shift is not untracked cash.
+      { mode: 'UPI', label: null, amount: 7_000, shiftId: null },
+      { mode: 'OTHER', label: 'Cheque', amount: 2_000, shiftId: null },
+    ]);
+    expect(report.cash.outsideShift).toBe(30_000);
+    expect(report.payments.find((line) => line.mode === 'CASH')?.amount).toBe(40_000);
+    expect(report.paymentsTotal).toBe(49_000);
+  });
+
+  it('is nothing when all the cash went into shifts', () => {
+    expect(
+      outside([{ mode: 'CASH', label: null, amount: 500, shiftId: 's1' }]).cash.outsideShift,
+    ).toBe(0);
+  });
+
+  it('leaves a shift closed as "not counted" out of the difference', () => {
+    const report = buildZReport({
+      businessDate: '2026-09-26',
+      orders: 0,
+      invoices: [],
+      taxLines: [],
+      payments: [],
+      shifts: [
+        {
+          shiftId: 's1',
+          staffId: 'a',
+          openingFloat: 0,
+          expectedCash: 9_000,
+          countedCash: null,
+          variance: null,
+          notCounted: true,
+        },
+      ],
+      cashIn: 0,
+      cashOut: 0,
+    });
+    expect(report.totalVariance).toBe(0);
+    expect(report.shifts[0]?.notCounted).toBe(true);
   });
 });

@@ -318,8 +318,10 @@ describe('[BILL-013] cash taken while the cashier’s shift is being closed (QA-
     release();
     await closing;
     const paid = await payment;
-    expect(paid.status, JSON.stringify(paid.body)).toBe(409);
-    expect(paid.body).toMatchObject({ code: 'NO_OPEN_SHIFT' });
+    // The cash waited for the close and went into no shift, so the count stays right (ADR-0029
+    // lets cash be taken with no shift; it was refused here before).
+    expect(paid.status, JSON.stringify(paid.body)).toBe(200);
     expect(await prisma.payment.count({ where: { shiftId } })).toBe(0);
+    expect(await prisma.payment.count({ where: { invoiceId: invoice.id, shiftId: null } })).toBe(1);
   });
 });

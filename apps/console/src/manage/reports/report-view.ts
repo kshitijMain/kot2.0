@@ -126,6 +126,7 @@ export function flagSubject(flag: Flag, t: Translator): string {
     flag.item === null ? null : { item: flag.item, quantity: String(flag.quantity ?? 1) };
   switch (flag.kind) {
     case 'CASH_VARIANCE':
+    case 'SHIFT_NOT_COUNTED':
       return t('reportsPage.suspicious.shift');
     case 'NO_SALE_DRAWER':
       return t('reportsPage.suspicious.drawer');

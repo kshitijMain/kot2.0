@@ -1672,7 +1672,7 @@
       "post": {
         "operationId": "openCashDrawer",
         "summary": "Open the cash drawer without a sale, with a reason",
-        "description": "BILL-016, AUD-006. The receipt printer kicks the drawer; an opening is audited (CASH_DRAWER_OPENED) and appears in the suspicious-activity report.",
+        "description": "BILL-016, AUD-006, ADR-0029. Needs the person’s own open shift. The receipt printer kicks the drawer; an opening is audited (CASH_DRAWER_OPENED) and appears in the suspicious-activity report.",
         "tags": ["payments"],
         "requestBody": {
           "required": true,
@@ -1705,6 +1705,12 @@
           },
           "403": {
             "description": "The signed-in role lacks the required capability.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "The person has no open shift (`OWN_SHIFT_REQUIRED`).",
             "content": {
               "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
@@ -1886,7 +1892,7 @@
       "post": {
         "operationId": "closeDay",
         "summary": "Close the business date and keep its Z-report",
-        "description": "BILL-013. Refused while shifts are open or takeaway bills are unpaid; open tables block unless carried forward to the next business date. Afterwards everything recorded belongs to the next business date. Audited.",
+        "description": "BILL-013, ADR-0029. Refused while takeaway bills are unpaid; open tables block unless carried forward to the next business date. An open shift does not block: it runs on into the next date. Afterwards everything recorded belongs to the next business date. Audited.",
         "tags": ["day-end"],
         "requestBody": {
           "required": true,
@@ -4236,7 +4242,7 @@
       "post": {
         "operationId": "recordPayments",
         "summary": "Record payments against an invoice; settled when they equal the total",
-        "description": "BILL-008. Split across modes and paid in steps, never more than the total. Cash needs an open shift. When a table’s last bill is paid, the table is freed. Idempotent. Audited.",
+        "description": "BILL-008. Split across modes and paid in steps, never more than the total. Cash goes into the shift of the person taking it when they have one open, and into none otherwise (ADR-0029). When a table’s last bill is paid, the table is freed. Idempotent. Audited.",
         "tags": ["payments"],
         "parameters": [
           {
@@ -4292,7 +4298,7 @@
             }
           },
           "409": {
-            "description": "Voided or already settled, or cash without an open shift.",
+            "description": "Voided or already settled.",
             "content": {
               "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
@@ -11149,7 +11155,7 @@
       "post": {
         "operationId": "recordCashMovement",
         "summary": "Record cash taken into or out of the drawer, with a reason",
-        "description": "BILL-013. Managers and the Owner, for any shift. Audited.",
+        "description": "BILL-013, ADR-0029. Only on the person’s own open shift: cash in and out make sense only against a drawer they count. Audited.",
         "tags": ["payments"],
         "parameters": [
           {
@@ -11201,7 +11207,7 @@
             }
           },
           "409": {
-            "description": "The shift is closed.",
+            "description": "The shift is closed, or is not the person’s own (`OWN_SHIFT_REQUIRED`).",
             "content": {
               "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
             }
@@ -11237,6 +11243,66 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "The closed shift.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ShiftView" } }
+            }
+          },
+          "400": {
+            "description": "The request does not match the contract.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "No valid session or device credential.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "The signed-in role lacks the required capability.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "No such shift.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "409": {
+            "description": "Already closed.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        },
+        "x-capability": "CASH_MOVEMENT_AND_SHIFT_CLOSE",
+        "x-requirements": ["BILL-013", "AUD-006", "AUD-001"]
+      }
+    },
+    "/api/v1/shifts/{id}/close-not-counted": {
+      "post": {
+        "operationId": "closeShiftNotCounted",
+        "summary": "Close a shift at day end without counting the drawer",
+        "description": "ADR-0029, AUD-006. No counted cash and no difference are recorded. Audited, and flagged in the suspicious-activity report. Managers and the Owner, for any shift.",
+        "tags": ["payments"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "The closed shift.",
@@ -16211,18 +16277,6 @@
       "DayEndBlockers": {
         "type": "object",
         "properties": {
-          "openShifts": {
-            "type": "array",
-            "items": {
-              "type": "object",
-              "properties": {
-                "shiftId": { "$ref": "#/components/schemas/Id" },
-                "staffId": { "$ref": "#/components/schemas/Id" }
-              },
-              "required": ["shiftId", "staffId"],
-              "additionalProperties": false
-            }
-          },
           "openTables": {
             "type": "array",
             "items": {
@@ -16249,7 +16303,22 @@
             }
           }
         },
-        "required": ["openShifts", "openTables", "unsettledInvoices"],
+        "required": ["openTables", "unsettledInvoices"],
+        "additionalProperties": false
+      },
+      "DayEndOpenShift": {
+        "type": "object",
+        "properties": {
+          "shiftId": { "$ref": "#/components/schemas/Id" },
+          "staffId": { "$ref": "#/components/schemas/Id" },
+          "staffName": { "type": "string" },
+          "expectedCash": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": ["shiftId", "staffId", "staffName", "expectedCash"],
         "additionalProperties": false
       },
       "DayEndParams": {
@@ -16264,9 +16333,13 @@
           "businessDate": { "$ref": "#/components/schemas/IsoDate" },
           "status": { "type": "string", "enum": ["OPEN", "CLOSED"] },
           "blockers": { "$ref": "#/components/schemas/DayEndBlockers" },
+          "openShifts": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/DayEndOpenShift" }
+          },
           "report": { "$ref": "#/components/schemas/ZReportView" }
         },
-        "required": ["businessDate", "status", "blockers", "report"],
+        "required": ["businessDate", "status", "blockers", "openShifts", "report"],
         "additionalProperties": false
       },
       "DayEndView": {
@@ -21512,9 +21585,10 @@
               "additionalProperties": false
             }
           },
+          "cashOutsideShift": { "$ref": "#/components/schemas/Paise" },
           "total": { "$ref": "#/components/schemas/Paise" }
         },
-        "required": ["from", "to", "modes", "total"],
+        "required": ["from", "to", "modes", "cashOutsideShift", "total"],
         "additionalProperties": false
       },
       "PaymentRequest": {
@@ -23499,6 +23573,7 @@
               { "type": "null" }
             ]
           },
+          "notCounted": { "type": "boolean" },
           "denominations": {
             "anyOf": [{ "$ref": "#/components/schemas/Denominations" }, { "type": "null" }]
           },
@@ -23521,6 +23596,7 @@
           "expectedCash",
           "countedCash",
           "variance",
+          "notCounted",
           "denominations",
           "movements"
         ],
@@ -24108,6 +24184,7 @@
           "DISCOUNT_OVER_LIMIT",
           "REPEATED_REPRINT",
           "CASH_VARIANCE",
+          "SHIFT_NOT_COUNTED",
           "CANCELLED_AFTER_PREP",
           "SENT_NOT_BILLED",
           "NO_SALE_DRAWER"
@@ -25625,9 +25702,10 @@
             "type": "object",
             "properties": {
               "cashIn": { "$ref": "#/components/schemas/Paise" },
-              "cashOut": { "$ref": "#/components/schemas/Paise" }
+              "cashOut": { "$ref": "#/components/schemas/Paise" },
+              "outsideShift": { "$ref": "#/components/schemas/Paise" }
             },
-            "required": ["cashIn", "cashOut"],
+            "required": ["cashIn", "cashOut", "outsideShift"],
             "additionalProperties": false
           },
           "shifts": {
@@ -25655,7 +25733,8 @@
                     },
                     { "type": "null" }
                   ]
-                }
+                },
+                "notCounted": { "type": "boolean" }
               },
               "required": [
                 "shiftId",
@@ -25663,7 +25742,8 @@
                 "openingFloat",
                 "expectedCash",
                 "countedCash",
-                "variance"
+                "variance",
+                "notCounted"
               ],
               "additionalProperties": false
             }

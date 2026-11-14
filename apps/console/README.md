@@ -45,7 +45,7 @@ screens come with P1-08, P1-09, P1-12 and P4-01 to P4-07.
 - Billing (`/pos/bill/:billId`, `/pos/pay/:invoiceId`, `/pos/shift`, P1-12a): `src/billing/`
   shows the bill preview, discounts (with a manager's PIN in place when above a custom role's
   limit, `override.tsx`), service charge, customer, print (issue and print), payments across
-  modes with change and one idempotency key per set, and the manager's cash shift (there is no cashier, ADR-0023). P1-12b adds split
+  modes with change and one idempotency key per set, and the manager's own cash shift, an optional add-on (no cashier, ADR-0023; optional, ADR-0029). P1-12b adds split
   bills (`SplitDialog`), void and edit after print with approval, and `/pos/day-end`.
 - Alerts (P2-06c, MGR-008, NTF-004, NTF-008): `src/alerts/` reads the signed-in person's open
   alerts in the POS and manage modes (managers and the Owner see every open alert) and reads them

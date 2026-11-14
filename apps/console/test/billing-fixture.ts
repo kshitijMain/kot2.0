@@ -151,6 +151,7 @@ export function shiftView(overrides: Partial<ShiftView> = {}): ShiftView {
     expectedCash: 140_000,
     countedCash: null,
     variance: null,
+    notCounted: false,
     denominations: null,
     movements: [],
     ...overrides,

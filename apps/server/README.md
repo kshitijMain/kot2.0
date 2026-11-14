@@ -422,8 +422,9 @@ bill in `test/unit/virtual-printer.test.ts`.
 
 ## Payments (P1-11)
 
-- `src/payments/shifts.service.ts` (P1-11a): shifts with a float, cash in and out, and closing
-  with counted cash and variance.
+- `src/payments/shifts.service.ts` (P1-11a, ADR-0029): optional per-person shifts with a float, cash
+  in and out on the person's own open shift, and closing with counted cash and variance, or as not
+  counted at day end. Cash payments never need one.
 - `src/day-end/day-end.service.ts` (P1-11b): the Z-report, day-end blockers, carry-forward and
   closing the business date. `currentBusinessDate` skips closed dates.
 - `src/payments/payments.service.ts`: idempotent payment recording, settlement, and freeing the
