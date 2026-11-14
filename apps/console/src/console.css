@@ -2966,3 +2966,10 @@ body {
   border-radius: var(--rp-radius-md);
   background: var(--rp-color-surface);
 }
+
+/* Round 2 of testing: why Bump is grey, in one line beside it. */
+.kds-ticket__why {
+  flex: 1 1 auto;
+  color: var(--rp-color-text-muted);
+  font-size: var(--rp-font-size-sm);
+}

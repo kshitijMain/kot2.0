@@ -136,9 +136,10 @@ describe('[KDS-001] [KDS-002] [KDS-003] [KDS-004] the station board', () => {
     expect(within(first).getByText('Extra butter')).toBeInTheDocument();
     expect(within(first).getByText('less oil')).toBeInTheDocument();
     expect(within(first).getByText(t('kds.movedTo', { table: 'T6' }))).toBeInTheDocument();
-    expect(
-      within(first).getByRole('button', { name: t('kds.bumpFor', { number: 1 }) }),
-    ).toBeDisabled();
+    const bump = within(first).getByRole('button', { name: t('kds.bumpFor', { number: 1 }) });
+    expect(bump).toBeDisabled();
+    // Why, in one line, tied to the button.
+    expect(bump).toHaveAccessibleDescription(t('kds.bumpWhy'));
 
     const slip = await card(/^KOT 2, TAKEAWAY #7$/);
     expect(slip).toHaveAttribute('data-age', 'red');
@@ -220,10 +221,11 @@ describe('[KDS-005] [KDS-007] kitchen steps, bump and recall', () => {
       }));
     const { user } = await renderKds(fake);
     const first = await card(/^KOT 1/);
-    // Food at the pass is picked up, which serves it, never bumped off the screen while "Ready".
+    // Every dish ready: Bump is there at once (round 2; P9-21 waited for the pick-up).
     expect(
       within(first).getByRole('button', { name: t('kds.bumpFor', { number: 1 }) }),
-    ).toBeDisabled();
+    ).toBeEnabled();
+    expect(within(first).queryByText(t('kds.bumpWhy'))).toBeNull();
     await user.click(within(first).getByRole('button', { name: t('kds.pickUpAll') }));
     await waitFor(() => {
       expect(postsTo(fake, `/api/v1/order-items/${line(11).orderItemId}/status`)[0]?.body).toEqual({

@@ -4697,6 +4697,8 @@ until you press Publish.
     allReady: 'All ready',
     bump: 'Bump',
     bumpFor: 'Bump KOT {number}',
+    /** Round 2 of testing: why Bump is grey. */
+    bumpWhy: 'Mark all dishes ready to bump',
     recall: 'Recall',
     recallFor: 'Recall KOT {number}',
     recallTitle: 'Recently bumped',

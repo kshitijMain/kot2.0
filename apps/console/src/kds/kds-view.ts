@@ -47,14 +47,16 @@ export function groupLines(lines: readonly KdsTicketLine[]): LineGroup[] {
   return groups;
 }
 
-/** A new ticket can be bumped once nothing on it is waiting or cooking; slips any time. */
+/**
+ * A new ticket can be bumped once every dish on it that is not cancelled is ready, collected or
+ * served (round 2 of testing: P9-21 had also waited for ready food to be picked up, so Bump stayed
+ * grey after "All ready"). The server refuses the same: nothing waiting or cooking. Ready food
+ * stays ready for the waiter to collect; Recall brings the ticket back within the hour. Slips any
+ * time.
+ */
 export function canBump(ticket: KdsTicket): boolean {
   if (ticket.kind !== 'NEW') return true;
-  // Food still at the pass is picked up, not bumped (P9-21): picking it up serves it, and a ready
-  // dish bumped off the screen had stayed "Ready" for good (the waiter app has no Served button).
-  return ticket.lines.every(
-    (line) => line.state !== 'SENT' && line.state !== 'PREPARING' && line.state !== 'READY',
-  );
+  return ticket.lines.every((line) => line.state !== 'SENT' && line.state !== 'PREPARING');
 }
 
 /**

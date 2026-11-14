@@ -55,12 +55,18 @@ describe('[KDS-005] [KDS-007] kitchen steps and bump', () => {
     expect(ticketStep(ticket(4, { kind: 'CANCELLED' }))).toBeUndefined();
   });
 
-  it('bumps only when nothing is waiting, cooking or at the pass; slips any time', () => {
+  it('bumps once every dish not cancelled is ready or collected; slips any time (round 2)', () => {
     expect(canBump(ticket(1))).toBe(false);
-    // P9-21: a ready dish bumped off the screen had stayed "Ready" for good.
+    expect(
+      canBump(ticket(2, { lines: [line(1, { state: 'READY' }), line(2, { state: 'PREPARING' })] })),
+    ).toBe(false);
+    // The brief of round 2 changed P9-21's rule: ready at the pass is enough to bump.
     expect(
       canBump(ticket(2, { lines: [line(1, { state: 'READY' }), line(2, { state: 'CANCELLED' })] })),
-    ).toBe(false);
+    ).toBe(true);
+    expect(
+      canBump(ticket(2, { lines: [line(1, { state: 'READY' }), line(2, { state: 'SERVED' })] })),
+    ).toBe(true);
     expect(
       canBump(
         ticket(2, { lines: [line(1, { state: 'PICKED_UP' }), line(2, { state: 'CANCELLED' })] }),

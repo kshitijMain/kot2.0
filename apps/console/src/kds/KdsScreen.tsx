@@ -571,9 +571,15 @@ function TicketCard({
                 : t('kds.pickUpAll')}
           </Button>
         )}
+        {canBump(ticket) ? null : (
+          <span id={`bump-why-${ticket.kotId}`} className="kds-ticket__why">
+            {t('kds.bumpWhy')}
+          </span>
+        )}
         <Button
           variant="secondary"
           aria-label={t('kds.bumpFor', { number: ticket.kotNumber })}
+          {...(!canBump(ticket) && { 'aria-describedby': `bump-why-${ticket.kotId}` })}
           disabled={busy || !canBump(ticket)}
           onClick={() => {
             props.onBump(ticket);
