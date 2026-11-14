@@ -144,6 +144,19 @@ export type KotReprintRequest = z.input<typeof KotReprintRequest>;
 export const KotParams = z.strictObject({ id: Id });
 export type KotParams = z.infer<typeof KotParams>;
 
+/** A ticket or note waiting for a printer (ADR-0031's Printers page). */
+export const PrintQueueJob = z.object({
+  id: Id,
+  kind: z.enum(['KOT', 'NOTICE']),
+  /** "KOT 14 · T3", "KOT 15 · Takeaway #12", or a note's title. */
+  label: z.string(),
+  stationName: z.string(),
+  createdAt: Timestamp,
+  /** Tries so far. */
+  attempts: z.int().min(0),
+});
+export type PrintQueueJob = z.infer<typeof PrintQueueJob>;
+
 /** A printer as the print queue sees it, for the POS "printer offline" banner. */
 export const PrintQueuePrinter = z.object({
   printerId: Id,
@@ -154,6 +167,8 @@ export const PrintQueuePrinter = z.object({
   redirectToId: Id.nullable(),
   /** Tickets and notes waiting for this printer. */
   queued: z.int().min(0),
+  /** The first 200 of them, oldest first (ADR-0031). */
+  jobs: z.array(PrintQueueJob).default([]),
 });
 export type PrintQueuePrinter = z.infer<typeof PrintQueuePrinter>;
 

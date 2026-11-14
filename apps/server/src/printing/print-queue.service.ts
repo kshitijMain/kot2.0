@@ -5,7 +5,12 @@ import {
   type OnApplicationBootstrap,
   type OnModuleDestroy,
 } from '@nestjs/common';
-import type { PrintQueueResponse, TestPrintResponse } from '@rp/contracts';
+import type {
+  PrintQueueJob,
+  PrintQueuePrinter,
+  PrintQueueResponse,
+  TestPrintResponse,
+} from '@rp/contracts';
 import { AuditService } from '../audit/audit.service.js';
 import type { Principal } from '../auth/principal.js';
 import { isoDateOf } from '../common/business-dates.js';
@@ -33,7 +38,8 @@ export interface PrintQueueOptions {
 export const DEFAULT_PRINT_QUEUE_OPTIONS: PrintQueueOptions = {
   intervalMs: 2_000,
   retryBaseMs: 2_000,
-  retryMaxMs: 60_000,
+  // ADR-0031: never more than 8 s between tries; a probe on every pass finds it back sooner.
+  retryMaxMs: 8_000,
 };
 
 /** Tests drive the queue with `drain()` so nothing prints behind their back. */
@@ -140,6 +146,7 @@ export class PrintQueueService implements OnApplicationBootstrap, OnModuleDestro
       }),
       this.status.queuedByPrinter(this.prisma, restaurantId),
     ]);
+    const jobs = await this.waitingJobs(restaurantId);
     return {
       printers: printers.map((printer) => ({
         printerId: printer.id,
@@ -149,8 +156,97 @@ export class PrintQueueService implements OnApplicationBootstrap, OnModuleDestro
         lastError: printer.lastError,
         redirectToId: printer.redirectToId,
         queued: queued.get(printer.id) ?? 0,
+        jobs: jobs.get(printer.id) ?? [],
       })),
     };
+  }
+
+  /** The tickets and notes waiting for each printer, oldest first (ADR-0031's Printers page). */
+  private async waitingJobs(restaurantId: string): Promise<Map<string, PrintQueueJob[]>> {
+    const [kots, notices, routes] = await Promise.all([
+      this.prisma.kot.findMany({
+        where: { restaurantId, printStatus: { in: [...WAITING] } },
+        select: {
+          id: true,
+          kotNumber: true,
+          stationId: true,
+          createdAt: true,
+          printAttempts: true,
+          station: { select: { name: true } },
+          order: { select: { takeawayToken: true, table: { select: { label: true } } } },
+        },
+        orderBy: [{ createdAt: 'asc' }, { kotNumber: 'asc' }],
+        take: 200,
+      }),
+      this.prisma.printNotice.findMany({
+        where: { restaurantId, printStatus: { in: [...WAITING] } },
+        select: {
+          id: true,
+          title: true,
+          stationId: true,
+          createdAt: true,
+          printAttempts: true,
+          station: { select: { name: true } },
+        },
+        orderBy: { createdAt: 'asc' },
+        take: 200,
+      }),
+      this.status.routing(this.prisma, restaurantId),
+    ]);
+    const all = [
+      ...kots.map((kot) => ({
+        stationId: kot.stationId,
+        job: {
+          id: kot.id,
+          kind: 'KOT' as const,
+          label: `KOT ${String(kot.kotNumber)} · ${
+            kot.order.table?.label ??
+            (kot.order.takeawayToken === null
+              ? 'Takeaway'
+              : `Takeaway #${String(kot.order.takeawayToken)}`)
+          }`,
+          stationName: kot.station.name,
+          createdAt: kot.createdAt.toISOString(),
+          attempts: kot.printAttempts,
+        },
+      })),
+      ...notices.map((notice) => ({
+        stationId: notice.stationId,
+        job: {
+          id: notice.id,
+          kind: 'NOTICE' as const,
+          label: notice.title,
+          stationName: notice.station.name,
+          createdAt: notice.createdAt.toISOString(),
+          attempts: notice.printAttempts,
+        },
+      })),
+    ].sort((a, b) => a.job.createdAt.localeCompare(b.job.createdAt));
+    const byPrinter = new Map<string, PrintQueueJob[]>();
+    for (const { stationId, job } of all) {
+      const printerId = routes.get(stationId);
+      if (printerId !== undefined)
+        byPrinter.set(printerId, [...(byPrinter.get(printerId) ?? []), job]);
+    }
+    return byPrinter;
+  }
+
+  /** "Retry now" (ADR-0031): forgets the wait, tries the printer's queue, and says how it stands. */
+  async retryNow(restaurantId: string, printerId: string): Promise<PrintQueuePrinter> {
+    const printer = await this.prisma.printer.findFirst({
+      where: { id: printerId, restaurantId, archivedAt: null },
+      select: { id: true },
+    });
+    if (printer === null)
+      throw new AppError(404, 'PRINTER_NOT_FOUND', 'There is no such active printer.');
+    this.backoff.delete(printerId);
+    await this.drain();
+    const found = (await this.queue(restaurantId)).printers.find(
+      (entry) => entry.printerId === printerId,
+    );
+    if (found === undefined)
+      throw new AppError(404, 'PRINTER_NOT_FOUND', 'There is no such active printer.');
+    return found;
   }
 
   /** Forgets the wait after a printer's failure, e.g. when a manager redirects or tests it. */
@@ -296,12 +392,25 @@ export class PrintQueueService implements OnApplicationBootstrap, OnModuleDestro
     );
   }
 
-  /** One printer's jobs in order; stops at the first failure so the order is kept. */
+  /**
+   * One printer's jobs in order; stops at the first failure so the order is kept. A printer
+   * waiting after a failure is asked whether it answers, printing nothing, on every pass: when it
+   * does, its jobs print at once (ADR-0031: they had waited up to a minute after it came back).
+   */
   private async printAll(printerId: string, jobs: readonly Job[]): Promise<DrainResult> {
-    const wait = this.backoff.get(printerId);
-    if (wait !== undefined && Date.now() < wait.retryAt) return { printed: 0, failed: 0 };
+    let wait = this.backoff.get(printerId);
     const printer = await this.prisma.printer.findUnique({ where: { id: printerId } });
     if (printer === null) return { printed: 0, failed: 0 };
+    if (wait !== undefined && Date.now() < wait.retryAt) {
+      const target = {
+        connection: printer.connection,
+        host: printer.host ?? '',
+        port: printer.port,
+      };
+      if (!(await this.transport.probe(target))) return { printed: 0, failed: 0 };
+      this.backoff.delete(printerId);
+      wait = undefined;
+    }
     let printed = 0;
     for (const job of jobs) {
       const bytes = await this.render(job, printer);

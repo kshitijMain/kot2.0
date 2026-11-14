@@ -21,6 +21,7 @@ import {
   KotsController,
   PrintersController,
   PrintQueueController,
+  PrinterRetryController,
   StationsController,
 } from './printing.controller.js';
 import { PrintersService } from './printers.service.js';
@@ -29,7 +30,13 @@ import { StationsService } from './stations.service.js';
 /** Stations, printers and kitchen tickets on paper (P1-07): setup, rendering and the queue. */
 @Module({
   imports: [EventsModule, SettingsModule],
-  controllers: [StationsController, PrintersController, PrintQueueController, KotsController],
+  controllers: [
+    StationsController,
+    PrintersController,
+    PrintQueueController,
+    KotsController,
+    PrinterRetryController,
+  ],
   providers: [
     StationsService,
     PrintersService,

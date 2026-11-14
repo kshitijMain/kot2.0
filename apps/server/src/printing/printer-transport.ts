@@ -20,7 +20,18 @@ export class PrintFailure extends Error {
 /** Sends rendered ESC/POS bytes to a printer. Replaced in tests that must not touch a device. */
 export abstract class PrinterTransport {
   abstract send(target: PrintTarget, bytes: Uint8Array): Promise<void>;
+
+  /**
+   * Whether the printer answers now, printing nothing (ADR-0031): the queue asks an offline
+   * printer on every pass, so it prints as soon as the printer is back. Unknown is false.
+   */
+  probe(_target: PrintTarget): Promise<boolean> {
+    return Promise.resolve(false);
+  }
 }
+
+/** How long a probe waits for an offline printer to answer. */
+const PROBE_TIMEOUT_MS = 1_500;
 
 /** Long enough for a busy printer on Wi-Fi, short enough that the POS hears about a dead one. */
 const NETWORK_TIMEOUT_MS = 5_000;
@@ -55,6 +66,39 @@ export class NetworkAndUsbTransport extends PrinterTransport {
     return target.connection === 'NETWORK'
       ? this.sendToNetwork(target, bytes)
       : this.sendToUsb(target, bytes);
+  }
+
+  /** A network printer that accepts a connection is back; nothing is sent. USB: unknown. */
+  override probe(target: PrintTarget): Promise<boolean> {
+    if (
+      target.connection !== 'NETWORK' ||
+      target.port === null ||
+      !NETWORK_HOST.test(target.host)
+    ) {
+      return Promise.resolve(false);
+    }
+    const port = target.port;
+    return new Promise((resolve) => {
+      const socket = connect({ host: target.host, port });
+      let settled = false;
+      const done = (answered: boolean) => {
+        if (settled) return;
+        settled = true;
+        socket.destroy();
+        resolve(answered);
+      };
+      socket.setTimeout(Math.min(PROBE_TIMEOUT_MS, this.timeoutMs), () => {
+        done(false);
+      });
+      socket.once('error', () => {
+        done(false);
+      });
+      socket.once('connect', () => {
+        socket.end(() => {
+          done(true);
+        });
+      });
+    });
   }
 
   private sendToNetwork(target: PrintTarget, bytes: Uint8Array): Promise<void> {

@@ -242,6 +242,7 @@ import {
   PrintingArchiveRequest,
   PrintingParams,
   PrintQueueResponse,
+  PrintQueuePrinter,
   StationListResponse,
   StationRequest,
   StationView,
@@ -4218,6 +4219,24 @@ export const ROUTES = [
     request: { params: PrintingParams },
     responses: {
       200: { description: 'The result.', schema: TestPrintResponse },
+      ...standardErrors,
+      404: { description: 'No such active printer.', schema: ApiError },
+    },
+  },
+  {
+    operationId: 'retryPrinter',
+    method: 'POST',
+    path: '/api/v1/printers/:id/retry',
+    summary: 'Try a printer’s waiting tickets again now',
+    description:
+      'ADR-0031: "Retry now" on the dashboard’s Printers page. Answers how the printer stands ' +
+      'afterwards. The queue also checks an offline printer on every pass by itself.',
+    tags: ['printing'],
+    requirements: ['KDS-008'],
+    capability: 'OPERATIONS_CONFIGURE',
+    request: { params: PrintingParams },
+    responses: {
+      200: { description: 'The printer as the queue sees it now.', schema: PrintQueuePrinter },
       ...standardErrors,
       404: { description: 'No such active printer.', schema: ApiError },
     },

@@ -9,6 +9,7 @@ import {
   type PrinterView,
   PrintingArchiveRequest,
   PrintingParams,
+  type PrintQueuePrinter,
   type PrintQueueResponse,
   type StationListResponse,
   StationRequest,
@@ -141,6 +142,22 @@ export class PrintersController {
     @Param(new ZodValidationPipe(PrintingParams)) params: PrintingParams,
   ): Promise<TestPrintResponse> {
     return this.printers.testPrint(principalOf(request), params.id);
+  }
+}
+
+/** "Retry now" on the dashboard's Printers page (ADR-0031). */
+@Controller('printers')
+export class PrinterRetryController {
+  constructor(private readonly queue: PrintQueueService) {}
+
+  @Post(':id/retry')
+  @HttpCode(200)
+  @RequireCapability('OPERATIONS_CONFIGURE')
+  retry(
+    @Req() request: AuthenticatedRequest,
+    @Param(new ZodValidationPipe(PrintingParams)) params: PrintingParams,
+  ): Promise<PrintQueuePrinter> {
+    return this.queue.retryNow(principalOf(request).restaurantId, params.id);
   }
 }
 

@@ -12,7 +12,10 @@ export class FakePrinter {
       const chunks: Buffer[] = [];
       socket.on('data', (chunk: Buffer) => chunks.push(chunk));
       socket.on('end', () => {
-        this.jobs.push(Buffer.concat(chunks).toString('latin1'));
+        // A connection that sends nothing is a check that the printer is there (ADR-0031's probe),
+        // not a job: the virtual printer and real printers print nothing for it either.
+        const job = Buffer.concat(chunks);
+        if (job.length > 0) this.jobs.push(job.toString('latin1'));
         socket.end();
       });
     });

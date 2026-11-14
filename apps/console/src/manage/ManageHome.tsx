@@ -24,6 +24,7 @@ import { BulkPhotosScreen } from './menu/BulkPhotosScreen.js';
 import { MenuEditor } from './menu/MenuEditor.js';
 import { DashboardUnpublishedNotice } from './menu/UnpublishedNotice.js';
 import { PrintingScreen } from './printing/PrintingScreen.js';
+import { PrintersScreen, stuckJobs, usePrintQueue } from './printing/PrintersScreen.js';
 import { AuditScreen } from './audit/AuditScreen.js';
 import { ReportsArea } from './reports/ReportsArea.js';
 import { RestaurantScreen } from './restaurant/RestaurantScreen.js';
@@ -88,6 +89,12 @@ function useApprovalCount(enabled: boolean): number | undefined {
   return enabled && data.status === 'ready' ? data.value : undefined;
 }
 
+/** Tickets waiting on printers that are down (ADR-0031), kept live. */
+function usePrinterCount(enabled: boolean): number | undefined {
+  const { data } = usePrintQueue(enabled);
+  return enabled && data.status === 'ready' ? stuckJobs(data.value) : undefined;
+}
+
 /** How many alerts are the signed-in person's, as the header's bell counts them. */
 function useAlertCount(): number | undefined {
   const state = useAlerts();
@@ -128,6 +135,7 @@ export function ManageHome() {
   const billCount = useBillCount(bills);
   const approvalCount = useApprovalCount(operates);
   const alertCount = useAlertCount();
+  const printerCount = usePrinterCount(operates && bills);
   // On a phone the sections are one row that scrolls sideways: keep the open one in view.
   const navRef = useRef<HTMLElement>(null);
   const { pathname } = useLocation();
@@ -200,6 +208,13 @@ export function ManageHome() {
         {bills ? (
           <Section to="/manage/cash-drawer" label={t('dashboard.section.cashDrawer')} />
         ) : null}
+        {operates ? (
+          <Section
+            to="/manage/printers"
+            label={t('dashboard.section.printers')}
+            count={printerCount}
+          />
+        ) : null}
         {more ? <span className="dashboard__more">{t('dashboard.more')}</span> : null}
         {operates ? (
           <>
@@ -255,6 +270,7 @@ export function ManageHome() {
           {operates ? <Route path="setup/readiness" element={<ReadinessChecklist />} /> : null}
           {operates ? <Route path="restaurant" element={<RestaurantScreen />} /> : null}
           {operates ? <Route path="printing" element={<PrintingScreen />} /> : null}
+          {operates ? <Route path="printers" element={<PrintersScreen />} /> : null}
           {operates ? <Route path="settings" element={<SettingsScreen />} /> : null}
           {operates ? <Route path="system" element={<SystemScreen />} /> : null}
           {operates ? (

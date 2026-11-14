@@ -136,6 +136,14 @@ it, and everyone decides for themselves.
   only make sense against a drawer you count. Always give the reason.
 - A cash drawer connected to the printer still opens on every cash payment, shift or no shift.
 
+## Printers
+
+**Printers** shows each printer, whether it is printing (and since when it is not, and why) and
+the tickets waiting for it. The number beside Printers is how many tickets wait on a printer that
+is down. When a printer is switched on again, what waited prints by itself within a few seconds,
+in order; **Retry now** tries at once. A printer that stays broken: **Print on another printer**
+sends its tickets to another one (give the reason); choose it again later to send them back.
+
 ## Ending the day
 
 Close open tables, then Bills → **Day end**. The day-end report is produced; the business day changes at

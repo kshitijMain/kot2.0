@@ -166,3 +166,28 @@ bill.
 **Changed tests.** The two QA-022 tests that expected the revision in place, and paying the old
 amount, now expect the cancellation and the new number, and the refusal (the brief changes the
 rule).
+
+## H. A printer that comes back
+
+**Cause.** After a printer failed, the queue waited ever longer before trying it again (2, 4, 8, 16,
+32 s, then a minute each time), and nothing checked whether it was back meanwhile. A printer off
+for a minute or two printed what waited up to a minute after it was switched on; nothing on the
+dashboard showed the waiting tickets, so it looked as if they never came out.
+
+**Now.**
+
+- On every pass (every 2 s), the queue asks a printer that failed whether it answers, without
+  printing on it (`PrinterTransport.probe`: a network printer that takes a connection; USB cannot
+  tell). As soon as it does, the waiting jobs print, in order, once each. The wait between real
+  tries is never more than 8 s (`retryMaxMs`).
+- `POST /api/v1/printers/:id/retry` (`OPERATIONS_CONFIGURE`) tries at once. The print queue lists
+  each printer's waiting tickets and notes (`PrintQueuePrinter.jobs`).
+- The dashboard's **Printers** page shows each printer printing or not (since when, why), its
+  waiting tickets oldest first with how often they were tried, **Retry now** and **Print on another
+  printer** (the existing redirect, with a reason). The count beside Printers is the tickets waiting
+  on printers that are down.
+
+**Tests.** `printer-resume.int.test.ts` stops a printer for 15 s with two tickets waiting, starts
+it, and needs both printed within 10 s, in order, once each (it failed with the old waits); and
+Retry now. The probe has unit tests; the virtual printer and the tests' fake printer ignore a
+connection that sends nothing, as printers do.

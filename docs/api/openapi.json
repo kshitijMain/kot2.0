@@ -8440,6 +8440,60 @@
         "x-requirements": ["KDS-008", "AUD-001"]
       }
     },
+    "/api/v1/printers/{id}/retry": {
+      "post": {
+        "operationId": "retryPrinter",
+        "summary": "Try a printer’s waiting tickets again now",
+        "description": "ADR-0031: \"Retry now\" on the dashboard’s Printers page. Answers how the printer stands afterwards. The queue also checks an offline printer on every pass by itself.",
+        "tags": ["printing"],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid",
+              "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[1-8][0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}|00000000-0000-0000-0000-000000000000|ffffffff-ffff-ffff-ffff-ffffffffffff)$"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The printer as the queue sees it now.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/PrintQueuePrinter" } }
+            }
+          },
+          "400": {
+            "description": "The request does not match the contract.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "401": {
+            "description": "No valid session or device credential.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "403": {
+            "description": "The signed-in role lacks the required capability.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          },
+          "404": {
+            "description": "No such active printer.",
+            "content": {
+              "application/json": { "schema": { "$ref": "#/components/schemas/ApiError" } }
+            }
+          }
+        },
+        "x-capability": "OPERATIONS_CONFIGURE",
+        "x-requirements": ["KDS-008"]
+      }
+    },
     "/api/v1/printers/{id}/test": {
       "post": {
         "operationId": "testPrinter",
@@ -22107,6 +22161,19 @@
         "required": ["printed", "error", "duplicate", "printCount"],
         "additionalProperties": false
       },
+      "PrintQueueJob": {
+        "type": "object",
+        "properties": {
+          "id": { "$ref": "#/components/schemas/Id" },
+          "kind": { "type": "string", "enum": ["KOT", "NOTICE"] },
+          "label": { "type": "string" },
+          "stationName": { "type": "string" },
+          "createdAt": { "$ref": "#/components/schemas/Timestamp" },
+          "attempts": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+        },
+        "required": ["id", "kind", "label", "stationName", "createdAt", "attempts"],
+        "additionalProperties": false
+      },
       "PrintQueuePrinter": {
         "type": "object",
         "properties": {
@@ -22118,7 +22185,42 @@
           },
           "lastError": { "type": ["string", "null"] },
           "redirectToId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
-          "queued": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+          "queued": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+          "jobs": {
+            "default": [],
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PrintQueueJob" }
+          }
+        },
+        "required": [
+          "printerId",
+          "name",
+          "online",
+          "offlineSince",
+          "lastError",
+          "redirectToId",
+          "queued",
+          "jobs"
+        ],
+        "additionalProperties": false
+      },
+      "PrintQueuePrinterInput": {
+        "type": "object",
+        "properties": {
+          "printerId": { "$ref": "#/components/schemas/Id" },
+          "name": { "type": "string" },
+          "online": { "type": "boolean" },
+          "offlineSince": {
+            "anyOf": [{ "$ref": "#/components/schemas/Timestamp" }, { "type": "null" }]
+          },
+          "lastError": { "type": ["string", "null"] },
+          "redirectToId": { "anyOf": [{ "$ref": "#/components/schemas/Id" }, { "type": "null" }] },
+          "queued": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 },
+          "jobs": {
+            "default": [],
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PrintQueueJob" }
+          }
         },
         "required": [
           "printerId",
@@ -22128,8 +22230,7 @@
           "lastError",
           "redirectToId",
           "queued"
-        ],
-        "additionalProperties": false
+        ]
       },
       "PrintQueueResponse": {
         "type": "object",
@@ -22141,6 +22242,16 @@
         },
         "required": ["printers"],
         "additionalProperties": false
+      },
+      "PrintQueueResponseInput": {
+        "type": "object",
+        "properties": {
+          "printers": {
+            "type": "array",
+            "items": { "$ref": "#/components/schemas/PrintQueuePrinterInput" }
+          }
+        },
+        "required": ["printers"]
       },
       "PrintTableBillResponse": {
         "type": "object",

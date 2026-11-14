@@ -697,6 +697,11 @@ export const en = {
       body: 'Every dish cancelled or voided after its KOT was sent, with the stage it had reached, who did it, who approved it and why; and bills cancelled after printing.',
       tip: 'Choose a range of dates to look further back.',
     },
+    printers: {
+      title: 'Printers and what waits for them',
+      body: 'Each printer, whether it is printing, why not, and the tickets waiting for it, oldest first. When a printer comes back, what waited prints within a few seconds, in order.',
+      tip: 'A printer that stays down: Print on another printer sends its tickets elsewhere.',
+    },
     cashDrawer: {
       title: 'Your cash drawer (optional)',
       body: 'A shift counts the cash in your drawer: open it with the float, record cash in or out, and close it by counting. Cash payments are taken with or without one.',
@@ -802,6 +807,7 @@ export const en = {
       tables: 'Tables',
       cancelledKots: 'Cancelled KOTs',
       cashDrawer: 'Cash drawer',
+      printers: 'Printers',
       overview: 'Overview',
       orders: 'Orders',
       alerts: 'Alerts',
@@ -2001,6 +2007,37 @@ until you press Publish.
     },
   },
   /** The Reports area (P4-05d, RPT-001 to RPT-016). */
+  /** ADR-0031: each printer, what waits for it, Retry now. */
+  printersPage: {
+    title: 'Printers',
+    intro:
+      'Whether each printer is printing, and the tickets waiting for it. A printer that is back prints what waited within a few seconds, in order.',
+    loadFailed: 'Could not read the printers.',
+    none: 'No printers yet. Add them in Kitchen and printers.',
+    nothingWaits: 'Every printer is working and nothing is waiting.',
+    online: 'Printing',
+    offline: 'Not printing',
+    since: 'Not printing since {age}',
+    redirected: 'Its tickets print on {name} instead.',
+    noJobs: 'Nothing waiting.',
+    waiting: '{count, plural, one {# ticket waiting} other {# tickets waiting}}',
+    attempts: '{count, plural, =0 {not tried yet} one {tried once} other {tried # times}}',
+    retry: 'Retry now',
+    retried: {
+      online: '{name} is printing again.',
+      offline: '{name} still does not answer.',
+    },
+    elsewhere: 'Print on another printer',
+    change: 'Change where it prints',
+    elsewhereTitle: 'Where {name}’s tickets print',
+    to: 'Print on',
+    backHere: '{name} again',
+    reason: 'Reason',
+    reasonNeeded: 'Give a reason for the record.',
+    send: 'Send them there',
+    sentTo: 'Tickets now print on {name}.',
+    sentBack: '{name} prints its own tickets again.',
+  },
   /** ADR-0031: everything on the printed bill, in one place, with the bill beside it. */
   invoiceSettings: {
     title: 'Invoice settings',

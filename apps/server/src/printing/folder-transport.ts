@@ -19,6 +19,11 @@ export class FolderTransport extends PrinterTransport {
     super();
   }
 
+  /** A folder is always there. */
+  override probe(): Promise<boolean> {
+    return Promise.resolve(true);
+  }
+
   async send(target: PrintTarget, bytes: Uint8Array): Promise<void> {
     this.count += 1;
     const stamp = this.now().toISOString().replace(/[:.]/g, '-');
