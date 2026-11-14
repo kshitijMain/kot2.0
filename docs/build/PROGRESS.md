@@ -1020,6 +1020,29 @@ anyone"; ADR-0025 amended):
 838. Unchanged without the flag: AUTH-007 pairing, and the table tablet, which still pairs with a
      code (no tablets in the pilot).
 
+Decided 2026-11-15 (fixes from the Business Owner's testing, round 2, ADR-0031; open business
+choices are D-39 to D-41 in `docs/testing/DECISIONS_NEEDED.md`):
+
+870. Bump is enabled once every dish not cancelled is ready, picked up or served (P9-21 changed);
+     a grey Bump says "Mark all dishes ready to bump".
+871. A KOT goes to the dish's station as it stands, published or not (D-39); the menu editor and
+     the dashboard say "Unpublished changes" with Publish; Kitchen and printers warns about a
+     station whose tickets appear nowhere.
+872. Menu availability is a full page of cards with one switch per dish, portions as − 12 +,
+     Undo instead of dialogs, and "Mark all in a category available".
+873. The KOT, the KDS card, the order feed and the staff report name the KOT's sender (the
+     approver for a diner's order); "Opened by" stays in the table's details.
+874. The KOT layout: table very large, inverted station banner, KOT and time large, Sent by,
+     guests, "2nd KOT for this table", held dishes listed, "1 line, 1 item".
+875. Invoice settings on the Restaurant page with a live bill preview; `bills.thankYouLine`,
+     `bills.printPhone`, `bills.printFssai`; place of supply "27-Maharashtra" (D-40); switching
+     the series mid-year warns and needs confirming (D-41).
+876. A printed, unpaid bill that dishes were added to is outdated: not paid or printed again; the
+     next print voids it ("Items added after the bill was printed") and issues the next number
+     with every dish (QA-022's revision in place changed).
+877. The print queue probes a failed network printer on every pass and prints as soon as it
+     answers; retries at most 8 s apart; a Printers page with Retry now.
+
 Decided 2026-11-14 (fixes from the Business Owner's testing, round 1, ADR-0030; open business
 choices are D-34 to D-38 in `docs/testing/DECISIONS_NEEDED.md`):
 
@@ -4694,6 +4717,24 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-11-15: fixes from testing, round 2 (ADR-0031)
+
+Same branch `fix/testing-round-1` (local only), one commit per item, A to H. Decisions 870 to 877,
+D-39 to D-41. Each bug's cause is in ADR-0031 with the test that reproduced it.
+
+- A: `canBump` waited for the pick-up. B: KOTs took the station from the published menu
+  (`routeToLiveStations`, `GET /menu/publish-status`). C: `AvailabilityScreen` rewritten,
+  `/kds/availability`. D: sender everywhere (`senderOf`, `kotsSent`). E: `renderKotTicket`
+  rewritten, the virtual printer draws GS B. F: `particularsFrom`, `POST /restaurant/invoice-preview`,
+  `InvoiceSettings`, `QrBillInvoice.footerLines`. G: `billing/outdated.ts`, `BILL_OUTDATED`,
+  `cancelOutdated`. H: `PrinterTransport.probe`, `POST /printers/:id/retry`, `PrintersScreen`.
+- Before/after KOT images in `docs/testing/screenshots/round-2/`.
+
+Gotchas: the QR relay must be updated before the server (it checks a published bill strictly and
+`footerLines` is new). The tests' `FakePrinter` (now `test/helpers/fake-printer.ts`) ignores a
+connection that sends nothing, as printers do, because the queue's probe opens one.
+`printer-resume.int` waits on real timers (about 20 s).
 
 ### 2026-11-14: fixes from testing, round 1 (ADR-0030)
 

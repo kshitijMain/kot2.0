@@ -5,7 +5,8 @@ role-based modes:
 
 - POS (`/pos`): tables and order entry, for waiters at a PC (Phase 1; billing moved to the
   dashboard, ADR-0030);
-- KDS (`/kds`): kitchen station screens, device-authenticated, for the kitchen only (Phase 1);
+- KDS (`/kds`): kitchen station screens, device-authenticated, for the kitchen only (Phase 1),
+  with Menu availability as a page of its own (`/kds/availability`, ADR-0031);
 - Manager dashboard (`/manage`), where managers and the Owner do everything (ADR-0030): Bills
   (pending and history, with the bill, payment and day-end screens), Modifications, Take order,
   the live Tables, Cancelled KOTs and the cash drawer; overview, live order feed and alert centre

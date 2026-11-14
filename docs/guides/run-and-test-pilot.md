@@ -554,7 +554,7 @@ Open **http://127.0.0.1:9180** in a browser on the laptop. New tickets appear by
 
 #### Step 2: connect it (once)
 
-On the POS sign in as **Manager (Parosaa)**, 2222, then go to **Manage → Kitchen and printers**.
+Sign in on the PC as **Manager (Parosaa)**, 2222, then go to **Manage → More → Kitchen and printers**.
 
 1. Press **Add a printer**. Name: `Virtual`. **Network**. Address: `127.0.0.1`. Port: `9100`. Paper:
    **80 mm**. Press **Save printer**.
@@ -565,16 +565,16 @@ On the POS sign in as **Manager (Parosaa)**, 2222, then go to **Manage → Kitch
 
 #### Step 3: test it
 
-| #   | Do this                                                                                            | You should see                                                     | What's happening behind the scenes                                       |
-| --- | -------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------ |
-| 1   | Press **Print a test page** on the printer's row.                                                  | `TEST PAGE` and a row of digits across the full width              | The server sends printer commands to port 9100. The page draws them.     |
-| 2   | On the **POS**, tap a free table, tap the number of guests, tap a dish, press **Send to kitchen**. | A ticket headed `TABLE 1`, `Kitchen`, `KOT 1`                      | Each kitchen station prints to the printer set for it.                   |
-| 3   | Tap the table, **Bill**, **Print bill**.                                                           | A bill with the tax lines and total                                | The invoice number is created and the bill goes to the bill printer.     |
-| 4   | Press **Print again**.                                                                             | The second copy says `DUPLICATE`.                                  | Any reprint is marked so it cannot pass as the original.                 |
-| 5   | Open a shift, then **Take payment**, **Record payment** in cash.                                   | `Cash drawer opened`                                               | The server sends the drawer-opening signal to the bill printer.          |
-| 6   | Run the "unplug" command below, then send another dish.                                            | On the POS: `Printer offline`                                      | The server cannot connect to port 9100, so it keeps the ticket waiting.  |
-| 7   | Run `printer virtual` again.                                                                       | The waiting ticket appears by itself, once, within about a minute. | The server keeps retrying and sends the ticket when the printer answers. |
-| 8   | Change the printer to **58 mm** and repeat row 1.                                                  | A narrower ticket with nothing cut off                             | Lines are laid out for the paper's width.                                |
+| #   | Do this                                                                                               | You should see                                                                                      | What's happening behind the scenes                                        |
+| --- | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------- |
+| 1   | Press **Print a test page** on the printer's row.                                                     | `TEST PAGE` and a row of digits across the full width                                               | The server sends printer commands to port 9100. The page draws them.      |
+| 2   | **Manage → Take order**, tap a free table, tap the number of guests, tap a dish, **Send to kitchen**. | A ticket headed `TABLE 1`, `KITCHEN` in a black band, `KOT 1` and the time                          | Each kitchen station prints to the printer set for it.                    |
+| 3   | On the order screen press **Bill**, then **Print bill**.                                              | A bill with the tax lines, `Place of supply: 27-Maharashtra` and `Thank you for dining at Parosaa!` | The invoice number is created and the bill goes to the bill printer.      |
+| 4   | Press **Print again**.                                                                                | The second copy says `DUPLICATE`.                                                                   | Any reprint is marked so it cannot pass as the original.                  |
+| 5   | Open a shift, then **Take payment**, **Record payment** in cash.                                      | `Cash drawer opened`                                                                                | The server sends the drawer-opening signal to the bill printer.           |
+| 6   | Run the "unplug" command below, then send another dish.                                               | **Manage → Printers**: `Not printing` and the ticket waiting                                        | The server cannot connect to port 9100, so it keeps the ticket waiting.   |
+| 7   | Run `printer virtual` again.                                                                          | The waiting ticket appears by itself, once, within about 10 seconds.                                | The server checks the printer every 2 seconds and prints when it answers. |
+| 8   | Change the printer to **58 mm** and repeat row 1.                                                     | A narrower ticket with nothing cut off                                                              | Lines are laid out for the paper's width.                                 |
 
 The "unplug" command for row 6:
 

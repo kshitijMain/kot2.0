@@ -305,10 +305,12 @@ test.describe.serial('the web console', () => {
 
     await ticket.getByRole('button', { name: t('kds.allPreparing') }).click();
     await expect(ticket.getByRole('button', { name: t('kds.allReady') })).toBeVisible();
+    // Cooking: Bump says why it waits (ADR-0031).
     await expect(ticket.getByRole('button', { name: /^Bump KOT/ })).toBeDisabled();
+    await expect(ticket.getByText(t('kds.bumpWhy'))).toBeVisible();
     await ticket.getByRole('button', { name: t('kds.allReady') }).click();
-    // Food waiting at the pass: Bump waits until it is picked up (P9-21).
-    await expect(ticket.getByRole('button', { name: /^Bump KOT/ })).toBeDisabled();
+    // Everything ready: Bump is there at once (ADR-0031; P9-21 waited for the pick-up).
+    await expect(ticket.getByRole('button', { name: /^Bump KOT/ })).toBeEnabled();
     const pickUp = ticket.getByRole('button', {
       name: t('kds.stepFor', { step: t('kds.step.PICK_UP'), item: 'Chicken Tikka' }),
     });
@@ -1094,6 +1096,70 @@ test.describe.serial('the web console', () => {
     await expect(page.getByText(t('dayEnd.notCountedDone', { name: neha }))).toBeVisible();
     await expect(page.getByText(t('dayEnd.shiftsTitle'))).toHaveCount(0);
     await page.getByRole('button', { name: t('bills.back') }).click();
+  });
+
+  test('[BILL-010] [KDS-008] a bill printed before more dishes is replaced, never paid as it was (ADR-0031)', async () => {
+    await page.getByRole('button', { name: t('login.signOut') }).click();
+    await page.getByRole('button', { name: /^Vikram \(Manager\)/ }).click();
+    await page.keyboard.type('2222');
+    await expect(page).toHaveURL(/\/manage\/bills$/);
+    // Table 4: a naan, the bill printed.
+    await section(page, 'takeOrder').click();
+    await page
+      .getByRole('region', { name: 'Main Hall' })
+      .getByRole('button', { name: '4, Free' })
+      .click();
+    await page
+      .getByRole('dialog', { name: t('pos.open.title', { table: '4' }) })
+      .getByRole('button', { name: t('pos.open.guestsCount', { count: 2 }) })
+      .click();
+    const sendNaan = async () => {
+      await page.getByRole('button', { name: 'Breads', exact: true }).click();
+      await page.getByRole('button', { name: /^Butter Naan, / }).click();
+      await page
+        .getByRole('complementary', { name: t('pos.cart.title') })
+        .getByRole('button', { name: t('pos.cart.send') })
+        .click();
+      await expect(page.getByText(/^Order \d+ sent to the kitchen$/).first()).toBeVisible();
+    };
+    await sendNaan();
+    await page.getByRole('button', { name: t('pos.billTable') }).click();
+    await page.getByRole('button', { name: t('billing.printBill') }).click();
+    const firstNumber = (
+      await page
+        .getByText(/^Invoice \S+ · /)
+        .first()
+        .textContent()
+    )?.split(' ')[1];
+    // Another naan for table 4: the printed bill is outdated.
+    await section(page, 'takeOrder').click();
+    await page.getByRole('button', { name: /^4, Bill printed/ }).click();
+    await sendNaan();
+    await section(page, 'bills').click();
+    const row = page
+      .getByRole('table', { name: t('bills.list') })
+      .getByRole('row')
+      .filter({ hasText: 'Table 4' });
+    await expect(row.getByText(t('bills.status.NEEDS_NEW_BILL'))).toBeVisible();
+    await row.getByRole('button', { name: new RegExp(`^${t('bills.open')}`) }).click();
+    await expect(page.getByText(t('billing.outdated'))).toBeVisible();
+    await expect(page.getByRole('button', { name: t('billing.pay') })).toHaveCount(0);
+    await page.getByRole('button', { name: t('billing.printUpdated') }).click();
+    // The old number is cancelled; the new bill has the next one, and is the one to pay.
+    await expect(page.getByText(/Items added after the bill was printed/)).toBeVisible();
+    const pay = page.getByRole('button', { name: t('billing.pay') });
+    await expect(pay).toHaveCount(1);
+    await expect(page.getByText(new RegExp(`^Invoice ${firstNumber ?? 'x'} · `))).toBeVisible();
+    await pay.click();
+    await page.getByRole('button', { name: t('payment.record') }).click();
+    await expect(page.getByText(/^Invoice .* is paid$/)).toBeVisible();
+
+    // The Printers page: each printer and what waits for it.
+    await section(page, 'printers').click();
+    await expect(
+      page.getByRole('heading', { level: 2, name: t('printersPage.title') }),
+    ).toBeVisible();
+    await expectAccessible(page);
   });
 
   test('[SEC-003] a waiter cannot open the Staff page', async () => {
