@@ -172,6 +172,11 @@ export const OTHER_CA: ServerAuthority = {
  * The Android trust module's stand-in (ADR-0011): the servers that hand out a CA before pairing and
  * what the device pinned. `pin` answers the certificate's sample fingerprint, or `pinAnswer`.
  */
+/** An error as the native module rejects: with a `code`. */
+function coded(code: string, serverUrl: string): Error {
+  return Object.assign(new Error(`${code} at ${serverUrl}`), { code });
+}
+
 export class FakeTrust implements ServerTrust {
   /** Addresses whose CA was asked for, in order. */
   readonly fetched: string[] = [];
@@ -180,6 +185,28 @@ export class FakeTrust implements ServerTrust {
   /** What `pin` answers instead of the certificate's fingerprint: a device that disagrees. */
   pinAnswer: string | undefined;
   private readonly servers = new Map<string, ServerAuthority>();
+  private readonly failures = new Map<string, string>();
+  private readonly checkFailures = new Map<string, string>();
+  /** Addresses checked through the pinned CA, in order. */
+  readonly checked: string[] = [];
+
+  /** Fetching the CA at `serverUrl` fails with the native module's `code` (round 3 of testing). */
+  fail(serverUrl: string, code: string): this {
+    this.failures.set(serverUrl, code);
+    return this;
+  }
+
+  /** Asking `serverUrl` through the pinned CA fails with `code`: `ERR_CERT_NAME`, … */
+  failCheck(serverUrl: string, code: string): this {
+    this.checkFailures.set(serverUrl, code);
+    return this;
+  }
+
+  check(serverUrl: string): Promise<void> {
+    this.checked.push(serverUrl);
+    const code = this.checkFailures.get(serverUrl);
+    return code === undefined ? Promise.resolve() : Promise.reject(coded(code, serverUrl));
+  }
 
   /** A server at `serverUrl` hands out `authority`; nothing answers at any other address. */
   serve(serverUrl: string, authority: ServerAuthority = LAN_CA): this {
@@ -189,6 +216,8 @@ export class FakeTrust implements ServerTrust {
 
   fetchAuthority(serverUrl: string): Promise<ServerAuthority> {
     this.fetched.push(serverUrl);
+    const code = this.failures.get(serverUrl);
+    if (code !== undefined) return Promise.reject(coded(code, serverUrl));
     const authority = this.servers.get(serverUrl);
     return authority === undefined
       ? Promise.reject(new Error(`Nothing answered at ${serverUrl}`))

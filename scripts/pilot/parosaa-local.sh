@@ -538,6 +538,46 @@ doctor() {
     fi
   fi
 
+  heading "The waiter app"
+  local names_covered ca_now apk_file apk_settings
+  if port_busy "$SERVER_PORT"; then
+    names_covered="$(echo | openssl s_client -connect "127.0.0.1:$SERVER_PORT" 2>/dev/null |
+      openssl x509 -noout -ext subjectAltName 2>/dev/null | tail -n +2)"
+    if node "$ROOT/scripts/pilot/apk-checks.mjs" covers "$names_covered" "$IP"; then
+      ok "The server's certificate covers $IP, so phones accept it"
+    else
+      fix "The server's certificate does not cover $IP: phones refuse it (Chrome only warns)." \
+        "Run: scripts/pilot/parosaa-local.sh restart (it renews the certificate; the app's fingerprint stays the same)"
+    fi
+    ca_now="$(curl -sk -m 3 "https://127.0.0.1:$SERVER_PORT/api/v1/tls/ca" |
+      node -e 'let t="";process.stdin.on("data",c=>t+=c).on("end",()=>{try{process.stdout.write(JSON.parse(t).sha256)}catch{}})')"
+  fi
+  apk_file="$STATE/apk/parosaa-waiter-preview.apk"
+  if [[ -f "$apk_file" ]]; then
+    apk_settings="$(node "$ROOT/scripts/pilot/apk-checks.mjs" apk "$apk_file" 2>/dev/null || true)"
+    if [[ "$apk_settings" != *"https://$IP:$SERVER_PORT"* ]]; then
+      fix "The waiter app was built for another address: $apk_settings" \
+        "Build it again and reinstall it: scripts/pilot/build-waiter-apk.sh"
+    elif [[ "$apk_settings" == *'https://172.'* || "$apk_settings" == *'https://127.'* ]]; then
+      fix "The waiter app also has an address no phone can reach: $apk_settings" \
+        "Build it again and reinstall it: scripts/pilot/build-waiter-apk.sh"
+    else
+      ok "The waiter app is built for https://$IP:$SERVER_PORT"
+    fi
+    if [[ -n "${ca_now:-}" && "$apk_settings" != *"$ca_now"* ]]; then
+      fix "The server's certificate changed since the waiter app was built (set-up or reset)." \
+        "On each phone: open the app, press Scan the code on the PC, and scan Manage → Devices → Connect a phone." \
+        "Or build it again and reinstall it: scripts/pilot/build-waiter-apk.sh"
+    elif [[ -n "${ca_now:-}" ]]; then
+      ok "The waiter app knows the server's certificate"
+    fi
+  else
+    ok "No waiter app built here yet (scripts/pilot/build-waiter-apk.sh builds one)"
+  fi
+  if is_wsl; then
+    ok "Inside WSL phones cannot find the PC by themselves (mDNS stays in WSL): the app uses its built-in address or the Connect QR"
+  fi
+
   heading "Ports and programs"
   for name in "server $SERVER_PORT" "qr-site $SITE_PORT" "relay-host $RELAY_PORT"; do
     set -- $name

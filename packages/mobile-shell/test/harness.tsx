@@ -22,7 +22,7 @@ export function newSession(
   options: Partial<
     Pick<
       DeviceSessionOptions,
-      'followAlerts' | 'alertNotifier' | 'discovery' | 'wifi' | 'plainStore'
+      'followAlerts' | 'alertNotifier' | 'discovery' | 'wifi' | 'plainStore' | 'relocateAfterMs'
     >
   > = {},
 ) {

@@ -63,13 +63,22 @@ false data.
 - Mitigation: the app pins the CA whose fingerprint is in the pairing QR code before it sends the
   code, and then trusts only that CA, failing closed; for a typed address a person compares the
   fingerprint before pairing. The Android trust manager is tested only through JavaScript fakes.
+  A paired phone whose PC answers with another certificate stops and asks for the PC's Connect QR
+  code (ADR-0032): nothing found on the Wi-Fi, built in or typed replaces the pinned CA, only the
+  fingerprint in that code, and a code whose fingerprint the PC does not match is refused. Before
+  pairing, the phone also asks the PC through the pinned CA with the host-name check
+  (`RpLanTrust.check`), so a certificate that does not name the address is caught there.
 - Code: `packages/mobile-native/android/src/main/java/com/rp/mobilenative/LanTrust.kt`;
+  `packages/mobile-native/android/src/main/java/com/rp/mobilenative/RpLanTrustModule.kt` (`check`);
   `packages/mobile-core/src/server-trust.ts` (`findServer`);
   `packages/mobile-core/src/device-session.ts` (`DeviceSession`).
 - Tests: `packages/mobile-core/test/device-session.test.ts` "refuses a server whose CA is not the
   one in the QR code", "shows the CA of a typed address for a person to compare and pairs only
   once they have"; `packages/mobile-native/test/lan-trust.test.ts` "downloads a server’s CA, pins
-  it and forgets it on unpairing".
+  it and forgets it on unpairing"; `packages/mobile-core/test/lan-discovery.test.ts` "tells a
+  paired phone the PC’s certificate changed, and only a scan of the PC’s code fixes it";
+  `packages/mobile-shell/test/connect.test.tsx` "offers only the scan when a paired phone’s PC has
+  another certificate".
 - Risk: likelihood Low, impact High: Medium.
 - Status: Partly mitigated. Plan: manual task 33 by 2026-10-31: the man-in-the-middle check on a
   device (MASVS-NETWORK). The trust manager and the APK installer are tested through JavaScript

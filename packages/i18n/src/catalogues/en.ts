@@ -255,11 +255,19 @@ export const en = {
     failed: 'This phone could not connect to the restaurant PC.',
     wifi: 'Check that this phone is on the restaurant’s Wi-Fi and that the restaurant PC is on.',
     address: 'Restaurant PC address',
-    addressHint: 'Only if the restaurant PC moved, for example 192.168.1.20:8080.',
+    addressHint:
+      'Or type the address the PC shows in Manage → Devices, for example 192.168.1.4:8080, and press Try again.',
     retry: 'Try again',
     removed: 'This phone was unpaired. Connect it again to carry on.',
     connectAgain: 'Connect',
     mismatch: 'This restaurant PC can’t be verified. Don’t use this phone; tell a manager.',
+    unreachable: 'Can’t reach {address} – check the Wi-Fi and port forwarding.',
+    noAnswer:
+      'No answer from {address} – check that the restaurant PC is on and its server is running.',
+    certificateChanged:
+      'This PC’s security certificate has changed – scan the Connect QR on the PC again.',
+    certificateName:
+      'This PC’s security certificate does not cover {address} – restart the server on the PC, then try again.',
     browserFailed: 'This browser could not connect to the restaurant PC.',
     browserWifi: 'Check this device is on the restaurant Wi-Fi and the restaurant PC is on.',
     browserRemoved: 'This browser was unpaired. Connect it again to carry on.',

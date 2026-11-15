@@ -104,6 +104,18 @@ describe('[SEC-001] the installation CA and server certificate (ADR-0011)', () =
     expect(localServerNames([], {}, 'not a valid_name').dnsNames).toEqual(['localhost']);
   });
 
+  it('covers a configured IPv4 address as an address, as phones check it (round 3)', () => {
+    // Inside WSL the PC's Wi-Fi address is only known from the configuration (RP_TLS_HOSTNAMES):
+    // as a DNS name, Android refused the certificate for https://192.168.1.2.
+    const names = localServerNames(
+      ['192.168.1.2', 'pos.local'],
+      { eth0: [{ address: '172.30.206.98', family: 'IPv4', internal: false } as never] },
+      'LAPTOP',
+    );
+    expect(names.ipAddresses).toEqual(['127.0.0.1', '172.30.206.98', '192.168.1.2']);
+    expect(names.dnsNames).toEqual(['localhost', 'laptop', 'laptop.local', 'pos.local']);
+  });
+
   it('[AUTH-007] tells devices where to reach the server: LAN addresses, then configured names', () => {
     const names = {
       dnsNames: ['localhost', 'desktop-pos1', 'desktop-pos1.local', 'pos.local'],

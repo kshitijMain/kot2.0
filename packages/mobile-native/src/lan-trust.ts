@@ -6,6 +6,8 @@ export interface LanTrustNative {
   pin(certificate: string, serverUrl: string): Promise<string>;
   pinned(): Promise<string | null>;
   clear(): Promise<void>;
+  /** Asks the server through the pinned CA as every request will (round 3 of testing). */
+  check?(serverUrl: string): Promise<void>;
 }
 
 async function nativeModule(): Promise<LanTrustNative> {
@@ -39,6 +41,16 @@ export class AndroidServerTrust implements ServerTrust {
   /** The same, as `ServerTrust`: how a device paired earlier recognises its PC (P9-27). */
   pinnedFingerprint(): Promise<string | undefined> {
     return this.pinned();
+  }
+
+  /**
+   * Asks the server through the pinned CA and the host-name check every request makes. Rejects
+   * with the module's code: `ERR_CERT_NAME`, `ERR_CERT_CHANGED`, `ERR_TIMEOUT`, `ERR_UNREACHABLE`.
+   * An app built before the module had it does not check.
+   */
+  async check(serverUrl: string): Promise<void> {
+    const native = await this.native();
+    if (native.check !== undefined) await native.check(serverUrl);
   }
 
   async clear(): Promise<void> {

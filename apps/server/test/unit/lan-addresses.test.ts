@@ -57,3 +57,32 @@ describe('[AUTH-007] the PC’s announcement on the Wi-Fi (P9-27)', () => {
     expect(mdnsInstanceName('Café <Delhi> #1')).toBe('Café Delhi 1 PC');
   });
 });
+
+describe('[AUTH-007] a server running inside WSL (round 3)', () => {
+  /** WSL's own network: phones on the Wi-Fi can never reach these. */
+  const WSL = {
+    eth0: [v4('172.30.206.98')],
+    docker0: [v4('172.17.0.1')],
+    lo: [{ ...v4('127.0.0.1'), internal: true }],
+  };
+
+  it('gives phones only the Wi-Fi address it was configured with, never WSL’s', () => {
+    expect(lanAddresses(WSL, undefined, { wsl: true })).toEqual([]);
+    const names = {
+      dnsNames: ['localhost'],
+      ipAddresses: ['127.0.0.1', '172.30.206.98', '192.168.1.2'],
+    };
+    expect(
+      lanServerUrls(names, {
+        tls: true,
+        port: 8080,
+        hostnames: ['192.168.1.2'],
+        addresses: lanAddresses(WSL, undefined, { wsl: true }),
+      }),
+    ).toEqual(['https://192.168.1.2:8080']);
+  });
+
+  it('keeps its own addresses outside WSL', () => {
+    expect(lanAddresses(WSL)).toEqual(['172.30.206.98']);
+  });
+});

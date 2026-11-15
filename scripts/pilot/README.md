@@ -80,9 +80,18 @@ scripts/pilot/build-waiter-apk.sh                 # the address the pilot rememb
 scripts/pilot/build-waiter-apk.sh 192.168.1.20    # or another address of this computer
 ```
 
-Build it again whenever the Mac's Wi-Fi address changes. (If the address changed and the app was
-not rebuilt, the app says it cannot connect and takes the new address in **Restaurant PC
+Build it again whenever the Wi-Fi address changes. (If the address changed and the app was
+not rebuilt, the app says it cannot reach the old address and takes the new one in **Restaurant PC
 address**.)
+
+The build refuses addresses no phone can reach (WSL's own `172.x`, `127.x`, `localhost`) and an
+address the server's certificate does not cover, and says what to do (ADR-0032). `parosaa-local.sh
+doctor` checks the app built in `.pilot/apk` against the running server: its address, and whether
+its certificate is still the server's. When the app says the PC's certificate has changed (after
+`reset`), scan the Connect QR in **Manage → Devices**; no reinstall is needed. To send the exact
+error, `scripts/pilot/build-waiter-apk.sh log` saves the phone's log over USB (`waiter-log.txt`,
+also in Windows Downloads under WSL). Under WSL the phone cannot find the PC by itself (mDNS does
+not cross WSL's network): the built-in address and the Connect QR are the ways in.
 
 It is "Parosaa Captain (preview)" (`in.rp.waiter.preview`), signed with the debug key, so it is
 installed directly, not from the Play Store. Over USB:

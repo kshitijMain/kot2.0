@@ -14,6 +14,7 @@ import { SECRET_STORE, type SecretStore } from '../auth/secret-store.js';
 import { APP_CONFIG, type AppConfig } from '../config/app-config.js';
 import {
   lanAddresses,
+  runningInWsl,
   lanServerUrls,
   localServerNames,
   serverTlsOptions,
@@ -111,7 +112,13 @@ export class TlsService implements OnApplicationBootstrap, OnModuleDestroy {
       tls: this.enabled,
       port: this.listeningPort(),
       hostnames: this.config.tlsHostnames,
-      addresses: lanAddresses(undefined, this.config.lanInterface),
+      // Inside WSL, the Wi-Fi address configured replaces WSL's own (round 3 of testing); with
+      // none configured, WSL's are better than nothing.
+      addresses: lanAddresses(undefined, this.config.lanInterface, {
+        wsl:
+          runningInWsl() &&
+          this.config.tlsHostnames.some((name) => /^\d+\.\d+\.\d+\.\d+$/.test(name)),
+      }),
     });
   }
 

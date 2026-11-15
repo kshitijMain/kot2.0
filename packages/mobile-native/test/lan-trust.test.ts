@@ -29,6 +29,14 @@ function fakeLanTrust() {
       state.pinned = undefined;
       return Promise.resolve();
     },
+    check: (serverUrl) =>
+      serverUrl === SERVER
+        ? Promise.resolve()
+        : Promise.reject(
+            Object.assign(new Error('The certificate does not name this address'), {
+              code: 'ERR_CERT_NAME',
+            }),
+          ),
   };
   return { native, state };
 }
@@ -56,5 +64,20 @@ describe('[SEC-010] the LAN CA pinned by the Android module (ADR-0011)', () => {
     await expect(trust.fetchAuthority('https://10.0.0.5:8443')).rejects.toMatchObject({
       code: 'ERR_UNREACHABLE',
     });
+  });
+
+  it('[AUTH-007] checks the server through the pinned CA, passing on why it failed (round 3)', async () => {
+    const { native } = fakeLanTrust();
+    const trust = new AndroidServerTrust(() => Promise.resolve(native));
+    await expect(trust.check(SERVER)).resolves.toBeUndefined();
+    await expect(trust.check('https://172.30.206.98:8080')).rejects.toMatchObject({
+      code: 'ERR_CERT_NAME',
+    });
+    // An app whose module has no check yet connects as before.
+    const older: LanTrustNative = { ...native };
+    delete older.check;
+    await expect(
+      new AndroidServerTrust(() => Promise.resolve(older)).check(SERVER),
+    ).resolves.toBeUndefined();
   });
 });

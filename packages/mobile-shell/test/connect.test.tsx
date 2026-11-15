@@ -31,11 +31,18 @@ function connectQr(payload: Record<string, unknown>): string {
   return JSON.stringify({ v: 1, kind: 'connect', name: 'Parosaa', ...payload });
 }
 
+/** Every session a test starts is stopped after it, so no timer keeps Jest running. */
+const started: { stop(): void }[] = [];
+afterEach(() => {
+  for (const session of started.splice(0)) session.stop();
+});
+
 async function setup(options: {
   trust: FakeTrust;
   discovery?: FakeDiscovery;
   wifi?: FakeWifiRoute;
   servers?: readonly string[];
+  caSha256?: string;
 }) {
   const server = fakeServer();
   const { session } = newSession(server, options.trust, {
@@ -43,9 +50,13 @@ async function setup(options: {
     ...(options.wifi !== undefined && { wifi: options.wifi }),
   });
   await session.start();
+  started.push(session);
   await renderShell(
     session,
-    <ConnectScreen {...(options.servers !== undefined && { servers: options.servers })} />,
+    <ConnectScreen
+      {...(options.servers !== undefined && { servers: options.servers })}
+      {...(options.caSha256 !== undefined && { caSha256: options.caSha256 })}
+    />,
   );
   return { server, session };
 }
@@ -114,6 +125,103 @@ describe('[AUTH-007] [NFR-A01] the connect screen finds the PC by itself (P9-27)
     await setup({ trust: new FakeTrust(), wifi });
     expect(await screen.findByTestId('connect-no-internet')).toHaveTextContent(
       translator('connect.wifiNoInternet'),
+    );
+  });
+});
+
+describe('[AUTH-007] the connect screen says exactly what failed (round 3)', () => {
+  const offersBoth = () => {
+    expect(screen.getByTestId('connect-scan')).toHaveTextContent('Scan the code on the PC');
+    expect(screen.getByTestId('connect-address')).toBeOnTheScreen();
+    expect(screen.getByTestId('connect-retry')).toBeOnTheScreen();
+  };
+
+  it('names the address it could not reach', async () => {
+    const trust = new FakeTrust().fail(LAN, 'ERR_UNREACHABLE');
+    await setup({ trust, servers: [LAN] });
+    expect(await screen.findByTestId('connect-error')).toHaveTextContent(
+      'Can’t reach 192.168.1.20:8443 – check the Wi-Fi and port forwarding.',
+    );
+    offersBoth();
+  });
+
+  it('says when nothing answered in time', async () => {
+    const trust = new FakeTrust().fail(LAN, 'ERR_TIMEOUT');
+    await setup({ trust, servers: [LAN] });
+    expect(await screen.findByTestId('connect-error')).toHaveTextContent(
+      translator('connect.noAnswer', { address: '192.168.1.20:8443' }),
+    );
+    expect(screen.getByTestId('connect-error')).toHaveTextContent(/^No answer from/);
+    offersBoth();
+  });
+
+  it('says when the PC’s certificate does not cover the address', async () => {
+    const trust = new FakeTrust().serve(LAN, LAN_CA).failCheck(LAN, 'ERR_CERT_NAME');
+    const { session } = await setup({ trust, servers: [LAN], caSha256: LAN_CA.sha256 });
+    expect(await screen.findByTestId('connect-error')).toHaveTextContent(
+      translator('connect.certificateName', { address: '192.168.1.20:8443' }),
+    );
+    expect(session.getSnapshot().phase).toBe('unpaired');
+  });
+
+  it('says the certificate changed, and takes the new one from the PC’s code', async () => {
+    // Built for the PC's old certificate; the PC was set up again since.
+    const trust = new FakeTrust().serve(LAN, OTHER_CA);
+    const { session } = await setup({ trust, servers: [LAN], caSha256: LAN_CA.sha256 });
+    expect(await screen.findByTestId('connect-error')).toHaveTextContent(
+      'This PC’s security certificate has changed – scan the Connect QR on the PC again.',
+    );
+    expect(trust.pinned).toBeUndefined();
+    await scan(connectQr({ urls: [LAN], ca: OTHER_CA.sha256 }));
+    await waitFor(() => {
+      expect(session.getSnapshot().phase).toBe('paired');
+    });
+    expect(trust.pinned).toEqual({ certificate: OTHER_CA.certificate, serverUrl: LAN });
+  });
+
+  it('offers only the scan when a paired phone’s PC has another certificate', async () => {
+    const trust = new FakeTrust().serve(LAN, LAN_CA);
+    const server = fakeServer();
+    const { session, sockets } = newSession(server, trust, {
+      discovery: new FakeDiscovery().answer(lanService('192.168.1.20', 8443, LAN_CA)),
+      relocateAfterMs: 10,
+    });
+    await session.start();
+    started.push(session);
+    await session.connectByItself();
+    // The PC was set up again: it answers where it was, with another certificate.
+    trust.serve(LAN, OTHER_CA);
+    sockets.last.fire('disconnect', 'transport close');
+    await waitFor(() => {
+      expect(session.getSnapshot().certificateChanged).toBe(true);
+    });
+    await renderShell(session, <ConnectScreen servers={[LAN]} caSha256={LAN_CA.sha256} />);
+    expect(screen.getByTestId('connect-error')).toHaveTextContent(
+      translator('connect.certificateChanged'),
+    );
+    expect(screen.queryByTestId('connect-retry')).toBeNull();
+    expect(screen.queryByTestId('connect-address')).toBeNull();
+    // A code from somewhere else, with yet another certificate, is refused.
+    await scan(connectQr({ urls: [LAN], ca: LAN_CA.sha256 }));
+    expect(await screen.findByTestId('connect-error')).toHaveTextContent(
+      translator('connect.mismatch'),
+    );
+    expect(trust.pinned?.certificate).toBe(LAN_CA.certificate);
+    // The PC's own code: its new certificate is trusted from now on.
+    await scan(connectQr({ urls: [LAN], ca: OTHER_CA.sha256 }));
+    await waitFor(() => {
+      expect(session.getSnapshot().certificateChanged).toBe(false);
+    });
+    expect(trust.pinned).toEqual({ certificate: OTHER_CA.certificate, serverUrl: LAN });
+  });
+
+  it('shows WSL’s address as it is, so the person sees the phone tried the wrong one', async () => {
+    const trust = new FakeTrust()
+      .fail('https://172.30.206.98:8080', 'ERR_UNREACHABLE')
+      .fail('https://192.168.1.4:8080', 'ERR_UNREACHABLE');
+    await setup({ trust, servers: ['https://172.30.206.98:8080', 'https://192.168.1.4:8080'] });
+    expect(await screen.findByTestId('connect-error')).toHaveTextContent(
+      'Can’t reach 172.30.206.98:8080, 192.168.1.4:8080 – check the Wi-Fi and port forwarding.',
     );
   });
 });

@@ -5,6 +5,7 @@ import {
   MemoryStore,
   normalizeFingerprint,
   sameFingerprint,
+  ServerCertificateNameError,
   ServerMismatchError,
   ServerUnreachableError,
 } from '../src/index.js';
@@ -271,5 +272,63 @@ describe('[NFR-A01] a Wi-Fi without internet (P9-27)', () => {
     expect(wifi.routed).toEqual([[], [LAN]]);
     wifi.set(false);
     expect(session.getSnapshot().wifiWithoutInternet).toBe(false);
+  });
+});
+
+describe('[AUTH-007] saying exactly why the phone could not connect (round 3)', () => {
+  it('names the address that refused or did not answer', async () => {
+    const trust = new FakeTrust().fail(BUILT_IN, 'ERR_UNREACHABLE').fail(QR, 'ERR_TIMEOUT');
+    const { session } = setup({ trust });
+    await session.start();
+    const refused = await session
+      .connectByItself({ builtIn: { servers: [BUILT_IN], caSha256: LAN_CA.sha256 } })
+      .catch((error: unknown) => error);
+    expect(refused).toBeInstanceOf(ServerUnreachableError);
+    expect((refused as ServerUnreachableError).failures).toEqual([
+      { url: BUILT_IN, reason: 'UNREACHABLE' },
+    ]);
+    const silent = await session
+      .connectByItself({ scanned: { servers: [QR], caSha256: LAN_CA.sha256 } })
+      .catch((error: unknown) => error);
+    expect((silent as ServerUnreachableError).failures).toEqual([{ url: QR, reason: 'TIMEOUT' }]);
+  });
+
+  it('says when the PC’s certificate does not cover the address the phone used', async () => {
+    // Inside WSL the certificate named only WSL's address: the CA matched, the address did not.
+    const trust = new FakeTrust().serve(BUILT_IN, LAN_CA).failCheck(BUILT_IN, 'ERR_CERT_NAME');
+    const { session, fake } = setup({ trust });
+    await session.start();
+    const failure = await session
+      .connectByItself({ builtIn: { servers: [BUILT_IN], caSha256: LAN_CA.sha256 } })
+      .catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(ServerCertificateNameError);
+    expect((failure as ServerCertificateNameError).serverUrl).toBe(BUILT_IN);
+    expect(fake.callsTo('POST', '/api/v1/devices/pair')).toHaveLength(0);
+    expect(session.getSnapshot().phase).toBe('unpaired');
+  });
+
+  it('tells a paired phone the PC’s certificate changed, and only a scan of the PC’s code fixes it', async () => {
+    const trust = new FakeTrust().serve(LAN, LAN_CA);
+    const discovery = new FakeDiscovery().answer(lanService('192.168.1.20', 8443, LAN_CA));
+    const { session, sockets, fake } = setup({ trust, discovery });
+    await session.start();
+    await session.connectByItself();
+    sockets.sync(4);
+    // The PC was set up again: same address, a new certificate.
+    trust.serve(LAN, OTHER_CA);
+    sockets.last.fire('disconnect', 'transport close');
+    await expect.poll(() => session.getSnapshot().certificateChanged).toBe(true);
+    // Nothing the phone finds by itself, or was built with, can replace the certificate.
+    await expect(
+      session.connectByItself({ builtIn: { servers: [LAN], caSha256: LAN_CA.sha256 } }),
+    ).rejects.toBeInstanceOf(ServerMismatchError);
+    await expect(session.connectByItself()).rejects.toBeInstanceOf(ServerMismatchError);
+    expect(trust.pinned?.certificate).toBe(LAN_CA.certificate);
+    // A person scans the PC's Connect QR code: its certificate is trusted from now on.
+    await session.connectByItself({ scanned: { servers: [LAN], caSha256: OTHER_CA.sha256 } });
+    expect(trust.pinned?.certificate).toBe(OTHER_CA.certificate);
+    expect(session.getSnapshot()).toMatchObject({ phase: 'paired', certificateChanged: false });
+    expect(fake.callsTo('POST', '/api/v1/devices/pair')).toHaveLength(2);
+    session.stop();
   });
 });

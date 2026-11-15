@@ -1020,6 +1020,24 @@ anyone"; ADR-0025 amended):
 838. Unchanged without the flag: AUTH-007 pairing, and the table tablet, which still pairs with a
      code (no tablets in the pilot).
 
+Decided 2026-11-15 (fixes from the Business Owner's testing, round 3, ADR-0032; the open business
+choice is D-42 in `docs/testing/DECISIONS_NEEDED.md`):
+
+880. A configured host name that is an IPv4 address goes into the certificate's IP addresses
+     (Android ignores an address written as a DNS name); the certificate is reissued with the same CA.
+881. Under WSL, with `RP_TLS_HOSTNAMES` naming an address, the Connect QR and advertised addresses
+     list only the configured ones, never WSL's own 172.x.
+882. `build-waiter-apk.sh` builds for `PILOT_IP` / `.pilot/pilot-ip`, refuses 127.x, localhost,
+     172.16–31.x and 169.254.x, and refuses when the server's certificate does not cover the
+     address; `doctor` checks the app's built-in address and certificate.
+883. The connect screen says what failed: "Can't reach <address> – check the Wi-Fi and port
+     forwarding", "No answer from <address>", "certificate does not cover <address>", "certificate
+     has changed – scan the Connect QR on the PC again" (`RpLanTrust.check`, `ServerUnreachableError.failures`,
+     `ServerCertificateNameError`).
+884. A paired phone whose PC has another certificate (`certificateChanged`) returns to the connect
+     screen with only "Scan the code on the PC"; only the fingerprint in the PC's Connect QR replaces
+     the trusted certificate (D-42).
+
 Decided 2026-11-15 (fixes from the Business Owner's testing, round 2, ADR-0031; open business
 choices are D-39 to D-41 in `docs/testing/DECISIONS_NEEDED.md`):
 
@@ -4717,6 +4735,25 @@ Owner actions that only a person can do (see also `docs/owner/OWNER_CHECKLIST.md
   add branch protection requiring the CI check.
 
 ## Session log (newest first)
+
+### 2026-11-15: fixes from testing, round 3: the waiter app can't connect (ADR-0032)
+
+Same branch `fix/testing-round-1` (local only). Decisions 880 to 884, D-42.
+
+- Cause: the certificate named the Wi-Fi address as `DNS:192.168.1.2`, not as an IP address, so
+  Android refused it after pinning the CA (Chrome only warned). Also, Windows port forwarding was
+  missing that day (WSL changes address after a restart).
+- Server: `localServerNames` (IPv4 to IP SANs), `runningInWsl`, `lanAddresses(…, { wsl })`.
+- Scripts: `scripts/pilot/apk-checks.mjs` (address, APK and certificate checks, tested in
+  `apps/server/test/unit/pilot-apk-checks.test.ts`), `build-waiter-apk.sh`, `doctor`.
+- Phone: `RpLanTrust.check` (Kotlin) and `ERR_TIMEOUT`; `ServerTrust.check`; per-address failures;
+  `certificateChanged`; the connect screen's messages (`connect.unreachable`, `connect.noAnswer`,
+  `connect.certificateName`, `connect.certificateChanged`).
+
+Gotchas: the Kotlin change is compiled only by an APK build (CI's Android job, or
+`build-waiter-apk.sh`). Jest test files that start a `DeviceSession` must stop it, or Jest waits
+on its timers after the run. mDNS never crosses WSL's network, so the pilot depends on the
+built-in address and the Connect QR.
 
 ### 2026-11-15: fixes from testing, round 2 (ADR-0031)
 

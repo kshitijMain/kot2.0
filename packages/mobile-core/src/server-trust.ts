@@ -22,6 +22,12 @@ export interface ServerTrust {
   clear(): Promise<void>;
   /** The pinned CA's fingerprint, if any: how a device paired earlier recognises its PC (P9-27). */
   pinnedFingerprint?(): Promise<string | undefined>;
+  /**
+   * Asks the server through the pinned CA, as every request will (round 3 of testing): rejects
+   * with `ERR_CERT_NAME` when the certificate does not cover the address, `ERR_CERT_CHANGED` when
+   * another CA signed it, `ERR_TIMEOUT` or `ERR_UNREACHABLE`.
+   */
+  check?(serverUrl: string): Promise<void>;
 }
 
 /** Where a device may pair: an address a person typed, or those in the manager's QR code. */
@@ -44,12 +50,48 @@ export interface FoundServer {
   readonly verified: boolean;
 }
 
-/** None of the addresses answered. */
+/**
+ * Why an address did not answer (round 3 of testing): it refused or could not be reached
+ * (`UNREACHABLE`: nothing listens there, or the Wi-Fi or port forwarding does not lead there),
+ * or it said nothing in time (`TIMEOUT`).
+ */
+export type ConnectFailureReason = 'UNREACHABLE' | 'TIMEOUT';
+
+/** One address tried and why it failed. */
+export interface ConnectFailure {
+  readonly url: string;
+  readonly reason: ConnectFailureReason;
+}
+
+/** None of the addresses answered; `failures` says, for each one tried, how. */
 export class ServerUnreachableError extends Error {
-  constructor(readonly servers: readonly string[]) {
+  constructor(
+    readonly servers: readonly string[],
+    readonly failures: readonly ConnectFailure[] = [],
+  ) {
     super('The server did not answer. Check that this device is on the restaurant Wi-Fi.');
     this.name = 'ServerUnreachableError';
   }
+}
+
+/**
+ * The PC presented the certificate the phone expects, but it does not cover the address the phone
+ * used (round 3 of testing: inside WSL it named only WSL's own address), so every request fails.
+ */
+export class ServerCertificateNameError extends Error {
+  constructor(readonly serverUrl: string) {
+    super(`The restaurant PC's certificate does not cover ${serverUrl}.`);
+    this.name = 'ServerCertificateNameError';
+  }
+}
+
+/** How an address failed, from the trust module's error code (`ERR_TIMEOUT`) or a fetch abort. */
+export function failureReasonOf(error: unknown): ConnectFailureReason {
+  const { code, name } = (typeof error === 'object' && error !== null ? error : {}) as {
+    code?: unknown;
+    name?: unknown;
+  };
+  return code === 'ERR_TIMEOUT' || name === 'AbortError' ? 'TIMEOUT' : 'UNREACHABLE';
 }
 
 /** The server's CA is not the one in the pairing QR code: someone may be in between. */
@@ -104,13 +146,16 @@ export async function findServer(
     if (urls.length > 1) await answers(serverUrl, options);
     return { serverUrl, authority: undefined, verified: false };
   });
-  const outcomes = await firstFulfilled(probes);
+  const outcomes = await firstFulfilled(probes, urls);
   if ('found' in outcomes) return outcomes.found;
   // A server that answered with the wrong CA is worth saying so, rather than "unreachable".
-  if (outcomes.errors.some((error) => error instanceof ServerMismatchError)) {
+  if (outcomes.errors.some((entry) => entry.error instanceof ServerMismatchError)) {
     throw new ServerMismatchError();
   }
-  throw new ServerUnreachableError(urls);
+  throw new ServerUnreachableError(
+    urls,
+    outcomes.errors.map((entry) => ({ url: entry.url, reason: failureReasonOf(entry.error) })),
+  );
 }
 
 /** Resolves once the server at `serverUrl` answers at all; rejects when it does not in time. */
@@ -126,22 +171,27 @@ async function answers(serverUrl: string, options: FindServerOptions): Promise<v
   }
 }
 
-/** The first probe to succeed, or every probe's error once all have failed. */
+/** The first probe to succeed, or every probe's error, in address order, once all have failed. */
 function firstFulfilled<T>(
   probes: readonly Promise<T>[],
-): Promise<{ found: T } | { errors: unknown[] }> {
+  urls: readonly string[],
+): Promise<{ found: T } | { errors: { url: string; error: unknown }[] }> {
   return new Promise((resolve) => {
-    const errors: unknown[] = [];
-    for (const probe of probes) {
+    const errors: ({ url: string; error: unknown } | undefined)[] = probes.map(() => undefined);
+    let failed = 0;
+    probes.forEach((probe, index) => {
       probe.then(
         (found) => {
           resolve({ found });
         },
         (error: unknown) => {
-          errors.push(error);
-          if (errors.length === probes.length) resolve({ errors });
+          errors[index] = { url: urls[index] ?? '', error };
+          failed += 1;
+          if (failed === probes.length) {
+            resolve({ errors: errors.filter((entry) => entry !== undefined) });
+          }
         },
       );
-    }
+    });
   });
 }

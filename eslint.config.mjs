@@ -26,6 +26,7 @@ export default tseslint.config(
       'packages/config/eslint/*.d.mts',
       // The virtual printer's parser types (development tooling, not part of a TS project).
       'scripts/virtual-printer/*.d.mts',
+      'scripts/pilot/*.d.mts',
       'firmware/**',
       // The Windows installer's staging folder and output (P0-16d).
       'apps/desktop/staging/**',

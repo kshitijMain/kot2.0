@@ -553,3 +553,21 @@ C: allow without a warning.
 
 **Recommendation:** A. GST allows several series as long as each runs without gaps; refusing would
 stop a restaurant that genuinely needs a separate series (for example for takeaway).
+
+## D-42: accepting a PC's new certificate on a phone
+
+**Situation.** When the PC is set up again (`reset`, or a new PC), it has a new security
+certificate. A phone that trusted the old one refuses it, as it must: another computer on the Wi-Fi
+could pretend to be the PC (ADR-0032).
+
+**Today.** The phone says "This PC's security certificate has changed – scan the Connect QR on the
+PC again". Scanning the code in Manage → Devices (which needs a manager signed in on the PC) makes
+the phone trust the new certificate. Nothing else does: not an address typed, found on the Wi-Fi or
+built into the app. Before this round the app had to be uninstalled.
+
+**Options.** A: scanning the PC's Connect QR is enough (as today). B: also ask for a manager's PIN on
+the phone. C: uninstall and reinstall the app (as before).
+
+**Recommendation:** A. The code is only on the PC's screen behind a manager's sign-in, and it
+carries the certificate's fingerprint, so a phone cannot be pointed at another computer by it. B adds
+a step every time the PC is set up again for little extra safety; C loses the phone's settings.

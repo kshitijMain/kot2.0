@@ -14,6 +14,7 @@ import {
   DISCOVERY_TIMEOUT_MS,
   discoveredUrls,
   type LanDiscovery,
+  sameFingerprint,
   type WifiRoute,
 } from './lan-discovery.js';
 import { MenuCache } from './menu-cache.js';
@@ -24,6 +25,9 @@ import {
   type FoundServer,
   type PairingTarget,
   type ServerAuthority,
+  ServerCertificateNameError,
+  type ConnectFailure,
+  failureReasonOf,
   ServerMismatchError,
   type ServerTrust,
   ServerUnreachableError,
@@ -60,6 +64,11 @@ export interface DeviceSessionSnapshot {
    * rest of the phone needs mobile data, so the connect screen says to keep both on.
    */
   readonly wifiWithoutInternet: boolean;
+  /**
+   * The PC at the paired address now presents another certificate (round 3 of testing: it was set
+   * up again). Only a person scanning the PC's Connect QR code can make the phone trust the new one.
+   */
+  readonly certificateChanged: boolean;
 }
 
 export interface DeviceSessionOptions {
@@ -130,6 +139,7 @@ const INITIAL: DeviceSessionSnapshot = {
   notice: undefined,
   clientTooOld: false,
   wifiWithoutInternet: false,
+  certificateChanged: false,
 };
 
 /**
@@ -280,11 +290,40 @@ export class DeviceSession {
    * answers only where it runs PIN-only, and the PIN is what lets anyone in.
    */
   async connectByItself(targets: ConnectTargets = {}): Promise<void> {
-    const found = await this.locate(targets);
+    // The PC's certificate changed: nothing found by itself or built in may replace it, only the
+    // certificate in the PC's own Connect QR code, scanned by a person (round 3 of testing).
+    if (this.snapshot.certificateChanged && targets.scanned?.caSha256 === undefined) {
+      throw new ServerMismatchError();
+    }
+    const found = await this.locate(
+      this.snapshot.certificateChanged ? { scanned: targets.scanned } : targets,
+    );
     await this.trustServer(found.serverUrl, found.authority);
+    await this.checkTrusted(found.serverUrl);
     const key = await this.newKey(found.serverUrl);
     const { code } = await this.requireClient().api.createPhonePairingCode();
     await this.completePairing(found.serverUrl, key, code, found.authority);
+    if (this.snapshot.certificateChanged) this.update({ certificateChanged: false });
+  }
+
+  /**
+   * Asks the PC through the CA just pinned, as every request will (round 3 of testing): a
+   * certificate that does not cover the address failed only later, with no reason given.
+   */
+  private async checkTrusted(serverUrl: string): Promise<void> {
+    const trust = this.options.trust;
+    if (trust?.check === undefined || !serverUrl.startsWith('https:')) return;
+    try {
+      await trust.check(serverUrl);
+    } catch (error) {
+      const code = (error as { code?: unknown }).code;
+      if (code === 'ERR_CERT_NAME') throw new ServerCertificateNameError(serverUrl);
+      if (code === 'ERR_CERT_CHANGED') throw new ServerMismatchError();
+      throw new ServerUnreachableError(
+        [serverUrl],
+        [{ url: serverUrl, reason: failureReasonOf(error) }],
+      );
+    }
   }
 
   /**
@@ -306,6 +345,7 @@ export class DeviceSession {
       () => Promise.resolve(builtIn?.servers ?? []),
     ];
     const tried = new Set<string>();
+    const failures: ConnectFailure[] = [];
     let invalid = false;
     let mismatch = false;
     for (const stage of stages) {
@@ -332,11 +372,12 @@ export class DeviceSession {
       } catch (error) {
         if (error instanceof ServerMismatchError) mismatch = true;
         else if (error instanceof InvalidServerAddressError) invalid = true;
+        else if (error instanceof ServerUnreachableError) failures.push(...error.failures);
       }
     }
     if (mismatch) throw new ServerMismatchError();
     if (tried.size === 0 && invalid) throw new InvalidServerAddressError();
-    throw new ServerUnreachableError([...tried]);
+    throw new ServerUnreachableError([...tried], failures);
   }
 
   /** A new Keystore key, and a client for `serverUrl` that signs with it. */
@@ -634,6 +675,15 @@ export class DeviceSession {
       const generation = this.generation;
       const expected = await this.pinnedFingerprint();
       if (expected === undefined && current.startsWith('https:')) return;
+      // Round 3 of testing: the PC answers where it was, with another certificate (it was set up
+      // again). Nothing found by itself replaces it; the person is asked to scan the PC's code.
+      if (expected !== undefined && this.options.trust !== undefined) {
+        const answer = await this.options.trust.fetchAuthority(current).catch(() => undefined);
+        if (answer !== undefined && !sameFingerprint(answer.sha256, expected)) {
+          if (!this.snapshot.certificateChanged) this.update({ certificateChanged: true });
+          return;
+        }
+      }
       const urls = (await this.discoverUrls(expected)).filter((url) => url !== current);
       if (urls.length === 0) return;
       await this.routeTo(urls);

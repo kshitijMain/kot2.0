@@ -1,5 +1,5 @@
 import { mkdir, readFile, rename, writeFile } from 'node:fs/promises';
-import { hostname, networkInterfaces } from 'node:os';
+import { hostname, networkInterfaces, release as osRelease } from 'node:os';
 import { join } from 'node:path';
 import type { SecureContextOptions } from 'node:tls';
 import { open as unseal, seal } from '../auth/secret-box.js';
@@ -50,6 +50,16 @@ const FILES = {
 } as const;
 
 const HOST_LABEL = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/;
+const IPV4 = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+
+/**
+ * Whether the server runs inside WSL on Windows (round 3 of testing): WSL has a network of its own
+ * behind Windows, so its addresses are not the ones phones reach; Windows forwards the Wi-Fi
+ * address's ports to it, and the Wi-Fi address comes from the configuration (`RP_TLS_HOSTNAMES`).
+ */
+export function runningInWsl(release: string = osRelease()): boolean {
+  return /microsoft|wsl/i.test(release);
+}
 
 /**
  * The names the server certificate must cover: every non-internal IPv4 address of this PC (its
@@ -70,7 +80,12 @@ export function localServerNames(
   const dnsNames = new Set(['localhost']);
   const label = computerName.toLowerCase();
   if (HOST_LABEL.test(label)) dnsNames.add(label).add(`${label}.local`);
-  for (const name of extraHostnames) dnsNames.add(name.toLowerCase());
+  for (const name of extraHostnames) {
+    // An address is covered as an address (round 3 of testing): phones check
+    // https://192.168.1.2 against the certificate's IP entries only, never its DNS names.
+    if (IPV4.test(name.trim())) ipAddresses.add(name.trim());
+    else dnsNames.add(name.toLowerCase());
+  }
   return { dnsNames: [...dnsNames], ipAddresses: [...ipAddresses].sort() };
 }
 
@@ -113,7 +128,10 @@ function lanRank(address: string): number | undefined {
 export function lanAddresses(
   interfaces: ReturnType<typeof networkInterfaces> = networkInterfaces(),
   preferredInterface?: string,
+  options: { readonly wsl?: boolean } = {},
 ): string[] {
+  // Inside WSL every adapter is WSL's own: the configured Wi-Fi address is offered instead.
+  if (options.wsl === true) return [];
   const found: { address: string; rank: number }[] = [];
   for (const [name, entries] of Object.entries(interfaces)) {
     if (VIRTUAL_ADAPTER.test(name.trim())) continue;

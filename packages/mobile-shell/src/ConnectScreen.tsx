@@ -1,6 +1,10 @@
 import { parseConnectQr, parsePairingQr } from '@rp/contracts';
 import type { PairingTarget } from '@rp/mobile-core';
-import { ServerMismatchError, ServerUnreachableError } from '@rp/mobile-core';
+import {
+  ServerCertificateNameError,
+  ServerMismatchError,
+  ServerUnreachableError,
+} from '@rp/mobile-core';
 import { Button, TextField } from '@rp/ui-native';
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
@@ -23,6 +27,10 @@ const QrScanner = lazy(() =>
  * Manage → Devices: the PC's addresses and certificate), "Try again" and the PC's address for the
  * day nothing else works. On a Wi-Fi without internet it says to keep Wi-Fi on and turn on mobile
  * data. A phone a manager removed connects again only when someone presses Connect.
+ *
+ * It says exactly what failed (round 3 of testing): which address could not be reached or did not
+ * answer, or that the PC's certificate changed or does not cover the address. A paired phone whose
+ * PC now has another certificate comes back here, and only scanning the PC's code fixes it.
  */
 export function ConnectScreen({
   servers = NO_SERVERS,
@@ -34,13 +42,15 @@ export function ConnectScreen({
   caSha256?: string;
 }) {
   const session = useDeviceSession();
-  const { notice, wifiWithoutInternet } = useSessionState();
+  const { notice, wifiWithoutInternet, certificateChanged } = useSessionState();
   const t = useT();
   const removed = notice === 'revoked';
   const [address, setAddress] = useState(servers[0] ?? '');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    certificateChanged ? t('connect.certificateChanged') : null,
+  );
   // Working from the start when it connects by itself, so the screen never flashes the form.
-  const [working, setWorking] = useState(!removed);
+  const [working, setWorking] = useState(!removed && !certificateChanged);
   const [scanning, setScanning] = useState(false);
   /** The Connect QR code scanned: its addresses and the PC's certificate, kept for Try again. */
   const [scanned, setScanned] = useState<PairingTarget | undefined>(undefined);
@@ -61,14 +71,15 @@ export function ConnectScreen({
         },
         (failure: unknown) => {
           setWorking(false);
-          setError(problemOf(failure, t));
+          setError(problemOf(failure, t, from !== undefined));
         },
       );
   };
 
   // Once, as the screen opens: the remembered address, mDNS, then the built-in addresses.
   useEffect(() => {
-    if (removed) return;
+    // A changed certificate: nothing to try by itself, only the PC's code scanned (round 3).
+    if (removed || certificateChanged) return;
     let live = true;
     session
       .connectByItself({
@@ -81,12 +92,14 @@ export function ConnectScreen({
         (failure: unknown) => {
           if (!live) return;
           setWorking(false);
-          setError(problemOf(failure, t));
+          setError(problemOf(failure, t, false));
         },
       );
     return () => {
       live = false;
     };
+    // Once, as the screen opens: a certificate that changes later does not start it again.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- certificateChanged is read once.
   }, [session, servers, caSha256, removed, t]);
 
   const onScanned = (data: string) => {
@@ -138,7 +151,7 @@ export function ConnectScreen({
           <Note tone="danger" testID="connect-error">
             {error}
           </Note>
-          <Note>{t('connect.wifi')}</Note>
+          {certificateChanged ? null : <Note>{t('connect.wifi')}</Note>}
         </>
       )}
       {working ? null : (
@@ -157,30 +170,34 @@ export function ConnectScreen({
               >
                 {t('connect.scan')}
               </Button>
-              <TextField
-                label={t('connect.address')}
-                hint={t('connect.addressHint')}
-                value={address}
-                onChangeText={setAddress}
-                testID="connect-address"
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-              />
+              {certificateChanged ? null : (
+                <TextField
+                  label={t('connect.address')}
+                  hint={t('connect.addressHint')}
+                  value={address}
+                  onChangeText={setAddress}
+                  testID="connect-address"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  keyboardType="url"
+                />
+              )}
             </>
           )}
-          <Button
-            testID="connect-retry"
-            variant="secondary"
-            size="lg"
-            fullWidth
-            onPress={() => {
-              // The address typed first, then the ones the app was built with.
-              connect(typed === '' ? servers : [...new Set([typed, ...servers])]);
-            }}
-          >
-            {error === null ? t('connect.connectAgain') : t('connect.retry')}
-          </Button>
+          {certificateChanged && !inBrowser ? null : (
+            <Button
+              testID="connect-retry"
+              variant="secondary"
+              size="lg"
+              fullWidth
+              onPress={() => {
+                // The address typed first, then the ones the app was built with.
+                connect(typed === '' ? servers : [...new Set([typed, ...servers])]);
+              }}
+            >
+              {error === null ? t('connect.connectAgain') : t('connect.retry')}
+            </Button>
+          )}
         </>
       )}
     </Screen>
@@ -207,8 +224,41 @@ export function connectTargetOf(data: string): PairingTarget | undefined {
   };
 }
 
-function problemOf(failure: unknown, t: ReturnType<typeof useT>): string {
-  if (failure instanceof ServerUnreachableError) return t('connect.failed');
-  if (failure instanceof ServerMismatchError) return t('connect.mismatch');
+/**
+ * What failed, in plain words (round 3 of testing). A certificate that does not match the code a
+ * person scanned may be another computer pretending: the phone is not used. One that does not
+ * match what the phone knew means the PC was set up again: scanning the PC's code fixes it.
+ */
+export function problemOf(failure: unknown, t: ReturnType<typeof useT>, scanned: boolean): string {
+  if (failure instanceof ServerUnreachableError) {
+    if (failure.failures.length === 0) return t('connect.failed');
+    const where = (reason: string) =>
+      [
+        ...new Set(
+          failure.failures
+            .filter((entry) => entry.reason === reason)
+            .map((entry) => addressOf(entry.url)),
+        ),
+      ].join(', ');
+    return [
+      where('UNREACHABLE') === ''
+        ? null
+        : t('connect.unreachable', { address: where('UNREACHABLE') }),
+      where('TIMEOUT') === '' ? null : t('connect.noAnswer', { address: where('TIMEOUT') }),
+    ]
+      .filter((line) => line !== null)
+      .join('\n');
+  }
+  if (failure instanceof ServerCertificateNameError) {
+    return t('connect.certificateName', { address: addressOf(failure.serverUrl) });
+  }
+  if (failure instanceof ServerMismatchError) {
+    return t(scanned ? 'connect.mismatch' : 'connect.certificateChanged');
+  }
   return messageOf(failure, t);
+}
+
+/** `https://192.168.1.4:8080/` → `192.168.1.4:8080`: the address as the PC shows it. */
+export function addressOf(url: string): string {
+  return url.replace(/^[a-z]+:\/\//i, '').replace(/\/.*$/, '');
 }

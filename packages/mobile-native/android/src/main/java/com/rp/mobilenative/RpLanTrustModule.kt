@@ -6,9 +6,13 @@ import expo.modules.kotlin.exception.Exceptions
 import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 import java.io.IOException
+import java.io.InterruptedIOException
+import java.security.cert.CertificateException
 import java.security.cert.X509Certificate
 import java.util.concurrent.TimeUnit
 import javax.net.ssl.SSLContext
+import javax.net.ssl.SSLHandshakeException
+import javax.net.ssl.SSLPeerUnverifiedException
 import javax.net.ssl.X509TrustManager
 import okhttp3.Call
 import okhttp3.Callback
@@ -34,6 +38,16 @@ class RpLanTrustModule : Module() {
      */
     AsyncFunction("fetchAuthority") { baseUrl: String, promise: Promise ->
       fetchAuthority(baseUrl, promise)
+    }
+
+    /**
+     * Asks `GET <serverUrl>/api/v1/health` through the pinned CA and host-name check, exactly as
+     * every later request goes (round 3 of testing). Rejects `ERR_CERT_NAME` when the server's
+     * certificate does not name the address, `ERR_CERT_CHANGED` when it is not signed by the
+     * pinned CA, `ERR_TIMEOUT` when nothing answers in time and `ERR_UNREACHABLE` otherwise.
+     */
+    AsyncFunction("check") { serverUrl: String, promise: Promise ->
+      check(serverUrl, promise)
     }
 
     /** Pins the CA (PEM) for the server at `serverUrl`; resolves its fingerprint. */
@@ -66,7 +80,11 @@ class RpLanTrustModule : Module() {
     untrusted.newCall(request).enqueue(
       object : Callback {
         override fun onFailure(call: Call, e: IOException) {
-          promise.reject("ERR_UNREACHABLE", "The server did not answer at $baseUrl", e)
+          if (e is InterruptedIOException) {
+            promise.reject("ERR_TIMEOUT", "No answer from $baseUrl in time", e)
+          } else {
+            promise.reject("ERR_UNREACHABLE", "The server did not answer at $baseUrl", e)
+          }
         }
 
         override fun onResponse(call: Call, response: Response) {
@@ -92,9 +110,53 @@ class RpLanTrustModule : Module() {
     )
   }
 
+  private fun check(serverUrl: String, promise: Promise) {
+    val request =
+      try {
+        Request.Builder().url(serverUrl.trimEnd('/') + HEALTH_PATH).get().build()
+      } catch (e: IllegalArgumentException) {
+        promise.reject("ERR_ADDRESS", "This is not a server address: $serverUrl", e)
+        return
+      }
+    pinned.newCall(request).enqueue(
+      object : Callback {
+        override fun onFailure(call: Call, e: IOException) {
+          when {
+            e is SSLPeerUnverifiedException ->
+              promise.reject("ERR_CERT_NAME", "The certificate at $serverUrl does not name this address", e)
+            e is SSLHandshakeException || e.cause is CertificateException ->
+              promise.reject("ERR_CERT_CHANGED", "The server at $serverUrl has another certificate", e)
+            e is InterruptedIOException ->
+              promise.reject("ERR_TIMEOUT", "No answer from $serverUrl in time", e)
+            else -> promise.reject("ERR_UNREACHABLE", "The server did not answer at $serverUrl", e)
+          }
+        }
+
+        override fun onResponse(call: Call, response: Response) {
+          // Any answer means the connection is trusted; what the health check says is not ours.
+          response.close()
+          promise.resolve(null)
+        }
+      },
+    )
+  }
+
   private companion object {
+    const val HEALTH_PATH = "/api/v1/health"
+
     const val CA_PATH = "/api/v1/tls/ca"
     const val MAX_BODY_BYTES = 64L * 1024
+
+    /** Through the pinned CA with the standard host-name check: as the app's own requests go. */
+    val pinned: OkHttpClient by lazy {
+      OkHttpClient.Builder()
+        .sslSocketFactory(LanTrust.socketFactory, LanTrust.trustManager)
+        .followRedirects(false)
+        .connectTimeout(4, TimeUnit.SECONDS)
+        .readTimeout(4, TimeUnit.SECONDS)
+        .callTimeout(8, TimeUnit.SECONDS)
+        .build()
+    }
 
     /**
      * Only for downloading the CA before pairing: it accepts any server certificate and host

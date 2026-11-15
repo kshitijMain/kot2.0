@@ -40,13 +40,14 @@ function Screens({
   notifications: NotificationPermission | undefined;
   opener: AlertTableOpener | undefined;
 }) {
-  const { phase, person, clientTooOld } = useSessionState();
+  const { phase, person, clientTooOld, certificateChanged } = useSessionState();
   // An over-the-air update restarts the app only while nobody is signed in on it (P7-04e1).
   useAppUpdateWhenFree(person !== undefined);
   if (phase === 'loading') return null;
   if (clientTooOld) return <UpdateRequiredScreen />;
   // Nobody pairs the phone: it connects to the restaurant PC by itself (ADR-0025, 2026-11-01).
-  if (phase === 'unpaired') {
+  // A PC set up again has another certificate: the person scans its code (round 3 of testing).
+  if (phase === 'unpaired' || certificateChanged) {
     return (
       <ConnectScreen
         servers={restaurant.servers}
